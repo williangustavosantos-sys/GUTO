@@ -44,17 +44,14 @@ export function GutoAvatar({
   stage = "baby",
   showPlatform = true,
   className,
-  animate = true 
 }: GutoAvatarProps) {
   return (
     <div className={cn("flex flex-col items-center", className)}>
-      <motion.div
+      <div
         className={cn(
           "relative flex items-center justify-center",
           sizeClasses[size]
         )}
-        animate={animate ? { y: [0, -8, 0] } : undefined}
-        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
       >
         {/* Body */}
         <div 
@@ -152,14 +149,12 @@ export function GutoAvatar({
             }}
           />
         </div>
-      </motion.div>
+      </div>
 
       {/* Platform/Base */}
       {showPlatform && (
-        <motion.div 
+        <div 
           className="relative mt-2"
-          animate={{ scale: [1, 1.02, 1] }}
-          transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
         >
           {/* Platform */}
           <div 
@@ -171,13 +166,13 @@ export function GutoAvatar({
               `
             }}
           />
-        </motion.div>
+        </div>
       )}
 
       {/* Stage Label */}
       {stage && (
         <div className="mt-2 px-3 py-1 rounded-full bg-slate-100/80 backdrop-blur-sm border border-slate-200/50">
-          <span className="text-xs font-bold uppercase tracking-wider text-slate-600">
+          <span className="text-xs font-bold uppercase tracking-wider text-blue-950">
             {stage}
           </span>
         </div>

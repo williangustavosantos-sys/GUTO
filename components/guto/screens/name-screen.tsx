@@ -90,12 +90,13 @@ export function NameScreen({ onSubmit, language = "pt-BR" }: NameScreenProps) {
           </h1>
           <span className="text-muted-foreground/50 text-lg">&</span>
           <h2
-            className="text-4xl font-light italic tracking-wide max-w-[90vw] break-words"
+            className="text-4xl font-light italic tracking-wide max-w-[90vw]"
             style={{
               background: "linear-gradient(180deg, #b8c8d8 0%, #8aa0b8 50%, #a0b8c8 100%)",
               WebkitBackgroundClip: "text",
               backgroundClip: "text",
               color: "transparent",
+              overflowWrap: "break-word",
             }}
           >
             {displayName}

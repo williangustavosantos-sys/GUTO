@@ -1,33 +1,47 @@
-import type { Metadata, Viewport } from 'next'
-import { Inter } from 'next/font/google'
-import { Analytics } from '@vercel/analytics/next'
-import './globals.css'
-
-const inter = Inter({ 
-  subsets: ["latin"],
-  variable: '--font-inter'
-})
+import type { Metadata, Viewport } from "next"
+import { Analytics } from "@vercel/analytics/next"
+import "./globals.css"
 
 export const metadata: Metadata = {
   title: 'GUTO - Sistema de Evolução Humana',
   description: 'O Guto é um melhor amigo digital que conduz, adapta, erra, aprende e permanece — até que você evolua.',
-  generator: 'v0.app',
+  generator: 'GUTO',
   icons: {
+    shortcut: '/favicon-guto.ico?v=3',
     icon: [
       {
-        url: '/icon-light-32x32.png',
+        url: '/favicon-guto.ico?v=3',
+        sizes: 'any',
+      },
+      {
+        url: '/icon-light-32x32.png?v=3',
         media: '(prefers-color-scheme: light)',
+        type: 'image/png',
+        sizes: '32x32',
       },
       {
-        url: '/icon-dark-32x32.png',
+        url: '/icon-dark-32x32.png?v=3',
         media: '(prefers-color-scheme: dark)',
+        type: 'image/png',
+        sizes: '32x32',
       },
       {
-        url: '/icon.svg',
+        url: '/icon-guto.svg?v=3',
         type: 'image/svg+xml',
       },
     ],
-    apple: '/apple-icon.png',
+    apple: [
+      {
+        url: '/apple-touch-icon.png?v=3',
+        sizes: '180x180',
+        type: 'image/png',
+      },
+      {
+        url: '/apple-icon.png?v=3',
+        sizes: '180x180',
+        type: 'image/png',
+      },
+    ],
   },
 }
 
@@ -45,9 +59,9 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="pt-BR" className="bg-background dark:bg-background">
-      <body className={`${inter.variable} font-sans antialiased text-foreground`}>
-        <main className="mx-auto w-full max-w-107.5 min-h-dvh h-dvh bg-background relative shadow-2xl sm:border-x border-black/10 dark:border-white/10 overflow-x-hidden overflow-y-auto flex flex-col">
+    <html lang="pt-BR" className="bg-background">
+      <body className="font-sans text-foreground">
+        <main className="mx-auto flex h-dvh w-full max-w-[430px] flex-col overflow-hidden bg-white">
           {children}
         </main>
         {process.env.NODE_ENV === 'production' && <Analytics />}

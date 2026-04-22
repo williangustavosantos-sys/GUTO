@@ -1,201 +1,144 @@
 "use client"
 
 import { motion } from "framer-motion"
-import { Check, ChevronRight, Flame, Lock, Zap, MessageCircle } from "lucide-react"
-import { GutoOfficialAvatar } from "../guto-official-avatar"
+import { AlertCircle, Check, Flame, Lock } from "lucide-react"
+
 import { getLanguage, translations } from "../translations"
+import { pathDaysFixture } from "../view-models"
 
 interface PathTabProps {
   userName: string
   language: string
 }
 
-interface DayNode {
-  day: number
-  status: "completed" | "current" | "locked"
-  xp?: number
-}
+const nodeOffsets = [0, 34, 8, 42, 18, 48, 22]
 
-const pathData: DayNode[] = [
-  { day: 21, status: "completed" },
-  { day: 22, status: "completed" },
-  { day: 23, status: "current", xp: 150 },
-  { day: 24, status: "locked", xp: 3000 },
-  { day: 25, status: "locked" },
-]
+const pathCopy = {
+  "pt-BR": { active: "Trilha ativa", visibleFailure: "Falha visível", debt: "Dia perdido fica cravado no material. O vazio cobra." },
+  "en-US": { active: "Active path", visibleFailure: "Visible failure", debt: "A missed day stays carved into the material. The void charges for it." },
+  "es-ES": { active: "Camino activo", visibleFailure: "Falla visible", debt: "El día perdido queda grabado en el material. El vacío cobra." },
+  "it-IT": { active: "Percorso attivo", visibleFailure: "Errore visibile", debt: "Il giorno perso resta inciso nel materiale. Il vuoto presenta il conto." },
+} as const
 
-const streakDays = 3
-
-export function PathTab({ userName, language }: PathTabProps) {
+export function PathTab({ language }: PathTabProps) {
   const validLang = getLanguage(language)
   const locale = translations[validLang]
+  const copy = pathCopy[validLang]
 
   return (
-    <div className="flex flex-col h-full overflow-y-auto no-scrollbar pb-24">
-      {/* Header */}
-      <div className="text-center pt-6 pb-4 px-4">
-        <motion.h1 
-          className="text-3xl font-black tracking-tight text-foreground/90"
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          {locale.pathTitle}
-        </motion.h1>
-        <p className="text-muted-foreground/60 mt-1 text-sm">
-          {locale.pathSubtitle}
+    <div className="flex h-full flex-col pb-4">
+      <div className="px-1 pb-5">
+        <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-[rgba(13,35,65,0.42)]">
+          {copy.active}
         </p>
-        
-        {/* Month selector */}
-        <motion.button
-          className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-full glass-strong text-sm font-semibold text-foreground/70"
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-        >
-          {locale.pathMonth}
-          <ChevronRight className="w-4 h-4" />
-        </motion.button>
+        <h1 className="mt-2 text-[1.9rem] font-black tracking-[0.12em] text-[var(--guto-navy)]">
+          {locale.pathTitle}
+        </h1>
+        <p className="mt-1 max-w-[16rem] text-sm text-[rgba(13,35,65,0.58)]">{locale.pathSubtitle}</p>
       </div>
 
-      {/* Path visualization */}
-      <div className="relative flex-1 px-6 py-8">
-        {/* Connection lines - SVG path */}
-        <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 0 }}>
+      <div className="relative flex-1 overflow-hidden rounded-[1.9rem] px-1 pb-5">
+        <svg
+          className="pointer-events-none absolute inset-x-0 top-4 h-[15rem] w-full"
+          viewBox="0 0 360 240"
+          preserveAspectRatio="none"
+        >
           <path
-            d="M 80 50 Q 120 80 160 60 Q 200 40 240 70 Q 280 100 320 80 Q 360 60 400 90"
+            d="M 36 32 C 74 32, 98 68, 136 68 S 194 40, 226 104 S 292 168, 328 182"
             fill="none"
-            stroke="oklch(0.70 0.18 200 / 0.3)"
-            strokeWidth="2"
-            strokeDasharray="4 4"
+            stroke="rgba(25, 60, 106, 0.12)"
+            strokeWidth="18"
+            strokeLinecap="round"
+          />
+          <path
+            d="M 36 32 C 74 32, 98 68, 136 68 S 194 40, 226 104 S 292 168, 328 182"
+            fill="none"
+            stroke="rgba(82, 231, 255, 0.68)"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeDasharray="6 10"
           />
         </svg>
 
-        {/* Day nodes */}
-        <div className="relative flex flex-wrap justify-center gap-4 max-w-xs mx-auto">
-          {pathData.map((node, index) => (
-            <motion.div
-              key={node.day}
-              className="relative"
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: index * 0.1 }}
-              style={{
-                marginTop: index % 2 === 0 ? 0 : 20,
-              }}
-            >
-              {/* Node */}
-              <div
-                className={`w-14 h-14 rounded-full flex items-center justify-center font-bold text-lg relative ${
-                  node.status === "completed"
-                    ? "bg-green-100 text-green-600 border-2 border-green-300"
-                    : node.status === "current"
-                    ? "glass-strong text-primary border-2 border-primary/30"
-                    : "bg-muted/50 text-muted-foreground/40 border border-muted-foreground/20"
-                }`}
-                style={{
-                  boxShadow: node.status === "current" 
-                    ? "0 0 20px oklch(0.70 0.18 200 / 0.3)" 
-                    : undefined
-                }}
+        <div className="relative flex flex-col gap-3 px-1 pt-2">
+          {pathDaysFixture.map((day, index) => {
+            const statusIcon =
+              day.status === "completed" ? (
+                <Check className="h-3.5 w-3.5 text-[var(--guto-cyan)]" />
+              ) : day.status === "missed" ? (
+                <AlertCircle className="h-3.5 w-3.5 text-[rgba(13,35,65,0.36)]" />
+              ) : day.status === "locked" ? (
+                <Lock className="h-3.5 w-3.5 text-[rgba(13,35,65,0.32)]" />
+              ) : (
+                <Flame className="h-3.5 w-3.5 text-[var(--guto-navy)]" />
+              )
+
+            return (
+              <motion.div
+                key={`${day.label}-${day.day}`}
+                initial={{ opacity: 0, x: -12 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.06 }}
+                className="relative"
+                style={{ marginLeft: `${nodeOffsets[index] ?? 0}px` }}
               >
-                {node.day}
-                
-                {/* Status indicator */}
-                {node.status === "completed" && (
-                  <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-green-500 flex items-center justify-center">
-                    <Check className="w-3 h-3 text-white" />
+                <div className="flex items-center gap-4">
+                  <div
+                    className={
+                      day.status === "completed"
+                        ? "guto-deboss-deep flex h-14 w-14 items-center justify-center rounded-full border-[rgba(82,231,255,0.46)]"
+                        : day.status === "current"
+                          ? "guto-deboss flex h-14 w-14 items-center justify-center rounded-full border-[rgba(13,35,65,0.28)]"
+                          : day.status === "missed"
+                            ? "flex h-14 w-14 items-center justify-center rounded-full border border-[rgba(154,163,173,0.3)] bg-[rgba(174,181,188,0.22)] shadow-[inset_4px_4px_14px_rgba(123,131,144,0.16),inset_-4px_-4px_10px_rgba(255,255,255,0.54)]"
+                            : "flex h-14 w-14 items-center justify-center rounded-full border border-[rgba(13,35,65,0.08)] bg-[rgba(255,255,255,0.4)] shadow-[inset_2px_2px_8px_rgba(152,163,179,0.12),inset_-3px_-3px_8px_rgba(255,255,255,0.72)]"
+                    }
+                  >
+                    <span
+                      className={
+                        day.status === "completed"
+                          ? "font-mono text-sm tracking-[0.18em] text-[var(--guto-cyan)]"
+                          : day.status === "current"
+                            ? "font-mono text-sm tracking-[0.18em] text-[var(--guto-navy)]"
+                            : "font-mono text-sm tracking-[0.18em] text-[rgba(13,35,65,0.34)]"
+                      }
+                    >
+                      {day.day}
+                    </span>
                   </div>
-                )}
-                {node.status === "locked" && (
-                  <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-muted flex items-center justify-center">
-                    <Lock className="w-3 h-3 text-muted-foreground/50" />
-                  </div>
-                )}
-              </div>
 
-              {/* XP label */}
-              {node.xp && (
-                <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-xs font-semibold text-muted-foreground/60 whitespace-nowrap">
-                  +{node.xp.toLocaleString()} XP
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-[11px] uppercase tracking-[0.22em] text-[rgba(13,35,65,0.42)]">
+                        {day.label}
+                      </span>
+                      {statusIcon}
+                    </div>
+                    {day.commitment && (
+                      <p className="mt-1 text-sm text-[rgba(13,35,65,0.66)]">{day.commitment}</p>
+                    )}
+                  </div>
                 </div>
-              )}
-            </motion.div>
-          ))}
-        </div>
-
-        {/* Guto Avatar in center */}
-        <div className="flex justify-center mt-8">
-          <div className="relative">
-            <GutoOfficialAvatar size="lg" showPlatform={true} className="w-40 h-40" />
-            
-            {/* Streak badge */}
-            <motion.div
-              className="absolute -top-2 -right-2 flex items-center gap-1 px-2 py-1 rounded-full bg-orange-100 border border-orange-200"
-              animate={{ scale: [1, 1.1, 1] }}
-              transition={{ duration: 2, repeat: Infinity }}
-            >
-              <Flame className="w-3 h-3 text-orange-500" />
-              <span className="text-xs font-bold text-orange-600">{streakDays}</span>
-            </motion.div>
-          </div>
+              </motion.div>
+            )
+          })}
         </div>
       </div>
 
-      {/* Daily summary card */}
-      <div className="px-4 pb-4">
-        <motion.div
-          className="glass-strong rounded-2xl p-4"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-        >
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary">
-              23
-            </div>
-            <div>
-              <span className="font-semibold text-foreground/80">{locale.pathDayLabel}</span>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-sm">
-              <Check className="w-4 h-4 text-green-500" />
-              <span className="text-foreground/70">{locale.pathWorkoutDone} </span>
-              <span className="font-semibold text-foreground/90">{locale.pathWorkoutName}</span>
-              <Check className="w-4 h-4 text-green-500" />
-            </div>
-            <div className="flex items-center gap-2 text-sm text-foreground/60">
-              <Zap className="w-4 h-4 text-primary" />
-              <span>{locale.pathXpYesterday}</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm text-foreground/60">
-              <Flame className="w-4 h-4 text-orange-500" />
-              <span>{locale.pathStreak}</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm text-foreground/60">
-              <MessageCircle className="w-4 h-4 text-primary" />
-              <span>{locale.pathObservation}</span>
-              <span className="ml-auto text-primary font-semibold">{locale.pathXpReward}</span>
-            </div>
-          </div>
-
-          {/* Progress bar */}
-          <div className="mt-4 h-2 bg-muted rounded-full overflow-hidden">
-            <motion.div
-              className="h-full xp-bar rounded-full"
-              initial={{ width: 0 }}
-              animate={{ width: "75%" }}
-              transition={{ delay: 0.8, duration: 0.8 }}
-            />
-          </div>
-
-          {/* Quote */}
-          <div className="mt-4 pt-4 border-t border-border/50">
-            <p className="text-sm text-foreground/70 italic">
-              {"\""}{locale.pathQuote}{"\""}
+      <div className="guto-deboss mt-1 rounded-[1.8rem] px-4 py-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-[rgba(13,35,65,0.38)]">
+              {copy.visibleFailure}
+            </p>
+            <p className="mt-1 text-sm text-[rgba(13,35,65,0.68)]">
+              {copy.debt}
             </p>
           </div>
-        </motion.div>
+          <div className="guto-deboss-deep flex h-12 w-12 items-center justify-center rounded-full">
+            <Flame className="h-4 w-4 text-[var(--guto-cyan)]" />
+          </div>
+        </div>
       </div>
     </div>
   )

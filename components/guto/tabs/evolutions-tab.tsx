@@ -2,233 +2,163 @@
 
 import { motion } from "framer-motion"
 import { Lock } from "lucide-react"
+
 import { GutoOfficialAvatar } from "../guto-official-avatar"
-import { cn } from "@/lib/utils"
 import { getLanguage, translations } from "../translations"
+import { evolutionCardsFixture } from "../view-models"
+import type { EvolutionStage } from "@/types/contract"
 
 interface EvolutionsTabProps {
   userName: string
   language: string
+  currentEvolution: EvolutionStage
 }
-
-type EvolutionStage = "baby" | "teen" | "adult" | "elite"
-
-interface Evolution {
-  stage: EvolutionStage
-  label: string
-  level: number
-  unlocked: boolean
-  requiredXp: number
-}
-
-const evolutions: Evolution[] = [
-  { stage: "baby", label: "BABY", level: 1, unlocked: true, requiredXp: 0 },
-  { stage: "teen", label: "TEEN", level: 2, unlocked: false, requiredXp: 3000 },
-  { stage: "adult", label: "ADULT", level: 3, unlocked: false, requiredXp: 10000 },
-  { stage: "elite", label: "ELITE", level: 4, unlocked: false, requiredXp: 25000 },
-]
 
 const currentXp = 1250
-const targetXp = 3000
-const progress = (currentXp / targetXp) * 100
+const nextTargetXp = 3000
+const progress = (currentXp / nextTargetXp) * 100
 
-export function EvolutionsTab({ userName, language }: EvolutionsTabProps) {
+const evolutionCopy = {
+  "pt-BR": { desire: "Desejo em camadas", active: "Ativo", released: "Forma liberada. Nitidez total no presente.", blocked: "Bloqueado até" },
+  "en-US": { desire: "Desire in layers", active: "Active", released: "Form unlocked. Full sharpness in the present.", blocked: "Locked until" },
+  "es-ES": { desire: "Deseo en capas", active: "Activo", released: "Forma liberada. Nitidez total en el presente.", blocked: "Bloqueado hasta" },
+  "it-IT": { desire: "Desiderio a strati", active: "Attivo", released: "Forma sbloccata. Nitidezza totale nel presente.", blocked: "Bloccato fino a" },
+} as const
+
+export function EvolutionsTab({ language, currentEvolution }: EvolutionsTabProps) {
   const validLang = getLanguage(language)
   const locale = translations[validLang]
+  const copy = evolutionCopy[validLang]
 
   return (
-    <div className="flex flex-col h-full overflow-y-auto no-scrollbar pb-24">
-      {/* Header */}
-      <div className="text-center pt-6 pb-4 px-4">
-        <motion.h1 
-          className="text-3xl font-black tracking-tight text-foreground/90"
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          {locale.evoTitle}
-        </motion.h1>
-        <p className="text-muted-foreground/60 mt-1 text-sm">
-          {locale.evoSubtitle}
+    <div className="flex h-full flex-col pb-4">
+      <div className="px-1 pb-5">
+        <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-[rgba(13,35,65,0.42)]">
+          {copy.desire}
         </p>
+        <h1 className="mt-2 text-[1.85rem] font-black tracking-[0.12em] text-[var(--guto-navy)]">
+          {locale.evoTitle}
+        </h1>
+        <p className="mt-1 max-w-[16rem] text-sm text-[rgba(13,35,65,0.58)]">{locale.evoSubtitle}</p>
       </div>
 
-      {/* Evolution stages */}
-      <div className="flex-1 px-4">
-        <div className="flex gap-3 overflow-x-auto no-scrollbar pb-4">
-          {evolutions.map((evo, index) => (
+      <div className="flex-1 space-y-3 overflow-y-auto pr-1">
+        {evolutionCardsFixture.map((card, index) => {
+          const isCurrent = card.stage === currentEvolution
+
+          return (
             <motion.div
-              key={evo.stage}
-              className={cn(
-                "flex-none w-40 rounded-2xl p-4 flex flex-col items-center relative",
-                evo.unlocked 
-                  ? "glass-strong border-2 border-primary/30" 
-                  : "bg-muted/30 border border-muted-foreground/10"
-              )}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: index * 0.1 }}
-              style={{
-                boxShadow: evo.unlocked 
-                  ? "0 8px 30px oklch(0.70 0.18 200 / 0.15)" 
-                  : undefined
-              }}
+              key={card.stage}
+              className={
+                isCurrent
+                  ? "guto-deboss-deep relative overflow-hidden rounded-[1.9rem] px-4 py-4"
+                  : "guto-deboss relative overflow-hidden rounded-[1.9rem] px-4 py-4"
+              }
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.08 }}
             >
-              {/* Stage label */}
-              <span 
-                className={cn(
-                  "text-sm font-bold tracking-wider mb-3",
-                  evo.unlocked ? "text-primary" : "text-muted-foreground/40"
-                )}
-              >
-                {locale.evoStages[evo.stage]}
-              </span>
+              <div className="absolute inset-y-0 right-0 w-24 bg-[radial-gradient(circle_at_center,rgba(82,231,255,0.14)_0%,transparent_74%)]" />
 
-              {/* Avatar or silhouette */}
-              <div className={cn("relative", !evo.unlocked && "opacity-40")}>
-                {evo.unlocked ? (
-                  <GutoOfficialAvatar 
-                    size="md" 
-                    showPlatform={true} 
-                    className="w-28 h-28"
-                  />
-                ) : (
-                  <div className="w-24 h-24 flex items-center justify-center">
-                    {/* Silhouette placeholder */}
-                    <div 
-                      className="w-20 h-20 rounded-full"
-                      style={{
-                        background: "linear-gradient(180deg, rgba(148,163,184,0.8) 0%, rgba(30,41,59,0.8) 100%)",
-                        clipPath: index === 1 
-                          ? "polygon(20% 0%, 80% 0%, 100% 20%, 100% 80%, 80% 100%, 20% 100%, 0% 80%, 0% 20%)"
-                          : index === 2
-                          ? "polygon(25% 0%, 75% 0%, 100% 25%, 100% 75%, 75% 100%, 25% 100%, 0% 75%, 0% 25%)"
-                          : "polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%)"
-                      }}
+              <div className="relative flex items-center gap-4">
+                <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-[1.6rem]">
+                  {isCurrent ? (
+                    <GutoOfficialAvatar
+                      size="md"
+                      showPlatform={false}
+                      evolution={card.stage}
+                      className="w-full"
                     />
-                  </div>
-                )}
-              </div>
+                  ) : (
+                    <div className="relative flex h-20 w-20 items-center justify-center rounded-[1.4rem] bg-[rgba(191,199,208,0.24)] shadow-[inset_3px_3px_10px_rgba(124,136,152,0.18),inset_-4px_-4px_12px_rgba(255,255,255,0.72)]">
+                      <div className="absolute inset-4 rounded-full bg-[rgba(255,255,255,0.78)] opacity-70" />
+                      <div className="absolute inset-0 rounded-[1.4rem] bg-[radial-gradient(circle_at_center,rgba(82,231,255,0.18)_0%,transparent_72%)]" />
+                    </div>
+                  )}
+                </div>
 
-              {/* Level badge or lock */}
-              <div className="mt-3">
-                {evo.unlocked ? (
-                  <span className="px-3 py-1 rounded-full bg-primary/10 text-xs font-bold text-primary uppercase">
-                    {locale.level} {evo.level}
-                  </span>
-                ) : (
-                  <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
-                    <Lock className="w-4 h-4 text-muted-foreground/50" />
-                  </div>
-                )}
-              </div>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-[rgba(13,35,65,0.38)]">
+                        {locale.level}
+                      </p>
+                      <h2 className="mt-1 text-xl font-black tracking-[0.16em] text-[var(--guto-navy)]">
+                        {card.label}
+                      </h2>
+                    </div>
 
-              {/* Status label */}
-              <span 
-                className={cn(
-                  "mt-2 text-xs font-semibold tracking-wide",
-                  evo.unlocked ? "text-green-600" : "text-muted-foreground/40"
-                )}
-              >
-                {evo.unlocked ? locale.unlocked : locale.locked}
-              </span>
+                    {isCurrent ? (
+                      <span className="font-mono text-[10px] uppercase tracking-[0.24em] text-[var(--guto-cyan)]">
+                        {copy.active}
+                      </span>
+                    ) : (
+                      <div className="guto-deboss flex h-10 w-10 items-center justify-center rounded-full">
+                        <Lock className="h-4 w-4 text-[rgba(13,35,65,0.34)]" />
+                      </div>
+                    )}
+                  </div>
+
+                  <p className="mt-2 text-sm text-[rgba(13,35,65,0.64)]">
+                    {isCurrent
+                      ? copy.released
+                      : `${copy.blocked} ${card.requiredXp.toLocaleString()} XP.`}
+                  </p>
+                </div>
+              </div>
             </motion.div>
-          ))}
-        </div>
+          )
+        })}
       </div>
 
-      {/* XP Progress card */}
-      <div className="px-4 pb-4">
-        <motion.div
-          className="glass-strong rounded-2xl p-5"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-        >
-          <div className="flex gap-4 items-center">
-            {/* Circular progress */}
-            <div className="relative w-24 h-24 flex-none">
-              <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
-                <circle
-                  cx="50"
-                  cy="50"
-                  r="42"
-                  fill="none"
-                  stroke="oklch(0.90 0.02 240)"
-                  strokeWidth="8"
-                />
-                <motion.circle
-                  cx="50"
-                  cy="50"
-                  r="42"
-                  fill="none"
-                  stroke="oklch(0.70 0.18 200)"
-                  strokeWidth="8"
-                  strokeLinecap="round"
-                  strokeDasharray={264}
-                  initial={{ strokeDashoffset: 264 }}
-                  animate={{ strokeDashoffset: 264 * (1 - progress / 100) }}
-                  transition={{ delay: 0.6, duration: 1 }}
-                  style={{
-                    filter: "drop-shadow(0 0 6px oklch(0.70 0.18 200 / 0.5))"
-                  }}
-                />
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider">
-                  {locale.totalXp}
-                </span>
-                <span className="text-2xl font-black text-primary">
-                  {currentXp.toLocaleString()}
-                </span>
-                <span className="text-[10px] text-muted-foreground/50">
-                  / {targetXp.toLocaleString()} XP
-                </span>
-              </div>
-            </div>
-
-            {/* Info */}
-            <div className="flex-1 space-y-3">
-              <div>
-                <p className="text-sm text-foreground/70">
-                  {locale.evoAuto1}
-                </p>
-                <p className="text-sm font-bold text-foreground/90">
-                  {locale.evoAuto2}
-                </p>
-              </div>
-
-              {/* Linear progress */}
-              <div className="space-y-1">
-                <div className="h-2 bg-muted rounded-full overflow-hidden">
-                  <motion.div
-                    className="h-full xp-bar rounded-full"
-                    initial={{ width: 0 }}
-                    animate={{ width: `${progress}%` }}
-                    transition={{ delay: 0.8, duration: 0.8 }}
-                  />
-                </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-muted-foreground/60">
-                    {locale.nextEvolution}: <span className="text-primary font-semibold">{locale.evoStages.teen}</span>
-                  </span>
-                  <span className="text-primary font-bold">{Math.round(progress)}%</span>
-                </div>
-              </div>
+      <div className="guto-deboss mt-4 rounded-[1.9rem] px-4 py-4">
+        <div className="flex items-center gap-4">
+          <div className="relative h-24 w-24 shrink-0">
+            <svg className="h-full w-full -rotate-90" viewBox="0 0 100 100">
+              <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(13,35,65,0.1)" strokeWidth="8" />
+              <motion.circle
+                cx="50"
+                cy="50"
+                r="42"
+                fill="none"
+                stroke="rgba(82,231,255,0.95)"
+                strokeWidth="8"
+                strokeLinecap="round"
+                strokeDasharray="264"
+                initial={{ strokeDashoffset: 264 }}
+                animate={{ strokeDashoffset: 264 * (1 - progress / 100) }}
+                transition={{ duration: 0.9 }}
+              />
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-[rgba(13,35,65,0.38)]">
+                XP
+              </span>
+              <span className="text-xl font-black text-[var(--guto-navy)]">
+                {currentXp.toLocaleString()}
+              </span>
             </div>
           </div>
-        </motion.div>
 
-        {/* Motivational quote */}
-        <motion.div
-          className="mt-4 text-center px-4"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1 }}
-        >
-          <p className="text-sm text-foreground/60 italic">
-            {"\""}{locale.evoQuote}{"\""}
-          </p>
-        </motion.div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm text-[rgba(13,35,65,0.68)]">{locale.evoAuto1}</p>
+            <p className="mt-1 text-sm font-semibold text-[var(--guto-navy)]">{locale.evoAuto2}</p>
+
+            <div className="mt-4 h-2 overflow-hidden rounded-full bg-[rgba(13,35,65,0.08)]">
+              <motion.div
+                className="h-full rounded-full bg-[linear-gradient(90deg,rgba(82,231,255,0.65),rgba(82,231,255,1))]"
+                initial={{ width: 0 }}
+                animate={{ width: `${progress}%` }}
+                transition={{ duration: 0.85, delay: 0.2 }}
+              />
+            </div>
+
+            <div className="mt-2 flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.18em] text-[rgba(13,35,65,0.4)]">
+              <span>{locale.nextEvolution}</span>
+              <span>{nextTargetXp.toLocaleString()} XP</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   )

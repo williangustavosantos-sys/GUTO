@@ -1,5 +1,3 @@
-// lib/api/guto.ts
-
 import { apiRequest } from "./client"
 
 export type SupportedLanguage = "pt-BR" | "it-IT" | "es-ES" | "en-US"

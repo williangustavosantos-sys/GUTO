@@ -1,10 +1,7 @@
-// lib/api/client.ts
-
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"
 
 export class ApiError extends Error {
   status?: number
-
   constructor(message: string, status?: number) {
     super(message)
     this.name = "ApiError"
@@ -38,9 +35,7 @@ export async function apiRequest<T>(
       try {
         const body = await res.json()
         message = body?.message || message
-      } catch {
-        // mantém message padrão
-      }
+      } catch {}
       throw new ApiError(message, res.status)
     }
 
