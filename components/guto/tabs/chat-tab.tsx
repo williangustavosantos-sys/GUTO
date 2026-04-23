@@ -1,19 +1,30 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import Image from "next/image"
 import { motion } from "framer-motion"
 import { Loader2, Mic, Send, Volume2, VolumeX } from "lucide-react"
 
-import { sendGutoMessage } from "@/lib/api/guto"
+import { API_URL, getApiErrorMessage } from "@/lib/api/client"
+import { getGutoProactive, sendGutoMessage } from "@/lib/api/guto"
+import type { GutoExpectedResponse } from "@/lib/api/guto"
 import type { EvolutionStage, SupportedLanguage } from "@/types/contract"
 
 import { GutoOfficialAvatar } from "../guto-official-avatar"
 import { getLanguage, translations } from "../translations"
+import type { MissionExercise } from "../view-models"
+
+interface PendingExerciseQuestion {
+  id: string
+  exercise: MissionExercise
+}
 
 interface ChatTabProps {
   userName: string
   language: string
   evolution?: EvolutionStage
+  pendingExerciseQuestion?: PendingExerciseQuestion | null
+  onExerciseQuestionHandled?: () => void
 }
 
 interface Message {
@@ -22,8 +33,6 @@ interface Message {
   isGuto: boolean
   timestamp: Date
 }
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"
 
 const chatCopy: Record<SupportedLanguage, { channel: string; speaking: string }> = {
   "pt-BR": { channel: "Canal do oráculo", speaking: "falando" },
@@ -39,11 +48,20 @@ const openingMessage: Record<SupportedLanguage, (name: string) => string> = {
   "it-IT": (name) => `Ciao ${name}, finalmente sei arrivato. Ti stavo aspettando!`,
 }
 
+const GUTO_USER_ID = "local-user"
+const PROACTIVE_CHECK_INTERVAL_MS = 60_000
+
 function formatDisplayName(value: string) {
   return value.replace(/\s+/g, " ").trim().toLocaleUpperCase()
 }
 
-export function ChatTab({ userName, language, evolution = "BABY" }: ChatTabProps) {
+export function ChatTab({
+  userName,
+  language,
+  evolution = "BABY",
+  pendingExerciseQuestion,
+  onExerciseQuestionHandled,
+}: ChatTabProps) {
   const validLang = getLanguage(language)
   const locale = translations[validLang]
   const copy = chatCopy[validLang]
@@ -61,7 +79,7 @@ export function ChatTab({ userName, language, evolution = "BABY" }: ChatTabProps
   const [input, setInput] = useState("")
   const [isSending, setIsSending] = useState(false)
   const [isSpeaking, setIsSpeaking] = useState(false)
-  const [isMuted, setIsMuted] = useState(false)
+  const [isMuted, setIsMuted] = useState(true)
   const [isRecording, setIsRecording] = useState(false)
 
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -69,6 +87,11 @@ export function ChatTab({ userName, language, evolution = "BABY" }: ChatTabProps
   const currentAudioRef = useRef<HTMLAudioElement | null>(null)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
+  const handledExerciseQuestionRef = useRef<string | null>(null)
+  const proactiveInFlightRef = useRef(false)
+  const lastProactiveKeyRef = useRef<string | null>(null)
+  const arrivalBriefingRequestedRef = useRef(false)
+  const pendingExpectedResponseRef = useRef<GutoExpectedResponse | null>(null)
 
   useEffect(() => {
     messagesRef.current = messages
@@ -110,7 +133,7 @@ export function ChatTab({ userName, language, evolution = "BABY" }: ChatTabProps
     [messages]
   )
 
-  const playBase64Mp3 = async (audioBase64: string) => {
+  const playBase64Mp3 = useCallback(async (audioBase64: string) => {
     if (!audioBase64 || audioBase64.length < 100) return
 
     try {
@@ -131,9 +154,9 @@ export function ChatTab({ userName, language, evolution = "BABY" }: ChatTabProps
       setIsSpeaking(false)
       console.error("Erro ao reproduzir áudio:", error)
     }
-  }
+  }, [])
 
-  const synthesizeAndPlay = async (text: string, lang: SupportedLanguage) => {
+  const synthesizeAndPlay = useCallback(async (text: string, lang: SupportedLanguage) => {
     try {
       const response = await fetch(`${API_URL}/voz`, {
         method: "POST",
@@ -152,7 +175,65 @@ export function ChatTab({ userName, language, evolution = "BABY" }: ChatTabProps
     } catch (error) {
       console.error("Erro na rota /voz:", error)
     }
-  }
+  }, [playBase64Mp3])
+
+  const checkProactiveMessage = useCallback(async (forceArrivalBriefing = false) => {
+    if (proactiveInFlightRef.current || isSending) return
+    if (forceArrivalBriefing && arrivalBriefingRequestedRef.current) return
+
+    proactiveInFlightRef.current = true
+    if (forceArrivalBriefing) {
+      arrivalBriefingRequestedRef.current = true
+    }
+    const safeLanguage = getLanguage(language) as SupportedLanguage
+
+    try {
+      const data = await getGutoProactive({
+        userId: GUTO_USER_ID,
+        language: safeLanguage,
+        force: forceArrivalBriefing,
+      })
+      const fala = data.fala?.trim()
+      if (!data.due || !fala) return
+      pendingExpectedResponseRef.current = data.expectedResponse || null
+
+      const proactiveKey = `${data.slot || "slot"}-${fala}`
+      if (lastProactiveKeyRef.current === proactiveKey) return
+      lastProactiveKeyRef.current = proactiveKey
+
+      const gutoMessage: Message = {
+        id: `g-proactive-${Date.now()}`,
+        text: fala,
+        isGuto: true,
+        timestamp: new Date(),
+      }
+
+      setMessages((prev) => {
+        if (forceArrivalBriefing && prev.length === 1 && prev[0]?.id === "guto-initial") {
+          return [gutoMessage]
+        }
+
+        return [...prev, gutoMessage]
+      })
+
+      if (!isMuted) {
+        await synthesizeAndPlay(fala, safeLanguage)
+      }
+    } catch (error) {
+      console.warn(`Proatividade do GUTO indisponível: ${getApiErrorMessage(error)}`)
+    } finally {
+      proactiveInFlightRef.current = false
+    }
+  }, [isMuted, isSending, language, synthesizeAndPlay])
+
+  useEffect(() => {
+    void checkProactiveMessage(true)
+    const timer = window.setInterval(() => {
+      void checkProactiveMessage()
+    }, PROACTIVE_CHECK_INTERVAL_MS)
+
+    return () => window.clearInterval(timer)
+  }, [checkProactiveMessage])
 
   const sendAudio = async (blob: Blob) => {
     setIsSending(true)
@@ -209,15 +290,12 @@ export function ChatTab({ userName, language, evolution = "BABY" }: ChatTabProps
     setIsRecording(false)
   }
 
-  const handleSend = async () => {
-    if (!input.trim() || isSending) return
-
-    const userText = input.trim()
+  const sendTextToGuto = useCallback(async (displayText: string, modelInput = displayText) => {
     const safeLanguage = getLanguage(language) as SupportedLanguage
 
     const userMessage: Message = {
       id: `u-${Date.now()}`,
-      text: userText,
+      text: displayText,
       isGuto: false,
       timestamp: new Date(),
     }
@@ -227,17 +305,20 @@ export function ChatTab({ userName, language, evolution = "BABY" }: ChatTabProps
     setIsSending(true)
 
     try {
+      const expectedResponse = pendingExpectedResponseRef.current
       const data = await sendGutoMessage({
-        profile: { name: userName || "Usuário" },
-        input: userText,
+        profile: { name: userName || "Usuário", userId: GUTO_USER_ID },
+        input: modelInput,
         language: safeLanguage,
         history: messagesRef.current.map((message) => ({
           role: message.isGuto ? "model" : "user",
           parts: [{ text: message.text }],
         })),
+        expectedResponse,
       })
 
       const fala = data?.fala?.trim() || "Sem distração. Executa a próxima ação agora."
+      pendingExpectedResponseRef.current = data?.expectedResponse || null
 
       const gutoMessage: Message = {
         id: `g-${Date.now()}`,
@@ -264,16 +345,49 @@ export function ChatTab({ userName, language, evolution = "BABY" }: ChatTabProps
     } finally {
       setIsSending(false)
     }
+  }, [isMuted, language, synthesizeAndPlay, userName])
+
+  useEffect(() => {
+    if (!pendingExerciseQuestion || isSending) return
+    if (handledExerciseQuestionRef.current === pendingExerciseQuestion.id) return
+
+    handledExerciseQuestionRef.current = pendingExerciseQuestion.id
+    const { exercise } = pendingExerciseQuestion
+    const displayText = `Dúvida: ${exercise.name}`
+    const modelInput = [
+      "O usuário apertou o botão de dúvida no treino do dia.",
+      `Exercício: ${exercise.name}.`,
+      `Séries: ${exercise.sets}. Repetições: ${exercise.reps}. Descanso: ${exercise.rest}.`,
+      `Instrução base: ${exercise.cue}`,
+      `Observação do GUTO: ${exercise.note}`,
+      "Explique como executar com clareza, corrija os principais erros e termine dizendo que ele pode perguntar a dúvida específica na mesma conversa.",
+    ].join(" ")
+
+    void sendTextToGuto(displayText, modelInput).finally(() => {
+      onExerciseQuestionHandled?.()
+    })
+  }, [isSending, onExerciseQuestionHandled, pendingExerciseQuestion, sendTextToGuto])
+
+  const handleSend = async () => {
+    if (!input.trim() || isSending) return
+    await sendTextToGuto(input.trim())
   }
 
   const latestGuto = messages[lastGutoIndex] ?? messages[0]
   const latestUser = [...messages].reverse().find((message) => !message.isGuto)
 
   return (
-    <div className="relative h-full min-h-[690px] overflow-hidden">
-      <div className="guto-top-strip absolute left-0 top-[1.03%] h-[9.27%] w-full border-y border-[var(--guto-cyan)]">
+    <div className="guto-chat-stage relative h-full min-h-0 overflow-hidden">
+      <div className="guto-top-strip absolute left-0 top-[1.03%] z-20 h-[9.27%] w-full border-y border-[var(--guto-cyan)]">
         <div className="guto-chat-brand" aria-label={brandName ? `GUTO e ${brandName}` : "GUTO"}>
-          <img src="/assets/guto/logo_guto.png" alt="GUTO" className="guto-chat-brand-logo" />
+          <Image
+            src="/assets/guto/logo_guto.png"
+            alt="GUTO"
+            width={104}
+            height={33}
+            priority
+            className="guto-chat-brand-logo"
+          />
         </div>
         {brandName && (
           <div className="guto-chat-partner">
@@ -285,37 +399,20 @@ export function ChatTab({ userName, language, evolution = "BABY" }: ChatTabProps
         )}
       </div>
 
-      <div className="guto-chat-bubble absolute left-[21.89%] top-[13.16%] flex h-[10.98%] w-[57.71%] items-center justify-between gap-2 rounded-[18px] py-3 pl-[7.4%] pr-[15%]">
+      <div className="guto-chat-bubble absolute left-[21.89%] top-[13.16%] z-10 h-[10.98%] w-[57.71%] rounded-[18px]">
+        <div className="guto-chat-bubble-copy">
           <motion.p
             key={latestGuto.id}
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            className="min-w-0 flex-1 text-center font-mono text-[clamp(10px,2.8vw,13px)] font-black leading-[1.14] tracking-normal text-[var(--guto-navy)]"
+            className="guto-chat-bubble-text"
           >
             {latestGuto.text}
           </motion.p>
-
-          <button
-            type="button"
-            onClick={() =>
-              setIsMuted((prev) => {
-                const next = !prev
-                if (next && currentAudioRef.current) {
-                  currentAudioRef.current.pause()
-                  currentAudioRef.current = null
-                  setIsSpeaking(false)
-                }
-                return next
-              })
-            }
-            className="absolute bottom-[5px] right-[7px] grid h-[30px] w-[29px] shrink-0 place-items-center rounded-full text-[var(--guto-cyan)]"
-            aria-label={isMuted ? "Ativar som" : "Silenciar som"}
-          >
-            {isMuted ? <VolumeX className="h-[30px] w-[29px]" /> : <Volume2 className="h-[30px] w-[29px]" />}
-          </button>
         </div>
+      </div>
 
-      <div className="absolute left-[-0.8%] top-[21.5%] flex h-[63.2%] w-[101.6%] items-center justify-center">
+      <div className="guto-chat-avatar-stage absolute flex items-center justify-center">
           <GutoOfficialAvatar
             size="xl"
             showPlatform={false}
@@ -324,18 +421,39 @@ export function ChatTab({ userName, language, evolution = "BABY" }: ChatTabProps
           />
         </div>
 
+      <button
+        type="button"
+        onClick={() =>
+          setIsMuted((prev) => {
+            const next = !prev
+            if (next && currentAudioRef.current) {
+              currentAudioRef.current.pause()
+              currentAudioRef.current = null
+              setIsSpeaking(false)
+            }
+            return next
+          })
+        }
+        className="guto-chat-sound-toggle absolute z-30"
+        data-audio-active={!isMuted}
+        aria-label={isMuted ? "Ativar fala do GUTO" : "Silenciar fala do GUTO"}
+        aria-pressed={!isMuted}
+      >
+        {isMuted ? <VolumeX className="h-[18px] w-[18px]" /> : <Volume2 className="h-[18px] w-[18px]" />}
+      </button>
+
         {latestUser && (
           <motion.div
             key={latestUser.id}
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
-            className="absolute left-1/2 top-[70.8%] max-w-[84%] -translate-x-1/2 rounded-[1.1rem] border border-white/80 bg-white/45 px-4 py-2 text-center text-xs font-semibold uppercase tracking-normal text-[rgba(13,35,65,0.58)] backdrop-blur-md"
+            className="guto-latest-user-bubble absolute left-1/2 z-20 max-w-[84%] -translate-x-1/2 rounded-[1.1rem] border border-white/80 bg-white/45 px-4 py-2 text-center text-xs font-semibold uppercase tracking-normal text-[rgba(13,35,65,0.58)] backdrop-blur-md"
           >
             {latestUser.text}
           </motion.div>
         )}
 
-      <div className="absolute left-[8.46%] top-[74.94%] z-10 h-[58px] w-[81.34%]">
+      <div className="guto-chat-input-anchor absolute left-[8.46%] z-30 h-[58px] w-[81.34%]">
         <div className="guto-chat-input h-full rounded-[18px] px-3 py-2">
           <div className="flex h-full items-center gap-3">
             <motion.button

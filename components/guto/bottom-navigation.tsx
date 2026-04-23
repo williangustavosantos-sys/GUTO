@@ -35,10 +35,10 @@ export function BottomNavigation({ activeTab, onTabChange, language }: BottomNav
   const safeLanguage = getSafeLanguage(language)
 
   return (
-    <div className="px-0 pb-[calc(env(safe-area-inset-bottom)+42px)] pt-3">
+    <div className="guto-bottom-navigation px-0 pt-3">
       <nav
         aria-label="Navegação principal"
-        className="mx-auto grid w-[91.54%] max-w-[368px] grid-cols-4 gap-[13px]"
+        className="mx-auto grid w-[91.54%] max-w-[368px] grid-cols-4 gap-[clamp(7px,3vw,13px)]"
       >
         {tabs.map((tab) => {
           const Icon = tab.icon
@@ -52,7 +52,7 @@ export function BottomNavigation({ activeTab, onTabChange, language }: BottomNav
               aria-current={isActive ? "page" : undefined}
               aria-label={tabLabels[safeLanguage][tab.labelKey]}
               className={cn(
-                "guto-action-tile relative grid h-[73px] min-w-0 place-items-center overflow-hidden rounded-[18px] text-[rgba(13,35,65,0.56)]",
+                "guto-action-tile relative grid h-[var(--guto-nav-tile-size)] min-w-0 place-items-center overflow-hidden rounded-[18px] text-[rgba(13,35,65,0.56)]",
                 isActive && "text-[var(--guto-navy)]"
               )}
               whileTap={{ scale: 0.96 }}

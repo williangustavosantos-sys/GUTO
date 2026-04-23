@@ -24,20 +24,7 @@ export interface MissionExercise {
   reps: number
   rest: string
   cue: string
-  xp?: number
-}
-
-export interface MissionAssistMessage {
-  id: string
-  role: "user" | "guto"
-  text: string
-}
-
-export interface MissionAssistState {
-  exerciseId: string | null
-  draft: string
-  isSending: boolean
-  messages: MissionAssistMessage[]
+  note: string
 }
 
 export const pathDaysFixture: PathDay[] = [
@@ -59,46 +46,75 @@ export const evolutionCardsFixture: EvolutionCard[] = [
 
 export const missionExercisesFixture: MissionExercise[] = [
   {
-    id: "incline-press",
-    name: "Supino inclinado com halteres",
-    sets: 4,
-    reps: 10,
-    rest: "1:30min",
-    cue: "Controla a descida e trava a escápula.",
-    xp: 90,
-  },
-  {
     id: "bench-press",
     name: "Supino reto",
     sets: 4,
     reps: 8,
-    rest: "1:45min",
-    cue: "Última repetição com peito, não com ego.",
-    xp: 120,
+    rest: "1:30min",
+    cue: "Barra desce controlada até a linha do peito. Pé firme, escápula travada.",
+    note: "Não deixa o ombro assumir. Peito trabalha, ego fica fora.",
   },
   {
-    id: "rope-pushdown",
-    name: "Tríceps corda",
+    id: "incline-dumbbell-press",
+    name: "Supino inclinado com halteres",
     sets: 4,
+    reps: 10,
+    rest: "1:30min",
+    cue: "Banco inclinado, halteres descem alinhados ao peito alto.",
+    note: "Amplitude limpa. Se perder controle, reduz carga.",
+  },
+  {
+    id: "cable-fly",
+    name: "Crucifixo no cabo",
+    sets: 3,
     reps: 12,
     rest: "1:15min",
-    cue: "Cotovelos presos. Fecha no final.",
-    xp: 65,
+    cue: "Braços semi-flexionados. Fecha o cabo sem bater as mãos.",
+    note: "Sente o peitoral encurtar. Movimento bonito não vale se não contrair.",
   },
   {
-    id: "close-grip",
-    name: "Supino fechado",
+    id: "machine-chest-press",
+    name: "Chest press máquina",
+    sets: 3,
+    reps: 12,
+    rest: "1:30min",
+    cue: "Costas coladas, punho neutro, empurra sem tirar o ombro do lugar.",
+    note: "Aqui é volume controlado. Sem roubar no fim.",
+  },
+  {
+    id: "dips",
+    name: "Paralela assistida",
     sets: 3,
     reps: 10,
     rest: "1:30min",
-    cue: "Fecha com precisão. Sem colapsar o punho.",
-    xp: 105,
+    cue: "Desce até sentir peitoral e tríceps, sobe sem travar agressivo.",
+    note: "Se o ombro reclamar, reduz amplitude. Execução manda.",
+  },
+  {
+    id: "rope-triceps",
+    name: "Tríceps corda",
+    sets: 4,
+    reps: 12,
+    rest: "1:00min",
+    cue: "Cotovelos presos. Abre a corda no final e segura meio segundo.",
+    note: "Não transforma em balanço. Tríceps fecha a missão.",
+  },
+  {
+    id: "overhead-triceps",
+    name: "Tríceps francês no cabo",
+    sets: 3,
+    reps: 12,
+    rest: "1:15min",
+    cue: "Cotovelo aponta para frente. Alongamento controlado atrás da cabeça.",
+    note: "O alongamento importa. Não corta o movimento.",
+  },
+  {
+    id: "close-grip-pushup",
+    name: "Flexão fechada",
+    sets: 3,
+    reps: 15,
+    rest: "1:00min",
+    cue: "Mãos abaixo do peito, corpo rígido, cotovelos próximos.",
+    note: "Finaliza sem teatro. Se falhar, pausa curta e completa.",
   },
 ]
-
-export const initialMissionAssistState: MissionAssistState = {
-  exerciseId: null,
-  draft: "",
-  isSending: false,
-  messages: [],
-}

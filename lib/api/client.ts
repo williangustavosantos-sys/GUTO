@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"
+export const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"
 
 export class ApiError extends Error {
   status?: number
@@ -7,6 +7,12 @@ export class ApiError extends Error {
     this.name = "ApiError"
     this.status = status
   }
+}
+
+export function getApiErrorMessage(error: unknown) {
+  if (error instanceof ApiError) return error.message
+  if (error instanceof Error) return error.message
+  return "Falha de conexão com o servidor."
 }
 
 interface RequestOptions extends RequestInit {

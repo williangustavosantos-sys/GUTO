@@ -61,25 +61,76 @@ export function GutoOfficialAvatar({
   const sources = EVOLUTION_VIDEOS[evolution] ?? EVOLUTION_VIDEOS.BABY
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const videoRef = useRef<HTMLVideoElement | null>(null)
+  const nativeVideoRef = useRef<HTMLVideoElement | null>(null)
   const frameRef = useRef<number | null>(null)
-  const [useNativeAlphaVideo, setUseNativeAlphaVideo] = useState(false)
+  const [canUseAppleAlphaVideo, setCanUseAppleAlphaVideo] = useState(false)
+  const [nativeVideoReady, setNativeVideoReady] = useState(false)
 
   useEffect(() => {
     const probe = document.createElement("video")
     const canPlayHevc =
       probe.canPlayType('video/quicktime; codecs="hvc1"') ||
       probe.canPlayType('video/mp4; codecs="hvc1"')
-    setUseNativeAlphaVideo(Boolean(canPlayHevc))
+    setCanUseAppleAlphaVideo(Boolean(canPlayHevc))
   }, [])
 
   useEffect(() => {
-    if (useNativeAlphaVideo) return
+    setNativeVideoReady(false)
+  }, [evolution])
+
+  useEffect(() => {
+    if (!canUseAppleAlphaVideo) {
+      setNativeVideoReady(false)
+      return
+    }
+
+    const video = nativeVideoRef.current
+    if (!video) return
+
+    let cancelled = false
+
+    const playNativeVideo = async () => {
+      try {
+        video.defaultMuted = true
+        video.muted = true
+        video.controls = false
+        video.playsInline = true
+        video.setAttribute("playsinline", "")
+        video.setAttribute("webkit-playsinline", "")
+        await video.play()
+        if (!cancelled) setNativeVideoReady(true)
+      } catch {
+        if (!cancelled) setNativeVideoReady(false)
+      }
+    }
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        void playNativeVideo()
+      }
+    }
+
+    video.addEventListener("loadeddata", playNativeVideo)
+    video.addEventListener("canplay", playNativeVideo)
+    document.addEventListener("visibilitychange", handleVisibility)
+    void playNativeVideo()
+
+    return () => {
+      cancelled = true
+      video.removeEventListener("loadeddata", playNativeVideo)
+      video.removeEventListener("canplay", playNativeVideo)
+      document.removeEventListener("visibilitychange", handleVisibility)
+    }
+  }, [canUseAppleAlphaVideo, evolution])
+
+  useEffect(() => {
+    if (canUseAppleAlphaVideo && nativeVideoReady) return
 
     const video = videoRef.current
     const canvas = canvasRef.current
     if (!video || !canvas) return
 
-    const ctx = canvas.getContext("2d", { willReadFrequently: true })
+    const ctx = canvas.getContext("2d", { willReadFrequently: !canUseAppleAlphaVideo })
     if (!ctx) return
 
     let cancelled = false
@@ -87,8 +138,11 @@ export function GutoOfficialAvatar({
     const draw = () => {
       if (cancelled || !video.videoWidth || !video.videoHeight) return
 
-      const width = canvas.clientWidth || 360
-      const height = canvas.clientHeight || 360
+      const cssWidth = Math.round(canvas.clientWidth || 360)
+      const cssHeight = Math.round(canvas.clientHeight || 360)
+      const pixelRatio = Math.min(window.devicePixelRatio || 1, canUseAppleAlphaVideo ? 2 : 1.5)
+      const width = Math.max(1, Math.round(cssWidth * pixelRatio))
+      const height = Math.max(1, Math.round(cssHeight * pixelRatio))
       if (canvas.width !== width || canvas.height !== height) {
         canvas.width = width
         canvas.height = height
@@ -103,7 +157,9 @@ export function GutoOfficialAvatar({
       const offsetY = (height - drawHeight) / 2
 
       ctx.drawImage(video, offsetX, offsetY, drawWidth, drawHeight)
-      stripVideoMatte(ctx, width, height)
+      if (!canUseAppleAlphaVideo) {
+        stripVideoMatte(ctx, width, height)
+      }
 
       frameRef.current = window.requestAnimationFrame(draw)
     }
@@ -112,6 +168,10 @@ export function GutoOfficialAvatar({
       try {
         video.defaultMuted = true
         video.muted = true
+        video.playsInline = true
+        video.controls = false
+        video.setAttribute("playsinline", "")
+        video.setAttribute("webkit-playsinline", "")
         await video.play()
         draw()
       } catch {
@@ -129,18 +189,20 @@ export function GutoOfficialAvatar({
 
     video.addEventListener("loadeddata", handleReady)
     video.addEventListener("canplay", handleReady)
+    document.addEventListener("visibilitychange", handleReady)
     handleReady()
 
     return () => {
       cancelled = true
       video.removeEventListener("loadeddata", handleReady)
       video.removeEventListener("canplay", handleReady)
+      document.removeEventListener("visibilitychange", handleReady)
       if (frameRef.current) {
         window.cancelAnimationFrame(frameRef.current)
         frameRef.current = null
       }
     }
-  }, [evolution, useNativeAlphaVideo])
+  }, [canUseAppleAlphaVideo, evolution, nativeVideoReady])
 
   return (
     <div className={cn("relative flex flex-col items-center justify-center", className)}>
@@ -150,8 +212,9 @@ export function GutoOfficialAvatar({
           sizeClasses[size]
         )}
       >
-        {useNativeAlphaVideo ? (
+        {canUseAppleAlphaVideo && (
           <video
+            ref={nativeVideoRef}
             key={`${evolution}-native-alpha`}
             autoPlay
             loop
@@ -159,37 +222,43 @@ export function GutoOfficialAvatar({
             playsInline
             disablePictureInPicture
             preload="auto"
-            className="guto-official-avatar-video pointer-events-none relative z-10 h-full w-full object-contain"
+            className={cn(
+              "guto-official-avatar-video pointer-events-none absolute inset-0 z-20 h-full w-full object-contain transition-opacity duration-150",
+              nativeVideoReady ? "opacity-100" : "opacity-0"
+            )}
           >
             <source src={`/assets/guto/${sources.alphaApple}`} type='video/quicktime; codecs="hvc1"' />
           </video>
-        ) : (
-          <>
-            <canvas
-              ref={canvasRef}
-              className="guto-official-avatar-canvas relative z-10 h-full w-full object-contain"
-            />
-
-            <video
-              ref={videoRef}
-              key={evolution}
-              autoPlay
-              loop
-              muted
-              playsInline
-              disablePictureInPicture
-              preload="auto"
-              className="pointer-events-none absolute h-0 w-0 opacity-0"
-              style={{
-                backgroundColor: "transparent",
-                mixBlendMode: "plus-lighter",
-              }}
-            >
-              <source src={`/assets/guto/${sources.fallback}`} type='video/webm; codecs="vp8, vorbis"' />
-              <source src={`/assets/guto/${sources.apple}`} type='video/quicktime; codecs="hvc1"' />
-            </video>
-          </>
         )}
+
+        <canvas
+          ref={canvasRef}
+          className={cn(
+            "guto-official-avatar-canvas relative z-10 h-full w-full object-contain transition-opacity duration-150",
+            canUseAppleAlphaVideo && nativeVideoReady ? "opacity-0" : "opacity-100"
+          )}
+        />
+
+        <video
+          ref={videoRef}
+          key={`${evolution}-${canUseAppleAlphaVideo ? "apple-alpha" : "matte-fallback"}`}
+          autoPlay
+          loop
+          muted
+          playsInline
+          disablePictureInPicture
+          preload="auto"
+          className="pointer-events-none absolute inset-0 h-full w-full opacity-0"
+          style={{
+            backgroundColor: "transparent",
+          }}
+        >
+          {canUseAppleAlphaVideo && (
+            <source src={`/assets/guto/${sources.alphaApple}`} type='video/quicktime; codecs="hvc1"' />
+          )}
+          <source src={`/assets/guto/${sources.fallback}`} type='video/webm; codecs="vp8, vorbis"' />
+          <source src={`/assets/guto/${sources.apple}`} type='video/quicktime; codecs="hvc1"' />
+        </video>
       </div>
 
       {showPlatform && (

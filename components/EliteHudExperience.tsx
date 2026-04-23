@@ -1,12 +1,14 @@
 import React, { useMemo, useState } from 'react';
 import '../styles/eliteHud.css';
 
-const stages = [
+import { GutoOfficialAvatar } from './guto/guto-official-avatar';
+import type { EvolutionStage } from '@/types/contract';
 
-  { id: 'baby', label: 'Baby', apple: 'GUTO_BABY_2_APPLE.mov', default: 'GUTO BABY 2.webm' },
-  { id: 'teen', label: 'Teen', apple: 'GUTO_TEEN_2_APPLE.mov', default: 'GUTO TEEN 2.webm' },
-  { id: 'adult', label: 'Adult', apple: 'GUTO_ADULT_2_APPLE.mov', default: 'GUTO ADULT 2.webm' },
-  { id: 'elit', label: 'Elit', apple: 'GUTO_ELIT_2_APPLE.mov', default: 'GUTO ELIT 2.webm' },
+const stages = [
+  { id: 'baby', label: 'Baby', evolution: 'BABY' },
+  { id: 'teen', label: 'Teen', evolution: 'TEEN' },
+  { id: 'adult', label: 'Adult', evolution: 'ADULT' },
+  { id: 'elit', label: 'Elit', evolution: 'ELIT' },
 ] as const;
 
 const rotatingPanels = ['Caminho', 'Evolução', 'Missões', 'Chat'] as const;
@@ -50,6 +52,7 @@ const EliteHudExperience: React.FC = () => {
   const [isCharging, setIsCharging] = useState(false);
 
   const currentStage = useMemo(() => stages.find((s) => s.id === stage) ?? stages[0], [stage]);
+  const currentEvolution = currentStage.evolution as EvolutionStage;
 
   const techMessage = useTechTypewriter(
     isCharging
@@ -73,22 +76,13 @@ const EliteHudExperience: React.FC = () => {
         <div className="glass-ring top" />
         <div className="glass-ring bottom" />
 
-        <video
+        <GutoOfficialAvatar
           key={currentStage.id}
-          className="guto-video mix-blend-screen"
-          autoPlay
-          loop
-          muted
-          playsInline
-          preload="metadata"
-          aria-label={`Evolução ${currentStage.label}`}
-        >
-          {/* SOURCE 1: Obrigatório para o Safari/iOS ler o fundo transparente */}
-          <source src={`/assets/guto/${currentStage.apple}`} type='video/quicktime; codecs="hvc1"' />
-          
-          {/* SOURCE 2: Fallback para Chrome/Android */}
-          <source src={`/assets/guto/${currentStage.default}`} type="video/webm" />
-        </video>
+          className="guto-video"
+          size="xl"
+          showPlatform={false}
+          evolution={currentEvolution}
+        />
 
         <div className="hud-overlay">
           <span className="hud-chip">FPS target: 60</span>
