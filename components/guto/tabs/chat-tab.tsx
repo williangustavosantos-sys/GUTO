@@ -6,7 +6,7 @@ import { motion } from "framer-motion"
 import { Loader2, Mic, Send, Volume2, VolumeX } from "lucide-react"
 
 import { API_URL, getApiErrorMessage } from "@/lib/api/client"
-import { getGutoProactive, sendGutoMessage } from "@/lib/api/guto"
+import { getGutoProactive, sendGutoMessage, trackGutoEvent } from "@/lib/api/guto"
 import type { GutoAvatarEmotion, GutoExpectedResponse, GutoWorkoutPlan } from "@/lib/api/guto"
 import type { EvolutionStage, SupportedLanguage } from "@/types/contract"
 
@@ -53,6 +53,7 @@ const openingMessage: Record<SupportedLanguage, (name: string) => string> = {
 }
 
 const PROACTIVE_CHECK_INTERVAL_MS = 60_000
+const FIRST_MESSAGE_SENT_KEY_PREFIX = "guto-first-message-sent"
 
 function formatDisplayName(value: string) {
   return value.replace(/\s+/g, " ").trim().toLocaleUpperCase()
@@ -60,6 +61,19 @@ function formatDisplayName(value: string) {
 
 function normalizeAvatarEmotion(value?: string): GutoAvatarEmotion {
   return value === "alert" || value === "critical" || value === "reward" ? value : "default"
+}
+
+function shouldTrackFirstMessage(userId: string) {
+  if (typeof window === "undefined") return false
+
+  try {
+    const key = `${FIRST_MESSAGE_SENT_KEY_PREFIX}:${userId}`
+    if (window.localStorage.getItem(key)) return false
+    window.localStorage.setItem(key, new Date().toISOString())
+    return true
+  } catch {
+    return false
+  }
 }
 
 export function ChatTab({
@@ -283,6 +297,17 @@ export function ChatTab({
     }
 
     try {
+      if (shouldTrackFirstMessage(userId)) {
+        void trackGutoEvent({
+          event: "first_message_sent",
+          userId,
+          language: getLanguage(language) as SupportedLanguage,
+          metadata: { inputType: "audio" },
+        }).catch((error) => {
+          console.warn(`Evento do GUTO não registrado: ${getApiErrorMessage(error)}`)
+        })
+      }
+
       const response = await fetch(`${API_URL}/guto-audio`, { method: "POST", body: formData })
       const data = await response.json()
       const transcript = typeof data.transcript === "string" ? data.transcript.trim() : ""
@@ -368,6 +393,17 @@ export function ChatTab({
     setMessages((prev) => [...prev, userMessage])
     setInput("")
     setIsSending(true)
+
+    if (shouldTrackFirstMessage(userId)) {
+      void trackGutoEvent({
+        event: "first_message_sent",
+        userId,
+        language: safeLanguage,
+        metadata: { inputType: "text" },
+      }).catch((error) => {
+        console.warn(`Evento do GUTO não registrado: ${getApiErrorMessage(error)}`)
+      })
+    }
 
     try {
       const lastVisibleGuto = [...messagesRef.current].reverse().find((message) => message.isGuto)

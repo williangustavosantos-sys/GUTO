@@ -2,6 +2,12 @@ import { apiRequest } from "./client"
 
 export type SupportedLanguage = "pt-BR" | "it-IT" | "es-ES" | "en-US"
 export type GutoAvatarEmotion = "default" | "alert" | "critical" | "reward"
+export type GutoTelemetryEvent =
+  | "user_created"
+  | "pact_completed"
+  | "first_message_sent"
+  | "mission_completed"
+  | "user_returned_next_day"
 
 export interface GutoWorkoutExercise {
   id: string
@@ -104,6 +110,22 @@ export async function sendGutoMessage(payload: SendGutoMessageRequest) {
   return apiRequest<SendGutoMessageResponse>("/guto", {
     method: "POST",
     body: JSON.stringify(payload),
+  })
+}
+
+export async function trackGutoEvent(payload: {
+  event: GutoTelemetryEvent
+  userId?: string
+  language?: SupportedLanguage
+  metadata?: Record<string, unknown>
+}) {
+  return apiRequest<{ ok: true }>("/guto/events", {
+    method: "POST",
+    timeoutMs: 5000,
+    body: JSON.stringify({
+      ...payload,
+      timestamp: new Date().toISOString(),
+    }),
   })
 }
 

@@ -14,8 +14,8 @@ import { MissionTab } from "./tabs/mission-tab"
 import { PathTab } from "./tabs/path-tab"
 import type { MissionExercise } from "./view-models"
 import { getApiErrorMessage } from "@/lib/api/client"
-import { getGutoMemory, saveGutoMemory, validateGutoName, type GutoMemory, type GutoNameValidation, type GutoWorkoutPlan } from "@/lib/api/guto"
-import { getOrCreateGutoUserId } from "@/lib/guto/user-id"
+import { getGutoMemory, saveGutoMemory, trackGutoEvent, validateGutoName, type GutoMemory, type GutoNameValidation, type GutoTelemetryEvent, type GutoWorkoutPlan } from "@/lib/api/guto"
+import { getOrCreateGutoVisitTelemetry } from "@/lib/guto/user-id"
 import type { EvolutionStage, SupportedLanguage } from "@/types/contract"
 
 type AppStage = "intro" | "language" | "naming" | "pact" | "system" | "settings"
@@ -327,6 +327,20 @@ export function GutoApp({
     [gutoUserId, selectedLanguage]
   )
 
+  const trackBehaviorEvent = useCallback(
+    (event: GutoTelemetryEvent, metadata?: Record<string, unknown>) => {
+      void trackGutoEvent({
+        event,
+        userId: gutoUserId,
+        language: selectedLanguage,
+        metadata,
+      }).catch((error) => {
+        console.warn(`Evento do GUTO não registrado: ${getApiErrorMessage(error)}`)
+      })
+    },
+    [gutoUserId, selectedLanguage]
+  )
+
   useEffect(() => {
     const shell = shellRef.current
     if (!shell || typeof window === "undefined") return
@@ -381,7 +395,6 @@ export function GutoApp({
       const shouldReset =
         search.get("guto-reset") === "1" || readStorageItem(DEBUG_RESET_KEY) === "1"
       const shouldSkipIntro = skipIntro || search.get("skip-intro") === "1"
-      setGutoUserId(getOrCreateGutoUserId())
 
       if (shouldReset) {
         removeStorageItem(STORAGE_KEY)
@@ -389,6 +402,26 @@ export function GutoApp({
       }
 
       const safeLanguage = isSupportedLanguage(language) ? language : "pt-BR"
+      const visit = getOrCreateGutoVisitTelemetry()
+      setGutoUserId(visit.userId)
+      if (visit.isNewUser) {
+        void trackGutoEvent({
+          event: "user_created",
+          userId: visit.userId,
+          language: safeLanguage,
+        }).catch((error) => {
+          console.warn(`Evento do GUTO não registrado: ${getApiErrorMessage(error)}`)
+        })
+      }
+      if (visit.returnedNextDay) {
+        void trackGutoEvent({
+          event: "user_returned_next_day",
+          userId: visit.userId,
+          language: safeLanguage,
+        }).catch((error) => {
+          console.warn(`Evento do GUTO não registrado: ${getApiErrorMessage(error)}`)
+        })
+      }
       const storedRaw = readStorageItem(STORAGE_KEY)
 
       if (storedRaw) {
@@ -437,6 +470,7 @@ export function GutoApp({
         language: finalLanguage,
         trainedToday: false,
       })
+      trackBehaviorEvent("pact_completed", { finalLanguage })
       setPactProgress(100)
       setIsHoldingPact(false)
       setWhiteout(true)
@@ -448,7 +482,7 @@ export function GutoApp({
         setPactProgress(0)
       }, 860)
     },
-    [effectRegistry, persistMemory, persistProfile, schedule]
+    [effectRegistry, persistMemory, persistProfile, schedule, trackBehaviorEvent]
   )
 
   const handleIntroComplete = useCallback(() => {
@@ -728,8 +762,9 @@ export function GutoApp({
     })
     setMemory(updated)
     setEvolution(resolveEvolutionStage(updated.totalXp || 0))
+    trackBehaviorEvent("mission_completed", { missionType: "daily" })
     setActiveTab("caminho")
-  }, [gutoUserId, selectedLanguage])
+  }, [gutoUserId, selectedLanguage, trackBehaviorEvent])
 
   const handleAdaptedMissionComplete = useCallback(async () => {
     const updated = await saveGutoMemory({
@@ -739,8 +774,9 @@ export function GutoApp({
     })
     setMemory(updated)
     setEvolution(resolveEvolutionStage(updated.totalXp || 0))
+    trackBehaviorEvent("mission_completed", { missionType: "adapted" })
     setActiveTab("caminho")
-  }, [gutoUserId, selectedLanguage])
+  }, [gutoUserId, selectedLanguage, trackBehaviorEvent])
 
   const userLabel = committedName || formatGutoName(userName || "Operador")
   const locale = stageCopy[selectedLanguage]
