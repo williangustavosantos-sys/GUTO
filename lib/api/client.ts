@@ -1,4 +1,6 @@
-const RAW_API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"
+const RAW_API_URL =
+  process.env.NEXT_PUBLIC_API_URL ||
+  (process.env.NODE_ENV === "production" ? "" : "http://localhost:3001")
 
 export const API_URL = RAW_API_URL.replace(/\/+$/, "")
 
@@ -25,6 +27,10 @@ export async function apiRequest<T>(
   path: string,
   { timeoutMs = 15000, ...init }: RequestOptions = {}
 ): Promise<T> {
+  if (!API_URL) {
+    throw new ApiError("NEXT_PUBLIC_API_URL ausente. Configure a URL pública do Cérebro do GUTO.")
+  }
+
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), timeoutMs)
 

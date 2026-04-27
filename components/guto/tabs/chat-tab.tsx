@@ -20,6 +20,7 @@ interface PendingExerciseQuestion {
 }
 
 interface ChatTabProps {
+  userId: string
   userName: string
   language: string
   evolution?: EvolutionStage
@@ -51,7 +52,6 @@ const openingMessage: Record<SupportedLanguage, (name: string) => string> = {
   "it-IT": (name) => `${name}, finalmente. Ti stavo aspettando. Intanto ho gia lasciato aperte tre strade: palestra, casa o parco. Quale ti conviene di piu oggi?`,
 }
 
-const GUTO_USER_ID = "local-user"
 const PROACTIVE_CHECK_INTERVAL_MS = 60_000
 
 function formatDisplayName(value: string) {
@@ -63,6 +63,7 @@ function normalizeAvatarEmotion(value?: string): GutoAvatarEmotion {
 }
 
 export function ChatTab({
+  userId,
   userName,
   language,
   evolution = "BABY",
@@ -204,7 +205,7 @@ export function ChatTab({
 
     try {
       const data = await getGutoProactive({
-        userId: GUTO_USER_ID,
+        userId,
         language: safeLanguage,
         force: forceArrivalBriefing,
       })
@@ -249,7 +250,7 @@ export function ChatTab({
     } finally {
       proactiveInFlightRef.current = false
     }
-  }, [isMuted, isSending, language, synthesizeAndPlay])
+  }, [isMuted, isSending, language, synthesizeAndPlay, userId])
 
   useEffect(() => {
     void checkProactiveMessage(true)
@@ -265,25 +266,52 @@ export function ChatTab({
     const formData = new FormData()
     formData.append("audio", blob)
     formData.append("language", language)
+    formData.append("profile", JSON.stringify({ name: userName || "Usuário", userId }))
+    formData.append("history", JSON.stringify(messagesRef.current.map((message) => ({
+      role: message.isGuto ? "model" : "user",
+      parts: [{ text: message.text }],
+    }))))
+
+    const lastVisibleGuto = [...messagesRef.current].reverse().find((message) => message.isGuto)
+    const expectedResponse =
+      lastVisibleGuto?.id &&
+      pendingExpectedResponseMessageIdRef.current === lastVisibleGuto.id
+        ? pendingExpectedResponseRef.current
+        : null
+    if (expectedResponse) {
+      formData.append("expectedResponse", JSON.stringify(expectedResponse))
+    }
 
     try {
       const response = await fetch(`${API_URL}/guto-audio`, { method: "POST", body: formData })
       const data = await response.json()
+      const transcript = typeof data.transcript === "string" ? data.transcript.trim() : ""
+      const nextMessages: Message[] = []
+      if (transcript) {
+        nextMessages.push({
+          id: `u-audio-${Date.now()}`,
+          text: transcript,
+          isGuto: false,
+          timestamp: new Date(),
+        })
+      }
 
+      const messageId = `g-audio-${Date.now()}`
       const gutoMessage: Message = {
-        id: `g-audio-${Date.now()}`,
+        id: messageId,
         text: data.fala || "Executado.",
         isGuto: true,
         timestamp: new Date(),
         avatarEmotion: normalizeAvatarEmotion(data.avatarEmotion),
       }
 
-      setMessages((prev) => [...prev, gutoMessage])
+      pendingExpectedResponseRef.current = data?.expectedResponse || null
+      pendingExpectedResponseMessageIdRef.current = data?.expectedResponse ? messageId : null
+
+      setMessages((prev) => [...prev, ...nextMessages, gutoMessage])
       if (data.acao === "updateWorkout" && data.workoutPlan) {
         onWorkoutPlanUpdated?.(data.workoutPlan)
       }
-      pendingExpectedResponseRef.current = null
-      pendingExpectedResponseMessageIdRef.current = null
 
       if (!isMuted && data.audioContent) {
         await playBase64Mp3(data.audioContent)
@@ -298,13 +326,19 @@ export function ChatTab({
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      const recorder = new MediaRecorder(stream)
+      const preferredMimeType = [
+        "audio/webm;codecs=opus",
+        "audio/webm",
+        "audio/mp4",
+        "audio/aac",
+      ].find((type) => MediaRecorder.isTypeSupported(type))
+      const recorder = new MediaRecorder(stream, preferredMimeType ? { mimeType: preferredMimeType } : undefined)
       mediaRecorderRef.current = recorder
       audioChunksRef.current = []
 
       recorder.ondataavailable = (event) => audioChunksRef.current.push(event.data)
       recorder.onstop = async () => {
-        const blob = new Blob(audioChunksRef.current, { type: "audio/webm" })
+        const blob = new Blob(audioChunksRef.current, { type: recorder.mimeType || preferredMimeType || "audio/webm" })
         await sendAudio(blob)
         stream.getTracks().forEach((track) => track.stop())
       }
@@ -344,7 +378,7 @@ export function ChatTab({
           : null
 
       const data = await sendGutoMessage({
-        profile: { name: userName || "Usuário", userId: GUTO_USER_ID },
+        profile: { name: userName || "Usuário", userId },
         input: modelInput,
         language: safeLanguage,
         history: messagesRef.current.map((message) => ({
@@ -391,7 +425,7 @@ export function ChatTab({
     } finally {
       setIsSending(false)
     }
-  }, [isMuted, language, onWorkoutPlanUpdated, synthesizeAndPlay, userName])
+  }, [isMuted, language, onWorkoutPlanUpdated, synthesizeAndPlay, userId, userName])
 
   useEffect(() => {
     if (!pendingExerciseQuestion || isSending) return

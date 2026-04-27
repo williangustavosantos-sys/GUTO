@@ -15,6 +15,7 @@ import { PathTab } from "./tabs/path-tab"
 import type { MissionExercise } from "./view-models"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { getGutoMemory, saveGutoMemory, validateGutoName, type GutoMemory, type GutoNameValidation, type GutoWorkoutPlan } from "@/lib/api/guto"
+import { getOrCreateGutoUserId } from "@/lib/guto/user-id"
 import type { EvolutionStage, SupportedLanguage } from "@/types/contract"
 
 type AppStage = "intro" | "language" | "naming" | "pact" | "system" | "settings"
@@ -40,7 +41,6 @@ interface NameGate {
 
 const STORAGE_KEY = "guto-white-lab-profile"
 const DEBUG_RESET_KEY = "guto-debug-reset"
-const GUTO_USER_ID = "local-user"
 const HOLD_INTERVAL_MS = 16
 const HOLD_INCREMENT = (HOLD_INTERVAL_MS / 1600) * 100
 
@@ -252,6 +252,7 @@ export function GutoApp({
     useState<PendingExerciseQuestion | null>(null)
   const [workoutPlan, setWorkoutPlan] = useState<GutoWorkoutPlan | null>(null)
   const [memory, setMemory] = useState<GutoMemory | null>(null)
+  const [gutoUserId, setGutoUserId] = useState("local-user")
   const [nameGate, setNameGate] = useState<NameGate | null>(null)
   const [isValidatingName, setIsValidatingName] = useState(false)
 
@@ -316,14 +317,14 @@ export function GutoApp({
   const persistMemory = useCallback(
     (payload: Parameters<typeof saveGutoMemory>[0]) => {
       void saveGutoMemory({
-        userId: GUTO_USER_ID,
+        userId: gutoUserId,
         language: selectedLanguage,
         ...payload,
       }).catch((error) => {
         console.warn(`Memória do GUTO não sincronizada: ${getApiErrorMessage(error)}`)
       })
     },
-    [selectedLanguage]
+    [gutoUserId, selectedLanguage]
   )
 
   useEffect(() => {
@@ -380,6 +381,7 @@ export function GutoApp({
       const shouldReset =
         search.get("guto-reset") === "1" || readStorageItem(DEBUG_RESET_KEY) === "1"
       const shouldSkipIntro = skipIntro || search.get("skip-intro") === "1"
+      setGutoUserId(getOrCreateGutoUserId())
 
       if (shouldReset) {
         removeStorageItem(STORAGE_KEY)
@@ -687,7 +689,7 @@ export function GutoApp({
   useEffect(() => {
     let cancelled = false
 
-    void getGutoMemory(GUTO_USER_ID)
+    void getGutoMemory(gutoUserId)
       .then((memory) => {
         if (cancelled) return
         setMemory(memory)
@@ -701,7 +703,7 @@ export function GutoApp({
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [gutoUserId])
 
   const stopHold = useCallback(() => {
     if (stage !== "pact" || pactProgress >= 100 || pactCompleteRef.current) return
@@ -720,25 +722,25 @@ export function GutoApp({
 
   const handleMissionComplete = useCallback(async () => {
     const updated = await saveGutoMemory({
-      userId: GUTO_USER_ID,
+      userId: gutoUserId,
       language: selectedLanguage,
       xpEvent: "complete_daily_mission",
     })
     setMemory(updated)
     setEvolution(resolveEvolutionStage(updated.totalXp || 0))
     setActiveTab("caminho")
-  }, [selectedLanguage])
+  }, [gutoUserId, selectedLanguage])
 
   const handleAdaptedMissionComplete = useCallback(async () => {
     const updated = await saveGutoMemory({
-      userId: GUTO_USER_ID,
+      userId: gutoUserId,
       language: selectedLanguage,
       xpEvent: "accept_adapted_mission",
     })
     setMemory(updated)
     setEvolution(resolveEvolutionStage(updated.totalXp || 0))
     setActiveTab("caminho")
-  }, [selectedLanguage])
+  }, [gutoUserId, selectedLanguage])
 
   const userLabel = committedName || formatGutoName(userName || "Operador")
   const locale = stageCopy[selectedLanguage]
@@ -753,6 +755,7 @@ export function GutoApp({
       case "guto":
         return (
           <ChatTab
+            userId={gutoUserId}
             userName={userLabel}
             language={selectedLanguage}
             evolution={evolution}
@@ -796,6 +799,7 @@ export function GutoApp({
       default:
         return (
           <ChatTab
+            userId={gutoUserId}
             userName={userLabel}
             language={selectedLanguage}
             evolution={evolution}
@@ -806,7 +810,7 @@ export function GutoApp({
           />
         )
     }
-  }, [activeTab, evolution, handleAdaptedMissionComplete, handleExerciseQuestion, handleMissionComplete, isGutoDepleted, memory, pendingExerciseQuestion, selectedLanguage, userLabel, workoutPlan])
+  }, [activeTab, evolution, gutoUserId, handleAdaptedMissionComplete, handleExerciseQuestion, handleMissionComplete, isGutoDepleted, memory, pendingExerciseQuestion, selectedLanguage, userLabel, workoutPlan])
 
   if (!isHydrated) {
     return (
