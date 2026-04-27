@@ -1,0 +1,6 @@
+[submodule "guto-app-v0"]
+	path = guto-app-v0
+	url = https://github.com/williangustavosantos-sys/CORPOGUTO.git
+[submodule "guto-backend"]
+	path = guto-backend
+	url = https://github.com/williangustavosantos-sys/CEREBROGUTO.git
