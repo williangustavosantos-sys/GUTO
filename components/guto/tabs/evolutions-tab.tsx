@@ -7,16 +7,21 @@ import { GutoOfficialAvatar } from "../guto-official-avatar"
 import { getLanguage, translations } from "../translations"
 import { evolutionCardsFixture } from "../view-models"
 import type { EvolutionStage } from "@/types/contract"
+import type { GutoMemory } from "@/lib/api/guto"
 
 interface EvolutionsTabProps {
   userName: string
   language: string
   currentEvolution: EvolutionStage
+  memory?: GutoMemory | null
 }
 
-const currentXp = 1250
-const nextTargetXp = 3000
-const progress = (currentXp / nextTargetXp) * 100
+function getNextTargetXp(currentXp: number) {
+  if (currentXp < 1500) return 1500
+  if (currentXp < 3000) return 3000
+  if (currentXp < 5000) return 5000
+  return currentXp
+}
 
 const evolutionCopy = {
   "pt-BR": { desire: "Desejo em camadas", active: "Ativo", released: "Forma liberada. Nitidez total no presente.", blocked: "Bloqueado até" },
@@ -25,21 +30,21 @@ const evolutionCopy = {
   "it-IT": { desire: "Desiderio a strati", active: "Attivo", released: "Forma sbloccata. Nitidezza totale nel presente.", blocked: "Bloccato fino a" },
 } as const
 
-export function EvolutionsTab({ language, currentEvolution }: EvolutionsTabProps) {
+export function EvolutionsTab({ language, currentEvolution, memory }: EvolutionsTabProps) {
   const validLang = getLanguage(language)
   const locale = translations[validLang]
   const copy = evolutionCopy[validLang]
+  const currentXp = memory?.totalXp ?? 0
+  const nextTargetXp = getNextTargetXp(currentXp)
+  const progress = nextTargetXp > 0 ? Math.min(100, (currentXp / nextTargetXp) * 100) : 100
 
   return (
     <div className="flex h-full flex-col pb-4">
-      <div className="px-1 pb-5">
-        <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-[rgba(13,35,65,0.42)]">
-          {copy.desire}
-        </p>
-        <h1 className="mt-2 text-[1.85rem] font-black tracking-[0.12em] text-[var(--guto-navy)]">
+      <div className="px-1 pb-5 text-center">
+        <h1 className="mx-auto max-w-[19rem] text-balance text-[1.85rem] font-black leading-tight tracking-[0.12em] text-[var(--guto-navy)]">
           {locale.evoTitle}
         </h1>
-        <p className="mt-1 max-w-[16rem] text-sm text-[rgba(13,35,65,0.58)]">{locale.evoSubtitle}</p>
+        <p className="mx-auto mt-1 max-w-[16rem] text-sm text-[rgba(13,35,65,0.58)]">{locale.evoSubtitle}</p>
       </div>
 
       <div className="flex-1 space-y-3 overflow-y-auto pr-1">

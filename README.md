@@ -6,7 +6,7 @@ backend Express concentra as chamadas de IA, voz e transcricao.
 ## Estrutura
 
 - `guto-app-v0`: app Next.js.
-- `guto-backend`: API Express em `http://localhost:3001`.
+- `guto-backend`: API Express em `https://81x7l2cj-3001.euw.devtunnels.ms/`.
 
 ## Rodar Localmente
 
@@ -19,7 +19,7 @@ backend Express concentra as chamadas de IA, voz e transcricao.
    `VOICE_API_KEY=...`
    `OPENAI_API_KEY=...`
 4. Opcionalmente configure `guto-app-v0/.env.local`:
-   `NEXT_PUBLIC_API_URL=http://localhost:3001`
+   `NEXT_PUBLIC_API_URL=https://81x7l2cj-3001.euw.devtunnels.ms/`
 5. Rode o backend:
    `cd guto-backend && npm run dev`
 6. Rode o app:

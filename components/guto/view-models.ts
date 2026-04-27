@@ -1,6 +1,6 @@
 import type { EvolutionStage } from "@/types/contract"
 
-export type PathDayStatus = "completed" | "current" | "missed" | "locked"
+export type PathDayStatus = "completed" | "adapted" | "current" | "missed" | "locked"
 
 export interface PathDay {
   day: string
@@ -21,7 +21,7 @@ export interface MissionExercise {
   id: string
   name: string
   sets: number
-  reps: number
+  reps: number | string
   rest: string
   cue: string
   note: string
@@ -39,9 +39,9 @@ export const pathDaysFixture: PathDay[] = [
 
 export const evolutionCardsFixture: EvolutionCard[] = [
   { stage: "BABY", label: "BABY", requiredXp: 0, unlocked: true, silhouette: "soft" },
-  { stage: "TEEN", label: "TEEN", requiredXp: 3000, unlocked: false, silhouette: "blocked" },
-  { stage: "ADULT", label: "ADULT", requiredXp: 10000, unlocked: false, silhouette: "blocked" },
-  { stage: "ELIT", label: "ELIT", requiredXp: 25000, unlocked: false, silhouette: "blocked" },
+  { stage: "TEEN", label: "TEEN", requiredXp: 1500, unlocked: false, silhouette: "blocked" },
+  { stage: "ADULT", label: "ADULT", requiredXp: 3000, unlocked: false, silhouette: "blocked" },
+  { stage: "ELIT", label: "ELIT", requiredXp: 5000, unlocked: false, silhouette: "blocked" },
 ]
 
 export const missionExercisesFixture: MissionExercise[] = [

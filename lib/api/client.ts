@@ -1,4 +1,7 @@
-export const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"
+const RAW_API_URL =
+  process.env.NEXT_PUBLIC_API_URL || "https://81x7l2cj-3001.euw.devtunnels.ms/"
+
+export const API_URL = RAW_API_URL.replace(/\/+$/, "")
 
 export class ApiError extends Error {
   status?: number

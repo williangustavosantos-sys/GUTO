@@ -7,7 +7,7 @@ import { Loader2, Mic, Send, Volume2, VolumeX } from "lucide-react"
 
 import { API_URL, getApiErrorMessage } from "@/lib/api/client"
 import { getGutoProactive, sendGutoMessage } from "@/lib/api/guto"
-import type { GutoExpectedResponse } from "@/lib/api/guto"
+import type { GutoAvatarEmotion, GutoExpectedResponse, GutoWorkoutPlan } from "@/lib/api/guto"
 import type { EvolutionStage, SupportedLanguage } from "@/types/contract"
 
 import { GutoOfficialAvatar } from "../guto-official-avatar"
@@ -25,6 +25,8 @@ interface ChatTabProps {
   evolution?: EvolutionStage
   pendingExerciseQuestion?: PendingExerciseQuestion | null
   onExerciseQuestionHandled?: () => void
+  onWorkoutPlanUpdated?: (plan: GutoWorkoutPlan | null) => void
+  isDepleted?: boolean
 }
 
 interface Message {
@@ -32,6 +34,7 @@ interface Message {
   text: string
   isGuto: boolean
   timestamp: Date
+  avatarEmotion?: GutoAvatarEmotion
 }
 
 const chatCopy: Record<SupportedLanguage, { channel: string; speaking: string }> = {
@@ -42,10 +45,10 @@ const chatCopy: Record<SupportedLanguage, { channel: string; speaking: string }>
 }
 
 const openingMessage: Record<SupportedLanguage, (name: string) => string> = {
-  "pt-BR": (name) => `Oi ${name}, finalmente chegou. Estava te esperando!`,
-  "en-US": (name) => `Hi ${name}, you finally made it. I was waiting for you!`,
-  "es-ES": (name) => `Hola ${name}, por fin llegaste. Te estaba esperando!`,
-  "it-IT": (name) => `Ciao ${name}, finalmente sei arrivato. Ti stavo aspettando!`,
+  "pt-BR": (name) => `${name}, finalmente. Tava te esperando. Enquanto isso eu já deixei três rotas prontas: academia, casa ou parque. Qual faz mais sentido pra você hoje?`,
+  "en-US": (name) => `${name}, finally. I was waiting for you. While I waited, I left three routes open: gym, home, or park. Which one fits you best today?`,
+  "es-ES": (name) => `${name}, por fin. Te estaba esperando. Mientras tanto dejé tres rutas abiertas: gimnasio, casa o parque. Cual te conviene mas hoy?`,
+  "it-IT": (name) => `${name}, finalmente. Ti stavo aspettando. Intanto ho gia lasciato aperte tre strade: palestra, casa o parco. Quale ti conviene di piu oggi?`,
 }
 
 const GUTO_USER_ID = "local-user"
@@ -55,12 +58,18 @@ function formatDisplayName(value: string) {
   return value.replace(/\s+/g, " ").trim().toLocaleUpperCase()
 }
 
+function normalizeAvatarEmotion(value?: string): GutoAvatarEmotion {
+  return value === "alert" || value === "critical" || value === "reward" ? value : "default"
+}
+
 export function ChatTab({
   userName,
   language,
   evolution = "BABY",
   pendingExerciseQuestion,
   onExerciseQuestionHandled,
+  onWorkoutPlanUpdated,
+  isDepleted = false,
 }: ChatTabProps) {
   const validLang = getLanguage(language)
   const locale = translations[validLang]
@@ -74,6 +83,7 @@ export function ChatTab({
       text: initialGutoMessage,
       isGuto: true,
       timestamp: new Date(),
+      avatarEmotion: "default" as GutoAvatarEmotion,
     },
   ])
   const [input, setInput] = useState("")
@@ -92,6 +102,7 @@ export function ChatTab({
   const lastProactiveKeyRef = useRef<string | null>(null)
   const arrivalBriefingRequestedRef = useRef(false)
   const pendingExpectedResponseRef = useRef<GutoExpectedResponse | null>(null)
+  const pendingExpectedResponseMessageIdRef = useRef<string | null>(null)
 
   useEffect(() => {
     messagesRef.current = messages
@@ -101,10 +112,14 @@ export function ChatTab({
     setMessages((current) => {
       if (current.length !== 1 || current[0]?.id !== "guto-initial") return current
 
+      pendingExpectedResponseRef.current = null
+      pendingExpectedResponseMessageIdRef.current = null
+
       const next = [
         {
           ...current[0],
           text: initialGutoMessage,
+          avatarEmotion: "default" as GutoAvatarEmotion,
         },
       ]
       messagesRef.current = next
@@ -194,19 +209,29 @@ export function ChatTab({
         force: forceArrivalBriefing,
       })
       const fala = data.fala?.trim()
-      if (!data.due || !fala) return
-      pendingExpectedResponseRef.current = data.expectedResponse || null
+      if (!data.due || !fala) {
+        if (forceArrivalBriefing) {
+          pendingExpectedResponseRef.current = null
+          pendingExpectedResponseMessageIdRef.current = null
+        }
+        return
+      }
 
       const proactiveKey = `${data.slot || "slot"}-${fala}`
       if (lastProactiveKeyRef.current === proactiveKey) return
       lastProactiveKeyRef.current = proactiveKey
 
+      const messageId = `g-proactive-${Date.now()}`
       const gutoMessage: Message = {
-        id: `g-proactive-${Date.now()}`,
+        id: messageId,
         text: fala,
         isGuto: true,
         timestamp: new Date(),
+        avatarEmotion: normalizeAvatarEmotion(data.avatarEmotion),
       }
+
+      pendingExpectedResponseRef.current = data.expectedResponse || null
+      pendingExpectedResponseMessageIdRef.current = data.expectedResponse ? messageId : null
 
       setMessages((prev) => {
         if (forceArrivalBriefing && prev.length === 1 && prev[0]?.id === "guto-initial") {
@@ -250,9 +275,15 @@ export function ChatTab({
         text: data.fala || "Executado.",
         isGuto: true,
         timestamp: new Date(),
+        avatarEmotion: normalizeAvatarEmotion(data.avatarEmotion),
       }
 
       setMessages((prev) => [...prev, gutoMessage])
+      if (data.acao === "updateWorkout" && data.workoutPlan) {
+        onWorkoutPlanUpdated?.(data.workoutPlan)
+      }
+      pendingExpectedResponseRef.current = null
+      pendingExpectedResponseMessageIdRef.current = null
 
       if (!isMuted && data.audioContent) {
         await playBase64Mp3(data.audioContent)
@@ -305,7 +336,13 @@ export function ChatTab({
     setIsSending(true)
 
     try {
-      const expectedResponse = pendingExpectedResponseRef.current
+      const lastVisibleGuto = [...messagesRef.current].reverse().find((message) => message.isGuto)
+      const expectedResponse =
+        lastVisibleGuto?.id &&
+        pendingExpectedResponseMessageIdRef.current === lastVisibleGuto.id
+          ? pendingExpectedResponseRef.current
+          : null
+
       const data = await sendGutoMessage({
         profile: { name: userName || "Usuário", userId: GUTO_USER_ID },
         input: modelInput,
@@ -318,21 +355,29 @@ export function ChatTab({
       })
 
       const fala = data?.fala?.trim() || "Sem distração. Executa a próxima ação agora."
+      const messageId = `g-${Date.now()}`
       pendingExpectedResponseRef.current = data?.expectedResponse || null
+      pendingExpectedResponseMessageIdRef.current = data?.expectedResponse ? messageId : null
 
       const gutoMessage: Message = {
-        id: `g-${Date.now()}`,
+        id: messageId,
         text: fala,
         isGuto: true,
         timestamp: new Date(),
+        avatarEmotion: normalizeAvatarEmotion(data.avatarEmotion),
       }
 
       setMessages((prev) => [...prev, gutoMessage])
+      if (data.acao === "updateWorkout" && data.workoutPlan) {
+        onWorkoutPlanUpdated?.(data.workoutPlan)
+      }
 
       if (!isMuted) {
         await synthesizeAndPlay(fala, safeLanguage)
       }
     } catch {
+      pendingExpectedResponseRef.current = null
+      pendingExpectedResponseMessageIdRef.current = null
       setMessages((prev) => [
         ...prev,
         {
@@ -340,12 +385,13 @@ export function ChatTab({
           text: "Perdi conexão por um momento. Reorganiza e me envia de novo em 1 frase.",
           isGuto: true,
           timestamp: new Date(),
+          avatarEmotion: "default",
         },
       ])
     } finally {
       setIsSending(false)
     }
-  }, [isMuted, language, synthesizeAndPlay, userName])
+  }, [isMuted, language, onWorkoutPlanUpdated, synthesizeAndPlay, userName])
 
   useEffect(() => {
     if (!pendingExerciseQuestion || isSending) return
@@ -399,7 +445,12 @@ export function ChatTab({
         )}
       </div>
 
-      <div className="guto-chat-bubble absolute left-[21.89%] top-[13.16%] z-10 h-[10.98%] w-[57.71%] rounded-[18px]">
+      <div
+        className="guto-chat-bubble absolute left-[21.89%] z-10 h-[16.2%] w-[57.71%] rounded-[18px]"
+        style={{
+          top: "calc(var(--guto-chat-header-top) + var(--guto-chat-header-height) + clamp(10px, 1.9dvh, 18px))",
+        }}
+      >
         <div className="guto-chat-bubble-copy">
           <motion.p
             key={latestGuto.id}
@@ -417,6 +468,7 @@ export function ChatTab({
             size="xl"
             showPlatform={false}
             evolution={evolution}
+            emotion={isDepleted ? "critical" : latestGuto.avatarEmotion || "default"}
             className="h-full w-full"
           />
         </div>
@@ -447,7 +499,7 @@ export function ChatTab({
             key={latestUser.id}
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
-            className="guto-latest-user-bubble absolute left-1/2 z-20 max-w-[84%] -translate-x-1/2 rounded-[1.1rem] border border-white/80 bg-white/45 px-4 py-2 text-center text-xs font-semibold uppercase tracking-normal text-[rgba(13,35,65,0.58)] backdrop-blur-md"
+            className="guto-latest-user-bubble absolute left-1/2 z-20 max-w-[84%] -translate-x-1/2 rounded-[1.1rem] border border-white/80 bg-white/45 px-4 py-2 text-center text-xs font-semibold tracking-normal text-[rgba(13,35,65,0.58)] backdrop-blur-md"
           >
             {latestUser.text}
           </motion.div>
@@ -471,11 +523,11 @@ export function ChatTab({
 
             <input
               type="text"
-              placeholder={locale.placeholder.toUpperCase()}
+              placeholder={locale.placeholder}
               value={input}
               onChange={(event) => setInput(event.target.value)}
               onKeyDown={(event) => event.key === "Enter" && handleSend()}
-              className="min-w-0 flex-1 bg-transparent text-center text-[16px] font-semibold uppercase leading-none tracking-[0.3px] text-[var(--guto-navy)] outline-none placeholder:text-[#a6aeb1]"
+              className="min-w-0 flex-1 bg-transparent text-center text-[16px] font-semibold leading-none tracking-[0.3px] text-[var(--guto-navy)] outline-none placeholder:text-[#a6aeb1]"
             />
 
             <motion.button

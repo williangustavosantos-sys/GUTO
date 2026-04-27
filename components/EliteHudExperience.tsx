@@ -3,6 +3,7 @@ import '../styles/eliteHud.css';
 
 import { GutoOfficialAvatar } from './guto/guto-official-avatar';
 import type { EvolutionStage } from '@/types/contract';
+import type { GutoAvatarEmotion } from './guto/guto-official-avatar';
 
 const stages = [
   { id: 'baby', label: 'Baby', evolution: 'BABY' },
@@ -12,6 +13,12 @@ const stages = [
 ] as const;
 
 const rotatingPanels = ['Caminho', 'Evolução', 'Missões', 'Chat'] as const;
+const moods: Array<{ id: GutoAvatarEmotion; label: string }> = [
+  { id: 'default', label: 'Default' },
+  { id: 'alert', label: 'Alert' },
+  { id: 'critical', label: 'Critical' },
+  { id: 'reward', label: 'Reward' },
+];
 
 const useTechTypewriter = (message: string, speedMs = 28) => {
   const [display, setDisplay] = React.useState('');
@@ -50,6 +57,7 @@ const EliteHudExperience: React.FC = () => {
   const [stage, setStage] = useState<(typeof stages)[number]['id']>('baby');
   const [panelIndex, setPanelIndex] = useState(0);
   const [isCharging, setIsCharging] = useState(false);
+  const [mood, setMood] = useState<GutoAvatarEmotion>('default');
 
   const currentStage = useMemo(() => stages.find((s) => s.id === stage) ?? stages[0], [stage]);
   const currentEvolution = currentStage.evolution as EvolutionStage;
@@ -77,17 +85,19 @@ const EliteHudExperience: React.FC = () => {
         <div className="glass-ring bottom" />
 
         <GutoOfficialAvatar
-          key={currentStage.id}
+          key={`${currentStage.id}-${mood}`}
           className="guto-video"
           size="xl"
           showPlatform={false}
           evolution={currentEvolution}
+          emotion={mood}
         />
 
         <div className="hud-overlay">
           <span className="hud-chip">FPS target: 60</span>
           <span className="hud-chip">Painel: {activePanel}</span>
           <span className="hud-chip">Stage: {currentStage.label}</span>
+          <span className="hud-chip">Emotion: {moods.find((item) => item.id === mood)?.label}</span>
         </div>
       </div>
 
@@ -102,6 +112,20 @@ const EliteHudExperience: React.FC = () => {
                 onClick={() => setStage(item.id)}
                 role="tab"
                 aria-selected={item.id === stage}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="stage-picker" role="tablist" aria-label="Emoções do avatar">
+            {moods.map((item) => (
+              <button
+                key={item.id}
+                className={item.id === mood ? 'active' : ''}
+                onClick={() => setMood(item.id)}
+                role="tab"
+                aria-selected={item.id === mood}
               >
                 {item.label}
               </button>

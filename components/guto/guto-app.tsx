@@ -14,7 +14,7 @@ import { MissionTab } from "./tabs/mission-tab"
 import { PathTab } from "./tabs/path-tab"
 import type { MissionExercise } from "./view-models"
 import { getApiErrorMessage } from "@/lib/api/client"
-import { saveGutoMemory, validateGutoName, type GutoNameValidation } from "@/lib/api/guto"
+import { getGutoMemory, saveGutoMemory, validateGutoName, type GutoMemory, type GutoNameValidation, type GutoWorkoutPlan } from "@/lib/api/guto"
 import type { EvolutionStage, SupportedLanguage } from "@/types/contract"
 
 type AppStage = "intro" | "language" | "naming" | "pact" | "system" | "settings"
@@ -184,6 +184,13 @@ function validateGutoNameLocally(value: string): GutoNameValidation {
   return { status: "valid", normalized, message: "Nome aceito." }
 }
 
+function resolveEvolutionStage(totalXp = 0): EvolutionStage {
+  if (totalXp >= 5000) return "ELIT"
+  if (totalXp >= 3000) return "ADULT"
+  if (totalXp >= 1500) return "TEEN"
+  return "BABY"
+}
+
 async function resolveGutoNameValidation(value: string) {
   try {
     return await validateGutoName(value)
@@ -232,7 +239,7 @@ export function GutoApp({
   const [draftName, setDraftName] = useState("")
   const [committedName, setCommittedName] = useState("")
   const [activeTab, setActiveTab] = useState<TabType>("guto")
-  const [evolution] = useState<EvolutionStage>("BABY")
+  const [evolution, setEvolution] = useState<EvolutionStage>("BABY")
   const [activeLanguageGlow, setActiveLanguageGlow] = useState<SupportedLanguage | null>(null)
   const [rotatingLanguage, setRotatingLanguage] = useState(false)
   const [isHoldingPact, setIsHoldingPact] = useState(false)
@@ -243,6 +250,8 @@ export function GutoApp({
   const [settingsNameDraft, setSettingsNameDraft] = useState("")
   const [pendingExerciseQuestion, setPendingExerciseQuestion] =
     useState<PendingExerciseQuestion | null>(null)
+  const [workoutPlan, setWorkoutPlan] = useState<GutoWorkoutPlan | null>(null)
+  const [memory, setMemory] = useState<GutoMemory | null>(null)
   const [nameGate, setNameGate] = useState<NameGate | null>(null)
   const [isValidatingName, setIsValidatingName] = useState(false)
 
@@ -675,6 +684,25 @@ export function GutoApp({
     userName,
   ])
 
+  useEffect(() => {
+    let cancelled = false
+
+    void getGutoMemory(GUTO_USER_ID)
+      .then((memory) => {
+        if (cancelled) return
+        setMemory(memory)
+        setEvolution(resolveEvolutionStage(memory?.totalXp || 0))
+        if (memory?.lastWorkoutPlan) {
+          setWorkoutPlan(memory.lastWorkoutPlan)
+        }
+      })
+      .catch(() => {})
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   const stopHold = useCallback(() => {
     if (stage !== "pact" || pactProgress >= 100 || pactCompleteRef.current) return
     clearPactInterval()
@@ -690,8 +718,31 @@ export function GutoApp({
     setActiveTab("guto")
   }, [])
 
+  const handleMissionComplete = useCallback(async () => {
+    const updated = await saveGutoMemory({
+      userId: GUTO_USER_ID,
+      language: selectedLanguage,
+      xpEvent: "complete_daily_mission",
+    })
+    setMemory(updated)
+    setEvolution(resolveEvolutionStage(updated.totalXp || 0))
+    setActiveTab("caminho")
+  }, [selectedLanguage])
+
+  const handleAdaptedMissionComplete = useCallback(async () => {
+    const updated = await saveGutoMemory({
+      userId: GUTO_USER_ID,
+      language: selectedLanguage,
+      xpEvent: "accept_adapted_mission",
+    })
+    setMemory(updated)
+    setEvolution(resolveEvolutionStage(updated.totalXp || 0))
+    setActiveTab("caminho")
+  }, [selectedLanguage])
+
   const userLabel = committedName || formatGutoName(userName || "Operador")
   const locale = stageCopy[selectedLanguage]
+  const isGutoDepleted = (memory?.totalXp ?? 100) === 0
   const canSaveSettingsName =
     Boolean(formatGutoName(settingsNameDraft)) &&
     formatGutoName(settingsNameDraft) !== userLabel &&
@@ -707,20 +758,41 @@ export function GutoApp({
             evolution={evolution}
             pendingExerciseQuestion={pendingExerciseQuestion}
             onExerciseQuestionHandled={() => setPendingExerciseQuestion(null)}
+            onWorkoutPlanUpdated={setWorkoutPlan}
+            isDepleted={isGutoDepleted}
           />
         )
       case "caminho":
-        return <PathTab userName={userLabel} language={selectedLanguage} />
+        return (
+          <PathTab
+            userName={userLabel}
+            language={selectedLanguage}
+            memory={memory}
+            workoutPlan={workoutPlan}
+            currentEvolution={evolution}
+          />
+        )
       case "evolucoes":
         return (
           <EvolutionsTab
             userName={userLabel}
             language={selectedLanguage}
             currentEvolution={evolution}
+            memory={memory}
           />
         )
       case "missao":
-        return <MissionTab language={selectedLanguage} onAskExercise={handleExerciseQuestion} />
+        return (
+          <MissionTab
+            language={selectedLanguage}
+            onAskExercise={handleExerciseQuestion}
+            workoutPlan={workoutPlan}
+            trainedToday={Boolean(memory?.trainedToday)}
+            adaptedMissionToday={Boolean(memory?.adaptedMissionToday)}
+            onMissionComplete={handleMissionComplete}
+            onAdaptedMissionComplete={handleAdaptedMissionComplete}
+          />
+        )
       default:
         return (
           <ChatTab
@@ -729,10 +801,12 @@ export function GutoApp({
             evolution={evolution}
             pendingExerciseQuestion={pendingExerciseQuestion}
             onExerciseQuestionHandled={() => setPendingExerciseQuestion(null)}
+            onWorkoutPlanUpdated={setWorkoutPlan}
+            isDepleted={isGutoDepleted}
           />
         )
     }
-  }, [activeTab, evolution, handleExerciseQuestion, pendingExerciseQuestion, selectedLanguage, userLabel])
+  }, [activeTab, evolution, handleAdaptedMissionComplete, handleExerciseQuestion, handleMissionComplete, isGutoDepleted, memory, pendingExerciseQuestion, selectedLanguage, userLabel, workoutPlan])
 
   if (!isHydrated) {
     return (
@@ -744,7 +818,7 @@ export function GutoApp({
 
   return (
     <div ref={shellRef} className="sala-guto">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-(--guto-varnish)" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-[var(--guto-varnish)]" />
       <div className="pointer-events-none absolute inset-x-0 top-[18%] h-px bg-[linear-gradient(90deg,transparent,rgba(82,231,255,0.28),transparent)]" />
 
       <AnimatePresence mode="wait">
@@ -892,7 +966,7 @@ export function GutoApp({
                     }}
                     placeholder={locale.namingPlaceholder}
                     autoFocus
-                    className="min-w-0 flex-1 border-none bg-transparent text-center font-mono text-xl font-black uppercase tracking-normal text-(--guto-cyan) outline-none placeholder:text-[rgba(13,35,65,0.24)]"
+                    className="min-w-0 flex-1 border-none bg-transparent text-center font-mono text-xl font-black uppercase tracking-normal text-[var(--guto-cyan)] outline-none placeholder:text-[rgba(13,35,65,0.24)]"
                   />
                   <motion.button
                     type="button"
@@ -907,7 +981,7 @@ export function GutoApp({
                 </div>
                 {nameGate?.target === "onboarding" && (
                   <div className="mx-auto mt-3 w-full max-w-[24rem] rounded-[18px] border border-white/70 bg-white/55 px-4 py-3 text-center shadow-[inset_4px_4px_12px_rgba(105,119,138,0.16),inset_-4px_-4px_12px_rgba(255,255,255,0.82)] backdrop-blur-md">
-                    <p className="font-mono text-[11px] font-black uppercase leading-snug tracking-normal text-(--guto-navy)">
+                    <p className="font-mono text-[11px] font-black uppercase leading-snug tracking-normal text-[var(--guto-navy)]">
                       {nameGate.message}
                     </p>
                     {nameGate.status === "confirm" && (
@@ -915,14 +989,14 @@ export function GutoApp({
                         <button
                           type="button"
                           onClick={() => void handleSeal(true)}
-                          className="rounded-full bg-(--guto-cyan) px-4 py-2 text-[10px] font-black uppercase tracking-normal text-white"
+                          className="rounded-full bg-[var(--guto-cyan)] px-4 py-2 text-[10px] font-black uppercase tracking-normal text-white"
                         >
                           Confirmar
                         </button>
                         <button
                           type="button"
                           onClick={() => setNameGate(null)}
-                          className="rounded-full border border-[rgba(13,35,65,0.14)] bg-white/55 px-4 py-2 text-[10px] font-black uppercase tracking-normal text-(--guto-navy)"
+                          className="rounded-full border border-[rgba(13,35,65,0.14)] bg-white/55 px-4 py-2 text-[10px] font-black uppercase tracking-normal text-[var(--guto-navy)]"
                         >
                           Alterar
                         </button>
@@ -1264,7 +1338,7 @@ export function GutoApp({
                       }}
                       placeholder={locale.settingsNamePlaceholder}
                       autoFocus
-                      className="min-w-0 flex-1 border-none bg-transparent text-center font-mono text-xl font-black uppercase tracking-normal text-(--guto-cyan) outline-none placeholder:text-[rgba(13,35,65,0.24)]"
+                      className="min-w-0 flex-1 border-none bg-transparent text-center font-mono text-xl font-black uppercase tracking-normal text-[var(--guto-cyan)] outline-none placeholder:text-[rgba(13,35,65,0.24)]"
                     />
                     <motion.button
                       type="submit"
@@ -1278,7 +1352,7 @@ export function GutoApp({
                   </div>
                   {nameGate?.target === "settings" && (
                     <div className="mx-auto mt-3 w-full max-w-[24rem] rounded-[18px] border border-white/70 bg-white/55 px-4 py-3 text-center shadow-[inset_4px_4px_12px_rgba(105,119,138,0.16),inset_-4px_-4px_12px_rgba(255,255,255,0.82)] backdrop-blur-md">
-                      <p className="font-mono text-[11px] font-black uppercase leading-snug tracking-normal text-(--guto-navy)">
+                      <p className="font-mono text-[11px] font-black uppercase leading-snug tracking-normal text-[var(--guto-navy)]">
                         {nameGate.message}
                       </p>
                       {nameGate.status === "confirm" && (
@@ -1286,14 +1360,14 @@ export function GutoApp({
                           <button
                             type="button"
                             onClick={() => void saveSettingsName(true)}
-                            className="rounded-full bg-(--guto-cyan) px-4 py-2 text-[10px] font-black uppercase tracking-normal text-white"
+                            className="rounded-full bg-[var(--guto-cyan)] px-4 py-2 text-[10px] font-black uppercase tracking-normal text-white"
                           >
                             Confirmar
                           </button>
                           <button
                             type="button"
                             onClick={() => setNameGate(null)}
-                            className="rounded-full border border-[rgba(13,35,65,0.14)] bg-white/55 px-4 py-2 text-[10px] font-black uppercase tracking-normal text-(--guto-navy)"
+                            className="rounded-full border border-[rgba(13,35,65,0.14)] bg-white/55 px-4 py-2 text-[10px] font-black uppercase tracking-normal text-[var(--guto-navy)]"
                           >
                             Alterar
                           </button>

@@ -1,6 +1,25 @@
 import { apiRequest } from "./client"
 
 export type SupportedLanguage = "pt-BR" | "it-IT" | "es-ES" | "en-US"
+export type GutoAvatarEmotion = "default" | "alert" | "critical" | "reward"
+
+export interface GutoWorkoutExercise {
+  id: string
+  name: string
+  sets: number
+  reps: string
+  rest: string
+  cue: string
+  note: string
+}
+
+export interface GutoWorkoutPlan {
+  focus: string
+  dateLabel: string
+  scheduledFor: string
+  summary: string
+  exercises: GutoWorkoutExercise[]
+}
 
 export interface GutoExpectedResponse {
   type: "text"
@@ -28,7 +47,10 @@ export interface SendGutoMessageRequest {
 
 export interface SendGutoMessageResponse {
   fala?: string
+  acao?: "none" | "updateWorkout" | "lock"
   expectedResponse?: GutoExpectedResponse | null
+  avatarEmotion?: GutoAvatarEmotion
+  workoutPlan?: GutoWorkoutPlan | null
 }
 
 export interface GutoNameValidation {
@@ -41,15 +63,30 @@ export interface GutoMemory {
   userId: string
   name: string
   language: SupportedLanguage
+  initialXpGranted: boolean
+  totalXp: number
   streak: number
   trainedToday: boolean
+  adaptedMissionToday: boolean
   lastActiveAt: string
   energyLast?: string
   trainingLocation?: string
   trainingStatus?: string
   trainingLimitations?: string
+  trainingAge?: number
   lastWorkoutCompletedAt?: string
+  completedWorkoutDates: string[]
+  adaptedMissionDates: string[]
+  missedMissionDates: string[]
+  xpEvents: {
+    id: string
+    type: "grant_initial_xp" | "complete_daily_mission" | "accept_adapted_mission" | "apply_daily_miss_penalty"
+    amount: number
+    date: string
+    createdAt: string
+  }[]
   lastLimitationCheckAt?: string
+  lastWorkoutPlan?: GutoWorkoutPlan | null
   proactiveSent: Record<string, string[]>
 }
 
@@ -59,6 +96,8 @@ export interface GutoProactiveResponse {
   fala?: string
   acao?: "none" | "updateWorkout" | "lock"
   expectedResponse?: GutoExpectedResponse | null
+  avatarEmotion?: GutoAvatarEmotion
+  workoutPlan?: GutoWorkoutPlan | null
 }
 
 export async function sendGutoMessage(payload: SendGutoMessageRequest) {
@@ -80,6 +119,7 @@ export async function saveGutoMemory(payload: {
   name?: string
   language?: SupportedLanguage
   trainedToday?: boolean
+  xpEvent?: "grant_initial_xp" | "complete_daily_mission" | "accept_adapted_mission" | "apply_daily_miss_penalty"
   energyLast?: string
   trainingLocation?: string
   trainingStatus?: string
@@ -89,6 +129,12 @@ export async function saveGutoMemory(payload: {
   return apiRequest<GutoMemory>("/guto/memory", {
     method: "POST",
     body: JSON.stringify(payload),
+  })
+}
+
+export async function getGutoMemory(userId = "local-user") {
+  return apiRequest<GutoMemory>(`/guto/memory?userId=${encodeURIComponent(userId)}`, {
+    method: "GET",
   })
 }
 

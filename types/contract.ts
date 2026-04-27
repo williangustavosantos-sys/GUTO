@@ -1,4 +1,5 @@
 export type SupportedLanguage = "pt-BR" | "it-IT" | "es-ES" | "en-US"
+export type GutoAvatarEmotion = "default" | "alert" | "critical" | "reward"
 
 export type EvolutionStage = "BABY" | "TEEN" | "ADULT" | "ELIT"
 
@@ -21,4 +22,5 @@ export interface SendGutoMessageResponse {
   fala?: string
   acao?: "none" | "updateWorkout" | "lock" | "evolve"
   newEvolution?: EvolutionStage
+  avatarEmotion?: GutoAvatarEmotion
 }

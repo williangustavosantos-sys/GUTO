@@ -104,10 +104,10 @@ export const translations: Record<ValidLanguage, TranslationDictionary> = {
     pathDayLabel: "Quarta, Peito e tríceps",
     pathWorkoutDone: "Treino realizado:",
     pathWorkoutName: "Peito e tríceps",
-    pathXpYesterday: "+150 XP ontem",
+    pathXpYesterday: "0 XP hoje",
     pathStreak: "+3 dias na sequência",
     pathObservation: "+1 observação do Guto",
-    pathXpReward: "+150 XP",
+    pathXpReward: "+100 XP",
     pathQuote: "Você já é mais forte do que ontem. O melhor ainda está por vir."
   },
   "it-IT": {
@@ -157,10 +157,10 @@ export const translations: Record<ValidLanguage, TranslationDictionary> = {
     pathDayLabel: "Mercoledì, Petto e tricipiti",
     pathWorkoutDone: "Allenamento completato:",
     pathWorkoutName: "Petto e tricipiti",
-    pathXpYesterday: "+150 XP ieri",
+    pathXpYesterday: "0 XP oggi",
     pathStreak: "+3 giorni di fila",
     pathObservation: "+1 nota da Guto",
-    pathXpReward: "+150 XP",
+    pathXpReward: "+100 XP",
     pathQuote: "Sei già più forte di ieri. Il meglio deve ancora venire."
   },
   "es-ES": {
@@ -210,10 +210,10 @@ export const translations: Record<ValidLanguage, TranslationDictionary> = {
     pathDayLabel: "Miércoles, Pecho y tríceps",
     pathWorkoutDone: "Entrenamiento realizado:",
     pathWorkoutName: "Pecho y tríceps",
-    pathXpYesterday: "+150 XP ayer",
+    pathXpYesterday: "0 XP hoy",
     pathStreak: "+3 días seguidos",
     pathObservation: "+1 nota de Guto",
-    pathXpReward: "+150 XP",
+    pathXpReward: "+100 XP",
     pathQuote: "Ya eres más fuerte que ayer. Lo mejor está por venir."
   },
   "en-US": {
@@ -263,10 +263,10 @@ export const translations: Record<ValidLanguage, TranslationDictionary> = {
     pathDayLabel: "Wednesday, Chest and triceps",
     pathWorkoutDone: "Workout completed:",
     pathWorkoutName: "Chest and triceps",
-    pathXpYesterday: "+150 XP yesterday",
+    pathXpYesterday: "0 XP today",
     pathStreak: "+3 days in a row",
     pathObservation: "+1 note from Guto",
-    pathXpReward: "+150 XP",
+    pathXpReward: "+100 XP",
     pathQuote: "You are already stronger than yesterday. The best is yet to come."
   }
 };
