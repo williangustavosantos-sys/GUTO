@@ -1,5 +1,4 @@
-const RAW_API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "https://81x7l2cj-3001.euw.devtunnels.ms/"
+const RAW_API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"
 
 export const API_URL = RAW_API_URL.replace(/\/+$/, "")
 
@@ -54,7 +53,7 @@ export async function apiRequest<T>(
       throw new ApiError("Tempo de resposta excedido. Tente novamente.")
     }
     if (err instanceof ApiError) throw err
-    throw new ApiError("Falha de conexão com o servidor.")
+    throw new ApiError(`Falha de conexão com o servidor em ${API_URL}. Verifique NEXT_PUBLIC_API_URL ou se o backend está rodando.`)
   } finally {
     clearTimeout(timeout)
   }
