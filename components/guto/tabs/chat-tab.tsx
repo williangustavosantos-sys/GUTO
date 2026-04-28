@@ -568,8 +568,8 @@ export function ChatTab({
   const visibleMessages = messages.slice(-8)
 
   return (
-    <div className="relative flex h-full min-h-0 flex-col overflow-hidden pb-[calc(92px+max(env(safe-area-inset-bottom),12px))]">
-      <header className="flex h-[calc(max(env(safe-area-inset-top),8px)+48px)] shrink-0 items-end justify-center border-b border-[var(--guto-cyan)]/70 px-5 pb-2">
+    <div className="relative h-full min-h-[100dvh] w-full overflow-hidden">
+      <header className="absolute left-0 right-0 top-0 z-40 flex h-[calc(max(env(safe-area-inset-top),8px)+48px)] items-end justify-center border-b border-[var(--guto-cyan)]/70 px-5 pb-2">
         <div className="flex max-w-full items-center justify-center gap-2" aria-label={brandName ? `GUTO e ${brandName}` : "GUTO"}>
           <Image src="/assets/guto/logo_guto.png" alt="GUTO" width={92} height={29} priority className="h-auto w-[92px]" />
           {brandName && (
@@ -583,58 +583,59 @@ export function ChatTab({
         </div>
       </header>
 
-      <section className="relative flex min-h-0 flex-1 flex-col">
-        <button
-          type="button"
-          onClick={() =>
-            setIsMuted((prev) => {
-              const next = !prev
-              if (next && currentAudioRef.current) {
-                currentAudioRef.current.pause()
-                currentAudioRef.current = null
-                setIsSpeaking(false)
+      <button
+        type="button"
+        onClick={() =>
+          setIsMuted((prev) => {
+            const next = !prev
+            if (next && currentAudioRef.current) {
+              currentAudioRef.current.pause()
+              currentAudioRef.current = null
+              setIsSpeaking(false)
+            }
+            return next
+          })
+        }
+        className="absolute right-5 top-[calc(max(env(safe-area-inset-top),8px)+72px)] z-40 grid h-10 w-10 place-items-center rounded-full border border-[var(--guto-cyan)]/70 bg-white/45 text-[var(--guto-cyan)] shadow-[inset_3px_4px_10px_rgba(121,136,156,0.16),inset_-5px_-6px_12px_rgba(255,255,255,0.88),0_12px_26px_rgba(122,138,156,0.12)] backdrop-blur-md"
+        aria-label={isMuted ? "Ativar fala do GUTO" : "Silenciar fala do GUTO"}
+        aria-pressed={!isMuted}
+      >
+        {isMuted ? <VolumeX className="h-[18px] w-[18px]" /> : <Volume2 className="h-[18px] w-[18px]" />}
+      </button>
+
+      <div className="pointer-events-none absolute left-1/2 top-[34%] z-10 h-[min(42dvh,330px)] w-[min(86vw,22.5rem)] -translate-x-1/2 -translate-y-1/2">
+        <GutoOfficialAvatar
+          size="xl"
+          showPlatform={false}
+          evolution={evolution}
+          emotion={isDepleted ? "critical" : latestGuto.avatarEmotion || "default"}
+          className="h-full w-full"
+        />
+      </div>
+
+      <div
+        ref={scrollRef}
+        className="absolute left-0 right-0 top-[52%] bottom-[calc(96px+max(env(safe-area-inset-bottom),12px))] z-30 overflow-y-auto px-5 pb-4"
+      >
+        <div className="flex min-h-full flex-col justify-end gap-3">
+          {visibleMessages.map((message) => (
+            <motion.div
+              key={message.id}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className={
+                message.isGuto
+                  ? "mx-auto w-full max-w-[20rem] rounded-[18px] border border-[var(--guto-cyan)]/80 bg-white/70 px-4 py-3 text-center font-mono text-[clamp(11px,2.8vw,13px)] font-black leading-snug text-[var(--guto-navy)] shadow-[inset_0_1px_0_rgba(255,255,255,0.86),0_18px_38px_rgba(137,151,168,0.12)] backdrop-blur-md"
+                  : "ml-auto max-w-[74%] rounded-[18px] border border-white/80 bg-white/80 px-4 py-2 text-right text-xs font-semibold leading-snug text-[rgba(13,35,65,0.68)] shadow-[0_12px_26px_rgba(137,151,168,0.1)] backdrop-blur-md"
               }
-              return next
-            })
-          }
-          className="absolute right-5 top-4 z-30 grid h-10 w-10 place-items-center rounded-full border border-[var(--guto-cyan)]/70 bg-white/45 text-[var(--guto-cyan)] shadow-[inset_3px_4px_10px_rgba(121,136,156,0.16),inset_-5px_-6px_12px_rgba(255,255,255,0.88),0_12px_26px_rgba(122,138,156,0.12)] backdrop-blur-md"
-          aria-label={isMuted ? "Ativar fala do GUTO" : "Silenciar fala do GUTO"}
-          aria-pressed={!isMuted}
-        >
-          {isMuted ? <VolumeX className="h-[18px] w-[18px]" /> : <Volume2 className="h-[18px] w-[18px]" />}
-        </button>
-
-        <div className="flex h-[38dvh] min-h-[220px] shrink-0 items-center justify-center px-4 pt-2">
-          <GutoOfficialAvatar
-            size="xl"
-            showPlatform={false}
-            evolution={evolution}
-            emotion={isDepleted ? "critical" : latestGuto.avatarEmotion || "default"}
-            className="h-full w-full"
-          />
+            >
+              {message.text}
+            </motion.div>
+          ))}
         </div>
+      </div>
 
-        <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto px-5 pb-4">
-          <div className="flex min-h-full flex-col justify-end gap-3">
-            {visibleMessages.map((message) => (
-              <motion.div
-                key={message.id}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                className={
-                  message.isGuto
-                    ? "mx-auto w-full max-w-[20rem] rounded-[18px] border border-[var(--guto-cyan)]/80 bg-white/55 px-4 py-3 text-center font-mono text-[clamp(11px,2.8vw,13px)] font-black leading-snug text-[var(--guto-navy)] shadow-[inset_0_1px_0_rgba(255,255,255,0.86),0_18px_38px_rgba(137,151,168,0.12)] backdrop-blur-md"
-                    : "ml-auto max-w-[84%] rounded-[18px] border border-white/80 bg-white/55 px-4 py-2 text-right text-xs font-semibold leading-snug text-[rgba(13,35,65,0.68)] shadow-[0_12px_26px_rgba(137,151,168,0.1)] backdrop-blur-md"
-                }
-              >
-                {message.text}
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <div className="fixed inset-x-0 bottom-0 z-50 mx-auto w-full max-w-[430px] px-5 pb-[max(env(safe-area-inset-bottom),12px)] pt-2">
+      <div className="fixed inset-x-0 bottom-[max(env(safe-area-inset-bottom),12px)] z-50 mx-auto w-full max-w-[430px] px-5">
         <div className="rounded-[18px] border border-[var(--guto-cyan)]/80 bg-white/65 px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.86),0_18px_38px_rgba(137,151,168,0.16)] backdrop-blur-md">
           <div className="flex h-[42px] items-center gap-3">
             <motion.button
