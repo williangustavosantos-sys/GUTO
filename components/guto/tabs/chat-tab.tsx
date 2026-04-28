@@ -84,11 +84,35 @@ interface StoredChatState {
   expectedResponseMessageId: string | null
 }
 
-const chatCopy: Record<SupportedLanguage, { channel: string; speaking: string }> = {
-  "pt-BR": { channel: "Canal do oráculo", speaking: "falando" },
-  "en-US": { channel: "Oracle channel", speaking: "speaking" },
-  "es-ES": { channel: "Canal del oráculo", speaking: "hablando" },
-  "it-IT": { channel: "Canale dell'oracolo", speaking: "parlando" },
+const chatCopy: Record<SupportedLanguage, { channel: string; speaking: string; micUnavailable: string; unmute: string; mute: string }> = {
+  "pt-BR": {
+    channel: "Canal do oráculo",
+    speaking: "falando",
+    micUnavailable: "O microfone de fala não está disponível neste navegador. Escreve a resposta em uma frase curta.",
+    unmute: "Ativar fala do GUTO",
+    mute: "Silenciar fala do GUTO",
+  },
+  "en-US": {
+    channel: "Oracle channel",
+    speaking: "speaking",
+    micUnavailable: "Speech microphone is not available in this browser. Type the answer in one short sentence.",
+    unmute: "Enable GUTO voice",
+    mute: "Mute GUTO voice",
+  },
+  "es-ES": {
+    channel: "Canal del oráculo",
+    speaking: "hablando",
+    micUnavailable: "El micrófono de voz no está disponible en este navegador. Escribe la respuesta en una frase corta.",
+    unmute: "Activar voz de GUTO",
+    mute: "Silenciar voz de GUTO",
+  },
+  "it-IT": {
+    channel: "Canale dell'oracolo",
+    speaking: "parlando",
+    micUnavailable: "Il microfono vocale non è disponibile in questo browser. Scrivi la risposta in una frase breve.",
+    unmute: "Attiva la voce di GUTO",
+    mute: "Silenzia la voce di GUTO",
+  },
 }
 
 const openingMessage: Record<SupportedLanguage, (name: string) => string> = {
@@ -476,7 +500,7 @@ export function ChatTab({
             ...prev,
             {
               id: `g-speech-empty-${Date.now()}`,
-              text: "Não captei tua voz. Segura o microfone, fala uma frase curta e solta.",
+              text: copy.micUnavailable,
               isGuto: true,
               timestamp: new Date(),
               avatarEmotion: "default",
@@ -498,7 +522,7 @@ export function ChatTab({
       ...prev,
       {
         id: `g-speech-unavailable-${Date.now()}`,
-        text: "O microfone de fala não está disponível neste navegador. Escreve a resposta em uma frase curta.",
+        text: copy.micUnavailable,
         isGuto: true,
         timestamp: new Date(),
         avatarEmotion: "default",
@@ -673,7 +697,7 @@ export function ChatTab({
         }
         className="guto-chat-sound-toggle absolute z-40"
         data-audio-active={!isMuted}
-        aria-label={isMuted ? "Ativar fala do GUTO" : "Silenciar fala do GUTO"}
+        aria-label={isMuted ? copy.unmute : copy.mute}
         aria-pressed={!isMuted}
       >
         {isMuted ? <VolumeX className="h-[18px] w-[18px]" /> : <Volume2 className="h-[18px] w-[18px]" />}
