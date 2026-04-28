@@ -101,6 +101,7 @@ const openingMessage: Record<SupportedLanguage, (name: string) => string> = {
 const PROACTIVE_CHECK_INTERVAL_MS = 60_000
 const FIRST_MESSAGE_SENT_KEY_PREFIX = "guto-first-message-sent"
 const CHAT_STATE_KEY_PREFIX = "guto-chat-state"
+const STALE_AUDIO_FAILURE_TEXT = "O áudio falhou. Sem perder o ritmo: escreve a mesma resposta em uma frase curta."
 
 function formatDisplayName(value: string) {
   return value.replace(/\s+/g, " ").trim().toLocaleUpperCase()
@@ -113,6 +114,10 @@ function normalizeAvatarEmotion(value?: string): GutoAvatarEmotion {
 function getBrowserSpeechRecognition() {
   if (typeof window === "undefined") return null
   return window.SpeechRecognition || window.webkitSpeechRecognition || null
+}
+
+function isStaleAudioFailureMessage(message: Message) {
+  return message.isGuto && message.text.trim() === STALE_AUDIO_FAILURE_TEXT
 }
 
 function shouldTrackFirstMessage(userId: string) {
@@ -155,7 +160,7 @@ function readStoredChatState(userId: string): StoredChatState | null {
 
     if (!messages.length) return null
     return {
-      messages,
+      messages: messages.filter((message) => !isStaleAudioFailureMessage(message)),
       expectedResponse: parsed.expectedResponse || null,
       expectedResponseMessageId: parsed.expectedResponseMessageId || null,
     }

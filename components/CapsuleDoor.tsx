@@ -24,7 +24,7 @@ export default function CapsuleDoor({ onComplete }: CapsuleDoorProps) {
   }, [onComplete])
 
   return (
-    <div className="relative flex h-screen w-full items-center justify-center overflow-hidden bg-white select-none pointer-events-none">
+    <div className="relative flex h-[100dvh] w-full items-center justify-center overflow-hidden bg-white select-none pointer-events-none">
       {/* linhas geométricas sutis */}
       <div
         className="absolute inset-0 opacity-[0.08]"
