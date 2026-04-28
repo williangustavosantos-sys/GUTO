@@ -361,7 +361,7 @@ export function GutoApp({
           activeElement.matches("input, textarea, [contenteditable='true']")
         const keyboardOpen = isTextInput && (keyboardOffset > 60 || window.innerHeight - viewportHeight > 60)
 
-        shell.style.setProperty("--guto-viewport-height", `${viewportHeight}px`)
+        shell.style.setProperty("--guto-viewport-height", keyboardOpen ? `${viewportHeight}px` : "100dvh")
         shell.style.setProperty("--guto-viewport-width", `${viewportWidth}px`)
         shell.style.setProperty("--guto-keyboard-offset", `${keyboardOffset}px`)
         shell.toggleAttribute("data-keyboard-open", keyboardOpen)
@@ -728,8 +728,15 @@ export function GutoApp({
         if (cancelled) return
         setMemory(memory)
         setEvolution(resolveEvolutionStage(memory?.totalXp || 0))
-        if (memory?.lastWorkoutPlan) {
+        if (
+          memory?.lastWorkoutPlan &&
+          memory.trainingLocation &&
+          memory.trainingStatus &&
+          memory.trainingLimitations
+        ) {
           setWorkoutPlan(memory.lastWorkoutPlan)
+        } else {
+          setWorkoutPlan(null)
         }
       })
       .catch(() => {})
@@ -791,6 +798,7 @@ export function GutoApp({
       case "guto":
         return (
           <ChatTab
+            key={`chat-${gutoUserId}`}
             userId={gutoUserId}
             userName={userLabel}
             language={selectedLanguage}
@@ -835,6 +843,7 @@ export function GutoApp({
       default:
         return (
           <ChatTab
+            key={`chat-${gutoUserId}`}
             userId={gutoUserId}
             userName={userLabel}
             language={selectedLanguage}

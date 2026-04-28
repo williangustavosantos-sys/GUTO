@@ -186,9 +186,16 @@ export function GutoOfficialAvatar({
         video.defaultMuted = true
         video.muted = true
         video.controls = false
+        video.autoplay = true
+        video.loop = true
         video.playsInline = true
+        video.disablePictureInPicture = true
         video.setAttribute("playsinline", "")
         video.setAttribute("webkit-playsinline", "")
+        video.setAttribute("muted", "")
+        video.setAttribute("autoplay", "")
+        video.setAttribute("loop", "")
+        video.removeAttribute("controls")
         await video.play()
         if (!cancelled) setNativeVideoReady(true)
       } catch {
@@ -204,6 +211,7 @@ export function GutoOfficialAvatar({
 
     video.addEventListener("loadeddata", playNativeVideo)
     video.addEventListener("canplay", playNativeVideo)
+    video.addEventListener("pause", playNativeVideo)
     document.addEventListener("visibilitychange", handleVisibility)
     void playNativeVideo()
 
@@ -211,6 +219,7 @@ export function GutoOfficialAvatar({
       cancelled = true
       video.removeEventListener("loadeddata", playNativeVideo)
       video.removeEventListener("canplay", playNativeVideo)
+      video.removeEventListener("pause", playNativeVideo)
       document.removeEventListener("visibilitychange", handleVisibility)
     }
   }, [assetKey, canUseNativeAlphaVideo])
@@ -262,10 +271,17 @@ export function GutoOfficialAvatar({
       try {
         video.defaultMuted = true
         video.muted = true
+        video.autoplay = true
+        video.loop = true
         video.playsInline = true
         video.controls = false
+        video.disablePictureInPicture = true
         video.setAttribute("playsinline", "")
         video.setAttribute("webkit-playsinline", "")
+        video.setAttribute("muted", "")
+        video.setAttribute("autoplay", "")
+        video.setAttribute("loop", "")
+        video.removeAttribute("controls")
         await video.play()
         draw()
       } catch {
@@ -283,6 +299,7 @@ export function GutoOfficialAvatar({
 
     video.addEventListener("loadeddata", handleReady)
     video.addEventListener("canplay", handleReady)
+    video.addEventListener("pause", handleReady)
     document.addEventListener("visibilitychange", handleReady)
     handleReady()
 
@@ -290,6 +307,7 @@ export function GutoOfficialAvatar({
       cancelled = true
       video.removeEventListener("loadeddata", handleReady)
       video.removeEventListener("canplay", handleReady)
+      video.removeEventListener("pause", handleReady)
       document.removeEventListener("visibilitychange", handleReady)
       if (frameRef.current) {
         window.cancelAnimationFrame(frameRef.current)
@@ -315,6 +333,8 @@ export function GutoOfficialAvatar({
             muted
             playsInline
             disablePictureInPicture
+            controls={false}
+            controlsList="nodownload noplaybackrate nofullscreen"
             preload="auto"
             className="guto-official-avatar-video pointer-events-none absolute inset-0 h-full w-full object-contain"
           >
@@ -356,6 +376,8 @@ export function GutoOfficialAvatar({
           muted
           playsInline
           disablePictureInPicture
+          controls={false}
+          controlsList="nodownload noplaybackrate nofullscreen"
           preload="auto"
           className="pointer-events-none absolute inset-0 h-full w-full opacity-0"
           style={{

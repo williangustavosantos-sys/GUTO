@@ -6,7 +6,7 @@ import { CheckCircle2, CircleHelp, Play, RotateCcw } from "lucide-react"
 
 import type { GutoWorkoutPlan } from "@/lib/api/guto"
 import { getLanguage, translations } from "../translations"
-import { missionExercisesFixture, type MissionExercise } from "../view-models"
+import type { MissionExercise } from "../view-models"
 
 interface MissionTabProps {
   language: string
@@ -35,6 +35,8 @@ const missionCopy = {
     reset: "Reabrir execução",
     progress: "Progresso",
     block: "Bloco",
+    emptyTitle: "Sem treino definido",
+    emptyBody: "O GUTO ainda precisa fechar quando, onde, nível, idade e dor antes de liberar a missão.",
   },
   "en-US": {
     execution: "Today's workout",
@@ -52,6 +54,8 @@ const missionCopy = {
     reset: "Reopen execution",
     progress: "Progress",
     block: "Block",
+    emptyTitle: "No workout locked",
+    emptyBody: "GUTO still needs when, where, level, age, and pain before releasing the mission.",
   },
   "es-ES": {
     execution: "Entrenamiento del día",
@@ -69,6 +73,8 @@ const missionCopy = {
     reset: "Reabrir ejecución",
     progress: "Progreso",
     block: "Bloque",
+    emptyTitle: "Sin entreno definido",
+    emptyBody: "GUTO todavía necesita cuándo, dónde, nivel, edad y dolor antes de liberar la misión.",
   },
   "it-IT": {
     execution: "Allenamento del giorno",
@@ -86,6 +92,8 @@ const missionCopy = {
     reset: "Riapri esecuzione",
     progress: "Progresso",
     block: "Blocco",
+    emptyTitle: "Allenamento non definito",
+    emptyBody: "GUTO deve ancora chiudere quando, dove, livello, eta e dolori prima di liberare la missione.",
   },
 } as const
 
@@ -105,21 +113,8 @@ export function MissionTab({
   const [completedExerciseIds, setCompletedExerciseIds] = useState<string[]>([])
   const [isCompleting, setIsCompleting] = useState(false)
 
-  const exercises = useMemo(
-    () => {
-      if (workoutPlan?.exercises?.length) {
-        return workoutPlan.exercises
-      }
-
-      return missionExercisesFixture.map((exercise, index) => ({
-        ...exercise,
-        name: locale.exercises[index]?.name ?? exercise.name,
-        rest: locale.exercises[index]?.rest ?? exercise.rest,
-      }))
-    },
-    [locale.exercises, workoutPlan]
-  )
-  const missionKey = workoutPlan?.scheduledFor || workoutPlan?.focus || "fixture"
+  const exercises = useMemo(() => workoutPlan?.exercises || [], [workoutPlan])
+  const missionKey = workoutPlan?.scheduledFor || workoutPlan?.focus || "empty"
   const completedCount = completedExerciseIds.length
   const progress = exercises.length ? Math.round((completedCount / exercises.length) * 100) : 0
   const canComplete = started && exercises.length > 0 && completedCount === exercises.length && !trainedToday
@@ -165,6 +160,24 @@ export function MissionTab({
     } finally {
       setIsCompleting(false)
     }
+  }
+
+  if (!workoutPlan?.exercises?.length) {
+    return (
+      <div className="relative grid h-full min-h-0 place-items-center pb-2">
+        <div className="mx-auto max-w-[18rem] text-center">
+          <p className="font-mono text-[9px] uppercase tracking-[0.22em] text-[rgba(13,35,65,0.42)]">
+            {copy.execution}
+          </p>
+          <h1 className="mt-2 text-[1.2rem] font-black uppercase leading-tight tracking-[0.08em] text-[var(--guto-navy)]">
+            {copy.emptyTitle}
+          </h1>
+          <p className="mt-3 text-[12px] leading-relaxed text-[rgba(13,35,65,0.62)]">
+            {copy.emptyBody}
+          </p>
+        </div>
+      </div>
+    )
   }
 
   return (

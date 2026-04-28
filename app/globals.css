@@ -104,15 +104,21 @@
   body,
   #__next {
     width: 100%;
-    min-height: 100%;
+    height: 100%;
+    min-height: 100dvh;
     margin: 0;
     padding: 0;
+    overflow: hidden;
     overflow-x: hidden;
+    overscroll-behavior: none;
   }
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
     background: linear-gradient(180deg, #edf2f7 0%, #dfe7f0 100%);
+    position: fixed;
+    inset: 0;
+    width: 100%;
   }
 
   button,
@@ -131,10 +137,12 @@
   --guto-bottom-nav-space: calc(var(--guto-nav-tile-size) + max(env(safe-area-inset-bottom), 12px) + 26px);
   --guto-panel-scroll-padding: calc(var(--guto-bottom-nav-space) + 8px);
   --guto-chat-input-bottom: calc(var(--guto-bottom-nav-space) + 8px);
-  height: var(--guto-viewport-height);
-  min-height: var(--guto-viewport-height);
+  height: 100dvh;
+  min-height: 100dvh;
+  max-height: 100dvh;
   width: 100%;
   overflow: hidden;
+  isolation: isolate;
   font-family: var(--font-tech);
   background-image:
     linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(255, 255, 255, 0.3) 18%, rgba(255, 255, 255, 0) 38%),
@@ -149,7 +157,10 @@
 .sala-guto[data-keyboard-open] {
   --guto-bottom-nav-space: max(env(safe-area-inset-bottom), 12px);
   --guto-panel-scroll-padding: max(env(safe-area-inset-bottom), 16px);
-  --guto-chat-input-bottom: max(env(safe-area-inset-bottom), 10px);
+  --guto-chat-input-bottom: max(env(safe-area-inset-bottom), 8px);
+  height: var(--guto-viewport-height);
+  min-height: var(--guto-viewport-height);
+  max-height: var(--guto-viewport-height);
 }
 
 .guto-main-screen {
@@ -920,6 +931,9 @@
   --guto-chat-header-top: max(env(safe-area-inset-top), 1.03%);
   --guto-chat-header-height: clamp(54px, 9.27%, 72px);
   --guto-chat-avatar-top: clamp(148px, 21.5%, 182px);
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
 }
 
 .guto-chat-avatar-stage {
@@ -928,10 +942,15 @@
   top: var(--guto-chat-avatar-top);
   bottom: calc(var(--guto-chat-input-bottom) + 74px);
   min-height: 150px;
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease;
 }
 
 .guto-chat-input-anchor {
   bottom: var(--guto-chat-input-bottom);
+  position: sticky;
+  flex-shrink: 0;
 }
 
 .guto-latest-user-bubble {
@@ -947,20 +966,37 @@
 }
 
 .sala-guto[data-keyboard-open] .guto-chat-stage {
-  --guto-chat-avatar-top: clamp(112px, 20%, 148px);
+  --guto-chat-avatar-top: clamp(78px, 13%, 112px);
 }
 
 .sala-guto[data-keyboard-open] .guto-chat-avatar-stage {
-  bottom: calc(var(--guto-chat-input-bottom) + 70px);
-  min-height: 104px;
+  bottom: calc(var(--guto-chat-input-bottom) + 72px);
+  min-height: 0;
+  opacity: 0.2;
+  pointer-events: none;
+  transform: translateY(-18px) scale(0.72);
+  transform-origin: center top;
 }
 
 .sala-guto[data-keyboard-open] .guto-chat-bubble {
-  height: clamp(84px, 15%, 112px);
+  top: max(env(safe-area-inset-top), 8px) !important;
+  height: clamp(64px, 13%, 92px);
+  z-index: 24;
 }
 
 .sala-guto[data-keyboard-open] .guto-latest-user-bubble {
   display: none;
+}
+
+.sala-guto[data-keyboard-open] .guto-chat-input-anchor {
+  bottom: max(env(safe-area-inset-bottom), 8px);
+  height: 54px;
+  z-index: 50;
+}
+
+.sala-guto[data-keyboard-open] .guto-chat-sound-toggle {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .guto-chat-bubble,

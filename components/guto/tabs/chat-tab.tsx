@@ -38,6 +38,12 @@ interface Message {
   avatarEmotion?: GutoAvatarEmotion
 }
 
+interface StoredChatState {
+  messages: Message[]
+  expectedResponse: GutoExpectedResponse | null
+  expectedResponseMessageId: string | null
+}
+
 const chatCopy: Record<SupportedLanguage, { channel: string; speaking: string }> = {
   "pt-BR": { channel: "Canal do oráculo", speaking: "falando" },
   "en-US": { channel: "Oracle channel", speaking: "speaking" },
@@ -54,6 +60,7 @@ const openingMessage: Record<SupportedLanguage, (name: string) => string> = {
 
 const PROACTIVE_CHECK_INTERVAL_MS = 60_000
 const FIRST_MESSAGE_SENT_KEY_PREFIX = "guto-first-message-sent"
+const CHAT_STATE_KEY_PREFIX = "guto-chat-state"
 
 function formatDisplayName(value: string) {
   return value.replace(/\s+/g, " ").trim().toLocaleUpperCase()
@@ -76,6 +83,60 @@ function shouldTrackFirstMessage(userId: string) {
   }
 }
 
+function getChatStateKey(userId: string) {
+  return `${CHAT_STATE_KEY_PREFIX}:${userId}`
+}
+
+function readStoredChatState(userId: string): StoredChatState | null {
+  if (typeof window === "undefined") return null
+
+  try {
+    const raw = window.localStorage.getItem(getChatStateKey(userId))
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as {
+      messages?: Array<Omit<Message, "timestamp"> & { timestamp?: string }>
+      expectedResponse?: GutoExpectedResponse | null
+      expectedResponseMessageId?: string | null
+    }
+    const messages = Array.isArray(parsed.messages)
+      ? parsed.messages
+          .filter((message) => typeof message.text === "string" && typeof message.id === "string")
+          .slice(-24)
+          .map((message) => ({
+            ...message,
+            timestamp: message.timestamp ? new Date(message.timestamp) : new Date(),
+          }))
+      : []
+
+    if (!messages.length) return null
+    return {
+      messages,
+      expectedResponse: parsed.expectedResponse || null,
+      expectedResponseMessageId: parsed.expectedResponseMessageId || null,
+    }
+  } catch {
+    return null
+  }
+}
+
+function writeStoredChatState(userId: string, state: StoredChatState) {
+  if (typeof window === "undefined") return
+
+  try {
+    window.localStorage.setItem(
+      getChatStateKey(userId),
+      JSON.stringify({
+        messages: state.messages.slice(-24).map((message) => ({
+          ...message,
+          timestamp: message.timestamp.toISOString(),
+        })),
+        expectedResponse: state.expectedResponse,
+        expectedResponseMessageId: state.expectedResponseMessageId,
+      })
+    )
+  } catch {}
+}
+
 export function ChatTab({
   userId,
   userName,
@@ -91,16 +152,25 @@ export function ChatTab({
   const copy = chatCopy[validLang]
   const brandName = formatDisplayName(userName || "OPERADOR")
   const initialGutoMessage = openingMessage[validLang](brandName)
+  const initialChatState = useMemo(
+    () =>
+      readStoredChatState(userId) || {
+        messages: [
+          {
+            id: "guto-initial",
+            text: initialGutoMessage,
+            isGuto: true,
+            timestamp: new Date(),
+            avatarEmotion: "default" as GutoAvatarEmotion,
+          },
+        ],
+        expectedResponse: null,
+        expectedResponseMessageId: null,
+      },
+    [initialGutoMessage, userId]
+  )
 
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "guto-initial",
-      text: initialGutoMessage,
-      isGuto: true,
-      timestamp: new Date(),
-      avatarEmotion: "default" as GutoAvatarEmotion,
-    },
-  ])
+  const [messages, setMessages] = useState<Message[]>(initialChatState.messages)
   const [input, setInput] = useState("")
   const [isSending, setIsSending] = useState(false)
   const [isSpeaking, setIsSpeaking] = useState(false)
@@ -116,12 +186,17 @@ export function ChatTab({
   const proactiveInFlightRef = useRef(false)
   const lastProactiveKeyRef = useRef<string | null>(null)
   const arrivalBriefingRequestedRef = useRef(false)
-  const pendingExpectedResponseRef = useRef<GutoExpectedResponse | null>(null)
-  const pendingExpectedResponseMessageIdRef = useRef<string | null>(null)
+  const pendingExpectedResponseRef = useRef<GutoExpectedResponse | null>(initialChatState.expectedResponse)
+  const pendingExpectedResponseMessageIdRef = useRef<string | null>(initialChatState.expectedResponseMessageId)
 
   useEffect(() => {
     messagesRef.current = messages
-  }, [messages])
+    writeStoredChatState(userId, {
+      messages,
+      expectedResponse: pendingExpectedResponseRef.current,
+      expectedResponseMessageId: pendingExpectedResponseMessageIdRef.current,
+    })
+  }, [messages, userId])
 
   useEffect(() => {
     setMessages((current) => {
