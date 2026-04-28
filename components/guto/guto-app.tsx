@@ -639,7 +639,9 @@ export function GutoApp({
     (lang: SupportedLanguage) => {
       effectRegistry.emit("language_select", { meta: { language: lang, source: "settings" } })
       setSelectedLanguage(lang)
-      setActiveLanguageGlow(lang)
+      setActiveLanguageGlow(null)
+      setSettingsMode("menu")
+      setStage("system")
       persistProfile({ language: lang, onboardingComplete: true })
       persistMemory({ language: lang })
     },
@@ -681,6 +683,9 @@ export function GutoApp({
       setCommittedName(finalName)
       persistProfile({ userName: finalName, onboardingComplete: true })
       persistMemory({ name: finalName, confirmedName })
+      setSettingsNameDraft(finalName)
+      setSettingsMode("menu")
+      setStage("system")
     },
     [isValidatingName, persistMemory, persistProfile, settingsNameDraft]
   )
