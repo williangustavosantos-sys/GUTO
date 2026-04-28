@@ -59,8 +59,19 @@ const openingMessage: Record<SupportedLanguage, (name: string) => string> = {
 }
 
 const PROACTIVE_CHECK_INTERVAL_MS = 60_000
+const AUDIO_REQUEST_TIMEOUT_MS = 45_000
 const FIRST_MESSAGE_SENT_KEY_PREFIX = "guto-first-message-sent"
 const CHAT_STATE_KEY_PREFIX = "guto-chat-state"
+
+function createAbortSignal(timeoutMs: number) {
+  const controller = new AbortController()
+  const timeout = window.setTimeout(() => controller.abort(), timeoutMs)
+
+  return {
+    signal: controller.signal,
+    clear: () => window.clearTimeout(timeout),
+  }
+}
 
 function formatDisplayName(value: string) {
   return value.replace(/\s+/g, " ").trim().toLocaleUpperCase()
@@ -357,8 +368,24 @@ export function ChatTab({
 
   const sendAudio = async (blob: Blob) => {
     setIsSending(true)
+
+    if (blob.size < 800) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `g-audio-empty-${Date.now()}`,
+          text: "Não captei tua voz. Segura o microfone, fala uma frase curta e solta.",
+          isGuto: true,
+          timestamp: new Date(),
+          avatarEmotion: "default",
+        },
+      ])
+      setIsSending(false)
+      return
+    }
+
     const formData = new FormData()
-    formData.append("audio", blob)
+    formData.append("audio", blob, `guto-audio.${blob.type.includes("mp4") || blob.type.includes("aac") ? "m4a" : "webm"}`)
     formData.append("language", language)
     formData.append("profile", JSON.stringify({ name: userName || "Usuário", userId }))
     formData.append("history", JSON.stringify(messagesRef.current.map((message) => ({
@@ -388,18 +415,30 @@ export function ChatTab({
         })
       }
 
-      const response = await fetch(`${API_URL}/guto-audio`, { method: "POST", body: formData })
-      const data = await response.json()
-      const transcript = typeof data.transcript === "string" ? data.transcript.trim() : ""
-      const nextMessages: Message[] = []
-      if (transcript) {
-        nextMessages.push({
-          id: `u-audio-${Date.now()}`,
-          text: transcript,
-          isGuto: false,
-          timestamp: new Date(),
-        })
+      const request = createAbortSignal(AUDIO_REQUEST_TIMEOUT_MS)
+      const response = await fetch(`${API_URL}/guto-audio`, {
+        method: "POST",
+        body: formData,
+        signal: request.signal,
+      }).finally(request.clear)
+      const data = await response.json().catch(() => ({}))
+
+      if (!response.ok) {
+        throw new Error(typeof data.error === "string" ? data.error : "Falha ao processar áudio.")
       }
+
+      const transcript = typeof data.transcript === "string" ? data.transcript.trim() : ""
+      if (!transcript) {
+        throw new Error("Não consegui transformar o áudio em texto.")
+      }
+
+      const nextMessages: Message[] = []
+      nextMessages.push({
+        id: `u-audio-${Date.now()}`,
+        text: transcript,
+        isGuto: false,
+        timestamp: new Date(),
+      })
 
       const messageId = `g-audio-${Date.now()}`
       const gutoMessage: Message = {
@@ -423,6 +462,19 @@ export function ChatTab({
       }
     } catch (error) {
       console.error("Erro no envio do áudio:", error)
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `g-audio-error-${Date.now()}`,
+          text:
+            error instanceof DOMException && error.name === "AbortError"
+              ? "O áudio demorou demais para processar. Me manda por texto agora para não travar o fluxo."
+              : "O áudio falhou. Sem perder o ritmo: escreve a mesma resposta em uma frase curta.",
+          isGuto: true,
+          timestamp: new Date(),
+          avatarEmotion: "default",
+        },
+      ])
     } finally {
       setIsSending(false)
     }
