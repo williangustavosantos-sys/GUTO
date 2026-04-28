@@ -99,19 +99,8 @@ const openingMessage: Record<SupportedLanguage, (name: string) => string> = {
 }
 
 const PROACTIVE_CHECK_INTERVAL_MS = 60_000
-const AUDIO_REQUEST_TIMEOUT_MS = 45_000
 const FIRST_MESSAGE_SENT_KEY_PREFIX = "guto-first-message-sent"
 const CHAT_STATE_KEY_PREFIX = "guto-chat-state"
-
-function createAbortSignal(timeoutMs: number) {
-  const controller = new AbortController()
-  const timeout = window.setTimeout(() => controller.abort(), timeoutMs)
-
-  return {
-    signal: controller.signal,
-    clear: () => window.clearTimeout(timeout),
-  }
-}
 
 function formatDisplayName(value: string) {
   return value.replace(/\s+/g, " ").trim().toLocaleUpperCase()
@@ -237,8 +226,6 @@ export function ChatTab({
   const scrollRef = useRef<HTMLDivElement>(null)
   const messagesRef = useRef<Message[]>(messages)
   const currentAudioRef = useRef<HTMLAudioElement | null>(null)
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
-  const audioChunksRef = useRef<Blob[]>([])
   const speechRecognitionRef = useRef<BrowserSpeechRecognition | null>(null)
   const speechTranscriptRef = useRef("")
   const speechResultHandledRef = useRef(false)
@@ -414,125 +401,6 @@ export function ChatTab({
     return () => window.clearInterval(timer)
   }, [checkProactiveMessage])
 
-  const sendAudio = async (blob: Blob) => {
-    setIsSending(true)
-
-    if (blob.size < 800) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `g-audio-empty-${Date.now()}`,
-          text: "Não captei tua voz. Segura o microfone, fala uma frase curta e solta.",
-          isGuto: true,
-          timestamp: new Date(),
-          avatarEmotion: "default",
-        },
-      ])
-      setIsSending(false)
-      return
-    }
-
-    const formData = new FormData()
-    formData.append("audio", blob, `guto-audio.${blob.type.includes("mp4") || blob.type.includes("aac") ? "m4a" : "webm"}`)
-    formData.append("language", language)
-    formData.append("profile", JSON.stringify({ name: userName || "Usuário", userId }))
-    formData.append("history", JSON.stringify(messagesRef.current.map((message) => ({
-      role: message.isGuto ? "model" : "user",
-      parts: [{ text: message.text }],
-    }))))
-
-    const lastVisibleGuto = [...messagesRef.current].reverse().find((message) => message.isGuto)
-    const expectedResponse =
-      lastVisibleGuto?.id &&
-      pendingExpectedResponseMessageIdRef.current === lastVisibleGuto.id
-        ? pendingExpectedResponseRef.current
-        : null
-    if (expectedResponse) {
-      formData.append("expectedResponse", JSON.stringify(expectedResponse))
-    }
-
-    try {
-      if (shouldTrackFirstMessage(userId)) {
-        void trackGutoEvent({
-          event: "first_message_sent",
-          userId,
-          language: getLanguage(language) as SupportedLanguage,
-          metadata: { inputType: "audio" },
-        }).catch((error) => {
-          console.warn(`Evento do GUTO não registrado: ${getApiErrorMessage(error)}`)
-        })
-      }
-
-      const request = createAbortSignal(AUDIO_REQUEST_TIMEOUT_MS)
-      const response = await fetch(`${API_URL}/guto-audio`, {
-        method: "POST",
-        body: formData,
-        signal: request.signal,
-      }).finally(request.clear)
-      const data = await response.json().catch(() => ({}))
-
-      if (!response.ok) {
-        throw new Error(typeof data.error === "string" ? data.error : "Falha ao processar áudio.")
-      }
-
-      const transcript = typeof data.transcript === "string" ? data.transcript.trim() : ""
-      if (!transcript) {
-        throw new Error("Não consegui transformar o áudio em texto.")
-      }
-
-      const nextMessages: Message[] = []
-      nextMessages.push({
-        id: `u-audio-${Date.now()}`,
-        text: transcript,
-        isGuto: false,
-        timestamp: new Date(),
-      })
-
-      const fala = typeof data.fala === "string" ? data.fala.trim() : ""
-      if (!fala) {
-        throw new Error("O GUTO recebeu o áudio, mas não gerou resposta.")
-      }
-
-      const messageId = `g-audio-${Date.now()}`
-      const gutoMessage: Message = {
-        id: messageId,
-        text: fala,
-        isGuto: true,
-        timestamp: new Date(),
-        avatarEmotion: normalizeAvatarEmotion(data.avatarEmotion),
-      }
-
-      pendingExpectedResponseRef.current = data?.expectedResponse || null
-      pendingExpectedResponseMessageIdRef.current = data?.expectedResponse ? messageId : null
-
-      setMessages((prev) => [...prev, ...nextMessages, gutoMessage])
-      if (data.acao === "updateWorkout" && data.workoutPlan) {
-        onWorkoutPlanUpdated?.(data.workoutPlan)
-      }
-
-      if (!isMuted && data.audioContent) {
-        await playBase64Mp3(data.audioContent)
-      }
-    } catch (error) {
-      console.error("Erro no envio do áudio:", error)
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `g-audio-error-${Date.now()}`,
-          text:
-            error instanceof DOMException && error.name === "AbortError"
-              ? "O áudio demorou demais para processar. Me manda por texto agora para não travar o fluxo."
-              : "O áudio falhou. Sem perder o ritmo: escreve a mesma resposta em uma frase curta.",
-          isGuto: true,
-          timestamp: new Date(),
-          avatarEmotion: "default",
-        },
-      ])
-    } finally {
-      setIsSending(false)
-    }
-  }
-
   const startRecording = async () => {
     if (isSending || isRecording) return
 
@@ -589,35 +457,21 @@ export function ChatTab({
         setIsRecording(true)
         return
       } catch (error) {
-        console.warn("Reconhecimento de voz do navegador falhou, usando upload:", error)
+        console.warn("Reconhecimento de voz do navegador falhou:", error)
         speechRecognitionRef.current = null
       }
     }
 
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      const preferredMimeType = [
-        "audio/webm;codecs=opus",
-        "audio/webm",
-        "audio/mp4",
-        "audio/aac",
-      ].find((type) => MediaRecorder.isTypeSupported(type))
-      const recorder = new MediaRecorder(stream, preferredMimeType ? { mimeType: preferredMimeType } : undefined)
-      mediaRecorderRef.current = recorder
-      audioChunksRef.current = []
-
-      recorder.ondataavailable = (event) => audioChunksRef.current.push(event.data)
-      recorder.onstop = async () => {
-        const blob = new Blob(audioChunksRef.current, { type: recorder.mimeType || preferredMimeType || "audio/webm" })
-        await sendAudio(blob)
-        stream.getTracks().forEach((track) => track.stop())
-      }
-
-      recorder.start()
-      setIsRecording(true)
-    } catch (error) {
-      console.error("Erro ao acessar microfone", error)
-    }
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: `g-speech-unavailable-${Date.now()}`,
+        text: "O microfone de fala não está disponível neste navegador. Escreve a resposta em uma frase curta.",
+        isGuto: true,
+        timestamp: new Date(),
+        avatarEmotion: "default",
+      },
+    ])
   }
 
   const stopRecording = () => {
@@ -630,7 +484,6 @@ export function ChatTab({
       return
     }
 
-    mediaRecorderRef.current?.stop()
     setIsRecording(false)
   }
 
