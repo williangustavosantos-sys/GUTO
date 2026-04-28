@@ -152,9 +152,10 @@ export function ChatTab({
   const copy = chatCopy[validLang]
   const brandName = formatDisplayName(userName || "OPERADOR")
   const initialGutoMessage = openingMessage[validLang](brandName)
+  const storedChatState = useMemo(() => readStoredChatState(userId), [userId])
   const initialChatState = useMemo(
     () =>
-      readStoredChatState(userId) || {
+      storedChatState || {
         messages: [
           {
             id: "guto-initial",
@@ -167,7 +168,7 @@ export function ChatTab({
         expectedResponse: null,
         expectedResponseMessageId: null,
       },
-    [initialGutoMessage, userId]
+    [initialGutoMessage, storedChatState]
   )
 
   const [messages, setMessages] = useState<Message[]>(initialChatState.messages)
@@ -186,6 +187,7 @@ export function ChatTab({
   const proactiveInFlightRef = useRef(false)
   const lastProactiveKeyRef = useRef<string | null>(null)
   const arrivalBriefingRequestedRef = useRef(false)
+  const shouldForceArrivalBriefingRef = useRef(!storedChatState)
   const pendingExpectedResponseRef = useRef<GutoExpectedResponse | null>(initialChatState.expectedResponse)
   const pendingExpectedResponseMessageIdRef = useRef<string | null>(initialChatState.expectedResponseMessageId)
 
@@ -342,7 +344,10 @@ export function ChatTab({
   }, [isMuted, isSending, language, synthesizeAndPlay, userId])
 
   useEffect(() => {
-    void checkProactiveMessage(true)
+    const shouldForceArrivalBriefing = shouldForceArrivalBriefingRef.current
+    shouldForceArrivalBriefingRef.current = false
+
+    void checkProactiveMessage(shouldForceArrivalBriefing)
     const timer = window.setInterval(() => {
       void checkProactiveMessage()
     }, PROACTIVE_CHECK_INTERVAL_MS)
