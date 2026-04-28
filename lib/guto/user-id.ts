@@ -1,6 +1,10 @@
 const GUTO_USER_ID_KEY = "guto-anonymous-user-id"
 const GUTO_LAST_SEEN_DATE_KEY = "guto-last-seen-date"
 const GUTO_RETURN_RECORDED_DATE_KEY = "guto-return-recorded-date"
+const GUTO_RESET_PREFIXES = [
+  "guto-chat-state:",
+  "guto-first-message-sent:",
+]
 
 function createAnonymousUserId() {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -12,6 +16,23 @@ function createAnonymousUserId() {
 
 export function getOrCreateGutoUserId() {
   return getOrCreateGutoVisitTelemetry().userId
+}
+
+export function clearGutoBrowserIdentity() {
+  if (typeof window === "undefined") return
+
+  try {
+    window.localStorage.removeItem(GUTO_USER_ID_KEY)
+    window.localStorage.removeItem(GUTO_LAST_SEEN_DATE_KEY)
+    window.localStorage.removeItem(GUTO_RETURN_RECORDED_DATE_KEY)
+
+    for (let index = window.localStorage.length - 1; index >= 0; index -= 1) {
+      const key = window.localStorage.key(index)
+      if (key && GUTO_RESET_PREFIXES.some((prefix) => key.startsWith(prefix))) {
+        window.localStorage.removeItem(key)
+      }
+    }
+  } catch {}
 }
 
 export function getOrCreateGutoVisitTelemetry() {

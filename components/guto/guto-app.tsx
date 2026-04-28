@@ -15,7 +15,7 @@ import { PathTab } from "./tabs/path-tab"
 import type { MissionExercise } from "./view-models"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { getGutoMemory, saveGutoMemory, trackGutoEvent, validateGutoName, type GutoMemory, type GutoNameValidation, type GutoTelemetryEvent, type GutoWorkoutPlan } from "@/lib/api/guto"
-import { getOrCreateGutoVisitTelemetry } from "@/lib/guto/user-id"
+import { clearGutoBrowserIdentity, getOrCreateGutoVisitTelemetry } from "@/lib/guto/user-id"
 import type { EvolutionStage, SupportedLanguage } from "@/types/contract"
 
 type AppStage = "intro" | "language" | "naming" | "pact" | "system" | "settings"
@@ -399,6 +399,7 @@ export function GutoApp({
       if (shouldReset) {
         removeStorageItem(STORAGE_KEY)
         removeStorageItem(DEBUG_RESET_KEY)
+        clearGutoBrowserIdentity()
       }
 
       const safeLanguage = isSupportedLanguage(language) ? language : "pt-BR"
