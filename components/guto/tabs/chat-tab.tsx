@@ -679,7 +679,7 @@ export function ChatTab({
         {isMuted ? <VolumeX className="h-[18px] w-[18px]" /> : <Volume2 className="h-[18px] w-[18px]" />}
       </button>
 
-      <div className="pointer-events-none absolute left-1/2 top-[39%] z-10 h-[min(38dvh,310px)] w-[min(82vw,21rem)] -translate-x-1/2 -translate-y-1/2">
+      <div className="pointer-events-none absolute left-1/2 top-[45%] z-10 h-[min(51dvh,430px)] w-[min(96vw,28rem)] -translate-x-1/2 -translate-y-1/2">
         <GutoOfficialAvatar
           size="xl"
           showPlatform={false}
@@ -691,7 +691,7 @@ export function ChatTab({
 
       <div
         ref={scrollRef}
-        className="absolute left-0 right-0 top-[57%] bottom-[calc(var(--guto-chat-input-bottom)+72px)] z-30 overflow-y-auto px-5 pb-3"
+        className="absolute left-0 right-0 top-[54%] bottom-[calc(var(--guto-chat-input-bottom)+72px)] z-30 overflow-y-auto px-5 pb-3"
       >
         <div className="flex min-h-full flex-col justify-end gap-3">
           {visibleMessages.map((message) => (
