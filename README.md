@@ -6,7 +6,9 @@ backend Express concentra as chamadas de IA, voz e transcricao.
 ## Estrutura
 
 - `guto-app-v0`: app Next.js.
-- `guto-backend`: API Express em `https://81x7l2cj-3001.euw.devtunnels.ms/`.
+- `guto-backend`: API Express. Em producao, configure a URL publica em
+  `NEXT_PUBLIC_API_URL`. Em desenvolvimento, o app usa `http://localhost:3001`
+  quando essa variavel nao existir.
 
 ## Rodar Localmente
 
@@ -18,8 +20,9 @@ backend Express concentra as chamadas de IA, voz e transcricao.
    `GEMINI_API_KEY=...`
    `VOICE_API_KEY=...`
    `OPENAI_API_KEY=...`
-4. Opcionalmente configure `guto-app-v0/.env.local`:
-   `NEXT_PUBLIC_API_URL=https://81x7l2cj-3001.euw.devtunnels.ms/`
+4. Opcionalmente configure `guto-app-v0/.env.local` quando quiser apontar para
+   um backend publicado:
+   `NEXT_PUBLIC_API_URL=https://sua-api-publica`
 5. Rode o backend:
    `cd guto-backend && npm run dev`
 6. Rode o app:
@@ -29,5 +32,6 @@ backend Express concentra as chamadas de IA, voz e transcricao.
 
 - O app usa `app/page.tsx`, `app/layout.tsx` e alias `@/*` via Next.js.
 - O frontend nao deve chamar Gemini diretamente; ele chama o backend.
-- O avatar oficial centraliza a escolha de video Apple `.mov` com fallback
-  `.webm` para reduzir quebra visual entre Safari, Chrome e Android.
+- O avatar oficial esta travado no visual azul para a primeira demo mobile,
+  reduzindo peso de carregamento e variacao visual entre Safari, Chrome e
+  Android.

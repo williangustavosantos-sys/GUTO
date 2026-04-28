@@ -1,0 +1,25 @@
+{
+  "name": "GUTO",
+  "short_name": "GUTO",
+  "description": "Sistema de evolução humana, presença e accountability.",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#e8eef5",
+  "theme_color": "#e8eef5",
+  "icons": [
+    {
+      "src": "/icon-guto.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

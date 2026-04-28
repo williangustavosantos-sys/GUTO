@@ -6,6 +6,15 @@ export const metadata: Metadata = {
   title: 'GUTO - Sistema de Evolução Humana',
   description: 'O Guto é um melhor amigo digital que conduz, adapta, erra, aprende e permanece — até que você evolua.',
   generator: 'GUTO',
+  manifest: '/manifest.webmanifest',
+  appleWebApp: {
+    capable: true,
+    title: 'GUTO',
+    statusBarStyle: 'default',
+  },
+  formatDetection: {
+    telephone: false,
+  },
   icons: {
     shortcut: '/favicon-guto.ico?v=3',
     icon: [

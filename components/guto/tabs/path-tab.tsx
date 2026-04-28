@@ -25,6 +25,10 @@ const pathCopy = {
     debt: "Dia perdido fica cravado no material. O vazio cobra.",
     unlocked: "Desbloqueado",
     adapted: "Rota reduzida aceita",
+    waitingMission: "Missão ainda não definida",
+    waitingMissionBody: "O GUTO precisa fechar o treino no chat antes de cravar execução no caminho.",
+    noXp: "0 XP hoje",
+    noStreak: "Sequência ainda zerada",
   },
   "en-US": {
     active: "Active path",
@@ -32,6 +36,10 @@ const pathCopy = {
     debt: "A missed day stays carved into the material. The void charges for it.",
     unlocked: "Unlocked",
     adapted: "Reduced route accepted",
+    waitingMission: "Mission not locked yet",
+    waitingMissionBody: "GUTO needs to close the workout in chat before carving execution into the path.",
+    noXp: "0 XP today",
+    noStreak: "Streak still at zero",
   },
   "es-ES": {
     active: "Camino activo",
@@ -39,6 +47,10 @@ const pathCopy = {
     debt: "El día perdido queda grabado en el material. El vacío cobra.",
     unlocked: "Desbloqueado",
     adapted: "Ruta reducida aceptada",
+    waitingMission: "Misión todavía no definida",
+    waitingMissionBody: "GUTO necesita cerrar el entreno en el chat antes de marcar ejecución en el camino.",
+    noXp: "0 XP hoy",
+    noStreak: "Racha todavía en cero",
   },
   "it-IT": {
     active: "Percorso attivo",
@@ -46,6 +58,10 @@ const pathCopy = {
     debt: "Il giorno perso resta inciso nel materiale. Il vuoto presenta il conto.",
     unlocked: "Sbloccato",
     adapted: "Rotta ridotta accettata",
+    waitingMission: "Missione non ancora definita",
+    waitingMissionBody: "GUTO deve chiudere l'allenamento in chat prima di incidere l'esecuzione nel percorso.",
+    noXp: "0 XP oggi",
+    noStreak: "Sequenza ancora a zero",
   },
 } as const
 
@@ -100,7 +116,8 @@ export function PathTab({ language, memory, workoutPlan, currentEvolution }: Pat
   const currentDay = pathDays[2] ?? pathDays[0]
   const completedCount = pathDays.filter((day) => day.status === "completed").length
   const monthLabel = new Intl.DateTimeFormat(validLang, { month: "long", year: "numeric" }).format(new Date()).toUpperCase()
-  const focus = workoutPlan?.focus || locale.pathWorkoutName
+  const hasWorkoutPlan = Boolean(workoutPlan?.exercises?.length)
+  const focus = workoutPlan?.focus || copy.waitingMission
   const streak = memory?.streak ?? 0
   const isAdaptedToday = Boolean(memory?.adaptedMissionToday)
   const xpReward = memory?.trainedToday ? "+100 XP" : isAdaptedToday ? "+50 XP" : "0 XP"
@@ -204,22 +221,26 @@ export function PathTab({ language, memory, workoutPlan, currentEvolution }: Pat
                   {currentDay.day}
                 </span>
                 <h2 className="truncate text-sm font-black text-[var(--guto-navy)]">
-                  {locale.pathDayLabel}
+                  {hasWorkoutPlan ? (workoutPlan?.focus || locale.pathDayLabel) : copy.waitingMission}
                 </h2>
               </div>
 
               <div className="mt-3 space-y-2 font-mono text-[11px] leading-tight text-[rgba(13,35,65,0.64)]">
                 <p className="flex items-center gap-2">
                   <Check className="h-4 w-4 rounded-full bg-[rgba(117,165,211,0.8)] p-[2px] text-white" />
-                  {isAdaptedToday && !memory?.trainedToday ? copy.adapted : `${locale.pathWorkoutDone} ${focus}`}
+                  {isAdaptedToday && !memory?.trainedToday
+                    ? copy.adapted
+                    : hasWorkoutPlan
+                      ? `${locale.pathWorkoutDone} ${focus}`
+                      : copy.waitingMissionBody}
                 </p>
                 <p className="flex items-center gap-2">
                   <Zap className="h-4 w-4 text-[rgba(117,165,211,0.95)]" />
-                  {memory?.trainedToday ? "+100 XP hoje" : isAdaptedToday ? "+50 XP hoje" : locale.pathXpYesterday}
+                  {memory?.trainedToday ? "+100 XP hoje" : isAdaptedToday ? "+50 XP hoje" : copy.noXp}
                 </p>
                 <p className="flex items-center gap-2">
                   <Flame className="h-4 w-4 text-[rgba(117,165,211,0.95)]" />
-                  {streak > 0 ? `+${streak} dias na sequência` : locale.pathStreak}
+                  {streak > 0 ? `+${streak} dias na sequência` : copy.noStreak}
                 </p>
               </div>
             </div>

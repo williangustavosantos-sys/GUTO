@@ -120,11 +120,11 @@ export function GutoOfficialAvatar({
   size = "lg",
   showPlatform = true,
   evolution = "BABY",
-  emotion = "default",
   className,
 }: GutoOfficialAvatarProps) {
-  const sources = EVOLUTION_VIDEOS[evolution]?.[emotion] ?? EVOLUTION_VIDEOS.BABY.default
-  const assetKey = `${evolution}-${emotion}`
+  const effectiveEmotion: GutoAvatarEmotion = "default"
+  const sources = EVOLUTION_VIDEOS[evolution]?.[effectiveEmotion] ?? EVOLUTION_VIDEOS.BABY.default
+  const assetKey = `${evolution}-${effectiveEmotion}`
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const nativeVideoRef = useRef<HTMLVideoElement | null>(null)
