@@ -38,6 +38,46 @@ interface Message {
   avatarEmotion?: GutoAvatarEmotion
 }
 
+interface BrowserSpeechRecognitionResult {
+  transcript: string
+}
+
+interface BrowserSpeechRecognitionEvent {
+  resultIndex: number
+  results: {
+    length: number
+    [index: number]: {
+      isFinal: boolean
+      [index: number]: BrowserSpeechRecognitionResult
+    }
+  }
+}
+
+interface BrowserSpeechRecognitionErrorEvent {
+  error?: string
+}
+
+interface BrowserSpeechRecognition {
+  lang: string
+  continuous: boolean
+  interimResults: boolean
+  maxAlternatives: number
+  onresult: ((event: BrowserSpeechRecognitionEvent) => void) | null
+  onerror: ((event: BrowserSpeechRecognitionErrorEvent) => void) | null
+  onend: (() => void) | null
+  start: () => void
+  stop: () => void
+}
+
+type BrowserSpeechRecognitionConstructor = new () => BrowserSpeechRecognition
+
+declare global {
+  interface Window {
+    SpeechRecognition?: BrowserSpeechRecognitionConstructor
+    webkitSpeechRecognition?: BrowserSpeechRecognitionConstructor
+  }
+}
+
 interface StoredChatState {
   messages: Message[]
   expectedResponse: GutoExpectedResponse | null
@@ -79,6 +119,11 @@ function formatDisplayName(value: string) {
 
 function normalizeAvatarEmotion(value?: string): GutoAvatarEmotion {
   return value === "alert" || value === "critical" || value === "reward" ? value : "default"
+}
+
+function getBrowserSpeechRecognition() {
+  if (typeof window === "undefined") return null
+  return window.SpeechRecognition || window.webkitSpeechRecognition || null
 }
 
 function shouldTrackFirstMessage(userId: string) {
@@ -194,6 +239,9 @@ export function ChatTab({
   const currentAudioRef = useRef<HTMLAudioElement | null>(null)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
+  const speechRecognitionRef = useRef<BrowserSpeechRecognition | null>(null)
+  const speechTranscriptRef = useRef("")
+  const speechResultHandledRef = useRef(false)
   const handledExerciseQuestionRef = useRef<string | null>(null)
   const proactiveInFlightRef = useRef(false)
   const lastProactiveKeyRef = useRef<string | null>(null)
@@ -486,6 +534,66 @@ export function ChatTab({
   }
 
   const startRecording = async () => {
+    if (isSending || isRecording) return
+
+    const SpeechRecognition = getBrowserSpeechRecognition()
+    if (SpeechRecognition) {
+      try {
+        const recognition = new SpeechRecognition()
+        speechTranscriptRef.current = ""
+        speechResultHandledRef.current = false
+        recognition.lang = getLanguage(language)
+        recognition.continuous = false
+        recognition.interimResults = true
+        recognition.maxAlternatives = 1
+
+        recognition.onresult = (event) => {
+          const parts: string[] = []
+          for (let index = 0; index < event.results.length; index += 1) {
+            const transcript = event.results[index]?.[0]?.transcript
+            if (transcript) parts.push(transcript)
+          }
+          speechTranscriptRef.current = parts.join(" ").replace(/\s+/g, " ").trim()
+        }
+
+        recognition.onerror = (event) => {
+          console.warn("Reconhecimento de voz indisponível:", event.error)
+        }
+
+        recognition.onend = () => {
+          setIsRecording(false)
+          speechRecognitionRef.current = null
+          if (speechResultHandledRef.current) return
+
+          const transcript = speechTranscriptRef.current.trim()
+          speechResultHandledRef.current = true
+          if (transcript) {
+            void sendTextToGuto(transcript)
+            return
+          }
+
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: `g-speech-empty-${Date.now()}`,
+              text: "Não captei tua voz. Segura o microfone, fala uma frase curta e solta.",
+              isGuto: true,
+              timestamp: new Date(),
+              avatarEmotion: "default",
+            },
+          ])
+        }
+
+        speechRecognitionRef.current = recognition
+        recognition.start()
+        setIsRecording(true)
+        return
+      } catch (error) {
+        console.warn("Reconhecimento de voz do navegador falhou, usando upload:", error)
+        speechRecognitionRef.current = null
+      }
+    }
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       const preferredMimeType = [
@@ -513,6 +621,15 @@ export function ChatTab({
   }
 
   const stopRecording = () => {
+    if (speechRecognitionRef.current) {
+      try {
+        speechRecognitionRef.current.stop()
+      } catch (error) {
+        console.warn("Falha ao parar reconhecimento de voz:", error)
+      }
+      return
+    }
+
     mediaRecorderRef.current?.stop()
     setIsRecording(false)
   }
@@ -713,6 +830,7 @@ export function ChatTab({
               onPointerDown={startRecording}
               onPointerUp={stopRecording}
               onPointerLeave={() => isRecording && stopRecording()}
+              disabled={isSending}
               className="grid h-[34px] w-[34px] shrink-0 place-items-center rounded-full text-[var(--guto-cyan)]"
               animate={isRecording ? { scale: [1, 1.08, 1] } : { scale: 1 }}
               transition={{ duration: 0.8, repeat: isRecording ? Infinity : 0 }}
