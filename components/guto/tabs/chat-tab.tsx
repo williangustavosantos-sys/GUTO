@@ -565,47 +565,46 @@ export function ChatTab({
   }
 
   const latestGuto = messages[lastGutoIndex] ?? messages[0]
-  const latestUser = [...messages].reverse().find((message) => !message.isGuto)
+  const visibleMessages = messages.slice(-8)
 
   return (
-    <div className="guto-chat-stage relative h-full min-h-0 overflow-hidden">
-      <div className="guto-top-strip absolute left-0 top-[1.03%] z-20 h-[9.27%] w-full border-y border-[var(--guto-cyan)]">
-        <div className="guto-chat-brand" aria-label={brandName ? `GUTO e ${brandName}` : "GUTO"}>
-          <Image
-            src="/assets/guto/logo_guto.png"
-            alt="GUTO"
-            width={104}
-            height={33}
-            priority
-            className="guto-chat-brand-logo"
-          />
+    <div className="relative flex h-full min-h-0 flex-col overflow-hidden pb-[calc(92px+max(env(safe-area-inset-bottom),12px))]">
+      <header className="flex h-[calc(max(env(safe-area-inset-top),8px)+48px)] shrink-0 items-end justify-center border-b border-[var(--guto-cyan)]/70 px-5 pb-2">
+        <div className="flex max-w-full items-center justify-center gap-2" aria-label={brandName ? `GUTO e ${brandName}` : "GUTO"}>
+          <Image src="/assets/guto/logo_guto.png" alt="GUTO" width={92} height={29} priority className="h-auto w-[92px]" />
+          {brandName && (
+            <>
+              <span className="font-mono text-[13px] font-black text-[var(--guto-cyan)]">&</span>
+              <span className="max-w-[8rem] truncate font-mono text-[12px] font-black uppercase text-[var(--guto-cyan)]">
+                {brandName}
+              </span>
+            </>
+          )}
         </div>
-        {brandName && (
-          <div className="guto-chat-partner">
-            <span className="guto-chat-partner-amp" aria-hidden="true">
-              &
-            </span>
-            <span className="guto-chat-partner-name">{brandName}</span>
-          </div>
-        )}
-      </div>
+      </header>
 
-      <div
-        className="guto-chat-bubble absolute left-1/2 z-20 h-[clamp(86px,14%,118px)] w-[72%] max-w-[20rem] -translate-x-1/2 rounded-[18px]"
-      >
-        <div className="guto-chat-bubble-copy">
-          <motion.p
-            key={latestGuto.id}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="guto-chat-bubble-text"
-          >
-            {latestGuto.text}
-          </motion.p>
-        </div>
-      </div>
+      <section className="relative flex min-h-0 flex-1 flex-col">
+        <button
+          type="button"
+          onClick={() =>
+            setIsMuted((prev) => {
+              const next = !prev
+              if (next && currentAudioRef.current) {
+                currentAudioRef.current.pause()
+                currentAudioRef.current = null
+                setIsSpeaking(false)
+              }
+              return next
+            })
+          }
+          className="absolute right-5 top-4 z-30 grid h-10 w-10 place-items-center rounded-full border border-[var(--guto-cyan)]/70 bg-white/45 text-[var(--guto-cyan)] shadow-[inset_3px_4px_10px_rgba(121,136,156,0.16),inset_-5px_-6px_12px_rgba(255,255,255,0.88),0_12px_26px_rgba(122,138,156,0.12)] backdrop-blur-md"
+          aria-label={isMuted ? "Ativar fala do GUTO" : "Silenciar fala do GUTO"}
+          aria-pressed={!isMuted}
+        >
+          {isMuted ? <VolumeX className="h-[18px] w-[18px]" /> : <Volume2 className="h-[18px] w-[18px]" />}
+        </button>
 
-      <div className="guto-chat-avatar-stage absolute flex items-center justify-center">
+        <div className="flex h-[38dvh] min-h-[220px] shrink-0 items-center justify-center px-4 pt-2">
           <GutoOfficialAvatar
             size="xl"
             showPlatform={false}
@@ -615,52 +614,40 @@ export function ChatTab({
           />
         </div>
 
-      <button
-        type="button"
-        onClick={() =>
-          setIsMuted((prev) => {
-            const next = !prev
-            if (next && currentAudioRef.current) {
-              currentAudioRef.current.pause()
-              currentAudioRef.current = null
-              setIsSpeaking(false)
-            }
-            return next
-          })
-        }
-        className="guto-chat-sound-toggle absolute z-30"
-        data-audio-active={!isMuted}
-        aria-label={isMuted ? "Ativar fala do GUTO" : "Silenciar fala do GUTO"}
-        aria-pressed={!isMuted}
-      >
-        {isMuted ? <VolumeX className="h-[18px] w-[18px]" /> : <Volume2 className="h-[18px] w-[18px]" />}
-      </button>
+        <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto px-5 pb-4">
+          <div className="flex min-h-full flex-col justify-end gap-3">
+            {visibleMessages.map((message) => (
+              <motion.div
+                key={message.id}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={
+                  message.isGuto
+                    ? "mx-auto w-full max-w-[20rem] rounded-[18px] border border-[var(--guto-cyan)]/80 bg-white/55 px-4 py-3 text-center font-mono text-[clamp(11px,2.8vw,13px)] font-black leading-snug text-[var(--guto-navy)] shadow-[inset_0_1px_0_rgba(255,255,255,0.86),0_18px_38px_rgba(137,151,168,0.12)] backdrop-blur-md"
+                    : "ml-auto max-w-[84%] rounded-[18px] border border-white/80 bg-white/55 px-4 py-2 text-right text-xs font-semibold leading-snug text-[rgba(13,35,65,0.68)] shadow-[0_12px_26px_rgba(137,151,168,0.1)] backdrop-blur-md"
+                }
+              >
+                {message.text}
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
 
-        {latestUser && (
-          <motion.div
-            key={latestUser.id}
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="guto-latest-user-bubble absolute left-1/2 z-20 max-w-[84%] -translate-x-1/2 rounded-[1.1rem] border border-white/80 bg-white/45 px-4 py-2 text-center text-xs font-semibold tracking-normal text-[rgba(13,35,65,0.58)] backdrop-blur-md"
-          >
-            {latestUser.text}
-          </motion.div>
-        )}
-
-      <div className="guto-chat-input-anchor absolute left-[8.46%] z-30 h-[58px] w-[81.34%]">
-        <div className="guto-chat-input h-full rounded-[18px] px-3 py-2">
-          <div className="flex h-full items-center gap-3">
+      <div className="fixed inset-x-0 bottom-0 z-50 mx-auto w-full max-w-[430px] px-5 pb-[max(env(safe-area-inset-bottom),12px)] pt-2">
+        <div className="rounded-[18px] border border-[var(--guto-cyan)]/80 bg-white/65 px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.86),0_18px_38px_rgba(137,151,168,0.16)] backdrop-blur-md">
+          <div className="flex h-[42px] items-center gap-3">
             <motion.button
               type="button"
               onPointerDown={startRecording}
               onPointerUp={stopRecording}
               onPointerLeave={() => isRecording && stopRecording()}
-              className="grid h-[30px] w-[29px] shrink-0 place-items-center rounded-full text-[var(--guto-cyan)]"
+              className="grid h-[34px] w-[34px] shrink-0 place-items-center rounded-full text-[var(--guto-cyan)]"
               animate={isRecording ? { scale: [1, 1.08, 1] } : { scale: 1 }}
               transition={{ duration: 0.8, repeat: isRecording ? Infinity : 0 }}
               aria-label="Microfone"
             >
-              <Mic className="h-[30px] w-[29px]" style={{ color: isRecording ? "#c03535" : "var(--guto-cyan)" }} />
+              <Mic className="h-[28px] w-[28px]" style={{ color: isRecording ? "#c03535" : "var(--guto-cyan)" }} />
             </motion.button>
 
             <input
@@ -669,18 +656,18 @@ export function ChatTab({
               value={input}
               onChange={(event) => setInput(event.target.value)}
               onKeyDown={(event) => event.key === "Enter" && handleSend()}
-              className="min-w-0 flex-1 bg-transparent text-center text-[16px] font-semibold leading-none tracking-[0.3px] text-[var(--guto-navy)] outline-none placeholder:text-[#a6aeb1]"
+              className="min-w-0 flex-1 bg-transparent text-center text-[16px] font-semibold leading-none tracking-normal text-[var(--guto-navy)] outline-none placeholder:text-[#a6aeb1]"
             />
 
             <motion.button
               type="button"
               onClick={handleSend}
               disabled={isSending || !input.trim()}
-              className="grid h-[30px] w-[29px] shrink-0 place-items-center rounded-full text-[var(--guto-cyan)] disabled:opacity-35"
+              className="grid h-[34px] w-[34px] shrink-0 place-items-center rounded-full text-[var(--guto-cyan)] disabled:opacity-35"
               whileTap={{ scale: isSending ? 1 : 0.94 }}
               aria-label="Enviar mensagem"
             >
-              {isSending ? <Loader2 className="h-[25px] w-[25px] animate-spin" /> : <Send className="h-[30px] w-[29px]" />}
+              {isSending ? <Loader2 className="h-[24px] w-[24px] animate-spin" /> : <Send className="h-[27px] w-[27px]" />}
             </motion.button>
           </div>
         </div>
