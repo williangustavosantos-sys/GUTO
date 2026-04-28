@@ -93,7 +93,7 @@ const missionCopy = {
     progress: "Progresso",
     block: "Blocco",
     emptyTitle: "Allenamento non definito",
-    emptyBody: "GUTO deve ancora chiudere quando, dove, livello, eta e dolori prima di liberare la missione.",
+    emptyBody: "GUTO deve ancora chiudere quando, dove, livello, età e fastidi prima di liberare la missione.",
   },
 } as const
 

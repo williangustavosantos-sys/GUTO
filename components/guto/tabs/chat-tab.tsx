@@ -94,8 +94,8 @@ const chatCopy: Record<SupportedLanguage, { channel: string; speaking: string }>
 const openingMessage: Record<SupportedLanguage, (name: string) => string> = {
   "pt-BR": (name) => `${name}, finalmente. Tava te esperando. Enquanto isso eu já deixei três rotas prontas: academia, casa ou parque. Qual faz mais sentido pra você hoje?`,
   "en-US": (name) => `${name}, finally. I was waiting for you. While I waited, I left three routes open: gym, home, or park. Which one fits you best today?`,
-  "es-ES": (name) => `${name}, por fin. Te estaba esperando. Mientras tanto dejé tres rutas abiertas: gimnasio, casa o parque. Cual te conviene mas hoy?`,
-  "it-IT": (name) => `${name}, finalmente. Ti stavo aspettando. Intanto ho gia lasciato aperte tre strade: palestra, casa o parco. Quale ti conviene di piu oggi?`,
+  "es-ES": (name) => `${name}, por fin. Te estaba esperando. Mientras tanto dejé tres rutas abiertas: gimnasio, casa o parque. ¿Cuál te conviene más hoy?`,
+  "it-IT": (name) => `${name}, finalmente. Ti stavo aspettando. Intanto ho già lasciato aperte tre strade: palestra, casa o parco. Quale ti conviene di più oggi?`,
 }
 
 const PROACTIVE_CHECK_INTERVAL_MS = 60_000
