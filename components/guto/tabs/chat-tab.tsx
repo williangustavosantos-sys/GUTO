@@ -120,6 +120,30 @@ function isStaleAudioFailureMessage(message: Message) {
   return message.isGuto && message.text.trim() === STALE_AUDIO_FAILURE_TEXT
 }
 
+function normalizeMessageText(value: string) {
+  return value.replace(/\s+/g, " ").trim().toLocaleLowerCase()
+}
+
+function removeConsecutiveDuplicateGutoMessages(messages: Message[]) {
+  return messages.reduce<Message[]>((cleaned, message) => {
+    const previous = cleaned[cleaned.length - 1]
+    const isDuplicateGuto =
+      previous?.isGuto &&
+      message.isGuto &&
+      normalizeMessageText(previous.text) === normalizeMessageText(message.text)
+
+    if (!isDuplicateGuto) {
+      cleaned.push(message)
+    }
+
+    return cleaned
+  }, [])
+}
+
+function appendMessagesWithoutDuplicateGuto(previous: Message[], nextMessages: Message[]) {
+  return removeConsecutiveDuplicateGutoMessages([...previous, ...nextMessages])
+}
+
 function shouldTrackFirstMessage(userId: string) {
   if (typeof window === "undefined") return false
 
@@ -160,7 +184,9 @@ function readStoredChatState(userId: string): StoredChatState | null {
 
     if (!messages.length) return null
     return {
-      messages: messages.filter((message) => !isStaleAudioFailureMessage(message)),
+      messages: removeConsecutiveDuplicateGutoMessages(
+        messages.filter((message) => !isStaleAudioFailureMessage(message))
+      ),
       expectedResponse: parsed.expectedResponse || null,
       expectedResponseMessageId: parsed.expectedResponseMessageId || null,
     }
@@ -236,6 +262,7 @@ export function ChatTab({
   const speechResultHandledRef = useRef(false)
   const handledExerciseQuestionRef = useRef<string | null>(null)
   const proactiveInFlightRef = useRef(false)
+  const sendInFlightRef = useRef(false)
   const lastProactiveKeyRef = useRef<string | null>(null)
   const arrivalBriefingRequestedRef = useRef(false)
   const shouldForceArrivalBriefingRef = useRef(!storedChatState)
@@ -381,7 +408,7 @@ export function ChatTab({
           return [gutoMessage]
         }
 
-        return [...prev, gutoMessage]
+        return appendMessagesWithoutDuplicateGuto(prev, [gutoMessage])
       })
 
       if (!isMuted) {
@@ -493,6 +520,9 @@ export function ChatTab({
   }
 
   const sendTextToGuto = useCallback(async (displayText: string, modelInput = displayText) => {
+    if (sendInFlightRef.current) return
+    sendInFlightRef.current = true
+
     const safeLanguage = getLanguage(language) as SupportedLanguage
 
     const userMessage: Message = {
@@ -549,7 +579,7 @@ export function ChatTab({
         avatarEmotion: normalizeAvatarEmotion(data.avatarEmotion),
       }
 
-      setMessages((prev) => [...prev, gutoMessage])
+      setMessages((prev) => appendMessagesWithoutDuplicateGuto(prev, [gutoMessage]))
       if (data.acao === "updateWorkout" && data.workoutPlan) {
         onWorkoutPlanUpdated?.(data.workoutPlan)
       }
@@ -571,6 +601,7 @@ export function ChatTab({
         },
       ])
     } finally {
+      sendInFlightRef.current = false
       setIsSending(false)
     }
   }, [isMuted, language, onWorkoutPlanUpdated, synthesizeAndPlay, userId, userName])
@@ -702,7 +733,11 @@ export function ChatTab({
               placeholder={locale.placeholder}
               value={input}
               onChange={(event) => setInput(event.target.value)}
-              onKeyDown={(event) => event.key === "Enter" && handleSend()}
+              onKeyDown={(event) => {
+                if (event.key !== "Enter" || event.repeat) return
+                event.preventDefault()
+                void handleSend()
+              }}
               className="min-w-0 flex-1 bg-transparent text-center text-[16px] font-semibold leading-none tracking-normal text-[var(--guto-navy)] outline-none placeholder:text-[#a6aeb1]"
             />
 
