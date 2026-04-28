@@ -440,10 +440,15 @@ export function ChatTab({
         timestamp: new Date(),
       })
 
+      const fala = typeof data.fala === "string" ? data.fala.trim() : ""
+      if (!fala) {
+        throw new Error("O GUTO recebeu o áudio, mas não gerou resposta.")
+      }
+
       const messageId = `g-audio-${Date.now()}`
       const gutoMessage: Message = {
         id: messageId,
-        text: data.fala || "Executado.",
+        text: fala,
         isGuto: true,
         timestamp: new Date(),
         avatarEmotion: normalizeAvatarEmotion(data.avatarEmotion),
