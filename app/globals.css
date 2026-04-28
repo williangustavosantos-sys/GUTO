@@ -979,7 +979,7 @@
 }
 
 .sala-guto[data-keyboard-open] .guto-chat-bubble {
-  top: max(env(safe-area-inset-top), 8px) !important;
+  bottom: calc(max(env(safe-area-inset-bottom), 8px) + 66px);
   height: clamp(64px, 13%, 92px);
   z-index: 24;
 }
@@ -1013,6 +1013,7 @@
 }
 
 .guto-chat-bubble {
+  bottom: calc(var(--guto-chat-input-bottom) + 124px);
   display: grid;
   align-items: center;
   overflow: hidden;

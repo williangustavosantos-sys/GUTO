@@ -591,10 +591,7 @@ export function ChatTab({
       </div>
 
       <div
-        className="guto-chat-bubble absolute left-[21.89%] z-10 h-[16.2%] w-[57.71%] rounded-[18px]"
-        style={{
-          top: "calc(var(--guto-chat-header-top) + var(--guto-chat-header-height) + clamp(10px, 1.9dvh, 18px))",
-        }}
+        className="guto-chat-bubble absolute left-1/2 z-20 h-[clamp(86px,14%,118px)] w-[72%] max-w-[20rem] -translate-x-1/2 rounded-[18px]"
       >
         <div className="guto-chat-bubble-copy">
           <motion.p
