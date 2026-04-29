@@ -38,6 +38,7 @@ const missionCopy = {
     block: "Bloco",
     preview: "Execução",
     closePreview: "Fechar",
+    howTo: "Como fazer",
     emptyTitle: "Sem treino definido",
     emptyBody: "O GUTO ainda precisa fechar quando, onde, nível, idade e dor antes de liberar a missão.",
   },
@@ -59,6 +60,7 @@ const missionCopy = {
     block: "Block",
     preview: "Preview",
     closePreview: "Close",
+    howTo: "How to",
     emptyTitle: "No workout locked",
     emptyBody: "GUTO still needs when, where, level, age, and pain before releasing the mission.",
   },
@@ -80,6 +82,7 @@ const missionCopy = {
     block: "Bloque",
     preview: "Ejecución",
     closePreview: "Cerrar",
+    howTo: "Cómo hacerlo",
     emptyTitle: "Sin entreno definido",
     emptyBody: "GUTO todavía necesita cuándo, dónde, nivel, edad y dolor antes de liberar la misión.",
   },
@@ -101,6 +104,7 @@ const missionCopy = {
     block: "Blocco",
     preview: "Esecuzione",
     closePreview: "Chiudi",
+    howTo: "Come si fa",
     emptyTitle: "Allenamento non definito",
     emptyBody: "GUTO deve ancora chiudere quando, dove, livello, età e fastidi prima di liberare la missione.",
   },
@@ -282,10 +286,11 @@ export function MissionTab({
                           <button
                             type="button"
                             onClick={() => onAskExercise(exercise)}
-                            className="guto-slot grid h-7 w-7 shrink-0 place-items-center rounded-full"
+                            className="guto-slot hidden h-7 shrink-0 items-center gap-1 rounded-full px-2 font-mono text-[8px] font-black uppercase tracking-[0.08em] text-[var(--guto-navy)] min-[390px]:inline-flex"
                             aria-label={`${copy.doubt}: ${exercise.name}`}
                           >
                             <CircleHelp className="h-[16px] w-[16px] text-[var(--guto-cyan)]" />
+                            {copy.howTo}
                           </button>
                         </div>
 
@@ -299,6 +304,16 @@ export function MissionTab({
                           <span className="font-mono text-[8px] uppercase tracking-[0.08em] text-[rgba(13,35,65,0.34)]">{copy.observation}:</span>{" "}
                           {exercise.note}
                         </p>
+
+                        <button
+                          type="button"
+                          onClick={() => onAskExercise(exercise)}
+                          className="guto-slot mt-2 inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 font-mono text-[8px] font-black uppercase tracking-[0.12em] text-[var(--guto-navy)] min-[390px]:hidden"
+                          aria-label={`${copy.doubt}: ${exercise.name}`}
+                        >
+                          <CircleHelp className="h-3.5 w-3.5 text-[var(--guto-cyan)]" />
+                          {copy.howTo}
+                        </button>
 
                         {exercise.animationUrl && API_URL ? (
                           <div className="mt-2">
