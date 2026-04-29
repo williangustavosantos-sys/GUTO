@@ -25,6 +25,9 @@ export interface MissionExercise {
   rest: string
   cue: string
   note: string
+  animationId?: string
+  animationUrl?: string
+  animationProvider?: "workoutx"
 }
 
 export const pathDaysFixture: PathDay[] = [

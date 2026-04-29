@@ -17,6 +17,9 @@ export interface GutoWorkoutExercise {
   rest: string
   cue: string
   note: string
+  animationId?: string
+  animationUrl?: string
+  animationProvider?: "workoutx"
 }
 
 export interface GutoWorkoutPlan {

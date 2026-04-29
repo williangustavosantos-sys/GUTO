@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react"
 import { motion } from "framer-motion"
 import { CheckCircle2, CircleHelp, Play, RotateCcw } from "lucide-react"
 
+import { API_URL } from "@/lib/api/client"
 import type { GutoWorkoutPlan } from "@/lib/api/guto"
 import { getLanguage, translations } from "../translations"
 import type { MissionExercise } from "../view-models"
@@ -35,6 +36,8 @@ const missionCopy = {
     reset: "Reabrir execução",
     progress: "Progresso",
     block: "Bloco",
+    preview: "Execução",
+    closePreview: "Fechar",
     emptyTitle: "Sem treino definido",
     emptyBody: "O GUTO ainda precisa fechar quando, onde, nível, idade e dor antes de liberar a missão.",
   },
@@ -54,6 +57,8 @@ const missionCopy = {
     reset: "Reopen execution",
     progress: "Progress",
     block: "Block",
+    preview: "Preview",
+    closePreview: "Close",
     emptyTitle: "No workout locked",
     emptyBody: "GUTO still needs when, where, level, age, and pain before releasing the mission.",
   },
@@ -73,6 +78,8 @@ const missionCopy = {
     reset: "Reabrir ejecución",
     progress: "Progreso",
     block: "Bloque",
+    preview: "Ejecución",
+    closePreview: "Cerrar",
     emptyTitle: "Sin entreno definido",
     emptyBody: "GUTO todavía necesita cuándo, dónde, nivel, edad y dolor antes de liberar la misión.",
   },
@@ -92,6 +99,8 @@ const missionCopy = {
     reset: "Riapri esecuzione",
     progress: "Progresso",
     block: "Blocco",
+    preview: "Esecuzione",
+    closePreview: "Chiudi",
     emptyTitle: "Allenamento non definito",
     emptyBody: "GUTO deve ancora chiudere quando, dove, livello, età e fastidi prima di liberare la missione.",
   },
@@ -112,6 +121,7 @@ export function MissionTab({
   const [started, setStarted] = useState(false)
   const [completedExerciseIds, setCompletedExerciseIds] = useState<string[]>([])
   const [isCompleting, setIsCompleting] = useState(false)
+  const [previewExerciseId, setPreviewExerciseId] = useState<string | null>(null)
 
   const exercises = useMemo(() => workoutPlan?.exercises || [], [workoutPlan])
   const missionKey = workoutPlan?.scheduledFor || workoutPlan?.focus || "empty"
@@ -130,6 +140,7 @@ export function MissionTab({
   useEffect(() => {
     setStarted(Boolean(trainedToday || adaptedMissionToday))
     setCompletedExerciseIds(trainedToday ? exercises.map((exercise) => exercise.id) : [])
+    setPreviewExerciseId(null)
   }, [adaptedMissionToday, exercises, missionKey, trainedToday])
 
   const toggleExercise = (exerciseId: string) => {
@@ -288,6 +299,32 @@ export function MissionTab({
                           <span className="font-mono text-[8px] uppercase tracking-[0.08em] text-[rgba(13,35,65,0.34)]">{copy.observation}:</span>{" "}
                           {exercise.note}
                         </p>
+
+                        {exercise.animationUrl && API_URL ? (
+                          <div className="mt-2">
+                            <button
+                              type="button"
+                              onClick={() => setPreviewExerciseId((current) => current === exercise.id ? null : exercise.id)}
+                              className="guto-slot inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 font-mono text-[8px] font-black uppercase tracking-[0.12em] text-[var(--guto-navy)]"
+                              aria-expanded={previewExerciseId === exercise.id}
+                            >
+                              <Play className="h-3.5 w-3.5 text-[var(--guto-cyan)]" />
+                              {previewExerciseId === exercise.id ? copy.closePreview : copy.preview}
+                            </button>
+
+                            {previewExerciseId === exercise.id ? (
+                              <div className="mt-2 overflow-hidden rounded-[0.85rem] border border-[rgba(82,231,255,0.44)] bg-white/62">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                  src={`${API_URL}${exercise.animationUrl}`}
+                                  alt={`${copy.preview}: ${exercise.name}`}
+                                  loading="lazy"
+                                  className="mx-auto aspect-video max-h-40 w-full object-contain"
+                                />
+                              </div>
+                            ) : null}
+                          </div>
+                        ) : null}
                       </div>
                     </div>
                   </motion.div>
