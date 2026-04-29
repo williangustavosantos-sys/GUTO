@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react"
 import { motion } from "framer-motion"
 import { CheckCircle2, CircleHelp, Play, RotateCcw } from "lucide-react"
 
-import { API_URL } from "@/lib/api/client"
 import type { GutoWorkoutPlan } from "@/lib/api/guto"
 import { getLanguage, translations } from "../translations"
 import type { MissionExercise } from "../view-models"
@@ -113,6 +112,28 @@ const missionCopy = {
     emptyBody: "GUTO deve ancora chiudere quando, dove, livello, età e fastidi prima di liberare la missione.",
   },
 } as const
+
+const localExerciseVideos: Record<string, string> = {
+  "supino-reto": "/exercise/visuals/peito/supino_reto_maquina.mp4",
+  "supino-inclinado-halteres": "/exercise/visuals/peito/supino_inclinado_halter.mp4",
+  crossover: "/exercise/visuals/peito/crucifixo_maquina.mp4",
+  "chest-press": "/exercise/visuals/peito/supino_reto_maquina.mp4",
+  "triceps-corda": "/exercise/visuals/bracos/triceps_barra_v_cabo.mp4",
+  "triceps-frances": "/exercise/visuals/bracos/triceps_frances_cabo.mp4",
+  "paralela-assistida": "/exercise/visuals/bracos/paralelas_gravitron.mp4",
+  "puxada-frente": "/exercise/visuals/costas/puxada_frente.mp4",
+  "remada-baixa": "/exercise/visuals/costas/remada_baixa_polia.mp4",
+  "remada-curvada": "/exercise/visuals/costas/remada_cavalinho.mp4",
+  "pulldown-neutro": "/exercise/visuals/costas/puxada_frente.mp4",
+  "rosca-direta": "/exercise/visuals/bracos/biceps_maquina.mp4",
+  "rosca-inclinada": "/exercise/visuals/bracos/rosca_alternada_halter_sentado.mp4",
+  "agachamento-livre": "/exercise/visuals/pernas-gluteos-panturrilha/agachamanto_livre.mp4",
+  "afundo-caminhando": "/exercise/visuals/pernas-gluteos-panturrilha/afundo_halter.mp4",
+  polichinelo: "/exercise/visuals/abdomen-core/polichinelo.mp4",
+  "agachamento-cadeira": "/exercise/visuals/pernas-gluteos-panturrilha/agachamanto_livre.mp4",
+  "remada-mochila": "/exercise/visuals/ombro/serrote.mp4",
+  "triceps-cadeira": "/exercise/visuals/bracos/paralelas_gravitron.mp4",
+}
 
 export function MissionTab({
   language,
@@ -259,6 +280,7 @@ export function MissionTab({
               {block.map((exercise) => {
                 const exerciseIndex = exercises.findIndex((item) => item.id === exercise.id)
                 const isDone = trainedToday || completedExerciseIds.includes(exercise.id)
+                const exerciseVideoUrl = localExerciseVideos[exercise.id]
                 const previewFailed = failedPreviewExerciseIds.includes(exercise.id)
 
                 return (
@@ -312,7 +334,7 @@ export function MissionTab({
                           {exercise.note}
                         </p>
 
-                        {exercise.animationUrl && API_URL ? (
+                        {exerciseVideoUrl ? (
                           <div className="mt-2">
                             <button
                               type="button"
@@ -327,17 +349,20 @@ export function MissionTab({
                             {previewExerciseId === exercise.id ? (
                               <div className="mt-2 overflow-hidden rounded-[0.85rem] border border-[rgba(82,231,255,0.44)] bg-white/62">
                                 {!previewFailed ? (
-                                  /* eslint-disable-next-line @next/next/no-img-element */
-                                  <img
-                                    src={`${API_URL}${exercise.animationUrl}`}
-                                    alt={`${copy.preview}: ${exercise.name}`}
-                                    loading="lazy"
+                                  <video
+                                    src={exerciseVideoUrl}
+                                    autoPlay
+                                    muted
+                                    loop
+                                    playsInline
+                                    preload="metadata"
+                                    controls={false}
                                     onError={() =>
                                       setFailedPreviewExerciseIds((current) =>
                                         current.includes(exercise.id) ? current : [...current, exercise.id]
                                       )
                                     }
-                                    className="mx-auto aspect-video max-h-40 w-full object-contain"
+                                    className="mx-auto aspect-video max-h-48 w-full object-contain"
                                   />
                                 ) : null}
                                 {previewFailed ? (
