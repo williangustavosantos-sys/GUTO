@@ -114,25 +114,28 @@ const missionCopy = {
 } as const
 
 const localExerciseVideos: Record<string, string> = {
-  "supino-reto": "/exercise/visuals/peito/supino_reto_maquina.mp4",
+  "supino-reto": "/exercise/visuals/peito/supino_reto.mp4",
   "supino-inclinado-halteres": "/exercise/visuals/peito/supino_inclinado_halter.mp4",
+  "supino-inclinado": "/exercise/visuals/peito/supino_inclinado.mp4",
+  "supino-declinado": "/exercise/visuals/peito/supino_declinado.mp4",
   crossover: "/exercise/visuals/peito/crucifixo_maquina.mp4",
-  "chest-press": "/exercise/visuals/peito/supino_reto_maquina.mp4",
+  "supino-reto-maquina": "/exercise/visuals/peito/supino_reto_maquina.mp4",
+  flexao: "/exercise/visuals/peito/flexao.mp4",
   "triceps-corda": "/exercise/visuals/bracos/triceps_barra_v_cabo.mp4",
   "triceps-frances": "/exercise/visuals/bracos/triceps_frances_cabo.mp4",
   "paralela-assistida": "/exercise/visuals/bracos/paralelas_gravitron.mp4",
   "puxada-frente": "/exercise/visuals/costas/puxada_frente.mp4",
   "remada-baixa": "/exercise/visuals/costas/remada_baixa_polia.mp4",
   "remada-curvada": "/exercise/visuals/costas/remada_cavalinho.mp4",
-  "pulldown-neutro": "/exercise/visuals/costas/puxada_frente.mp4",
+  "remada-neutra-maquina": "/exercise/visuals/costas/remada_neutra_maquina.mp4",
   "rosca-direta": "/exercise/visuals/bracos/biceps_maquina.mp4",
   "rosca-inclinada": "/exercise/visuals/bracos/rosca_alternada_halter_sentado.mp4",
+  burpee: "/exercise/visuals/abdomen-core/burpee.mp4",
   "agachamento-livre": "/exercise/visuals/pernas-gluteos-panturrilha/agachamanto_livre.mp4",
   "afundo-caminhando": "/exercise/visuals/pernas-gluteos-panturrilha/afundo_halter.mp4",
   polichinelo: "/exercise/visuals/abdomen-core/polichinelo.mp4",
-  "agachamento-cadeira": "/exercise/visuals/pernas-gluteos-panturrilha/agachamanto_livre.mp4",
-  "remada-mochila": "/exercise/visuals/ombro/serrote.mp4",
-  "triceps-cadeira": "/exercise/visuals/bracos/paralelas_gravitron.mp4",
+  serrote: "/exercise/visuals/ombro/serrote.mp4",
+  "prancha-isometrica": "/exercise/visuals/abdomen-core/prancha_isomentrica.mp4",
 }
 
 export function MissionTab({
