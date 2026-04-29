@@ -24,31 +24,18 @@ type AvatarVideoSources = {
   fallback: string
 }
 
+const BLUE_BABY_SOURCES: Record<GutoAvatarEmotion, AvatarVideoSources> = {
+  default: { alphaApple: "GUTO_BABY_2_ALPHA.mov", alphaType: "hvc1", fallback: "GUTO BABY 2.webm" },
+  alert: { alphaApple: "GUTO_BABY_2_ALPHA.mov", alphaType: "hvc1", fallback: "GUTO BABY 2.webm" },
+  critical: { alphaApple: "GUTO_BABY_2_ALPHA.mov", alphaType: "hvc1", fallback: "GUTO BABY 2.webm" },
+  reward: { alphaApple: "GUTO_BABY_2_ALPHA.mov", alphaType: "hvc1", fallback: "GUTO BABY 2.webm" },
+}
+
 const EVOLUTION_VIDEOS: Record<EvolutionStage, Record<GutoAvatarEmotion, AvatarVideoSources>> = {
-  BABY: {
-    default: { alphaApple: "GUTO_BABY_2_ALPHA.mov", alphaType: "hvc1", apple: "GUTO_BABY_2_APPLE.mov", fallback: "GUTO BABY 2.webm" },
-    alert: { alphaApple: "GUTO_AMARELO_BABY_ALPHA.mov", alphaType: "hvc1", alphaWebm: "GUTO_AMARELO_BABY_ALPHA.webm", apple: "GUTO_AMARELO_BABY_ios_safe.mov", fallback: "GUTO_AMARELO_BABY.webm" },
-    critical: { alphaApple: "GUTO_VERMELHO_BABY_ALPHA.mov", alphaType: "hvc1", alphaWebm: "GUTO_VERMELHO_BABY_ALPHA.webm", apple: "GUTO_VERMELHO_BABY_ios_safe.mov", fallback: "GUTO_VERMELHO_BABY.webm" },
-    reward: { alphaApple: "GUTO_ROXO_BABY_ALPHA.mov", alphaType: "hvc1", alphaWebm: "GUTO_ROXO_BABY_ALPHA.webm", apple: "GUTO_ROXO_BABY_ios_safe.mov", fallback: "GUTO_ROXO_BABY.webm" },
-  },
-  TEEN: {
-    default: { alphaApple: "GUTO_TEEN_2_ALPHA.mov", alphaType: "hvc1", apple: "GUTO_TEEN_2_APPLE.mov", fallback: "GUTO TEEN 2.webm" },
-    alert: { alphaApple: "GUTO_AMARELO_TEEN_ALPHA.mov", alphaType: "hvc1", alphaWebm: "GUTO_AMARELO_TEEN_ALPHA.webm", apple: "GUTO_AMARELO_TEEN_ios_safe.mov", fallback: "GUTO_AMARELO_TEEN.webm" },
-    critical: { alphaApple: "GUTO_VERMELHO_TEEN_ALPHA.mov", alphaType: "hvc1", alphaWebm: "GUTO_VERMELHO_TEEN_ALPHA.webm", apple: "GUTO_VERMELHO_TEEN_ios_safe.mov", fallback: "GUTO_VERMELHO_TEEN.webm" },
-    reward: { alphaApple: "GUTO_ROXO_TEEN_ALPHA.mov", alphaType: "hvc1", alphaWebm: "GUTO_ROXO_TEEN_ALPHA.webm", apple: "GUTO_ROXO_TEEN_ios_safe.mov", fallback: "GUTO_ROXO_TEEN.webm" },
-  },
-  ADULT: {
-    default: { alphaApple: "GUTO_ADULT_2_ALPHA.mov", alphaType: "hvc1", apple: "GUTO_ADULT_2_APPLE.mov", fallback: "GUTO ADULT 2.webm" },
-    alert: { alphaApple: "GUTO_AMARELO_ADULT_ALPHA.mov", alphaType: "hvc1", alphaWebm: "GUTO_AMARELO_ADULT_ALPHA.webm", apple: "GUTO_AMARELO_ADULT_ios_safe.mov", fallback: "GUTO_AMARELO_ADULT.webm" },
-    critical: { alphaApple: "GUTO_VERMELHO_ADULT_ALPHA.mov", alphaType: "hvc1", alphaWebm: "GUTO_VERMELHO_ADULT_ALPHA.webm", apple: "GUTO_VERMELHO_ADULT_ios_safe.mov", fallback: "GUTO_VERMELHO_ADULT.webm" },
-    reward: { alphaApple: "GUTO_ROXO_ADULT_ALPHA.mov", alphaType: "hvc1", alphaWebm: "GUTO_ROXO_ADULT_ALPHA.webm", apple: "GUTO_ROXO_ADULT_ios_safe.mov", fallback: "GUTO_ROXO_ADULT.webm" },
-  },
-  ELIT: {
-    default: { alphaApple: "GUTO_ELIT_2_ALPHA.mov", alphaType: "hvc1", apple: "GUTO_ELIT_2_APPLE.mov", fallback: "GUTO ELIT 2.webm" },
-    alert: { alphaApple: "GUTO_AMARELO_ELIT_ALPHA.mov", alphaType: "hvc1", alphaWebm: "GUTO_AMARELO_ELIT_ALPHA.webm", apple: "GUTO_AMARELO_ELIT_ios_safe.mov", fallback: "GUTO_AMARELO_ELIT.webm" },
-    critical: { alphaApple: "GUTO_VERMELHO_ELIT_ALPHA.mov", alphaType: "hvc1", alphaWebm: "GUTO_VERMELHO_ELIT_ALPHA.webm", apple: "GUTO_VERMELHO_ELIT_ios_safe.mov", fallback: "GUTO_VERMELHO_ELIT.webm" },
-    reward: { alphaApple: "GUTO_ROXO_ELIT_ALPHA.mov", alphaType: "hvc1", alphaWebm: "GUTO_ROXO_ELIT_ALPHA.webm", apple: "GUTO_ROXO_ELIT_ios_safe.mov", fallback: "GUTO_ROXO_ELIT.webm" },
-  },
+  BABY: BLUE_BABY_SOURCES,
+  TEEN: BLUE_BABY_SOURCES,
+  ADULT: BLUE_BABY_SOURCES,
+  ELIT: BLUE_BABY_SOURCES,
 }
 
 const sizeClasses = {
