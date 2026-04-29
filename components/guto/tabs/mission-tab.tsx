@@ -38,6 +38,7 @@ const missionCopy = {
     block: "Bloco",
     preview: "Ver execução",
     closePreview: "Fechar",
+    previewUnavailable: "Execução indisponível. Falta configurar o backend.",
     askGuto: "Perguntar ao GUTO",
     emptyTitle: "Sem treino definido",
     emptyBody: "O GUTO ainda precisa fechar quando, onde, nível, idade e dor antes de liberar a missão.",
@@ -60,6 +61,7 @@ const missionCopy = {
     block: "Block",
     preview: "Watch form",
     closePreview: "Close",
+    previewUnavailable: "Preview unavailable. Backend setup is missing.",
     askGuto: "Ask GUTO",
     emptyTitle: "No workout locked",
     emptyBody: "GUTO still needs when, where, level, age, and pain before releasing the mission.",
@@ -82,6 +84,7 @@ const missionCopy = {
     block: "Bloque",
     preview: "Ver ejecución",
     closePreview: "Cerrar",
+    previewUnavailable: "Ejecución no disponible. Falta configurar el backend.",
     askGuto: "Preguntar a GUTO",
     emptyTitle: "Sin entreno definido",
     emptyBody: "GUTO todavía necesita cuándo, dónde, nivel, edad y dolor antes de liberar la misión.",
@@ -104,6 +107,7 @@ const missionCopy = {
     block: "Blocco",
     preview: "Vedi esecuzione",
     closePreview: "Chiudi",
+    previewUnavailable: "Esecuzione non disponibile. Manca la configurazione backend.",
     askGuto: "Chiedi a GUTO",
     emptyTitle: "Allenamento non definito",
     emptyBody: "GUTO deve ancora chiudere quando, dove, livello, età e fastidi prima di liberare la missione.",
@@ -126,6 +130,7 @@ export function MissionTab({
   const [completedExerciseIds, setCompletedExerciseIds] = useState<string[]>([])
   const [isCompleting, setIsCompleting] = useState(false)
   const [previewExerciseId, setPreviewExerciseId] = useState<string | null>(null)
+  const [failedPreviewExerciseIds, setFailedPreviewExerciseIds] = useState<string[]>([])
 
   const exercises = useMemo(() => workoutPlan?.exercises || [], [workoutPlan])
   const missionKey = workoutPlan?.scheduledFor || workoutPlan?.focus || "empty"
@@ -145,6 +150,7 @@ export function MissionTab({
     setStarted(Boolean(trainedToday || adaptedMissionToday))
     setCompletedExerciseIds(trainedToday ? exercises.map((exercise) => exercise.id) : [])
     setPreviewExerciseId(null)
+    setFailedPreviewExerciseIds([])
   }, [adaptedMissionToday, exercises, missionKey, trainedToday])
 
   const toggleExercise = (exerciseId: string) => {
@@ -253,6 +259,7 @@ export function MissionTab({
               {block.map((exercise) => {
                 const exerciseIndex = exercises.findIndex((item) => item.id === exercise.id)
                 const isDone = trainedToday || completedExerciseIds.includes(exercise.id)
+                const previewFailed = failedPreviewExerciseIds.includes(exercise.id)
 
                 return (
                   <motion.div
@@ -319,13 +326,25 @@ export function MissionTab({
 
                             {previewExerciseId === exercise.id ? (
                               <div className="mt-2 overflow-hidden rounded-[0.85rem] border border-[rgba(82,231,255,0.44)] bg-white/62">
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img
-                                  src={`${API_URL}${exercise.animationUrl}`}
-                                  alt={`${copy.preview}: ${exercise.name}`}
-                                  loading="lazy"
-                                  className="mx-auto aspect-video max-h-40 w-full object-contain"
-                                />
+                                {!previewFailed ? (
+                                  /* eslint-disable-next-line @next/next/no-img-element */
+                                  <img
+                                    src={`${API_URL}${exercise.animationUrl}`}
+                                    alt={`${copy.preview}: ${exercise.name}`}
+                                    loading="lazy"
+                                    onError={() =>
+                                      setFailedPreviewExerciseIds((current) =>
+                                        current.includes(exercise.id) ? current : [...current, exercise.id]
+                                      )
+                                    }
+                                    className="mx-auto aspect-video max-h-40 w-full object-contain"
+                                  />
+                                ) : null}
+                                {previewFailed ? (
+                                  <div className="px-3 py-2 text-center font-mono text-[9px] font-black uppercase tracking-[0.1em] text-[rgba(13,35,65,0.58)]">
+                                    {copy.previewUnavailable}
+                                  </div>
+                                ) : null}
                               </div>
                             ) : null}
                           </div>
