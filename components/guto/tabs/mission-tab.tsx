@@ -113,7 +113,7 @@ const missionCopy = {
   },
 } as const
 
-const localExerciseVideos: Record<string, string> = {
+const localExerciseMedia: Record<string, string> = {
   "supino-reto": "/exercise/visuals/peito/supino_reto.mp4",
   "supino-inclinado-halteres": "/exercise/visuals/peito/supino_inclinado_halter.mp4",
   "supino-inclinado": "/exercise/visuals/peito/supino_inclinado.mp4",
@@ -130,13 +130,15 @@ const localExerciseVideos: Record<string, string> = {
   "remada-neutra-maquina": "/exercise/visuals/costas/remada_neutra_maquina.mp4",
   "rosca-direta": "/exercise/visuals/bracos/biceps_maquina.mp4",
   "rosca-inclinada": "/exercise/visuals/bracos/rosca_alternada_halter_sentado.mp4",
-  burpee: "/exercise/visuals/abdomen-core/burpee.mp4",
-  "aquecimento-polichinelo": "/exercise/visuals/abdomen-core/polichinelo.mp4",
+  burpee: "/exercise/visuals/aquecimento-aerobico/burpee.mp4",
+  "aquecimento-bike": "/exercise/visuals/aquecimento-aerobico/bike_academia.mp4",
+  "aquecimento-escada": "/exercise/visuals/aquecimento-aerobico/escada_academia.mp4",
+  "aquecimento-polichinelo": "/exercise/visuals/aquecimento-aerobico/polichinelo.mp4",
   "aquecimento-perdigueiro": "/exercise/visuals/abdomen-core/perdigueiro.mp4",
   "aquecimento-prancha": "/exercise/visuals/abdomen-core/prancha_isomentrica.mp4",
   "agachamento-livre": "/exercise/visuals/pernas-gluteos-panturrilha/agachamanto_livre.mp4",
   "afundo-caminhando": "/exercise/visuals/pernas-gluteos-panturrilha/afundo_halter.mp4",
-  polichinelo: "/exercise/visuals/abdomen-core/polichinelo.mp4",
+  polichinelo: "/exercise/visuals/aquecimento-aerobico/polichinelo.mp4",
   serrote: "/exercise/visuals/ombro/serrote.mp4",
   "prancha-isometrica": "/exercise/visuals/abdomen-core/prancha_isomentrica.mp4",
 }
@@ -286,7 +288,7 @@ export function MissionTab({
               {block.map((exercise) => {
                 const exerciseIndex = exercises.findIndex((item) => item.id === exercise.id)
                 const isDone = trainedToday || completedExerciseIds.includes(exercise.id)
-                const exerciseVideoUrl = localExerciseVideos[exercise.id]
+                const exerciseMediaUrl = localExerciseMedia[exercise.id]
                 const previewFailed = failedPreviewExerciseIds.includes(exercise.id)
 
                 return (
@@ -340,7 +342,7 @@ export function MissionTab({
                           {exercise.note}
                         </p>
 
-                        {exerciseVideoUrl ? (
+                        {exerciseMediaUrl ? (
                           <div className="mt-2">
                             <button
                               type="button"
@@ -356,7 +358,7 @@ export function MissionTab({
                               <div className="mt-2 overflow-hidden rounded-[0.85rem] border border-[rgba(82,231,255,0.44)] bg-white/62">
                                 {!previewFailed ? (
                                   <video
-                                    src={exerciseVideoUrl}
+                                    src={exerciseMediaUrl}
                                     autoPlay
                                     muted
                                     loop
