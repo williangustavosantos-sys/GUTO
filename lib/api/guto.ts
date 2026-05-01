@@ -12,18 +12,32 @@ export type GutoTelemetryEvent =
 export interface GutoWorkoutExercise {
   id: string
   name: string
+  canonicalNamePt: string
+  muscleGroup: string
   sets: number
   reps: string
   rest: string
   cue: string
   note: string
+  videoUrl: string
+  videoProvider: "local"
+  sourceFileName: string
+  // kept for backward compat with plans saved before the catalog migration
   animationId?: string
   animationUrl?: string
   animationProvider?: "workoutx"
 }
 
+export type WorkoutFocus =
+  | "chest_triceps"
+  | "back_biceps"
+  | "legs_core"
+  | "shoulders_abs"
+  | "full_body"
+
 export interface GutoWorkoutPlan {
   focus: string
+  focusKey?: WorkoutFocus
   dateLabel: string
   scheduledFor: string
   summary: string

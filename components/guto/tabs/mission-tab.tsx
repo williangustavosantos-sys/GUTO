@@ -18,6 +18,13 @@ interface MissionTabProps {
   onAdaptedMissionComplete: () => Promise<void> | void
 }
 
+const MUSCLE_GROUP_LABEL: Record<string, Record<string, string>> = {
+  "pt-BR": { aquecimento: "Aquecimento", peito: "Peito", costas: "Costas", ombro: "Ombro", bracos: "Braços", pernas: "Pernas", abdomen: "Abdômen" },
+  "en-US": { aquecimento: "Warm-up", peito: "Chest", costas: "Back", ombro: "Shoulder", bracos: "Arms", pernas: "Legs", abdomen: "Core" },
+  "it-IT": { aquecimento: "Riscaldamento", peito: "Petto", costas: "Schiena", ombro: "Spalla", bracos: "Braccia", pernas: "Gambe", abdomen: "Addome" },
+  "es-ES": { aquecimento: "Calentamiento", peito: "Pecho", costas: "Espalda", ombro: "Hombro", bracos: "Brazos", pernas: "Piernas", abdomen: "Abdomen" },
+}
+
 const missionCopy = {
   "pt-BR": {
     execution: "Treino do dia",
@@ -113,35 +120,6 @@ const missionCopy = {
   },
 } as const
 
-const localExerciseMedia: Record<string, string> = {
-  "supino-reto": "/exercise/visuals/peito/supino_reto.mp4",
-  "supino-inclinado-halteres": "/exercise/visuals/peito/supino_inclinado_halter.mp4",
-  "supino-inclinado": "/exercise/visuals/peito/supino_inclinado.mp4",
-  "supino-declinado": "/exercise/visuals/peito/supino_declinado.mp4",
-  crossover: "/exercise/visuals/peito/crucifixo_maquina.mp4",
-  "supino-reto-maquina": "/exercise/visuals/peito/supino_reto_maquina.mp4",
-  flexao: "/exercise/visuals/peito/flexao.mp4",
-  "triceps-corda": "/exercise/visuals/bracos/triceps_barra_v_cabo.mp4",
-  "triceps-frances": "/exercise/visuals/bracos/triceps_frances_cabo.mp4",
-  "paralela-assistida": "/exercise/visuals/bracos/paralelas_gravitron.mp4",
-  "puxada-frente": "/exercise/visuals/costas/puxada_frente.mp4",
-  "remada-baixa": "/exercise/visuals/costas/remada_baixa_polia.mp4",
-  "remada-curvada": "/exercise/visuals/costas/remada_cavalinho.mp4",
-  "remada-neutra-maquina": "/exercise/visuals/costas/remada_neutra_maquina.mp4",
-  "rosca-direta": "/exercise/visuals/bracos/biceps_maquina.mp4",
-  "rosca-inclinada": "/exercise/visuals/bracos/rosca_alternada_halter_sentado.mp4",
-  burpee: "/exercise/visuals/aquecimento-aerobico/burpee.mp4",
-  "aquecimento-bike": "/exercise/visuals/aquecimento-aerobico/bike_academia.mp4",
-  "aquecimento-escada": "/exercise/visuals/aquecimento-aerobico/escada_academia.mp4",
-  "aquecimento-polichinelo": "/exercise/visuals/aquecimento-aerobico/polichinelo.mp4",
-  "aquecimento-perdigueiro": "/exercise/visuals/abdomen-core/perdigueiro.mp4",
-  "aquecimento-prancha": "/exercise/visuals/abdomen-core/prancha_isomentrica.mp4",
-  "agachamento-livre": "/exercise/visuals/pernas-gluteos-panturrilha/agachamanto_livre.mp4",
-  "afundo-caminhando": "/exercise/visuals/pernas-gluteos-panturrilha/afundo_halter.mp4",
-  polichinelo: "/exercise/visuals/aquecimento-aerobico/polichinelo.mp4",
-  serrote: "/exercise/visuals/ombro/serrote.mp4",
-  "prancha-isometrica": "/exercise/visuals/abdomen-core/prancha_isomentrica.mp4",
-}
 
 export function MissionTab({
   language,
@@ -158,9 +136,6 @@ export function MissionTab({
   const [started, setStarted] = useState(false)
   const [completedExerciseIds, setCompletedExerciseIds] = useState<string[]>([])
   const [isCompleting, setIsCompleting] = useState(false)
-  const [previewExerciseId, setPreviewExerciseId] = useState<string | null>(null)
-  const [failedPreviewExerciseIds, setFailedPreviewExerciseIds] = useState<string[]>([])
-
   const exercises = useMemo(() => workoutPlan?.exercises || [], [workoutPlan])
   const missionKey = workoutPlan?.scheduledFor || workoutPlan?.focus || "empty"
   const completedCount = completedExerciseIds.length
@@ -178,8 +153,6 @@ export function MissionTab({
   useEffect(() => {
     setStarted(Boolean(trainedToday || adaptedMissionToday))
     setCompletedExerciseIds(trainedToday ? exercises.map((exercise) => exercise.id) : [])
-    setPreviewExerciseId(null)
-    setFailedPreviewExerciseIds([])
   }, [adaptedMissionToday, exercises, missionKey, trainedToday])
 
   const toggleExercise = (exerciseId: string) => {
@@ -286,10 +259,18 @@ export function MissionTab({
               </div>
 
               {block.map((exercise) => {
+                // Backend invariant: every prescribed exercise has a local videoUrl.
+                // If this fires it signals a validation bug upstream — skip the card.
+                if (!exercise.videoUrl) {
+                  if (process.env.NODE_ENV === "development") {
+                    console.warn(`[GUTO] Exercise "${exercise.id}" reached the UI without videoUrl — card suppressed.`)
+                  }
+                  return null
+                }
+
                 const exerciseIndex = exercises.findIndex((item) => item.id === exercise.id)
                 const isDone = trainedToday || completedExerciseIds.includes(exercise.id)
-                const exerciseMediaUrl = localExerciseMedia[exercise.id]
-                const previewFailed = failedPreviewExerciseIds.includes(exercise.id)
+                const categoryLabel = MUSCLE_GROUP_LABEL[validLang]?.[exercise.muscleGroup] || exercise.muscleGroup
 
                 return (
                   <motion.div
@@ -313,23 +294,29 @@ export function MissionTab({
                       </button>
 
                       <div className="min-w-0 flex-1">
+                        {/* number + category tag */}
                         <div className="flex items-center gap-2">
                           <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[rgba(117,165,211,0.78)] font-mono text-[9px] font-black text-white">
                             {String(exerciseIndex + 1).padStart(2, "0")}
                           </span>
-                          <h2 className="min-w-0 flex-1 truncate text-[13px] font-black leading-tight text-[var(--guto-navy)]">
-                            {exercise.name}
-                          </h2>
+                          <span className="rounded-full bg-[rgba(117,165,211,0.18)] px-2 py-0.5 font-mono text-[8px] font-black uppercase tracking-[0.1em] text-[rgba(13,35,65,0.52)]">
+                            {categoryLabel}
+                          </span>
                           <button
                             type="button"
                             onClick={() => onAskExercise(exercise)}
-                            className="guto-slot hidden h-7 shrink-0 items-center gap-1 rounded-full px-2 font-mono text-[8px] font-black uppercase tracking-[0.08em] text-[var(--guto-navy)] min-[390px]:inline-flex"
+                            className="guto-slot ml-auto hidden h-7 shrink-0 items-center gap-1 rounded-full px-2 font-mono text-[8px] font-black uppercase tracking-[0.08em] text-[var(--guto-navy)] min-[390px]:inline-flex"
                             aria-label={`${copy.doubt}: ${exercise.name}`}
                           >
                             <CircleHelp className="h-[16px] w-[16px] text-[var(--guto-cyan)]" />
                             {copy.askGuto}
                           </button>
                         </div>
+
+                        {/* exercise name — full width, no truncation */}
+                        <h2 className="mt-0.5 text-[13px] font-black leading-tight text-[var(--guto-navy)]">
+                          {exercise.name}
+                        </h2>
 
                         <div className="mt-1.5 flex items-center gap-3 font-mono text-[10px] font-black text-[var(--guto-navy)]">
                           <span>{exercise.sets} <span className="font-semibold text-[rgba(13,35,65,0.48)]">{copy.series.toLowerCase()}</span></span>
@@ -342,46 +329,18 @@ export function MissionTab({
                           {exercise.note}
                         </p>
 
-                        {exerciseMediaUrl ? (
-                          <div className="mt-2">
-                            <button
-                              type="button"
-                              onClick={() => setPreviewExerciseId((current) => current === exercise.id ? null : exercise.id)}
-                              className="guto-deboss-deep inline-flex h-9 w-full items-center justify-center gap-2 rounded-[0.8rem] font-mono text-[9px] font-black uppercase tracking-[0.14em] text-[var(--guto-navy)]"
-                              aria-expanded={previewExerciseId === exercise.id}
-                            >
-                              <Play className="h-4 w-4 text-[var(--guto-cyan)]" />
-                              {previewExerciseId === exercise.id ? copy.closePreview : copy.preview}
-                            </button>
-
-                            {previewExerciseId === exercise.id ? (
-                              <div className="mt-2 overflow-hidden rounded-[0.85rem] border border-[rgba(82,231,255,0.44)] bg-white/62">
-                                {!previewFailed ? (
-                                  <video
-                                    src={exerciseMediaUrl}
-                                    autoPlay
-                                    muted
-                                    loop
-                                    playsInline
-                                    preload="metadata"
-                                    controls={false}
-                                    onError={() =>
-                                      setFailedPreviewExerciseIds((current) =>
-                                        current.includes(exercise.id) ? current : [...current, exercise.id]
-                                      )
-                                    }
-                                    className="mx-auto aspect-video max-h-48 w-full object-contain"
-                                  />
-                                ) : null}
-                                {previewFailed ? (
-                                  <div className="px-3 py-2 text-center font-mono text-[9px] font-black uppercase tracking-[0.1em] text-[rgba(13,35,65,0.58)]">
-                                    {copy.previewUnavailable}
-                                  </div>
-                                ) : null}
-                              </div>
-                            ) : null}
-                          </div>
-                        ) : null}
+                        <div className="mt-2 overflow-hidden rounded-[0.85rem] border border-[rgba(82,231,255,0.44)] bg-white/62">
+                          <video
+                            src={exercise.videoUrl}
+                            autoPlay
+                            muted
+                            loop
+                            playsInline
+                            preload="metadata"
+                            controls={false}
+                            className="mx-auto aspect-video max-h-48 w-full object-contain"
+                          />
+                        </div>
 
                         <button
                           type="button"

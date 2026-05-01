@@ -20,11 +20,17 @@ export interface EvolutionCard {
 export interface MissionExercise {
   id: string
   name: string
+  canonicalNamePt: string
+  muscleGroup: string
   sets: number
   reps: number | string
   rest: string
   cue: string
   note: string
+  videoUrl: string
+  videoProvider: "local"
+  sourceFileName: string
+  // kept for backward compat with plans saved before the catalog migration
   animationId?: string
   animationUrl?: string
   animationProvider?: "workoutx"
@@ -47,10 +53,16 @@ export const evolutionCardsFixture: EvolutionCard[] = [
   { stage: "ELIT", label: "ELIT", requiredXp: 5000, unlocked: false, silhouette: "blocked" },
 ]
 
+const FIXTURE_BASE = { canonicalNamePt: "", muscleGroup: "peito", videoUrl: "", videoProvider: "local" as const, sourceFileName: "" }
+
 export const missionExercisesFixture: MissionExercise[] = [
   {
-    id: "bench-press",
+    ...FIXTURE_BASE,
+    id: "supino_reto",
+    canonicalNamePt: "Supino reto",
     name: "Supino reto",
+    videoUrl: "/exercise/visuals/peito/supino_reto.mp4",
+    sourceFileName: "supino_reto.mp4",
     sets: 4,
     reps: 8,
     rest: "1:30min",
@@ -58,8 +70,12 @@ export const missionExercisesFixture: MissionExercise[] = [
     note: "Não deixa o ombro assumir. Peito trabalha, ego fica fora.",
   },
   {
-    id: "incline-dumbbell-press",
+    ...FIXTURE_BASE,
+    id: "supino_inclinado_halter",
+    canonicalNamePt: "Supino inclinado com halteres",
     name: "Supino inclinado com halteres",
+    videoUrl: "/exercise/visuals/peito/supino_inclinado_halter.mp4",
+    sourceFileName: "supino_inclinado_halter.mp4",
     sets: 4,
     reps: 10,
     rest: "1:30min",
@@ -67,8 +83,12 @@ export const missionExercisesFixture: MissionExercise[] = [
     note: "Amplitude limpa. Se perder controle, reduz carga.",
   },
   {
-    id: "cable-fly",
+    ...FIXTURE_BASE,
+    id: "crucifixo_maquina",
+    canonicalNamePt: "Crucifixo na máquina",
     name: "Crucifixo no cabo",
+    videoUrl: "/exercise/visuals/peito/crucifixo_maquina.mp4",
+    sourceFileName: "crucifixo_maquina.mp4",
     sets: 3,
     reps: 12,
     rest: "1:15min",
@@ -76,8 +96,12 @@ export const missionExercisesFixture: MissionExercise[] = [
     note: "Sente o peitoral encurtar. Movimento bonito não vale se não contrair.",
   },
   {
-    id: "machine-chest-press",
+    ...FIXTURE_BASE,
+    id: "supino_reto_maquina",
+    canonicalNamePt: "Supino reto na máquina",
     name: "Chest press máquina",
+    videoUrl: "/exercise/visuals/peito/supino_reto_maquina.mp4",
+    sourceFileName: "supino_reto_maquina.mp4",
     sets: 3,
     reps: 12,
     rest: "1:30min",
@@ -85,8 +109,13 @@ export const missionExercisesFixture: MissionExercise[] = [
     note: "Aqui é volume controlado. Sem roubar no fim.",
   },
   {
-    id: "dips",
+    ...FIXTURE_BASE,
+    id: "paralelas_gravitron",
+    canonicalNamePt: "Paralelas no Gravitron",
+    muscleGroup: "triceps",
     name: "Paralela assistida",
+    videoUrl: "/exercise/visuals/triceps/paralelas_gravitron.mp4",
+    sourceFileName: "paralelas_gravitron.mp4",
     sets: 3,
     reps: 10,
     rest: "1:30min",
@@ -94,8 +123,13 @@ export const missionExercisesFixture: MissionExercise[] = [
     note: "Se o ombro reclamar, reduz amplitude. Execução manda.",
   },
   {
-    id: "rope-triceps",
+    ...FIXTURE_BASE,
+    id: "triceps_barra_v_cabo",
+    canonicalNamePt: "Tríceps barra V no cabo",
+    muscleGroup: "triceps",
     name: "Tríceps corda",
+    videoUrl: "/exercise/visuals/triceps/triceps_barra_v_cabo.mp4",
+    sourceFileName: "triceps_barra_v_cabo.mp4",
     sets: 4,
     reps: 12,
     rest: "1:00min",
@@ -103,8 +137,13 @@ export const missionExercisesFixture: MissionExercise[] = [
     note: "Não transforma em balanço. Tríceps fecha a missão.",
   },
   {
-    id: "overhead-triceps",
+    ...FIXTURE_BASE,
+    id: "triceps_frances_cabo",
+    canonicalNamePt: "Tríceps francês no cabo",
+    muscleGroup: "triceps",
     name: "Tríceps francês no cabo",
+    videoUrl: "/exercise/visuals/triceps/triceps_frances_cabo.mp4",
+    sourceFileName: "triceps_frances_cabo.mp4",
     sets: 3,
     reps: 12,
     rest: "1:15min",
@@ -112,8 +151,13 @@ export const missionExercisesFixture: MissionExercise[] = [
     note: "O alongamento importa. Não corta o movimento.",
   },
   {
-    id: "close-grip-pushup",
+    ...FIXTURE_BASE,
+    id: "flexao",
+    canonicalNamePt: "Flexão de braço",
+    muscleGroup: "peito",
     name: "Flexão fechada",
+    videoUrl: "/exercise/visuals/peito/flexao.mp4",
+    sourceFileName: "flexao.mp4",
     sets: 3,
     reps: 15,
     rest: "1:00min",
