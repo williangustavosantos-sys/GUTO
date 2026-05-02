@@ -39,3 +39,4 @@ next.user-config.*
 # misc
 coverage/
 *.tsbuildinfo
+node_modules
