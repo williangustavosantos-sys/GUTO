@@ -1,10 +1,11 @@
 "use client"
 
-import { useMemo } from "react"
+import { useMemo, useState } from "react"
 import { motion } from "framer-motion"
 import { AlertCircle, Check, Flame, Lock, Quote, Zap } from "lucide-react"
 
-import type { GutoMemory, GutoWorkoutPlan } from "@/lib/api/guto"
+import type { GutoMemory, GutoWorkoutPlan, WorkoutValidationRecord } from "@/lib/api/guto"
+import { API_URL } from "@/lib/api/client"
 import { GutoOfficialAvatar } from "../guto-official-avatar"
 import { getLanguage, translations } from "../translations"
 import type { EvolutionStage } from "@/types/contract"
@@ -16,11 +17,12 @@ interface PathTabProps {
   memory?: GutoMemory | null
   workoutPlan?: GutoWorkoutPlan | null
   currentEvolution: EvolutionStage
+  validationHistory?: WorkoutValidationRecord[]
 }
 
 const pathCopy = {
   "pt-BR": {
-    active: "Trilha ativa",
+    active: "Percurso ativo",
     visibleFailure: "Falha visível",
     debt: "Dia perdido fica cravado no material. O vazio cobra.",
     unlocked: "Desbloqueado",
@@ -42,7 +44,7 @@ const pathCopy = {
     noStreak: "Streak still at zero",
   },
   "es-ES": {
-    active: "Camino activo",
+    active: "Recorrido activo",
     visibleFailure: "Falla visible",
     debt: "El día perdido queda grabado en el material. El vacío cobra.",
     unlocked: "Desbloqueado",
@@ -108,7 +110,7 @@ function buildPathDays(language: string, memory?: GutoMemory | null): PathDay[] 
   })
 }
 
-export function PathTab({ language, memory, workoutPlan, currentEvolution }: PathTabProps) {
+export function PathTab({ language, memory, workoutPlan, currentEvolution, validationHistory }: PathTabProps) {
   const validLang = getLanguage(language)
   const locale = translations[validLang]
   const copy = pathCopy[validLang]
@@ -122,6 +124,14 @@ export function PathTab({ language, memory, workoutPlan, currentEvolution }: Pat
   const isAdaptedToday = Boolean(memory?.adaptedMissionToday)
   const xpReward = memory?.trainedToday ? "+100 XP" : isAdaptedToday ? "+50 XP" : "0 XP"
   const avatarEmotion = (memory?.totalXp ?? 0) === 0 ? "critical" : memory?.trainedToday ? "reward" : isAdaptedToday ? "alert" : "default"
+  const [selectedPoster, setSelectedPoster] = useState<string | null>(null)
+
+  const validationSectionLabel = {
+    "pt-BR": "Últimos treinos validados",
+    "en-US": "Last validated workouts",
+    "it-IT": "Ultimi allenamenti validati",
+    "es-ES": "Últimos entrenamientos validados",
+  }[validLang]
 
   return (
     <div className="flex h-full min-h-0 flex-col pb-3">
@@ -277,6 +287,54 @@ export function PathTab({ language, memory, workoutPlan, currentEvolution }: Pat
           <Flame className="h-4 w-4 text-[var(--guto-cyan)]" />
         </div>
       </div>
+
+      {validationHistory && validationHistory.length > 0 && (
+        <div className="mt-3">
+          <p className="mb-2 font-mono text-[9px] font-black uppercase tracking-[0.2em] text-[rgba(13,35,65,0.42)]">
+            {validationSectionLabel}
+          </p>
+          <div className="no-scrollbar flex gap-3 overflow-x-auto pb-1">
+            {validationHistory.slice(0, 5).map((record) => (
+              <button
+                key={record.id}
+                type="button"
+                onClick={() => setSelectedPoster(`${API_URL}${record.posterUrl}`)}
+                className="shrink-0 text-left"
+              >
+                <div className="h-[72px] w-[54px] overflow-hidden rounded-[0.85rem] border border-[rgba(82,231,255,0.35)] bg-white/40">
+                  <img
+                    src={`${API_URL}${record.thumbUrl}`}
+                    alt={record.dateLabel}
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+                <p className="mt-1 font-mono text-[8px] uppercase tracking-[0.08em] text-[rgba(13,35,65,0.5)]">
+                  {record.dateLabel}
+                </p>
+                <p className="font-mono text-[8px] font-black text-[var(--guto-cyan)]">
+                  +{record.xp} XP
+                </p>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Poster modal */}
+      {selectedPoster && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(13,35,65,0.88)] p-6"
+          style={{ backdropFilter: "blur(8px)" }}
+          onClick={() => setSelectedPoster(null)}
+        >
+          <img
+            src={selectedPoster}
+            alt="Validation poster"
+            className="max-h-full max-w-full rounded-[1.5rem] object-contain shadow-[0_8px_48px_rgba(0,0,0,0.5)]"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   )
 }

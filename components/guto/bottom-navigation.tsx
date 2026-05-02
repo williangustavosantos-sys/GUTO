@@ -14,10 +14,10 @@ interface BottomNavigationProps {
 }
 
 const tabLabels: Record<"pt-BR" | "it-IT" | "es-ES" | "en-US", Record<TabType, string>> = {
-  "pt-BR": { guto: "GUTO", caminho: "CAM.", evolucoes: "EVO.", missao: "TREINO" },
+  "pt-BR": { guto: "GUTO", caminho: "PERC.", evolucoes: "EVO.", missao: "TREINO" },
   "it-IT": { guto: "GUTO", caminho: "PERC.", evolucoes: "EVO.", missao: "TRAIN" },
-  "es-ES": { guto: "GUTO", caminho: "CAM.", evolucoes: "EVO.", missao: "ENTR." },
-  "en-US": { guto: "GUTO", caminho: "PATH", evolucoes: "EVOLVE", missao: "WORKOUT" },
+  "es-ES": { guto: "GUTO", caminho: "REC.", evolucoes: "EVO.", missao: "ENTR." },
+  "en-US": { guto: "GUTO", caminho: "JOURNEY", evolucoes: "EVOLVE", missao: "WORKOUT" },
 }
 
 const tabs = [

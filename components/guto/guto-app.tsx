@@ -14,6 +14,7 @@ import { MissionTab } from "./tabs/mission-tab"
 import { PathTab } from "./tabs/path-tab"
 import { CalibrationScreen } from "./screens/calibration-screen"
 import type { MissionExercise } from "./view-models"
+import { WorkoutValidationFlow } from "./validation/workout-validation-flow"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { getGutoMemory, saveGutoMemory, trackGutoEvent, validateGutoName, type GutoMemory, type GutoNameValidation, type GutoTelemetryEvent, type GutoWorkoutPlan } from "@/lib/api/guto"
 import { clearGutoBrowserIdentity, getOrCreateGutoVisitTelemetry } from "@/lib/guto/user-id"
@@ -256,6 +257,7 @@ export function GutoApp({
   const [gutoUserId, setGutoUserId] = useState("local-user")
   const [nameGate, setNameGate] = useState<NameGate | null>(null)
   const [isValidatingName, setIsValidatingName] = useState(false)
+  const [showValidationFlow, setShowValidationFlow] = useState(false)
 
   const timersRef = useRef<number[]>([])
   const pactIntervalRef = useRef<number | null>(null)
@@ -838,6 +840,7 @@ export function GutoApp({
             memory={memory}
             workoutPlan={workoutPlan}
             currentEvolution={evolution}
+            validationHistory={memory?.validationHistory}
           />
         )
       case "evolucoes":
@@ -854,12 +857,15 @@ export function GutoApp({
           <MissionTab
             language={selectedLanguage}
             userName={userLabel}
+            userId={gutoUserId}
+            workoutFocus={workoutPlan?.focusKey || "full_body"}
             onAskExercise={handleExerciseQuestion}
             workoutPlan={workoutPlan}
             trainedToday={Boolean(memory?.trainedToday)}
             adaptedMissionToday={Boolean(memory?.adaptedMissionToday)}
             onMissionComplete={handleMissionComplete}
             onAdaptedMissionComplete={handleAdaptedMissionComplete}
+            onValidateWorkout={() => setShowValidationFlow(true)}
           />
         )
       default:
@@ -1481,6 +1487,23 @@ export function GutoApp({
           />
         )}
       </AnimatePresence>
+
+      {showValidationFlow && (
+        <div className="fixed inset-0 z-50">
+          <WorkoutValidationFlow
+            language={selectedLanguage}
+            userId={gutoUserId}
+            workoutFocus={workoutPlan?.focusKey || "full_body"}
+            workoutLabel={workoutPlan?.focus || ""}
+            onComplete={(validationHistory) => {
+              setMemory((prev) => prev ? { ...prev, validationHistory } : prev)
+              setShowValidationFlow(false)
+              setActiveTab("caminho")
+            }}
+            onClose={() => setShowValidationFlow(false)}
+          />
+        </div>
+      )}
     </div>
   )
 }

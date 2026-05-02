@@ -11,12 +11,15 @@ import type { MissionExercise } from "../view-models"
 interface MissionTabProps {
   language: string
   userName?: string
+  userId: string
+  workoutFocus?: string
   onAskExercise: (exercise: MissionExercise) => void
   workoutPlan?: GutoWorkoutPlan | null
   trainedToday?: boolean
   adaptedMissionToday?: boolean
   onMissionComplete: () => Promise<void> | void
   onAdaptedMissionComplete: () => Promise<void> | void
+  onValidateWorkout: () => void
 }
 
 const MUSCLE_GROUP_LABEL: Record<string, Record<string, string>> = {
@@ -51,6 +54,7 @@ const missionCopy = {
     emptyBody: "O GUTO ainda precisa fechar quando, onde, nível, idade e dor antes de liberar a missão.",
     warmup: "Aquecimento",
     mainSection: "Parte Principal",
+    validateWorkout: "VALIDAR TREINO",
   },
   "en-US": {
     execution: "Today's workout",
@@ -76,6 +80,7 @@ const missionCopy = {
     emptyBody: "GUTO still needs when, where, level, age, and pain before releasing the mission.",
     warmup: "Warm-Up",
     mainSection: "Main Workout",
+    validateWorkout: "VALIDATE WORKOUT",
   },
   "es-ES": {
     execution: "Entrenamiento del día",
@@ -101,6 +106,7 @@ const missionCopy = {
     emptyBody: "GUTO todavía necesita cuándo, dónde, nivel, edad y dolor antes de liberar la misión.",
     warmup: "Calentamiento",
     mainSection: "Parte Principal",
+    validateWorkout: "VALIDAR ENTRENAMIENTO",
   },
   "it-IT": {
     execution: "Allenamento del giorno",
@@ -126,6 +132,7 @@ const missionCopy = {
     emptyBody: "GUTO deve ancora chiudere quando, dove, livello, età e fastidi prima di liberare la missione.",
     warmup: "Riscaldamento",
     mainSection: "Parte Principale",
+    validateWorkout: "VALIDA ALLENAMENTO",
   },
 } as const
 
@@ -133,12 +140,15 @@ const missionCopy = {
 export function MissionTab({
   language,
   userName,
+  userId: _userId,
+  workoutFocus: _workoutFocus,
   onAskExercise,
   workoutPlan,
   trainedToday = false,
   adaptedMissionToday = false,
   onMissionComplete,
   onAdaptedMissionComplete,
+  onValidateWorkout,
 }: MissionTabProps) {
   const validLang = getLanguage(language)
   const locale = translations[validLang]
@@ -413,6 +423,16 @@ export function MissionTab({
         >
           {adaptedMissionToday ? copy.adaptedDone : copy.adapted}
         </button>
+
+        {trainedToday && (
+          <button
+            type="button"
+            onClick={onValidateWorkout}
+            className="guto-deboss-deep h-11 rounded-[1.05rem] border border-[rgba(82,231,255,0.5)] font-mono text-[10px] font-black uppercase tracking-[0.16em] text-[var(--guto-cyan)]"
+          >
+            {copy.validateWorkout}
+          </button>
+        )}
       </div>
     </div>
   )

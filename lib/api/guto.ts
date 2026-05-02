@@ -1,6 +1,24 @@
 import { apiRequest } from "./client"
 
 export type SupportedLanguage = "pt-BR" | "it-IT" | "es-ES" | "en-US"
+export type WorkoutLocationMode = "gym" | "home" | "park"
+
+export interface WorkoutValidationRecord {
+  id: string
+  userId: string
+  createdAt: string
+  dateLabel: string
+  workoutFocus: string
+  workoutLabel: string
+  locationMode: WorkoutLocationMode
+  language: SupportedLanguage
+  photoUrl: string
+  posterUrl: string
+  thumbUrl: string
+  xp: number
+  status: "validated"
+  gutoMessage: string
+}
 export type GutoAvatarEmotion = "default" | "alert" | "critical" | "reward"
 export type GutoTelemetryEvent =
   | "user_created"
@@ -119,6 +137,7 @@ export interface GutoMemory {
   lastWorkoutPlan?: GutoWorkoutPlan | null
   proactiveSent: Record<string, string[]>
   initialXpRewardSeen: boolean
+  validationHistory?: WorkoutValidationRecord[]
 }
 
 export interface GutoProactiveResponse {
@@ -191,6 +210,24 @@ export async function getGutoMemory(userId = "local-user") {
   return apiRequest<GutoMemory>(`/guto/memory?userId=${encodeURIComponent(userId)}`, {
     method: "GET",
   })
+}
+
+export async function validateWorkout(payload: {
+  userId: string
+  imageBase64: string
+  workoutFocus: string
+  workoutLabel: string
+  locationMode: WorkoutLocationMode
+  language: SupportedLanguage
+}) {
+  return apiRequest<{ success: true; validation: WorkoutValidationRecord; validationHistory: WorkoutValidationRecord[] }>(
+    "/guto/validate-workout",
+    {
+      method: "POST",
+      timeoutMs: 30000,
+      body: JSON.stringify(payload),
+    }
+  )
 }
 
 export async function getGutoProactive({
