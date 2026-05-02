@@ -16,7 +16,7 @@ interface WorkoutValidationFlowProps {
   onClose: () => void
 }
 
-type FlowStep = "intro" | "camera" | "countdown" | "speaking" | "uploading" | "success"
+type FlowStep = "intro" | "camera" | "uploading" | "success"
 
 const copy = {
   "pt-BR": {
@@ -29,7 +29,6 @@ const copy = {
     ],
     cta: "COMEÇAR",
     faceHint: "Encaixe o rosto no círculo",
-    ready: "ESTOU PRONTO",
     phrase: "TREINO FEITO, GUTO",
     uploading: "Validando missão...",
     validated: "VALIDADO",
