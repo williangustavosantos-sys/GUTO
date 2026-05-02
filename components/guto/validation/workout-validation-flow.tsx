@@ -215,37 +215,40 @@ export function WorkoutValidationFlow({
       return
     }
     setCameraError(null)
-    setStep("ready")
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: "user", width: { ideal: 1080 }, height: { ideal: 1440 } },
         audio: false,
       })
+      // Stream ready BEFORE advancing — garante que streamRef nunca é null no step "camera"
       streamRef.current = stream
+      setStep("ready")
     } catch (err) {
       const msg = copy[language] ?? copy["pt-BR"]
       setCameraError(
         err instanceof Error && err.name === "NotAllowedError" ? msg.noCamera : msg.cameraError
       )
-      setStep("intro")
     }
   }, [language])
 
-  // Connect stream → video and start countdown when step becomes "camera"
+  // Connect stream → video, forçar play() e iniciar countdown
   useEffect(() => {
     if (step !== "camera") return
     const video = videoRef.current
     if (!video || !streamRef.current) return
+
     video.srcObject = streamRef.current
-    const onCanPlay = () => {
-      video.removeEventListener("canplay", onCanPlay)
-      if (streamRef.current) startCameraCountdown()
-    }
-    if (video.readyState >= 3) {
-      startCameraCountdown()
+    // play() explícito necessário no iOS Safari — autoPlay sozinho não dispara
+    // quando srcObject é atribuído programaticamente após montagem do elemento
+    void video.play().catch(() => {})
+
+    const start = () => { if (streamRef.current) startCameraCountdown() }
+
+    if (video.readyState >= 2) {
+      start()
     } else {
-      video.addEventListener("canplay", onCanPlay)
-      return () => { video.removeEventListener("canplay", onCanPlay) }
+      video.addEventListener("canplay", start, { once: true })
+      return () => { video.removeEventListener("canplay", start) }
     }
   }, [step, startCameraCountdown])
 
