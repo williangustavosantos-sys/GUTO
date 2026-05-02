@@ -146,8 +146,8 @@ export function MissionTab({
   workoutPlan,
   trainedToday = false,
   adaptedMissionToday = false,
-  onMissionComplete,
-  onAdaptedMissionComplete,
+  onMissionComplete: _onMissionComplete,
+  onAdaptedMissionComplete: _onAdaptedMissionComplete,
   onValidateWorkout,
 }: MissionTabProps) {
   const validLang = getLanguage(language)
@@ -155,13 +155,11 @@ export function MissionTab({
   const copy = missionCopy[validLang]
   const [started, setStarted] = useState(false)
   const [completedExerciseIds, setCompletedExerciseIds] = useState<string[]>([])
-  const [isCompleting, setIsCompleting] = useState(false)
   const exercises = useMemo(() => workoutPlan?.exercises || [], [workoutPlan])
   const missionKey = workoutPlan?.scheduledFor || workoutPlan?.focus || "empty"
   const completedCount = completedExerciseIds.length
   const progress = exercises.length ? Math.round((completedCount / exercises.length) * 100) : 0
   const canComplete = started && exercises.length > 0 && completedCount === exercises.length && !trainedToday
-  const canAcceptAdapted = started && completedCount > 0 && !trainedToday && !adaptedMissionToday
 
   const warmupExercises = useMemo(
     () => exercises.filter((e) => e.muscleGroup === "aquecimento"),
@@ -187,25 +185,6 @@ export function MissionTab({
     )
   }
 
-  const completeMission = async () => {
-    if (!canComplete || isCompleting) return
-    setIsCompleting(true)
-    try {
-      await onMissionComplete()
-    } finally {
-      setIsCompleting(false)
-    }
-  }
-
-  const completeAdaptedMission = async () => {
-    if (!canAcceptAdapted || isCompleting) return
-    setIsCompleting(true)
-    try {
-      await onAdaptedMissionComplete()
-    } finally {
-      setIsCompleting(false)
-    }
-  }
 
   if (!workoutPlan?.exercises?.length) {
     return (
@@ -387,7 +366,7 @@ export function MissionTab({
 
       {/* Exercise sections */}
       <div className="flex min-h-0 flex-1 flex-col">
-        <div className="no-scrollbar min-h-0 flex-1 space-y-2 overflow-y-auto pb-[var(--guto-panel-scroll-padding)] pt-0.5">
+        <div className="no-scrollbar min-h-0 flex-1 space-y-2 overflow-y-auto pb-3 pt-0.5">
           {warmupExercises.length > 0 && (
             <section className="space-y-2">
               {renderSectionHeader(copy.warmup)}
@@ -404,39 +383,16 @@ export function MissionTab({
         </div>
       </div>
 
-      {/* Action buttons */}
-      <div className="mt-2 grid grid-cols-1 gap-2">
-        {!trainedToday && (
-          <>
-            <button
-              type="button"
-              onClick={completeMission}
-              disabled={!canComplete || isCompleting}
-              className="guto-deboss-deep h-11 rounded-[1.05rem] font-mono text-[10px] font-black uppercase tracking-[0.16em] text-[var(--guto-navy)] disabled:opacity-45"
-            >
-              {trainedToday ? copy.completed : copy.complete}
-            </button>
-
-            <button
-              type="button"
-              onClick={completeAdaptedMission}
-              disabled={!canAcceptAdapted || isCompleting}
-              className="guto-slot h-10 rounded-[1.05rem] font-mono text-[9px] font-black uppercase tracking-[0.14em] text-[var(--guto-navy)] disabled:opacity-35"
-            >
-              {adaptedMissionToday ? copy.adaptedDone : copy.adapted}
-            </button>
-          </>
-        )}
-
-        {trainedToday && (
-          <button
-            type="button"
-            onClick={onValidateWorkout}
-            className="guto-deboss-deep h-11 rounded-[1.05rem] border border-[rgba(82,231,255,0.5)] font-mono text-[10px] font-black uppercase tracking-[0.16em] text-[var(--guto-cyan)]"
-          >
-            {copy.validateWorkout}
-          </button>
-        )}
+      {/* Action — único botão final */}
+      <div className="mt-2">
+        <button
+          type="button"
+          onClick={onValidateWorkout}
+          disabled={!canComplete && !trainedToday}
+          className="guto-deboss-deep h-11 w-full rounded-[1.05rem] border border-[rgba(82,231,255,0.5)] font-mono text-[10px] font-black uppercase tracking-[0.16em] text-[var(--guto-cyan)] disabled:opacity-30"
+        >
+          {copy.validateWorkout}
+        </button>
       </div>
     </div>
   )
