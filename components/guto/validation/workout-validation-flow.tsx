@@ -117,13 +117,22 @@ export function WorkoutValidationFlow({
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const imageBase64Ref = useRef<string>("")
+  const countdownTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const clearCountdownTimer = useCallback(() => {
+    if (countdownTimerRef.current !== null) {
+      clearTimeout(countdownTimerRef.current)
+      countdownTimerRef.current = null
+    }
+  }, [])
 
   const stopCamera = useCallback(() => {
+    clearCountdownTimer()
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((track) => track.stop())
       streamRef.current = null
     }
-  }, [])
+  }, [clearCountdownTimer])
 
   // Cleanup on unmount
   useEffect(() => {
@@ -142,7 +151,8 @@ export function WorkoutValidationFlow({
     const ctx = canvas.getContext("2d")
     if (!ctx) return ""
 
-    // Mirror horizontally to match front camera preview
+    // Mirror horizontally to match front camera preview; reset transform first to avoid accumulation
+    ctx.setTransform(1, 0, 0, 1, 0, 0)
     ctx.translate(canvas.width, 0)
     ctx.scale(-1, 1)
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
@@ -159,11 +169,12 @@ export function WorkoutValidationFlow({
       count -= 1
       if (count > 0) {
         setCountdown(count)
-        setTimeout(tick, 1000)
+        countdownTimerRef.current = setTimeout(tick, 1000)
       } else {
         setCountdown(0)
         setShowPhrase(true)
-        setTimeout(() => {
+        countdownTimerRef.current = setTimeout(() => {
+          countdownTimerRef.current = null
           const dataUrl = capturePhoto()
           imageBase64Ref.current = dataUrl
           stopCamera()
@@ -171,12 +182,12 @@ export function WorkoutValidationFlow({
         }, 1500)
       }
     }
-    setTimeout(tick, 1000)
+    countdownTimerRef.current = setTimeout(tick, 1000)
   }, [capturePhoto, stopCamera])
 
   const openCamera = useCallback(async () => {
     if (!navigator?.mediaDevices?.getUserMedia) {
-      setCameraError(locale.noCamera)
+      setCameraError(copy[language]?.noCamera ?? copy["pt-BR"].noCamera)
       return
     }
 
@@ -191,21 +202,36 @@ export function WorkoutValidationFlow({
 
       streamRef.current = stream
 
-      // Wait for video element to be in DOM
-      setTimeout(() => {
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream
-          videoRef.current.play().catch(() => {})
-          startCameraCountdown()
+      // Start countdown only after the video stream is ready to play
+      const video = videoRef.current
+      if (video) {
+        video.srcObject = stream
+        video.play().catch(() => {})
+        const onCanPlay = () => {
+          video.removeEventListener("canplay", onCanPlay)
+          // Only start if stream is still active (user hasn't closed the modal)
+          if (streamRef.current) startCameraCountdown()
         }
-      }, 200)
+        video.addEventListener("canplay", onCanPlay)
+      } else {
+        // Video element not yet in DOM — use a short delay as fallback
+        countdownTimerRef.current = setTimeout(() => {
+          countdownTimerRef.current = null
+          if (videoRef.current && streamRef.current) {
+            videoRef.current.srcObject = stream
+            videoRef.current.play().catch(() => {})
+            startCameraCountdown()
+          }
+        }, 200)
+      }
     } catch (err) {
+      const msg = copy[language] ?? copy["pt-BR"]
       const message = err instanceof Error && err.name === "NotAllowedError"
-        ? locale.noCamera
-        : locale.cameraError
+        ? msg.noCamera
+        : msg.cameraError
       setCameraError(message)
     }
-  }, [locale.cameraError, locale.noCamera, startCameraCountdown])
+  }, [language, startCameraCountdown])
 
   // Call API after transition to uploading
   useEffect(() => {
