@@ -45,6 +45,30 @@ export interface TranslationDictionary {
   pathObservation: string;
   pathXpReward: string;
   pathQuote: string;
+  calibration: {
+    title: string;
+    subtitle: string;
+    ageLabel: string;
+    sexLabel: string;
+    sexOptions: { female: string; male: string; prefer_not_to_say: string };
+    levelLabel: string;
+    levelOptions: { beginner: string; returning: string; consistent: string; advanced: string };
+    pathologyLabel: string;
+    pathologyOptions: { none: string; knee: string; lower_back: string; shoulder: string; other: string };
+    pathologyPlaceholder: string;
+    confirm: string;
+    goalLabel: string;
+    goalOptions: { consistency: string; fat_loss: string; muscle_gain: string; conditioning: string; mobility_health: string };
+    locationLabel: string;
+    locationOptions: { gym: string; home: string; park: string; mixed: string };
+    submit: string;
+    errorRequired: string;
+    statusLabel: string;
+    statusChips: { paused: string; returning: string; active: string };
+    pathologySection: string;
+    objectiveSection: string;
+    objectiveChips: { fat_loss: string; muscle_gain: string; conditioning: string; mobility_health: string; consistency: string };
+  };
 }
 
 export const translations: Record<ValidLanguage, TranslationDictionary> = {
@@ -108,7 +132,31 @@ export const translations: Record<ValidLanguage, TranslationDictionary> = {
     pathStreak: "+3 dias na sequência",
     pathObservation: "+1 observação do Guto",
     pathXpReward: "+100 XP",
-    pathQuote: "Você já é mais forte do que ontem. O melhor ainda está por vir."
+    pathQuote: "Você já é mais forte do que ontem. O melhor ainda está por vir.",
+    calibration: {
+      title: "Calibragem do sistema",
+      subtitle: "Antes de eu te puxar, preciso entender o teu corpo.",
+      ageLabel: "Idade",
+      sexLabel: "Sexo biológico",
+      sexOptions: { female: "Feminino", male: "Masculino", prefer_not_to_say: "Prefiro não informar" },
+      levelLabel: "Nível atual de treino",
+      levelOptions: { beginner: "Começando", returning: "Voltando", consistent: "Mantendo ritmo", advanced: "Avançado" },
+      pathologyLabel: "Dor, limitação ou patologia",
+      pathologyOptions: { none: "Sem dor", knee: "Joelho", lower_back: "Lombar", shoulder: "Ombro", other: "Outro" },
+      pathologyPlaceholder: "Detalhe sua limitação...",
+      confirm: "Confirmar",
+      goalLabel: "Objetivo principal",
+      goalOptions: { consistency: "Consistência", fat_loss: "Perder gordura", muscle_gain: "Ganhar massa", conditioning: "Condicionamento", mobility_health: "Mobilidade e saúde" },
+      locationLabel: "Local padrão de treino",
+      locationOptions: { gym: "Academia", home: "Casa", park: "Parque", mixed: "Misturo" },
+      submit: "Calibrar GUTO",
+      errorRequired: "Falta calibrar isso antes de seguir.",
+      statusLabel: "ESTADO ATUAL",
+      statusChips: { paused: "Parado", returning: "Voltando", active: "Treinando" },
+      pathologySection: "LIMITAÇÃO PATOLOGIA",
+      objectiveSection: "OBJETIVO",
+      objectiveChips: { fat_loss: "Emagrecer", muscle_gain: "Hipertrofia", conditioning: "Condicionamento", mobility_health: "Saúde", consistency: "Consistência" },
+    }
   },
   "it-IT": {
     complete: "Completato.",
@@ -161,7 +209,31 @@ export const translations: Record<ValidLanguage, TranslationDictionary> = {
     pathStreak: "+3 giorni di fila",
     pathObservation: "+1 nota da Guto",
     pathXpReward: "+100 XP",
-    pathQuote: "Sei già più forte di ieri. Il meglio deve ancora venire."
+    pathQuote: "Sei già più forte di ieri. Il meglio deve ancora venire.",
+    calibration: {
+      title: "Calibrazione del sistema",
+      subtitle: "Prima di spingerti, devo capire il tuo corpo.",
+      ageLabel: "Età",
+      sexLabel: "Sesso biologico",
+      sexOptions: { female: "Femminile", male: "Maschile", prefer_not_to_say: "Preferisco non dirlo" },
+      levelLabel: "Livello attuale di allenamento",
+      levelOptions: { beginner: "Inizio", returning: "Rientro", consistent: "Tengo il ritmo", advanced: "Avanzato" },
+      pathologyLabel: "Dolore, limite o patologia",
+      pathologyOptions: { none: "Nessun dolore", knee: "Ginocchio", lower_back: "Lombare", shoulder: "Spalla", other: "Altro" },
+      pathologyPlaceholder: "Dettagli sulla limitazione...",
+      confirm: "Conferma",
+      goalLabel: "Obiettivo principale",
+      goalOptions: { consistency: "Costanza", fat_loss: "Perdere grasso", muscle_gain: "Aumentare massa", conditioning: "Condizionamento", mobility_health: "Mobilità e salute" },
+      locationLabel: "Luogo predefinito di allenamento",
+      locationOptions: { gym: "Palestra", home: "Casa", park: "Parco", mixed: "Misto" },
+      submit: "Calibra GUTO",
+      errorRequired: "Calibra questo prima di continuare.",
+      statusLabel: "STATO ATTUALE",
+      statusChips: { paused: "Fermo", returning: "Rientro", active: "In allenamento" },
+      pathologySection: "DOLORE E LIMITI",
+      objectiveSection: "OBIETTIVO",
+      objectiveChips: { fat_loss: "Dimagrire", muscle_gain: "Ipertrofia", conditioning: "Condizionamento", mobility_health: "Salute", consistency: "Costanza" },
+    }
   },
   "es-ES": {
     complete: "Completado.",
@@ -174,7 +246,7 @@ export const translations: Record<ValidLanguage, TranslationDictionary> = {
     level: "NIVEL",
     totalXp: "XP TOTAL",
     nextEvolution: "PRÓXIMA EVOLUCIÓN",
-    evoAuto1: "La evolución no es automática.",
+    evoAuto1: "La evolución não es automática.",
     evoAuto2: "Se construye todos los días.",
     evoQuote: "Ya eres más fuerte que ayer. Lo mejor está por venir.",
     evoStages: {
@@ -214,7 +286,31 @@ export const translations: Record<ValidLanguage, TranslationDictionary> = {
     pathStreak: "+3 días seguidos",
     pathObservation: "+1 nota de Guto",
     pathXpReward: "+100 XP",
-    pathQuote: "Ya eres más fuerte que ayer. Lo mejor está por venir."
+    pathQuote: "Ya eres más fuerte que ayer. Lo mejor está por venir.",
+    calibration: {
+      title: "Calibración del sistema",
+      subtitle: "Antes de empujarte, necesito entender tu cuerpo.",
+      ageLabel: "Edad",
+      sexLabel: "Sexo biológico",
+      sexOptions: { female: "Femenino", male: "Masculino", prefer_not_to_say: "Prefiero no decirlo" },
+      levelLabel: "Nivel actual de entrenamiento",
+      levelOptions: { beginner: "Empezando", returning: "Volviendo", consistent: "Manteniendo ritmo", advanced: "Avanzado" },
+      pathologyLabel: "Dolor, limitación o patología",
+      pathologyOptions: { none: "Sin dolor", knee: "Rodilla", lower_back: "Lumbar", shoulder: "Hombro", other: "Otro" },
+      pathologyPlaceholder: "Detalle su limitación...",
+      confirm: "Confirmar",
+      goalLabel: "Objetivo principal",
+      goalOptions: { consistency: "Consistencia", fat_loss: "Perder grasa", muscle_gain: "Ganar masa", conditioning: "Condicionamiento", mobility_health: "Movilidad y salud" },
+      locationLabel: "Lugar estándar de entrenamiento",
+      locationOptions: { gym: "Gimnasio", home: "Casa", park: "Parque", mixed: "Mixto" },
+      submit: "Calibrar GUTO",
+      errorRequired: "Calibra esto antes de seguir.",
+      statusLabel: "ESTADO ACTUAL",
+      statusChips: { paused: "Parado", returning: "Volviendo", active: "Entrenando" },
+      pathologySection: "DOLOR Y LIMITACIÓN",
+      objectiveSection: "OBJETIVO",
+      objectiveChips: { fat_loss: "Adelgazar", muscle_gain: "Hipertrofia", conditioning: "Acondicionamiento", mobility_health: "Salud", consistency: "Consistencia" },
+    }
   },
   "en-US": {
     complete: "Completed.",
@@ -267,6 +363,30 @@ export const translations: Record<ValidLanguage, TranslationDictionary> = {
     pathStreak: "+3 days in a row",
     pathObservation: "+1 note from Guto",
     pathXpReward: "+100 XP",
-    pathQuote: "You are already stronger than yesterday. The best is yet to come."
+    pathQuote: "You are already stronger than yesterday. The best is yet to come.",
+    calibration: {
+      title: "System calibration",
+      subtitle: "Before I push you, I need to read your body.",
+      ageLabel: "Age",
+      sexLabel: "Biological sex",
+      sexOptions: { female: "Female", male: "Male", prefer_not_to_say: "Prefer not to say" },
+      levelLabel: "Current training level",
+      levelOptions: { beginner: "Starting", returning: "Returning", consistent: "Keeping rhythm", advanced: "Advanced" },
+      pathologyLabel: "Pain, limitation or condition",
+      pathologyOptions: { none: "No pain", knee: "Knee", lower_back: "Lower back", shoulder: "Shoulder", other: "Other" },
+      pathologyPlaceholder: "Detail your limitation...",
+      confirm: "Confirm",
+      goalLabel: "Main goal",
+      goalOptions: { consistency: "Consistency", fat_loss: "Fat loss", muscle_gain: "Muscle gain", conditioning: "Conditioning", mobility_health: "Mobility and health" },
+      locationLabel: "Standard training location",
+      locationOptions: { gym: "Gym", home: "Home", park: "Park", mixed: "Mixed" },
+      submit: "Calibrate GUTO",
+      errorRequired: "Calibrate this before moving on.",
+      statusLabel: "CURRENT STATUS",
+      statusChips: { paused: "Inactive", returning: "Returning", active: "Active" },
+      pathologySection: "PAIN & LIMITATIONS",
+      objectiveSection: "GOAL",
+      objectiveChips: { fat_loss: "Lose Fat", muscle_gain: "Hypertrophy", conditioning: "Conditioning", mobility_health: "Health", consistency: "Consistency" },
+    }
   }
 };

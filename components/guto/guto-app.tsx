@@ -12,13 +12,14 @@ import { ChatTab } from "./tabs/chat-tab"
 import { EvolutionsTab } from "./tabs/evolutions-tab"
 import { MissionTab } from "./tabs/mission-tab"
 import { PathTab } from "./tabs/path-tab"
+import { CalibrationScreen } from "./screens/calibration-screen"
 import type { MissionExercise } from "./view-models"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { getGutoMemory, saveGutoMemory, trackGutoEvent, validateGutoName, type GutoMemory, type GutoNameValidation, type GutoTelemetryEvent, type GutoWorkoutPlan } from "@/lib/api/guto"
 import { clearGutoBrowserIdentity, getOrCreateGutoVisitTelemetry } from "@/lib/guto/user-id"
 import type { EvolutionStage, SupportedLanguage } from "@/types/contract"
 
-type AppStage = "intro" | "language" | "naming" | "pact" | "system" | "settings"
+type AppStage = "intro" | "language" | "naming" | "calibration" | "pact" | "system" | "settings"
 type SettingsMode = "menu" | "language" | "name"
 
 interface StoredProfile {
@@ -468,6 +469,7 @@ export function GutoApp({
         onboardingComplete: true,
       })
       persistMemory({
+        name: finalName,
         language: finalLanguage,
         trainedToday: false,
       })
@@ -573,7 +575,7 @@ export function GutoApp({
       setPactProgress(0)
       setIsHoldingPact(false)
       setWhiteout(false)
-      setStage("pact")
+      setStage("calibration")
       effectRegistry.emit("seal_complete", {
         meta: { nameLength: normalizedName.length, language: selectedLanguage },
       })
@@ -581,6 +583,15 @@ export function GutoApp({
       persistMemory({ name: normalizedName, confirmedName })
     },
     [effectRegistry, persistMemory, persistProfile, selectedLanguage]
+  )
+
+  const handleCalibrationComplete = useCallback(
+    (calibration: Parameters<typeof saveGutoMemory>[0]) => {
+      setStage("pact")
+      persistMemory(calibration)
+      trackBehaviorEvent("calibration_completed", { ...calibration })
+    },
+    [persistMemory, trackBehaviorEvent]
   )
 
   const handleSeal = useCallback(
@@ -704,7 +715,7 @@ export function GutoApp({
         if (next >= 100) {
           clearPactInterval()
           startSystem(
-            committedName || formatGutoName(draftName || userName || "Operador"),
+            committedName || formatGutoName(draftName || userName || ""),
             selectedLanguage
           )
         }
@@ -734,15 +745,10 @@ export function GutoApp({
         if (cancelled) return
         setMemory(memory)
         setEvolution(resolveEvolutionStage(memory?.totalXp || 0))
-        if (
-          memory?.lastWorkoutPlan &&
-          memory.trainingLocation &&
-          memory.trainingStatus &&
-          memory.trainingLimitations
-        ) {
+        if (memory?.lastWorkoutPlan?.exercises?.length) {
           setWorkoutPlan(memory.lastWorkoutPlan)
         } else {
-          setWorkoutPlan(null)
+          setWorkoutPlan((prev) => prev ? prev : null)
         }
       })
       .catch(() => {})
@@ -791,7 +797,7 @@ export function GutoApp({
     setActiveTab("caminho")
   }, [gutoUserId, selectedLanguage, trackBehaviorEvent])
 
-  const userLabel = committedName || formatGutoName(userName || "Operador")
+  const userLabel = committedName || formatGutoName(userName || "")
   const locale = stageCopy[selectedLanguage]
   const isGutoDepleted = (memory?.totalXp ?? 100) === 0
   const canSaveSettingsName =
@@ -813,6 +819,15 @@ export function GutoApp({
             onExerciseQuestionHandled={() => setPendingExerciseQuestion(null)}
             onWorkoutPlanUpdated={setWorkoutPlan}
             isDepleted={isGutoDepleted}
+            initialXpGranted={memory?.initialXpGranted}
+            initialXpRewardSeen={memory?.initialXpRewardSeen}
+            onXpRewardSeen={() => {
+              if (memory) {
+                const updated = { ...memory, initialXpRewardSeen: true };
+                setMemory(updated);
+                persistMemory({ initialXpRewardSeen: true });
+              }
+            }}
           />
         )
       case "caminho":
@@ -838,6 +853,7 @@ export function GutoApp({
         return (
           <MissionTab
             language={selectedLanguage}
+            userName={userLabel}
             onAskExercise={handleExerciseQuestion}
             workoutPlan={workoutPlan}
             trainedToday={Boolean(memory?.trainedToday)}
@@ -1061,6 +1077,22 @@ export function GutoApp({
                 )}
               </div>
             </div>
+          </motion.section>
+        )}
+
+        {stage === "calibration" && (
+          <motion.section
+            key="calibration"
+            className="guto-main-screen absolute inset-0 z-30 flex flex-col items-center"
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 1.02 }}
+            transition={{ duration: 0.4 }}
+          >
+            <CalibrationScreen 
+              language={selectedLanguage} 
+              onComplete={handleCalibrationComplete} 
+            />
           </motion.section>
         )}
 

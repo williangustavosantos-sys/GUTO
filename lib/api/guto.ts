@@ -8,6 +8,7 @@ export type GutoTelemetryEvent =
   | "first_message_sent"
   | "mission_completed"
   | "user_returned_next_day"
+  | "calibration_completed"
 
 export interface GutoWorkoutExercise {
   id: string
@@ -97,6 +98,12 @@ export interface GutoMemory {
   trainingStatus?: string
   trainingLimitations?: string
   trainingAge?: number
+  userAge?: number
+  biologicalSex?: "female" | "male" | "prefer_not_to_say"
+  trainingLevel?: "beginner" | "returning" | "consistent" | "advanced"
+  trainingGoal?: "consistency" | "fat_loss" | "muscle_gain" | "conditioning" | "mobility_health"
+  preferredTrainingLocation?: "gym" | "home" | "park" | "mixed"
+  trainingPathology?: string
   lastWorkoutCompletedAt?: string
   completedWorkoutDates: string[]
   adaptedMissionDates: string[]
@@ -111,6 +118,7 @@ export interface GutoMemory {
   lastLimitationCheckAt?: string
   lastWorkoutPlan?: GutoWorkoutPlan | null
   proactiveSent: Record<string, string[]>
+  initialXpRewardSeen: boolean
 }
 
 export interface GutoProactiveResponse {
@@ -126,6 +134,7 @@ export interface GutoProactiveResponse {
 export async function sendGutoMessage(payload: SendGutoMessageRequest) {
   return apiRequest<SendGutoMessageResponse>("/guto", {
     method: "POST",
+    timeoutMs: 35000,
     body: JSON.stringify(payload),
   })
 }
@@ -163,7 +172,14 @@ export async function saveGutoMemory(payload: {
   trainingLocation?: string
   trainingStatus?: string
   trainingLimitations?: string
+  userAge?: number
+  biologicalSex?: "female" | "male" | "prefer_not_to_say"
+  trainingLevel?: "beginner" | "returning" | "consistent" | "advanced"
+  trainingGoal?: "consistency" | "fat_loss" | "muscle_gain" | "conditioning" | "mobility_health"
+  preferredTrainingLocation?: "gym" | "home" | "park" | "mixed"
+  trainingPathology?: string
   confirmedName?: boolean
+  initialXpRewardSeen?: boolean
 }) {
   return apiRequest<GutoMemory>("/guto/memory", {
     method: "POST",

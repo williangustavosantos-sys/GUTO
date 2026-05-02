@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Image from "next/image"
-import { motion } from "framer-motion"
-import { Loader2, Mic, Send, Volume2, VolumeX } from "lucide-react"
+import { AnimatePresence, motion } from "framer-motion"
+import { Loader2, Mic, Send, TrendingUp, Volume2, VolumeX } from "lucide-react"
 
 import { API_URL, getApiErrorMessage } from "@/lib/api/client"
 import { getGutoProactive, sendGutoMessage, trackGutoEvent } from "@/lib/api/guto"
@@ -28,6 +28,9 @@ interface ChatTabProps {
   onExerciseQuestionHandled?: () => void
   onWorkoutPlanUpdated?: (plan: GutoWorkoutPlan | null) => void
   isDepleted?: boolean
+  initialXpGranted?: boolean
+  initialXpRewardSeen?: boolean
+  onXpRewardSeen?: () => void
 }
 
 interface Message {
@@ -116,10 +119,10 @@ const chatCopy: Record<SupportedLanguage, { channel: string; speaking: string; m
 }
 
 const openingMessage: Record<SupportedLanguage, (name: string) => string> = {
-  "pt-BR": (name) => `${name}, finalmente. Tava te esperando. Enquanto isso eu já deixei três rotas prontas: academia, casa ou parque. Qual faz mais sentido pra você hoje?`,
-  "en-US": (name) => `${name}, finally. I was waiting for you. While I waited, I left three routes open: gym, home, or park. Which one fits you best today?`,
-  "es-ES": (name) => `${name}, por fin. Te estaba esperando. Mientras tanto dejé tres rutas abiertas: gimnasio, casa o parque. ¿Cuál te conviene más hoy?`,
-  "it-IT": (name) => `${name}, finalmente. Ti stavo aspettando. Intanto ho già lasciato aperte tre strade: palestra, casa o parco. Quale ti conviene di più oggi?`,
+  "pt-BR": (name) => name ? `${name}, finalmente chegou, estava te esperando, enquanto isso já analisei tudo e já montei um treino para a gente evoluir junto. Bora?` : `Finalmente chegou, estava te esperando, enquanto isso já analisei tudo e já montei um treino para a gente evoluir junto. Bora?`,
+  "en-US": (name) => name ? `${name}, you finally arrived, I was waiting for you. Meanwhile I analyzed everything and put together a workout so we can evolve together. Let's go?` : `You finally arrived, I was waiting for you. Meanwhile I analyzed everything and put together a workout so we can evolve together. Let's go?`,
+  "es-ES": (name) => name ? `${name}, finalmente llegaste, te estaba esperando, mientras tanto ya analicé todo y armé un entrenamiento para que evolucionemos juntos. ¿Vamos?` : `Finalmente llegaste, te estaba esperando, mientras tanto ya analicé todo y armé un entrenamiento para que evolucionemos juntos. ¿Vamos?`,
+  "it-IT": (name) => name ? `${name}, finalmente sei arrivato, ti stavo aspettando, nel frattempo ho analizzato tutto e ho preparato un allenamento per farci evolvere insieme. Andiamo?` : `Finalmente sei arrivato, ti stavo aspettando, nel frattempo ho analizzato tutto e ho preparato un allenamento per farci evolvere insieme. Andiamo?`,
 }
 
 const PROACTIVE_CHECK_INTERVAL_MS = 60_000
@@ -246,11 +249,14 @@ export function ChatTab({
   onExerciseQuestionHandled,
   onWorkoutPlanUpdated,
   isDepleted = false,
+  initialXpGranted = false,
+  initialXpRewardSeen = false,
+  onXpRewardSeen,
 }: ChatTabProps) {
   const validLang = getLanguage(language)
   const locale = translations[validLang]
   const copy = chatCopy[validLang]
-  const brandName = formatDisplayName(userName || "OPERADOR")
+  const brandName = formatDisplayName(userName || "")
   const initialGutoMessage = openingMessage[validLang](brandName)
   const storedChatState = useMemo(() => readStoredChatState(userId), [userId])
   const initialChatState = useMemo(
@@ -277,6 +283,7 @@ export function ChatTab({
   const [isSpeaking, setIsSpeaking] = useState(false)
   const [isMuted, setIsMuted] = useState(true)
   const [isRecording, setIsRecording] = useState(false)
+  const [showXpReward, setShowXpReward] = useState(false)
 
   const scrollRef = useRef<HTMLDivElement>(null)
   const messagesRef = useRef<Message[]>(messages)
@@ -320,6 +327,16 @@ export function ChatTab({
       return next
     })
   }, [initialGutoMessage])
+  
+  useEffect(() => {
+    if (initialXpGranted && !initialXpRewardSeen) {
+      const timer = setTimeout(() => {
+        setShowXpReward(true)
+        onXpRewardSeen?.()
+      }, 1500)
+      return () => clearTimeout(timer)
+    }
+  }, [initialXpGranted, initialXpRewardSeen, onXpRewardSeen])
 
   useEffect(() => {
     scrollRef.current?.scrollTo({
@@ -387,7 +404,7 @@ export function ChatTab({
   }, [playBase64Mp3])
 
   const checkProactiveMessage = useCallback(async (forceArrivalBriefing = false) => {
-    if (proactiveInFlightRef.current || isSending) return
+    if (proactiveInFlightRef.current || sendInFlightRef.current) return
     if (forceArrivalBriefing && arrivalBriefingRequestedRef.current) return
 
     proactiveInFlightRef.current = true
@@ -435,6 +452,11 @@ export function ChatTab({
         return appendMessagesWithoutDuplicateGuto(prev, [gutoMessage])
       })
 
+      // Propagate workout plan to mission tab
+      if (data.acao === "updateWorkout" && data.workoutPlan) {
+        onWorkoutPlanUpdated?.(data.workoutPlan)
+      }
+
       if (!isMuted) {
         await synthesizeAndPlay(fala, safeLanguage)
       }
@@ -443,7 +465,7 @@ export function ChatTab({
     } finally {
       proactiveInFlightRef.current = false
     }
-  }, [isMuted, isSending, language, synthesizeAndPlay, userId])
+  }, [isMuted, language, onWorkoutPlanUpdated, synthesizeAndPlay, userId])
 
   useEffect(() => {
     const shouldForceArrivalBriefing = shouldForceArrivalBriefingRef.current
@@ -583,7 +605,7 @@ export function ChatTab({
         profile: { name: userName || "Usuário", userId },
         input: modelInput,
         language: safeLanguage,
-        history: messagesRef.current.map((message) => ({
+        history: messagesRef.current.slice(-6).map((message) => ({
           role: message.isGuto ? "model" : "user",
           parts: [{ text: message.text }],
         })),
@@ -784,6 +806,44 @@ export function ChatTab({
           </div>
         )}
       </div>
+
+      <AnimatePresence>
+        {showXpReward && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.5, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 1.2, y: -100 }}
+            transition={{ 
+              duration: 0.8, 
+              ease: [0.22, 1, 0.36, 1],
+              scale: { type: "spring", damping: 12, stiffness: 200 }
+            }}
+            onAnimationComplete={() => {
+              setTimeout(() => setShowXpReward(false), 3000)
+            }}
+            className="pointer-events-none absolute inset-0 z-[100] flex flex-col items-center justify-center"
+          >
+            <div className="relative">
+              <motion.div 
+                animate={{ rotate: 360 }}
+                transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                className="absolute inset-[-40px] rounded-full bg-[radial-gradient(circle,rgba(82,231,255,0.4)_0%,rgba(255,255,255,0)_70%)] blur-xl"
+              />
+              <div className="relative flex flex-col items-center">
+                <div className="mb-2 text-[var(--guto-cyan)] drop-shadow-[0_0_15px_rgba(82,231,255,0.8)]">
+                  <TrendingUp className="h-16 w-16 stroke-[3]" />
+                </div>
+                <div className="guto-chrome-text text-6xl font-black italic tracking-tighter">
+                  +100 XP
+                </div>
+                <div className="mt-2 rounded-full border border-[var(--guto-cyan)]/30 bg-black/40 px-4 py-1 font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--guto-cyan)] backdrop-blur-md">
+                  Prêmio Inicial • Guto Ativo
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
