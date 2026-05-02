@@ -52,8 +52,8 @@ export function CalibrationScreen({
   }
 
   return (
-    <div className="relative w-full h-[100dvh] overflow-hidden font-tech">
-      <div className="relative w-full max-w-[430px] mx-auto h-full flex flex-col px-5 pt-[max(env(safe-area-inset-top),14px)] pb-[max(env(safe-area-inset-bottom),12px)]">
+    <div className="relative w-full h-full font-tech">
+      <div className="relative w-full max-w-[430px] mx-auto h-full flex flex-col overflow-y-auto overscroll-none px-5 pt-[max(env(safe-area-inset-top),14px)] pb-[max(env(safe-area-inset-bottom),12px)]" style={{ WebkitOverflowScrolling: 'touch' }}>
 
         {/* ── TÍTULO ── */}
         <motion.div
@@ -69,7 +69,7 @@ export function CalibrationScreen({
 
         {/* ── PAINEL SUPERIOR: SEXO + IDADE ── */}
         <motion.div
-          className="shrink-0 rounded-[20px] bg-[rgba(220,244,255,0.60)] backdrop-blur-md border border-[rgba(82,231,255,0.40)] shadow-[0_4px_18px_rgba(82,231,255,0.10)] px-4 py-3 mb-2"
+          className="shrink-0 rounded-[20px] bg-[rgba(220,244,255,0.92)] border border-[rgba(82,231,255,0.40)] shadow-[0_4px_18px_rgba(82,231,255,0.10)] px-4 py-3 mb-2"
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.05 }}
@@ -101,14 +101,15 @@ export function CalibrationScreen({
               value={ageInput}
               onChange={(e) => setAgeInput(e.target.value)}
               placeholder="--"
-              className="w-[52px] h-[28px] rounded-full border border-[rgba(82,231,255,0.55)] bg-[rgba(255,255,255,0.75)] text-center text-[13px] font-black text-[var(--guto-navy)] outline-none px-2 appearance-none [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              autoComplete="off"
+              className="w-[52px] h-[28px] rounded-full border border-[rgba(82,231,255,0.55)] bg-white text-center text-[13px] font-black text-[var(--guto-navy)] outline-none px-2 appearance-none [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             />
           </div>
         </motion.div>
 
         {/* ── BONECO HOLOGRÁFICO ── */}
         <motion.div
-          className="relative flex-1 min-h-[180px] flex items-center justify-center"
+          className="relative flex-1 min-h-[80px] flex items-center justify-center"
           initial={{ opacity: 0, scale: 0.97 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.5, delay: 0.1 }}
@@ -154,7 +155,7 @@ export function CalibrationScreen({
 
         {/* ── PAINEL INFERIOR: STATUS + LIMITAÇÃO + OBJETIVO + LOCAL ── */}
         <motion.div
-          className="shrink-0 rounded-[22px] bg-[rgba(220,244,255,0.60)] backdrop-blur-md border border-[rgba(82,231,255,0.40)] shadow-[0_-4px_24px_rgba(82,231,255,0.10)] px-4 pt-3 pb-3 -mt-8 relative z-10 flex flex-col gap-2.5"
+          className="shrink-0 rounded-[22px] bg-[rgba(220,244,255,0.92)] border border-[rgba(82,231,255,0.40)] shadow-[0_-4px_24px_rgba(82,231,255,0.10)] px-4 pt-3 pb-3 -mt-8 relative z-10 flex flex-col gap-2.5"
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.15 }}
@@ -193,7 +194,10 @@ export function CalibrationScreen({
               value={pathology}
               onChange={(e) => setPathology(e.target.value)}
               placeholder={t.pathologyPlaceholder}
-              className="w-full px-3 py-1.5 rounded-full border border-[rgba(82,231,255,0.45)] bg-[rgba(255,255,255,0.70)] text-[10px] font-bold text-[var(--guto-navy)] placeholder-[rgba(13,35,65,0.30)] outline-none"
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck={false}
+              className="w-full px-3 py-2 rounded-full border border-[rgba(82,231,255,0.45)] bg-white text-[11px] font-bold text-[var(--guto-navy)] placeholder-[rgba(13,35,65,0.30)] outline-none"
             />
           </div>
 

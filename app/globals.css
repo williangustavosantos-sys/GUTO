@@ -436,14 +436,12 @@
 }
 
 .guto-name-slit {
-  background: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.92);
   border: 1px solid rgba(255, 255, 255, 0.78);
   box-shadow:
     inset 0 6px 18px rgba(91, 108, 130, 0.18),
     inset 0 -6px 16px rgba(255, 255, 255, 0.86),
     0 0 22px rgba(82, 231, 255, 0.08);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
 }
 
 .guto-name-slit input {
@@ -1002,14 +1000,12 @@
 .guto-chat-bubble,
 .guto-chat-input,
 .guto-action-tile {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.54) 0%, rgba(247, 250, 253, 0.34) 100%);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(247, 250, 253, 0.92) 100%);
   border: 1px solid rgba(82, 231, 255, 0.82);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.86),
     inset 0 -14px 24px rgba(198, 209, 222, 0.12),
     0 18px 38px rgba(137, 151, 168, 0.12);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
 }
 
 .guto-chat-bubble {

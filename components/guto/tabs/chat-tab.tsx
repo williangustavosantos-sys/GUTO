@@ -747,8 +747,8 @@ export function ChatTab({
               animate={{ opacity: 1, y: 0 }}
               className={
                 message.isGuto
-                  ? "mx-auto w-full max-w-[20rem] rounded-[18px] border border-[var(--guto-cyan)]/80 bg-white/70 px-4 py-3 text-center font-mono text-[clamp(11px,2.8vw,13px)] font-black leading-snug text-[var(--guto-navy)] shadow-[inset_0_1px_0_rgba(255,255,255,0.86),0_18px_38px_rgba(137,151,168,0.12)] backdrop-blur-md"
-                  : "ml-auto max-w-[70%] rounded-[18px] border border-white/80 bg-white/80 px-4 py-2 text-right text-xs font-semibold leading-snug text-[rgba(13,35,65,0.68)] shadow-[0_12px_26px_rgba(137,151,168,0.1)] backdrop-blur-md"
+                  ? "mx-auto w-full max-w-[20rem] rounded-[18px] border border-[var(--guto-cyan)]/80 bg-white px-4 py-3 text-center font-mono text-[clamp(11px,2.8vw,13px)] font-black leading-snug text-[var(--guto-navy)] shadow-[inset_0_1px_0_rgba(255,255,255,0.86),0_18px_38px_rgba(137,151,168,0.12)]"
+                  : "ml-auto max-w-[70%] rounded-[18px] border border-white/80 bg-white/95 px-4 py-2 text-right text-xs font-semibold leading-snug text-[rgba(13,35,65,0.68)] shadow-[0_12px_26px_rgba(137,151,168,0.1)]"
               }
             >
               {message.text}
@@ -836,7 +836,7 @@ export function ChatTab({
                 <div className="guto-chrome-text text-6xl font-black italic tracking-tighter">
                   +100 XP
                 </div>
-                <div className="mt-2 rounded-full border border-[var(--guto-cyan)]/30 bg-black/40 px-4 py-1 font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--guto-cyan)] backdrop-blur-md">
+                <div className="mt-2 rounded-full border border-[var(--guto-cyan)]/30 bg-black/70 px-4 py-1 font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--guto-cyan)]">
                   Prêmio Inicial • Guto Ativo
                 </div>
               </div>
