@@ -406,23 +406,27 @@ export function MissionTab({
 
       {/* Action buttons */}
       <div className="mt-2 grid grid-cols-1 gap-2">
-        <button
-          type="button"
-          onClick={completeMission}
-          disabled={!canComplete || isCompleting}
-          className="guto-deboss-deep h-11 rounded-[1.05rem] font-mono text-[10px] font-black uppercase tracking-[0.16em] text-[var(--guto-navy)] disabled:opacity-45"
-        >
-          {trainedToday ? copy.completed : copy.complete}
-        </button>
+        {!trainedToday && (
+          <>
+            <button
+              type="button"
+              onClick={completeMission}
+              disabled={!canComplete || isCompleting}
+              className="guto-deboss-deep h-11 rounded-[1.05rem] font-mono text-[10px] font-black uppercase tracking-[0.16em] text-[var(--guto-navy)] disabled:opacity-45"
+            >
+              {trainedToday ? copy.completed : copy.complete}
+            </button>
 
-        <button
-          type="button"
-          onClick={completeAdaptedMission}
-          disabled={!canAcceptAdapted || isCompleting}
-          className="guto-slot h-10 rounded-[1.05rem] font-mono text-[9px] font-black uppercase tracking-[0.14em] text-[var(--guto-navy)] disabled:opacity-35"
-        >
-          {adaptedMissionToday ? copy.adaptedDone : copy.adapted}
-        </button>
+            <button
+              type="button"
+              onClick={completeAdaptedMission}
+              disabled={!canAcceptAdapted || isCompleting}
+              className="guto-slot h-10 rounded-[1.05rem] font-mono text-[9px] font-black uppercase tracking-[0.14em] text-[var(--guto-navy)] disabled:opacity-35"
+            >
+              {adaptedMissionToday ? copy.adaptedDone : copy.adapted}
+            </button>
+          </>
+        )}
 
         {trainedToday && (
           <button

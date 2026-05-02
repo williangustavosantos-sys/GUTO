@@ -16,7 +16,7 @@ interface WorkoutValidationFlowProps {
   onClose: () => void
 }
 
-type FlowStep = "intro" | "camera" | "countdown" | "speaking" | "uploading" | "success"
+type FlowStep = "intro" | "ready" | "camera" | "countdown" | "speaking" | "uploading" | "success"
 
 const copy = {
   "pt-BR": {
@@ -48,6 +48,7 @@ const copy = {
     ],
     cta: "START",
     faceHint: "Position your face in the circle",
+    ready: "I AM READY",
     phrase: "WORKOUT DONE, GUTO",
     uploading: "Validating mission...",
     validated: "VALIDATED",
@@ -66,6 +67,7 @@ const copy = {
     ],
     cta: "INIZIA",
     faceHint: "Posiziona il viso nel cerchio",
+    ready: "SONO PRONTO",
     phrase: "ALLENAMENTO FATTO, GUTO",
     uploading: "Convalidando missione...",
     validated: "VALIDATO",
@@ -84,6 +86,7 @@ const copy = {
     ],
     cta: "EMPEZAR",
     faceHint: "Coloca el rostro en el círculo",
+    ready: "ESTOY LISTO",
     phrase: "ENTRENAMIENTO HECHO, GUTO",
     uploading: "Validando misión...",
     validated: "VALIDADO",
@@ -106,7 +109,6 @@ export function WorkoutValidationFlow({
 
   const [step, setStep] = useState<FlowStep>("intro")
   const [countdown, setCountdown] = useState<number | null>(null)
-  const [showPhrase, setShowPhrase] = useState(false)
   const [cameraError, setCameraError] = useState<string | null>(null)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [validationResult, setValidationResult] = useState<{
@@ -119,11 +121,16 @@ export function WorkoutValidationFlow({
   const streamRef = useRef<MediaStream | null>(null)
   const imageBase64Ref = useRef<string>("")
   const countdownTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const speakingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const clearCountdownTimer = useCallback(() => {
     if (countdownTimerRef.current !== null) {
       clearTimeout(countdownTimerRef.current)
       countdownTimerRef.current = null
+    }
+    if (speakingTimerRef.current !== null) {
+      clearTimeout(speakingTimerRef.current)
+      speakingTimerRef.current = null
     }
   }, [])
 
@@ -162,8 +169,8 @@ export function WorkoutValidationFlow({
   }, [])
 
   const startCameraCountdown = useCallback(() => {
+    setStep("countdown")
     setCountdown(3)
-    setShowPhrase(false)
 
     let count = 3
     const tick = () => {
@@ -173,14 +180,15 @@ export function WorkoutValidationFlow({
         countdownTimerRef.current = setTimeout(tick, 1000)
       } else {
         setCountdown(0)
-        setShowPhrase(true)
-        countdownTimerRef.current = setTimeout(() => {
-          countdownTimerRef.current = null
+        setStep("speaking")
+        // Set a timer for speaking duration (3 seconds) then capture
+        speakingTimerRef.current = setTimeout(() => {
+          speakingTimerRef.current = null
           const dataUrl = capturePhoto()
           imageBase64Ref.current = dataUrl
           stopCamera()
           setStep("uploading")
-        }, 1500)
+        }, 3000)
       }
     }
     countdownTimerRef.current = setTimeout(tick, 1000)
@@ -193,7 +201,7 @@ export function WorkoutValidationFlow({
     }
 
     setCameraError(null)
-    setStep("camera")
+    setStep("ready")
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -202,29 +210,6 @@ export function WorkoutValidationFlow({
       })
 
       streamRef.current = stream
-
-      // Start countdown only after the video stream is ready to play
-      const video = videoRef.current
-      if (video) {
-        video.srcObject = stream
-        video.play().catch(() => {})
-        const onCanPlay = () => {
-          video.removeEventListener("canplay", onCanPlay)
-          // Only start if stream is still active (user hasn't closed the modal)
-          if (streamRef.current) startCameraCountdown()
-        }
-        video.addEventListener("canplay", onCanPlay)
-      } else {
-        // Video element not yet in DOM — use a short delay as fallback
-        countdownTimerRef.current = setTimeout(() => {
-          countdownTimerRef.current = null
-          if (videoRef.current && streamRef.current) {
-            videoRef.current.srcObject = stream
-            videoRef.current.play().catch(() => {})
-            startCameraCountdown()
-          }
-        }, 200)
-      }
     } catch (err) {
       const msg = copy[language] ?? copy["pt-BR"]
       const message = err instanceof Error && err.name === "NotAllowedError"
@@ -232,7 +217,25 @@ export function WorkoutValidationFlow({
         : msg.cameraError
       setCameraError(message)
     }
-  }, [language, startCameraCountdown])
+  }, [language])
+
+  // Connect stream to video and start countdown when step becomes "camera"
+  useEffect(() => {
+    if (step !== "camera") return
+    const video = videoRef.current
+    if (!video || !streamRef.current) return
+    video.srcObject = streamRef.current
+    const onCanPlay = () => {
+      video.removeEventListener("canplay", onCanPlay)
+      if (streamRef.current) startCameraCountdown()
+    }
+    if (video.readyState >= 3) {
+      startCameraCountdown()
+    } else {
+      video.addEventListener("canplay", onCanPlay)
+      return () => { video.removeEventListener("canplay", onCanPlay) }
+    }
+  }, [step, startCameraCountdown])
 
   // Call API after transition to uploading
   useEffect(() => {
@@ -328,10 +331,73 @@ export function WorkoutValidationFlow({
           </motion.div>
         )}
 
-        {/* CAMERA STEP */}
-        {step === "camera" && (
+        {/* READY STEP */}
+        {step === "ready" && (
           <motion.div
-            key="camera"
+            key="ready"
+            className="flex h-full flex-col items-center justify-center px-8"
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.36 }}
+          >
+            {/* Close button */}
+            <button
+              type="button"
+              onClick={onClose}
+              className="absolute right-5 top-[max(env(safe-area-inset-top),1.1rem)] grid h-10 w-10 place-items-center rounded-full border border-white/20 bg-white/10 text-white"
+              aria-label="Fechar"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <div className="guto-frost-panel w-full max-w-[22rem] rounded-[2rem] p-6"
+              style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)", backdropFilter: "blur(12px)" }}>
+              <p className="mb-1 font-mono text-[9px] font-black uppercase tracking-[0.24em] text-[rgba(82,231,255,0.7)]">
+                GUTO VALIDATION
+              </p>
+              <h1 className="mb-6 text-[1.35rem] font-black uppercase leading-tight tracking-[0.08em] text-white">
+                {locale.title}
+              </h1>
+
+              <div className="space-y-6">
+                <div className="text-center">
+                  <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-[var(--guto-cyan,#52E7FF)]">
+                    {locale.ready}
+                  </p>
+                </div>
+
+                <div className="pointer-events-none relative z-10 flex flex-col items-center">
+                  <div
+                    className="rounded-full border-4 border-[rgba(82,231,255,0.82)]"
+                    style={{
+                      width: "220px",
+                      height: "220px",
+                      boxShadow: "0 0 24px rgba(82,231,255,0.28), inset 0 0 24px rgba(82,231,255,0.06)",
+                    }}
+                  />
+                  <p className="mt-4 font-mono text-[10px] font-black uppercase tracking-[0.2em] text-white/80">
+                    {locale.faceHint}
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setStep("camera")}
+                  className="mt-6 h-13 w-full rounded-[1.2rem] bg-[var(--guto-cyan,#52E7FF)] font-mono text-[11px] font-black uppercase tracking-[0.2em] text-[var(--guto-navy,#0D2341)]"
+                  style={{ height: "3.25rem" }}
+                >
+                  {locale.ready}
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* CAMERA / COUNTDOWN / SPEAKING STEPS — câmera fica visível nos três */}
+        {(step === "camera" || step === "countdown" || step === "speaking") && (
+          <motion.div
+            key="camera-view"
             className="relative flex h-full flex-col items-center justify-center overflow-hidden bg-black"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -371,7 +437,7 @@ export function WorkoutValidationFlow({
 
             {/* Countdown overlay */}
             <AnimatePresence mode="wait">
-              {countdown !== null && countdown > 0 && !showPhrase && (
+              {step === "countdown" && countdown !== null && countdown > 0 && (
                 <motion.div
                   key={`count-${countdown}`}
                   className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center"
@@ -389,7 +455,7 @@ export function WorkoutValidationFlow({
                 </motion.div>
               )}
 
-              {showPhrase && (
+              {step === "speaking" && (
                 <motion.div
                   key="phrase"
                   className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center bg-[rgba(13,35,65,0.72)]"
