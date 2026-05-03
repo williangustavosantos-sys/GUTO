@@ -33,6 +33,7 @@ interface ChatTabProps {
   initialXpGranted?: boolean
   initialXpRewardSeen?: boolean
   onXpRewardSeen?: () => void
+  memory?: import("@/lib/api/guto").GutoMemory | null
 }
 
 interface Message {
@@ -256,6 +257,7 @@ export function ChatTab({
   initialXpGranted = false,
   initialXpRewardSeen = false,
   onXpRewardSeen,
+  memory,
 }: ChatTabProps) {
   const validLang = getLanguage(language)
   const locale = translations[validLang]
@@ -687,11 +689,29 @@ export function ChatTab({
     handledMealQuestionRef.current = mealKey
     const mealFoodsList = pendingMealQuestion.foods.map((f) => `${f.name} (${f.quantity})`).join(", ")
     const displayText = `Dúvida sobre: ${pendingMealQuestion.name}`
+    
+    // Pegar o objetivo e dados da memória
+    const goalMap: Record<string, string> = {
+      fat_loss: "Emagrecimento",
+      muscle_gain: "Hipertrofia",
+      conditioning: "Condicionamento",
+      mobility_health: "Saúde",
+      consistency: "Consistência"
+    }
+    const goalLabel = memory?.trainingGoal ? goalMap[memory.trainingGoal] || memory.trainingGoal : "não informado"
+    const weightLabel = memory?.weightKg ? `${memory.weightKg} kg` : "não informado"
+    const heightLabel = memory?.heightCm ? `${memory.heightCm} cm` : "não informado"
+    const restrictionsLabel = memory?.foodRestrictions || "nenhuma"
+
     const modelInput = [
       "O usuário apertou o botão de dúvida em uma refeição da dieta.",
       `Refeição: ${pendingMealQuestion.name} (${pendingMealQuestion.time}).`,
       `Alimentos: ${mealFoodsList}.`,
       `Total: ${pendingMealQuestion.totalKcal} kcal.`,
+      `Objetivo: ${goalLabel}`,
+      `Peso: ${weightLabel}`,
+      `Altura: ${heightLabel}`,
+      `Restrição alimentar: ${restrictionsLabel}`,
       "Responda como melhor amigo direto: aceite a dúvida do usuário sobre substituição ou adaptação desta refeição. Seja objetivo e prático. Máximo 3 frases.",
     ].join(" ")
 

@@ -218,6 +218,21 @@ function CoachInner() {
           <span className="text-white/30 text-xs font-mono hidden md:inline">{coachId}</span>
           <Button
             size="sm"
+            variant="outline"
+            onClick={() => {
+              if (confirm("!!! CUIDADO !!!\n\nIsso apagará TODOS os alunos, toda a Arena e toda a Memória do sistema para SEMPRE.\n\nDeseja continuar?")) {
+                act(async () => {
+                  await coachFetch("/guto/coach/nuke-all", coachId, { method: "POST" });
+                  window.location.reload();
+                }, "SISTEMA ZERADO. O banco de dados foi limpo.");
+              }
+            }}
+            className="border-red-500/30 text-red-500 hover:bg-red-500/10 h-8 px-3 text-[10px] uppercase tracking-tighter bg-transparent"
+          >
+            Reset Nuclear
+          </Button>
+          <Button
+            size="sm"
             onClick={() => {
               setNewStudentName("");
               setNewStudentNote("");

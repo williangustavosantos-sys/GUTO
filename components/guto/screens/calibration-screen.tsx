@@ -52,7 +52,7 @@ export function CalibrationScreen({
   const isHeightValid = !isNaN(heightNum) && heightNum >= 100 && heightNum <= 250
   const weightNum = parseFloat(weightInput)
   const isWeightValid = !isNaN(weightNum) && weightNum >= 30 && weightNum <= 300
-  const isComplete = Boolean(biologicalSex && isAgeValid && trainingStatus && goal && location)
+  const isComplete = Boolean(biologicalSex && isAgeValid && trainingStatus && goal && location && isHeightValid && isWeightValid)
 
   const handleSubmit = () => {
     if (!isComplete) return

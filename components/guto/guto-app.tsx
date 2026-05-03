@@ -45,6 +45,8 @@ interface NameGate {
 }
 
 const STORAGE_KEY = "guto-white-lab-profile"
+const STORAGE_VERSION = 2  // bump aqui para forçar reset em todos os dispositivos
+const STORAGE_VERSION_KEY = "guto-storage-version"
 const DEBUG_RESET_KEY = "guto-debug-reset"
 const HOLD_INTERVAL_MS = 16
 const HOLD_INCREMENT = (HOLD_INTERVAL_MS / 1600) * 100
@@ -449,14 +451,20 @@ export function GutoApp({
       const inviteUserId = search.get("inviteUserId")
       const presetName = search.get("presetName")
 
+      const storedVersion = parseInt(readStorageItem(STORAGE_VERSION_KEY) ?? "0", 10)
+      const versionOutdated = storedVersion < STORAGE_VERSION
+
       const shouldReset =
-        search.get("guto-reset") === "1" || forceResetParam || readStorageItem(DEBUG_RESET_KEY) === "1"
+        search.get("guto-reset") === "1" || forceResetParam || readStorageItem(DEBUG_RESET_KEY) === "1" || versionOutdated
       const shouldSkipIntro = skipIntro || search.get("skip-intro") === "1"
 
       if (shouldReset) {
         removeStorageItem(STORAGE_KEY)
         removeStorageItem(DEBUG_RESET_KEY)
         clearGutoBrowserIdentity()
+        writeStorageItem(STORAGE_VERSION_KEY, String(STORAGE_VERSION))
+      } else {
+        writeStorageItem(STORAGE_VERSION_KEY, String(STORAGE_VERSION))
       }
 
       if (inviteUserId) {
@@ -922,6 +930,7 @@ export function GutoApp({
             userName={userLabel}
             language={selectedLanguage}
             evolution={evolution}
+            memory={memory}
             pendingExerciseQuestion={pendingExerciseQuestion}
             onExerciseQuestionHandled={() => setPendingExerciseQuestion(null)}
             pendingMealQuestion={pendingMealQuestion}
@@ -1000,6 +1009,7 @@ export function GutoApp({
             userName={userLabel}
             language={selectedLanguage}
             evolution={evolution}
+            memory={memory}
             pendingExerciseQuestion={pendingExerciseQuestion}
             onExerciseQuestionHandled={() => setPendingExerciseQuestion(null)}
             onWorkoutPlanUpdated={setWorkoutPlan}

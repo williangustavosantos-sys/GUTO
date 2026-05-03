@@ -240,14 +240,34 @@ export function DietTab({ userId, language, onMealDoubt }: DietTabProps) {
     try {
       setLoading(true)
       setError(null)
-      const fetched = await getDietPlan(userId)
+      let fetched = await getDietPlan(userId)
+      if (!fetched) {
+        setGenerating(true)
+        fetched = await generateDietPlan(userId, validLang)
+      }
       setPlan(fetched)
-    } catch {
+    } catch (err: any) {
       setPlan(null)
+      if (err.details && err.details.error === "missing_profile_fields" && err.details.missing) {
+        const missingMap: Record<string, string> = {
+          heightCm: "Falta altura",
+          weightKg: "Falta peso",
+          country: "Falta país",
+          trainingGoal: "Falta objetivo",
+          biologicalSex: "Falta sexo biológico",
+          userAge: "Falta idade",
+          trainingLevel: "Falta nível de treino"
+        }
+        const fields = err.details.missing.map((f: string) => missingMap[f] || f).join(", ")
+        setError(`${fields}`)
+      } else {
+        setError("Erro ao carregar ou gerar dieta. Verifique seu perfil.")
+      }
     } finally {
       setLoading(false)
+      setGenerating(false)
     }
-  }, [userId])
+  }, [userId, validLang])
 
   useEffect(() => {
     void loadPlan()
@@ -260,16 +280,17 @@ export function DietTab({ userId, language, onMealDoubt }: DietTabProps) {
       const newPlan = await generateDietPlan(userId, validLang)
       setPlan(newPlan)
     } catch (err: any) {
-      if (err.details && err.details.error === "missing_profile_data" && err.details.missingFields) {
+      if (err.details && err.details.error === "missing_profile_fields" && err.details.missing) {
         const missingMap: Record<string, string> = {
           heightCm: "Falta altura",
           weightKg: "Falta peso",
           country: "Falta país",
           trainingGoal: "Falta objetivo",
           biologicalSex: "Falta sexo biológico",
-          userAge: "Falta idade"
+          userAge: "Falta idade",
+          trainingLevel: "Falta nível de treino"
         }
-        const fields = err.details.missingFields.map((f: string) => missingMap[f] || f).join(", ")
+        const fields = err.details.missing.map((f: string) => missingMap[f] || f).join(", ")
         setError(`${fields}`)
       } else {
         setError("Erro ao gerar dieta. Verifique seu perfil e tente novamente.")
