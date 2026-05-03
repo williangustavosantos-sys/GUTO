@@ -165,7 +165,7 @@ export function CalibrationScreen({
             <p className="text-[8px] font-black uppercase tracking-[0.22em] text-[var(--guto-navy)]/55 mb-1.5">
               {t.statusLabel}:
             </p>
-            <div className="flex gap-1.5 flex-wrap">
+            <div className="flex gap-1.5 flex-wrap justify-center">
               <ChipButton
                 label={t.statusChips.paused}
                 active={trainingStatus === "beginner"}
@@ -206,7 +206,7 @@ export function CalibrationScreen({
             <p className="text-[8px] font-black uppercase tracking-[0.22em] text-[var(--guto-navy)]/55 mb-1.5">
               {t.objectiveSection}
             </p>
-            <div className="flex gap-1.5 flex-wrap">
+            <div className="flex gap-1.5 flex-wrap justify-center">
               {(Object.entries(t.objectiveChips) as [GoalKey, string][]).map(([key, label]) => (
                 <ChipButton
                   key={key}
@@ -223,7 +223,7 @@ export function CalibrationScreen({
             <p className="text-[8px] font-black uppercase tracking-[0.22em] text-[var(--guto-navy)]/55 mb-1.5">
               {t.locationLabel}
             </p>
-            <div className="flex gap-1.5 flex-wrap">
+            <div className="flex gap-1.5 flex-wrap justify-center">
               {(Object.entries(t.locationOptions) as [LocationKey, string][]).map(([key, label]) => (
                 <ChipButton
                   key={key}

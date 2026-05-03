@@ -416,10 +416,10 @@ export function WorkoutValidationFlow({
             </button>
 
             <div className="guto-frost-panel w-full max-w-[22rem] rounded-[2rem] p-6">
-              <span className="font-mono text-[9px] font-black uppercase tracking-[0.24em] text-[var(--guto-cyan)]">
+              <span className="block text-center font-mono text-[9px] font-black uppercase tracking-[0.24em] text-[var(--guto-cyan)]">
                 {locale.badge}
               </span>
-              <h1 className="mb-5 mt-1 text-[1.3rem] font-black uppercase leading-tight tracking-[0.08em] text-[var(--guto-navy)]">
+              <h1 className="mb-5 mt-1 text-center text-[1.3rem] font-black uppercase leading-tight tracking-[0.08em] text-[var(--guto-navy)]">
                 {locale.title}
               </h1>
 

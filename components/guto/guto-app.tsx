@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { AnimatePresence, motion } from "framer-motion"
-import { ArrowLeft, Check, Fingerprint, Languages, Send, Settings, UserRound, Volume2 } from "lucide-react"
+import { Activity, ArrowLeft, Check, Dumbbell, Fingerprint, Languages, MapPin, Send, Settings, UserRound, Volume2, Zap } from "lucide-react"
 
 import { BottomNavigation, type TabType } from "./bottom-navigation"
 import { createGutoEffectRegistry } from "./effects"
@@ -19,9 +19,10 @@ import { getApiErrorMessage } from "@/lib/api/client"
 import { getGutoMemory, saveGutoMemory, trackGutoEvent, validateGutoName, type GutoMemory, type GutoNameValidation, type GutoTelemetryEvent, type GutoWorkoutPlan } from "@/lib/api/guto"
 import { clearGutoBrowserIdentity, getOrCreateGutoVisitTelemetry } from "@/lib/guto/user-id"
 import type { EvolutionStage, SupportedLanguage } from "@/types/contract"
+import { translations } from "./translations"
 
 type AppStage = "intro" | "language" | "naming" | "calibration" | "pact" | "system" | "settings"
-type SettingsMode = "menu" | "language" | "name"
+type SettingsMode = "menu" | "language" | "name" | "profile" | "goal" | "location" | "pathology"
 
 interface StoredProfile {
   language: SupportedLanguage
@@ -78,6 +79,11 @@ const stageCopy: Record<
     settingsSaveName: string
     settingsClose: string
     settingsBack: string
+    settingsProfile: string
+    settingsGoal: string
+    settingsLocation: string
+    settingsPathology: string
+    settingsSave: string
   }
 > = {
   "pt-BR": {
@@ -95,6 +101,11 @@ const stageCopy: Record<
     settingsSaveName: "Salvar nome",
     settingsClose: "Fechar ajustes",
     settingsBack: "Voltar",
+    settingsProfile: "Perfil",
+    settingsGoal: "Objetivo",
+    settingsLocation: "Local",
+    settingsPathology: "Limitações",
+    settingsSave: "Salvar",
   },
   "en-US": {
     namingTitle: "GUTO & ________",
@@ -111,6 +122,11 @@ const stageCopy: Record<
     settingsSaveName: "Save name",
     settingsClose: "Close settings",
     settingsBack: "Back",
+    settingsProfile: "Profile",
+    settingsGoal: "Goal",
+    settingsLocation: "Location",
+    settingsPathology: "Limitations",
+    settingsSave: "Save",
   },
   "es-ES": {
     namingTitle: "GUTO & ________",
@@ -127,6 +143,11 @@ const stageCopy: Record<
     settingsSaveName: "Guardar nombre",
     settingsClose: "Cerrar ajustes",
     settingsBack: "Volver",
+    settingsProfile: "Perfil",
+    settingsGoal: "Objetivo",
+    settingsLocation: "Local",
+    settingsPathology: "Limitaciones",
+    settingsSave: "Guardar",
   },
   "it-IT": {
     namingTitle: "GUTO & ________",
@@ -143,6 +164,11 @@ const stageCopy: Record<
     settingsSaveName: "Salva nome",
     settingsClose: "Chiudi impostazioni",
     settingsBack: "Indietro",
+    settingsProfile: "Profilo",
+    settingsGoal: "Obiettivo",
+    settingsLocation: "Luogo",
+    settingsPathology: "Limitazioni",
+    settingsSave: "Salva",
   },
 }
 
@@ -250,6 +276,11 @@ export function GutoApp({
   const [introNeedsActivation, setIntroNeedsActivation] = useState(true)
   const [settingsMode, setSettingsMode] = useState<SettingsMode>("menu")
   const [settingsNameDraft, setSettingsNameDraft] = useState("")
+  const [settingsSexDraft, setSettingsSexDraft] = useState<"male" | "female" | null>(null)
+  const [settingsAgeDraft, setSettingsAgeDraft] = useState("")
+  const [settingsGoalDraft, setSettingsGoalDraft] = useState<string | null>(null)
+  const [settingsLocationDraft, setSettingsLocationDraft] = useState<string | null>(null)
+  const [settingsPathologyDraft, setSettingsPathologyDraft] = useState("")
   const [pendingExerciseQuestion, setPendingExerciseQuestion] =
     useState<PendingExerciseQuestion | null>(null)
   const [workoutPlan, setWorkoutPlan] = useState<GutoWorkoutPlan | null>(null)
@@ -632,10 +663,15 @@ export function GutoApp({
 
   const openSettings = useCallback(() => {
     setSettingsNameDraft(committedName || formatGutoName(userName || ""))
+    setSettingsSexDraft(memory?.biologicalSex === "male" || memory?.biologicalSex === "female" ? memory.biologicalSex : null)
+    setSettingsAgeDraft(memory?.userAge ? String(memory.userAge) : "")
+    setSettingsGoalDraft(memory?.trainingGoal ?? null)
+    setSettingsLocationDraft(memory?.preferredTrainingLocation ?? null)
+    setSettingsPathologyDraft(memory?.trainingPathology && memory.trainingPathology !== "sem dor" ? memory.trainingPathology : "")
     setSettingsMode("menu")
     setNameGate(null)
     setStage("settings")
-  }, [committedName, userName])
+  }, [committedName, memory, userName])
 
   const handleSettingsBack = useCallback(() => {
     setActiveLanguageGlow(null)
@@ -702,6 +738,42 @@ export function GutoApp({
     },
     [isValidatingName, persistMemory, persistProfile, settingsNameDraft]
   )
+
+  const saveProfileSettings = useCallback(() => {
+    const ageNum = parseInt(settingsAgeDraft, 10)
+    const isAgeValid = !isNaN(ageNum) && ageNum >= 14 && ageNum <= 99
+    if (!settingsSexDraft || !isAgeValid) return
+    persistMemory({ biologicalSex: settingsSexDraft, userAge: ageNum })
+    setMemory((prev) => prev ? { ...prev, biologicalSex: settingsSexDraft, userAge: ageNum } : prev)
+    setSettingsMode("menu")
+    setStage("system")
+  }, [persistMemory, settingsAgeDraft, settingsSexDraft])
+
+  const saveGoalSettings = useCallback(() => {
+    if (!settingsGoalDraft) return
+    const goal = settingsGoalDraft as "consistency" | "fat_loss" | "muscle_gain" | "conditioning" | "mobility_health"
+    persistMemory({ trainingGoal: goal })
+    setMemory((prev) => prev ? { ...prev, trainingGoal: goal } : prev)
+    setSettingsMode("menu")
+    setStage("system")
+  }, [persistMemory, settingsGoalDraft])
+
+  const saveLocationSettings = useCallback(() => {
+    if (!settingsLocationDraft) return
+    const loc = settingsLocationDraft as "gym" | "home" | "park" | "mixed"
+    persistMemory({ preferredTrainingLocation: loc })
+    setMemory((prev) => prev ? { ...prev, preferredTrainingLocation: loc } : prev)
+    setSettingsMode("menu")
+    setStage("system")
+  }, [persistMemory, settingsLocationDraft])
+
+  const savePathologySettings = useCallback(() => {
+    const val = settingsPathologyDraft.trim() || "sem dor"
+    persistMemory({ trainingPathology: val })
+    setMemory((prev) => prev ? { ...prev, trainingPathology: val } : prev)
+    setSettingsMode("menu")
+    setStage("system")
+  }, [persistMemory, settingsPathologyDraft])
 
   useEffect(() => {
     if (stage !== "pact" || !isHoldingPact) {
@@ -1333,13 +1405,13 @@ export function GutoApp({
             </div>
 
             {settingsMode === "menu" && (
-              <div className="guto-language-grid grid grid-cols-2">
+              <div className="guto-language-grid grid grid-cols-2 gap-3 pt-2">
                 <motion.button
                   type="button"
                   whileTap={{ scale: 0.96 }}
                   onClick={() => setSettingsMode("language")}
                   aria-label={locale.settingsLanguage}
-                  className="guto-language-card guto-settings-choice-card group relative flex items-center overflow-hidden rounded-[18px]"
+                  className="guto-language-card guto-settings-choice-card group relative flex flex-col items-center justify-center gap-2 overflow-hidden rounded-[18px] p-4"
                 >
                   <Languages className="guto-settings-choice-icon" strokeWidth={2.2} />
                   <span className="guto-settings-choice-label">{locale.settingsLanguage}</span>
@@ -1350,10 +1422,54 @@ export function GutoApp({
                   whileTap={{ scale: 0.96 }}
                   onClick={() => setSettingsMode("name")}
                   aria-label={locale.settingsName}
-                  className="guto-language-card guto-settings-choice-card group relative flex items-center overflow-hidden rounded-[18px]"
+                  className="guto-language-card guto-settings-choice-card group relative flex flex-col items-center justify-center gap-2 overflow-hidden rounded-[18px] p-4"
                 >
                   <UserRound className="guto-settings-choice-icon" strokeWidth={2.2} />
                   <span className="guto-settings-choice-label">{locale.settingsName}</span>
+                </motion.button>
+
+                <motion.button
+                  type="button"
+                  whileTap={{ scale: 0.96 }}
+                  onClick={() => setSettingsMode("profile")}
+                  aria-label={locale.settingsProfile}
+                  className="guto-language-card guto-settings-choice-card group relative flex flex-col items-center justify-center gap-2 overflow-hidden rounded-[18px] p-4"
+                >
+                  <Activity className="guto-settings-choice-icon" strokeWidth={2.2} />
+                  <span className="guto-settings-choice-label">{locale.settingsProfile}</span>
+                </motion.button>
+
+                <motion.button
+                  type="button"
+                  whileTap={{ scale: 0.96 }}
+                  onClick={() => setSettingsMode("goal")}
+                  aria-label={locale.settingsGoal}
+                  className="guto-language-card guto-settings-choice-card group relative flex flex-col items-center justify-center gap-2 overflow-hidden rounded-[18px] p-4"
+                >
+                  <Dumbbell className="guto-settings-choice-icon" strokeWidth={2.2} />
+                  <span className="guto-settings-choice-label">{locale.settingsGoal}</span>
+                </motion.button>
+
+                <motion.button
+                  type="button"
+                  whileTap={{ scale: 0.96 }}
+                  onClick={() => setSettingsMode("location")}
+                  aria-label={locale.settingsLocation}
+                  className="guto-language-card guto-settings-choice-card group relative flex flex-col items-center justify-center gap-2 overflow-hidden rounded-[18px] p-4"
+                >
+                  <MapPin className="guto-settings-choice-icon" strokeWidth={2.2} />
+                  <span className="guto-settings-choice-label">{locale.settingsLocation}</span>
+                </motion.button>
+
+                <motion.button
+                  type="button"
+                  whileTap={{ scale: 0.96 }}
+                  onClick={() => setSettingsMode("pathology")}
+                  aria-label={locale.settingsPathology}
+                  className="guto-language-card guto-settings-choice-card group relative flex flex-col items-center justify-center gap-2 overflow-hidden rounded-[18px] p-4"
+                >
+                  <Zap className="guto-settings-choice-icon" strokeWidth={2.2} />
+                  <span className="guto-settings-choice-label">{locale.settingsPathology}</span>
                 </motion.button>
               </div>
             )}
@@ -1393,6 +1509,7 @@ export function GutoApp({
 
             {settingsMode === "name" && (
               <div className="guto-name-stage flex w-full flex-1 flex-col items-center">
+
                 <motion.div
                   className="guto-name-lockup"
                   initial={{ opacity: 0, scale: 0.96 }}
@@ -1469,6 +1586,166 @@ export function GutoApp({
                     </div>
                   )}
                 </form>
+              </div>
+            )}
+
+            {settingsMode === "profile" && (() => {
+              const t = translations[selectedLanguage].calibration
+              const ageNum = parseInt(settingsAgeDraft, 10)
+              const isAgeValid = !isNaN(ageNum) && ageNum >= 14 && ageNum <= 99
+              const canSave = Boolean(settingsSexDraft && isAgeValid)
+              return (
+                <div className="flex flex-1 flex-col gap-4 pt-2">
+                  <div className="guto-slot rounded-[1.5rem] px-5 py-4">
+                    <p className="mb-3 font-mono text-[8px] font-black uppercase tracking-[0.2em] text-[rgba(13,35,65,0.42)]">
+                      {t.sexOptions.male} / {t.sexOptions.female}
+                    </p>
+                    <div className="flex gap-2">
+                      {(["male", "female"] as const).map((s) => (
+                        <button
+                          key={s}
+                          type="button"
+                          onClick={() => setSettingsSexDraft(s)}
+                          className={`flex-1 rounded-full border py-2 font-mono text-[10px] font-black uppercase tracking-[0.12em] transition-all ${
+                            settingsSexDraft === s
+                              ? "border-[rgba(82,231,255,0.75)] bg-[rgba(82,231,255,0.18)] text-[var(--guto-cyan)]"
+                              : "border-[rgba(82,231,255,0.28)] bg-white/50 text-[rgba(13,35,65,0.65)]"
+                          }`}
+                        >
+                          {s === "male" ? t.sexOptions.male : t.sexOptions.female}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="mt-4 mb-2 font-mono text-[8px] font-black uppercase tracking-[0.2em] text-[rgba(13,35,65,0.42)]">
+                      {t.ageLabel}
+                    </p>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      min={14}
+                      max={99}
+                      value={settingsAgeDraft}
+                      onChange={(e) => setSettingsAgeDraft(e.target.value)}
+                      placeholder="--"
+                      autoComplete="off"
+                      className="w-full rounded-full border border-[rgba(82,231,255,0.45)] bg-white px-4 py-2.5 text-center font-mono text-[14px] font-black text-[var(--guto-navy)] outline-none appearance-none [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    disabled={!canSave}
+                    onClick={saveProfileSettings}
+                    className={`h-12 w-full rounded-full font-mono text-[11px] font-black uppercase tracking-[0.2em] transition-all ${
+                      canSave
+                        ? "bg-[var(--guto-cyan)] text-[var(--guto-navy)] shadow-[0_4px_16px_rgba(82,231,255,0.3)]"
+                        : "bg-white/40 text-[rgba(13,35,65,0.3)] border border-[rgba(13,35,65,0.08)]"
+                    }`}
+                  >
+                    {locale.settingsSave}
+                  </button>
+                </div>
+              )
+            })()}
+
+            {settingsMode === "goal" && (() => {
+              const t = translations[selectedLanguage].calibration
+              type GoalKey = "consistency" | "fat_loss" | "muscle_gain" | "conditioning" | "mobility_health"
+              return (
+                <div className="flex flex-1 flex-col gap-4 pt-2">
+                  <div className="guto-slot rounded-[1.5rem] px-5 py-4">
+                    <div className="flex flex-wrap justify-center gap-2">
+                      {(Object.entries(t.objectiveChips) as [GoalKey, string][]).map(([key, label]) => (
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={() => setSettingsGoalDraft(key)}
+                          className={`rounded-full border px-4 py-1.5 font-mono text-[10px] font-black uppercase tracking-[0.1em] transition-all ${
+                            settingsGoalDraft === key
+                              ? "border-[rgba(82,231,255,0.75)] bg-[rgba(82,231,255,0.18)] text-[var(--guto-cyan)]"
+                              : "border-[rgba(82,231,255,0.28)] bg-white/50 text-[rgba(13,35,65,0.65)]"
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={!settingsGoalDraft}
+                    onClick={saveGoalSettings}
+                    className={`h-12 w-full rounded-full font-mono text-[11px] font-black uppercase tracking-[0.2em] transition-all ${
+                      settingsGoalDraft
+                        ? "bg-[var(--guto-cyan)] text-[var(--guto-navy)] shadow-[0_4px_16px_rgba(82,231,255,0.3)]"
+                        : "bg-white/40 text-[rgba(13,35,65,0.3)] border border-[rgba(13,35,65,0.08)]"
+                    }`}
+                  >
+                    {locale.settingsSave}
+                  </button>
+                </div>
+              )
+            })()}
+
+            {settingsMode === "location" && (() => {
+              const t = translations[selectedLanguage].calibration
+              type LocationKey = "gym" | "home" | "park" | "mixed"
+              return (
+                <div className="flex flex-1 flex-col gap-4 pt-2">
+                  <div className="guto-slot rounded-[1.5rem] px-5 py-4">
+                    <div className="flex flex-wrap justify-center gap-2">
+                      {(Object.entries(t.locationOptions) as [LocationKey, string][]).map(([key, label]) => (
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={() => setSettingsLocationDraft(key)}
+                          className={`rounded-full border px-4 py-1.5 font-mono text-[10px] font-black uppercase tracking-[0.1em] transition-all ${
+                            settingsLocationDraft === key
+                              ? "border-[rgba(82,231,255,0.75)] bg-[rgba(82,231,255,0.18)] text-[var(--guto-cyan)]"
+                              : "border-[rgba(82,231,255,0.28)] bg-white/50 text-[rgba(13,35,65,0.65)]"
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={!settingsLocationDraft}
+                    onClick={saveLocationSettings}
+                    className={`h-12 w-full rounded-full font-mono text-[11px] font-black uppercase tracking-[0.2em] transition-all ${
+                      settingsLocationDraft
+                        ? "bg-[var(--guto-cyan)] text-[var(--guto-navy)] shadow-[0_4px_16px_rgba(82,231,255,0.3)]"
+                        : "bg-white/40 text-[rgba(13,35,65,0.3)] border border-[rgba(13,35,65,0.08)]"
+                    }`}
+                  >
+                    {locale.settingsSave}
+                  </button>
+                </div>
+              )
+            })()}
+
+            {settingsMode === "pathology" && (
+              <div className="flex flex-1 flex-col gap-4 pt-2">
+                <div className="guto-slot rounded-[1.5rem] px-5 py-4">
+                  <input
+                    type="text"
+                    value={settingsPathologyDraft}
+                    onChange={(e) => setSettingsPathologyDraft(e.target.value)}
+                    placeholder={translations[selectedLanguage].calibration.pathologyPlaceholder}
+                    autoComplete="off"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    className="w-full rounded-full border border-[rgba(82,231,255,0.45)] bg-white px-4 py-2.5 font-mono text-[12px] text-[var(--guto-navy)] placeholder-[rgba(13,35,65,0.3)] outline-none"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={savePathologySettings}
+                  className="h-12 w-full rounded-full bg-[var(--guto-cyan)] font-mono text-[11px] font-black uppercase tracking-[0.2em] text-[var(--guto-navy)] shadow-[0_4px_16px_rgba(82,231,255,0.3)]"
+                >
+                  {locale.settingsSave}
+                </button>
               </div>
             )}
           </motion.section>
