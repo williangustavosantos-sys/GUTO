@@ -220,7 +220,7 @@ export async function validateWorkout(payload: {
   locationMode: WorkoutLocationMode
   language: SupportedLanguage
 }) {
-  return apiRequest<{ success: true; validation: WorkoutValidationRecord; validationHistory: WorkoutValidationRecord[] }>(
+  return apiRequest<{ success: true; validation: WorkoutValidationRecord; validationHistory: WorkoutValidationRecord[]; arena?: ArenaAwardResult }>(
     "/guto/validate-workout",
     {
       method: "POST",
@@ -228,6 +228,52 @@ export async function validateWorkout(payload: {
       body: JSON.stringify(payload),
     }
   )
+}
+
+// --- Arena types ---
+
+export type ArenaAvatarStage = "baby" | "teen" | "adult" | "elite"
+
+export interface ArenaRankingItem {
+  position: number
+  userId: string
+  pairName: string
+  avatarStage: ArenaAvatarStage
+  xp: number
+  validatedWorkouts: number
+  status?: string
+  currentStreak?: number
+  nextEvolutionXp?: number | null
+  xpToNextEvolution?: number | null
+}
+
+export interface ArenaRankingResponse {
+  rankingType: "weekly" | "monthly" | "individual"
+  arenaGroupId: string
+  resetLabel?: string
+  items: ArenaRankingItem[]
+}
+
+export interface ArenaMyProfile {
+  userId: string
+  pairName: string
+  avatarStage: ArenaAvatarStage
+  totalXp: number
+  weeklyXp: number
+  monthlyXp: number
+  currentStreak: number
+  validatedWorkoutsTotal: number
+  nextEvolutionXp: number | null
+  xpToNextEvolution: number | null
+}
+
+export interface ArenaAwardResult {
+  xpAwarded: number
+  totalXp: number
+  weeklyXp: number
+  monthlyXp: number
+  avatarStage: ArenaAvatarStage
+  leveledUp: boolean
 }
 
 export async function getGutoProactive({
@@ -246,4 +292,32 @@ export async function getGutoProactive({
     method: "GET",
     timeoutMs: 30000,
   })
+}
+
+export async function getArenaWeekly(arenaGroupId = "will-personal-alpha") {
+  return apiRequest<ArenaRankingResponse>(
+    `/guto/arena/weekly?arenaGroupId=${encodeURIComponent(arenaGroupId)}`,
+    { method: "GET" }
+  )
+}
+
+export async function getArenaMonthly(arenaGroupId = "will-personal-alpha") {
+  return apiRequest<ArenaRankingResponse>(
+    `/guto/arena/monthly?arenaGroupId=${encodeURIComponent(arenaGroupId)}`,
+    { method: "GET" }
+  )
+}
+
+export async function getArenaIndividual(arenaGroupId = "will-personal-alpha") {
+  return apiRequest<ArenaRankingResponse>(
+    `/guto/arena/individual?arenaGroupId=${encodeURIComponent(arenaGroupId)}`,
+    { method: "GET" }
+  )
+}
+
+export async function getArenaMe(userId: string, arenaGroupId = "will-personal-alpha") {
+  return apiRequest<ArenaMyProfile>(
+    `/guto/arena/me?userId=${encodeURIComponent(userId)}&arenaGroupId=${encodeURIComponent(arenaGroupId)}`,
+    { method: "GET" }
+  )
 }

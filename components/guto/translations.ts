@@ -69,6 +69,25 @@ export interface TranslationDictionary {
     objectiveSection: string;
     objectiveChips: { fat_loss: string; muscle_gain: string; conditioning: string; mobility_health: string; consistency: string };
   };
+  arena: {
+    tab: string;
+    subtitle: string;
+    week: string;
+    month: string;
+    individual: string;
+    weeklyHeadline: string;
+    monthlyHeadline: string;
+    individualHeadline: string;
+    workoutsValidated: string;
+    xp: string;
+    restartsMonday: string;
+    restartsNextMonth: string;
+    nextEvolution: string;
+    xpMissing: string;
+    emptyState: string;
+    xpEarned: string;
+    leveledUp: string;
+  };
 }
 
 export const translations: Record<ValidLanguage, TranslationDictionary> = {
@@ -156,7 +175,26 @@ export const translations: Record<ValidLanguage, TranslationDictionary> = {
       pathologySection: "LIMITAÇÃO PATOLOGIA",
       objectiveSection: "OBJETIVO",
       objectiveChips: { fat_loss: "Emagrecer", muscle_gain: "Hipertrofia", conditioning: "Condicionamento", mobility_health: "Saúde", consistency: "Consistência" },
-    }
+    },
+    arena: {
+      tab: "ARENA",
+      subtitle: "Aqui o GUTO não evolui escondido.",
+      week: "SEMANA",
+      month: "MÊS",
+      individual: "INDIVIDUAL",
+      weeklyHeadline: "Todo mundo tem chance de virar o jogo.",
+      monthlyHeadline: "Consistência vence empolgação.",
+      individualHeadline: "Essa é a evolução real do seu GUTO.",
+      workoutsValidated: "treinos validados",
+      xp: "XP",
+      restartsMonday: "Reinicia segunda-feira",
+      restartsNextMonth: "Reinicia no próximo mês",
+      nextEvolution: "Próxima evolução",
+      xpMissing: "XP restantes",
+      emptyState: "Nenhum treino validado ainda neste período.",
+      xpEarned: "+100 XP na Arena",
+      leveledUp: "Seu GUTO evoluiu!",
+    },
   },
   "it-IT": {
     complete: "Completato.",
@@ -233,7 +271,26 @@ export const translations: Record<ValidLanguage, TranslationDictionary> = {
       pathologySection: "DOLORE E LIMITI",
       objectiveSection: "OBIETTIVO",
       objectiveChips: { fat_loss: "Dimagrire", muscle_gain: "Ipertrofia", conditioning: "Condizionamento", mobility_health: "Salute", consistency: "Costanza" },
-    }
+    },
+    arena: {
+      tab: "ARENA",
+      subtitle: "Il tuo GUTO non evolve di nascosto.",
+      week: "SETTIMANA",
+      month: "MESE",
+      individual: "INDIVIDUALE",
+      weeklyHeadline: "Ogni settimana puoi ribaltare il gioco.",
+      monthlyHeadline: "La costanza batte la motivazione.",
+      individualHeadline: "Questa è la vera evoluzione del tuo GUTO.",
+      workoutsValidated: "allenamenti convalidati",
+      xp: "XP",
+      restartsMonday: "Riparte lunedì",
+      restartsNextMonth: "Riparte il prossimo mese",
+      nextEvolution: "Prossima evoluzione",
+      xpMissing: "XP rimanenti",
+      emptyState: "Nessun allenamento convalidato in questo periodo.",
+      xpEarned: "+100 XP nell'Arena",
+      leveledUp: "Il tuo GUTO si è evoluto!",
+    },
   },
   "es-ES": {
     complete: "Completado.",
@@ -310,7 +367,26 @@ export const translations: Record<ValidLanguage, TranslationDictionary> = {
       pathologySection: "DOLOR Y LIMITACIÓN",
       objectiveSection: "OBJETIVO",
       objectiveChips: { fat_loss: "Adelgazar", muscle_gain: "Hipertrofia", conditioning: "Acondicionamiento", mobility_health: "Salud", consistency: "Consistencia" },
-    }
+    },
+    arena: {
+      tab: "ARENA",
+      subtitle: "Tu GUTO no evoluciona en silencio.",
+      week: "SEMANA",
+      month: "MES",
+      individual: "INDIVIDUAL",
+      weeklyHeadline: "Cada semana puedes cambiar el juego.",
+      monthlyHeadline: "La constancia vence a la motivación.",
+      individualHeadline: "Esta es la evolución real de tu GUTO.",
+      workoutsValidated: "entrenamientos validados",
+      xp: "XP",
+      restartsMonday: "Reinicia el lunes",
+      restartsNextMonth: "Reinicia el próximo mes",
+      nextEvolution: "Próxima evolución",
+      xpMissing: "XP restantes",
+      emptyState: "Ningún entrenamiento validado aún en este período.",
+      xpEarned: "+100 XP en la Arena",
+      leveledUp: "¡Tu GUTO ha evolucionado!",
+    },
   },
   "en-US": {
     complete: "Completed.",
@@ -387,6 +463,25 @@ export const translations: Record<ValidLanguage, TranslationDictionary> = {
       pathologySection: "PAIN & LIMITATIONS",
       objectiveSection: "GOAL",
       objectiveChips: { fat_loss: "Lose Fat", muscle_gain: "Hypertrophy", conditioning: "Conditioning", mobility_health: "Health", consistency: "Consistency" },
-    }
+    },
+    arena: {
+      tab: "ARENA",
+      subtitle: "Your GUTO does not evolve in silence.",
+      week: "WEEK",
+      month: "MONTH",
+      individual: "INDIVIDUAL",
+      weeklyHeadline: "Everyone gets a fresh chance.",
+      monthlyHeadline: "Consistency beats motivation.",
+      individualHeadline: "This is your GUTO's real evolution.",
+      workoutsValidated: "validated workouts",
+      xp: "XP",
+      restartsMonday: "Restarts Monday",
+      restartsNextMonth: "Restarts next month",
+      nextEvolution: "Next evolution",
+      xpMissing: "XP remaining",
+      emptyState: "No validated workouts yet this period.",
+      xpEarned: "+100 XP in Arena",
+      leveledUp: "Your GUTO evolved!",
+    },
   }
 };

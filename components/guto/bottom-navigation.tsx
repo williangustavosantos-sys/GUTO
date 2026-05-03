@@ -1,11 +1,11 @@
 "use client"
 
 import { motion } from "framer-motion"
-import { Dumbbell, MapPin, MessageCircle, TrendingUp } from "lucide-react"
+import { Dumbbell, MapPin, MessageCircle, Swords, TrendingUp } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
-export type TabType = "guto" | "caminho" | "evolucoes" | "missao"
+export type TabType = "guto" | "caminho" | "evolucoes" | "missao" | "arena"
 
 interface BottomNavigationProps {
   activeTab: TabType
@@ -14,15 +14,16 @@ interface BottomNavigationProps {
 }
 
 const tabLabels: Record<"pt-BR" | "it-IT" | "es-ES" | "en-US", Record<TabType, string>> = {
-  "pt-BR": { guto: "GUTO", caminho: "PERC.", evolucoes: "EVO.", missao: "TREINO" },
-  "it-IT": { guto: "GUTO", caminho: "PERC.", evolucoes: "EVO.", missao: "TRAIN" },
-  "es-ES": { guto: "GUTO", caminho: "REC.", evolucoes: "EVO.", missao: "ENTR." },
-  "en-US": { guto: "GUTO", caminho: "JOURNEY", evolucoes: "EVOLVE", missao: "WORKOUT" },
+  "pt-BR": { guto: "GUTO", caminho: "PERC.", evolucoes: "EVO.", missao: "TREINO", arena: "ARENA" },
+  "it-IT": { guto: "GUTO", caminho: "PERC.", evolucoes: "EVO.", missao: "TRAIN", arena: "ARENA" },
+  "es-ES": { guto: "GUTO", caminho: "REC.", evolucoes: "EVO.", missao: "ENTR.", arena: "ARENA" },
+  "en-US": { guto: "GUTO", caminho: "JOURNEY", evolucoes: "EVOLVE", missao: "WORKOUT", arena: "ARENA" },
 }
 
 const tabs = [
   { id: "guto" as const, labelKey: "guto" as const, icon: MessageCircle },
   { id: "missao" as const, labelKey: "missao" as const, icon: Dumbbell },
+  { id: "arena" as const, labelKey: "arena" as const, icon: Swords },
   { id: "evolucoes" as const, labelKey: "evolucoes" as const, icon: TrendingUp },
   { id: "caminho" as const, labelKey: "caminho" as const, icon: MapPin },
 ]
@@ -38,7 +39,7 @@ export function BottomNavigation({ activeTab, onTabChange, language }: BottomNav
     <div className="guto-bottom-navigation px-0 pt-3">
       <nav
         aria-label="Navegação principal"
-        className="mx-auto grid w-[91.54%] max-w-[368px] grid-cols-4 gap-[clamp(7px,3vw,13px)]"
+        className="mx-auto grid w-[91.54%] max-w-[368px] grid-cols-5 gap-[clamp(4px,2vw,8px)]"
       >
         {tabs.map((tab) => {
           const Icon = tab.icon
@@ -67,7 +68,7 @@ export function BottomNavigation({ activeTab, onTabChange, language }: BottomNav
 
               <Icon
                 className={cn(
-                  "relative z-10 h-8 w-8 stroke-[2.4]",
+                  "relative z-10 h-7 w-7 stroke-[2.4]",
                   isActive ? "text-[var(--guto-cyan)]" : "text-[rgba(82,231,255,0.86)]"
                 )}
               />

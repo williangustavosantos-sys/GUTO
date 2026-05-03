@@ -8,6 +8,7 @@ import { Activity, ArrowLeft, Check, Dumbbell, Fingerprint, Languages, MapPin, S
 
 import { BottomNavigation, type TabType } from "./bottom-navigation"
 import { createGutoEffectRegistry } from "./effects"
+import { ArenaTab } from "./tabs/arena-tab"
 import { ChatTab } from "./tabs/chat-tab"
 import { EvolutionsTab } from "./tabs/evolutions-tab"
 import { MissionTab } from "./tabs/mission-tab"
@@ -938,6 +939,14 @@ export function GutoApp({
             onMissionComplete={handleMissionComplete}
             onAdaptedMissionComplete={handleAdaptedMissionComplete}
             onValidateWorkout={() => setShowValidationFlow(true)}
+          />
+        )
+      case "arena":
+        return (
+          <ArenaTab
+            userId={gutoUserId}
+            language={selectedLanguage}
+            translations={translations[selectedLanguage]}
           />
         )
       default:

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { X, Zap } from "lucide-react"
 
-import type { SupportedLanguage, WorkoutValidationRecord } from "@/lib/api/guto"
+import type { ArenaAwardResult, SupportedLanguage, WorkoutValidationRecord } from "@/lib/api/guto"
 import { validateWorkout } from "@/lib/api/guto"
 
 interface WorkoutValidationFlowProps {
@@ -143,6 +143,7 @@ export function WorkoutValidationFlow({
     validation: WorkoutValidationRecord
     validationHistory: WorkoutValidationRecord[]
   } | null>(null)
+  const [arenaResult, setArenaResult] = useState<ArenaAwardResult | null>(null)
 
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
@@ -380,6 +381,7 @@ export function WorkoutValidationFlow({
       .then((result) => {
         if (cancelled) return
         setValidationResult({ validation: result.validation, validationHistory: result.validationHistory })
+        if (result.arena) setArenaResult(result.arena)
         setStep("success")
       })
       .catch((err) => {
@@ -865,6 +867,25 @@ export function WorkoutValidationFlow({
                 </span>
               </div>
             </motion.div>
+
+            {/* Arena XP badge */}
+            {arenaResult && (
+              <motion.div
+                className="mx-auto mt-3 flex flex-col items-center gap-1"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.45 }}
+              >
+                <span className="rounded-full border border-[rgba(82,231,255,0.3)] bg-[rgba(82,231,255,0.08)] px-4 py-1.5 font-mono text-xs font-black tracking-widest text-[var(--guto-cyan)]">
+                  +{arenaResult.xpAwarded} XP · ARENA
+                </span>
+                {arenaResult.leveledUp && (
+                  <span className="mt-1 rounded-full bg-yellow-400/15 px-3 py-1 font-mono text-[10px] font-black tracking-widest text-yellow-300">
+                    GUTO EVOLUIU ⚡
+                  </span>
+                )}
+              </motion.div>
+            )}
 
             {/* GUTO message card */}
             {validationResult.validation.gutoMessage && (
