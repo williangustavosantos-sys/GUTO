@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { X, Check, Zap } from "lucide-react"
+import { X, Zap } from "lucide-react"
 
 import type { SupportedLanguage, WorkoutValidationRecord } from "@/lib/api/guto"
 import { validateWorkout } from "@/lib/api/guto"
@@ -500,7 +500,8 @@ export function WorkoutValidationFlow({
         {(step === "camera" || step === "countdown" || step === "speaking") && (
           <motion.div
             key="camera-view"
-            className="relative flex h-full flex-col items-center justify-center overflow-hidden bg-black"
+            className="relative flex h-full flex-col items-center justify-center overflow-hidden"
+            style={{ background: "#050d1a" }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -508,81 +509,135 @@ export function WorkoutValidationFlow({
           >
             <canvas ref={canvasRef} className="hidden" />
 
+            {/* Camera feed */}
             <video
               ref={videoCallbackRef}
               autoPlay
               muted
               playsInline
-              className="absolute inset-0 h-full w-full object-cover"
+              className="absolute inset-0 h-full w-full object-cover opacity-90"
               style={{ transform: "scaleX(-1)" }}
             />
 
-            {/* Vignette */}
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_36%,rgba(0,0,0,0.68)_76%)]" />
+            {/* Vignette profunda */}
+            <div className="pointer-events-none absolute inset-0"
+              style={{ background: "radial-gradient(ellipse 70% 80% at 50% 46%, transparent 30%, rgba(5,13,26,0.82) 75%)" }} />
 
-            {/* Close */}
-            <button
-              type="button"
-              onClick={() => { stopCamera(); onClose() }}
-              className="absolute right-5 top-[max(env(safe-area-inset-top),1.1rem)] z-30 grid h-9 w-9 place-items-center rounded-full border border-white/20 bg-black/30"
-              aria-label="Fechar"
-            >
-              <X className="h-4 w-4 text-white" />
-            </button>
+            {/* Scanline texture sutil */}
+            <div className="pointer-events-none absolute inset-0 opacity-[0.04]"
+              style={{ backgroundImage: "repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(82,231,255,0.6) 2px,rgba(82,231,255,0.6) 3px)", backgroundSize: "100% 3px" }} />
 
-            {/* Face ring com progresso SVG */}
+            {/* Top status bar */}
+            <div className="absolute top-[max(env(safe-area-inset-top),1.2rem)] inset-x-0 z-30 flex items-center justify-between px-5">
+              <div className="flex items-center gap-2">
+                <motion.div
+                  className="h-2 w-2 rounded-full bg-[var(--guto-cyan)]"
+                  animate={{ opacity: [1, 0.3, 1] }}
+                  transition={{ duration: 1.6, repeat: Infinity }}
+                />
+                <span className="font-mono text-[9px] font-black uppercase tracking-[0.22em] text-[rgba(82,231,255,0.8)]">
+                  GUTO VALIDATION
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => { stopCamera(); onClose() }}
+                className="grid h-9 w-9 place-items-center rounded-full border border-white/15 bg-white/8"
+                aria-label="Fechar"
+                style={{ background: "rgba(255,255,255,0.08)" }}
+              >
+                <X className="h-4 w-4 text-white/70" />
+              </button>
+            </div>
+
+            {/* ── Área demarcada (oval de rosto) com progresso ── */}
             {(() => {
-              const R = 107
-              const CIRC = 2 * Math.PI * R
+              const OW = 230; const OH = 290
+              const CX = OW / 2; const CY = OH / 2
+              const RX = CX - 3; const RY = CY - 3
+              // Circunferência da elipse (Ramanujan)
+              const hh = Math.pow(RX - RY, 2) / Math.pow(RX + RY, 2)
+              const CIRC = Math.PI * (RX + RY) * (1 + (3 * hh) / (10 + Math.sqrt(4 - 3 * hh)))
               const locked = faceProgress >= 100
               const dashOffset = CIRC * (1 - faceProgress / 100)
-              const hintText =
-                step !== "camera" ? null
-                : locked ? "✓"
-                : faceProgress > 0 ? locale.faceStable
-                : locale.faceHint
+              const glowColor = locked ? "rgba(82,231,255,0.7)" : "rgba(82,231,255,0.28)"
+
               return (
-                <div className="pointer-events-none relative z-10 flex flex-col items-center">
-                  <div style={{ width: 220, height: 220, position: "relative" }}>
-                    {/* SVG arc de progresso */}
-                    <svg
-                      width="220" height="220"
-                      className="absolute inset-0"
-                      style={{ transform: "rotate(-90deg)" }}
-                    >
+                <div className="pointer-events-none relative z-10 flex flex-col items-center" style={{ marginTop: "-24px" }}>
+                  <div style={{ width: OW, height: OH, position: "relative" }}>
+
+                    {/* Brilho externo ao travar */}
+                    <div className="absolute inset-0" style={{
+                      borderRadius: "50%",
+                      boxShadow: locked ? `0 0 48px 8px ${glowColor}` : "none",
+                      transition: "box-shadow 0.4s ease",
+                    }} />
+
+                    {/* SVG: trilho + arco de progresso (elipse) */}
+                    <svg width={OW} height={OH} className="absolute inset-0"
+                      style={{ transform: `rotate(-90deg) scaleX(-1)` }}>
                       {/* trilho */}
-                      <circle cx="110" cy="110" r={R} fill="none"
-                        stroke="rgba(255,255,255,0.12)" strokeWidth="4" />
+                      <ellipse cx={CX} cy={CY} rx={RX} ry={RY}
+                        fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="3" />
                       {/* progresso */}
-                      <circle cx="110" cy="110" r={R} fill="none"
-                        stroke={locked ? "#52e7ff" : "rgba(82,231,255,0.88)"}
-                        strokeWidth="4" strokeLinecap="round"
+                      <ellipse cx={CX} cy={CY} rx={RX} ry={RY}
+                        fill="none"
+                        stroke={locked ? "#52e7ff" : "rgba(82,231,255,0.85)"}
+                        strokeWidth="3.5" strokeLinecap="round"
                         strokeDasharray={CIRC}
                         strokeDashoffset={dashOffset}
-                        style={{ transition: "stroke-dashoffset 0.08s linear, stroke 0.3s ease" }}
+                        style={{ transition: "stroke-dashoffset 0.08s linear, stroke 0.35s ease, filter 0.35s ease",
+                          filter: locked ? "drop-shadow(0 0 6px rgba(82,231,255,0.9))" : "none" }}
                       />
                     </svg>
-                    {/* círculo interno guia */}
-                    <div className="absolute inset-0 rounded-full"
+
+                    {/* Borda interna oval (formato cabeça/rosto) */}
+                    <div className="absolute inset-0"
                       style={{
-                        border: `3px solid ${locked ? "rgba(82,231,255,0.5)" : "rgba(255,255,255,0.14)"}`,
-                        boxShadow: locked ? "0 0 28px rgba(82,231,255,0.32)" : "none",
-                        transition: "border-color 0.3s ease, box-shadow 0.3s ease",
+                        borderRadius: "50% 50% 46% 46% / 55% 55% 45% 45%",
+                        border: `2px solid ${locked ? "rgba(82,231,255,0.45)" : "rgba(255,255,255,0.1)"}`,
+                        transition: "border-color 0.35s ease",
                       }}
                     />
+
+                    {/* Cantos futuristas (targeting brackets) */}
+                    {[
+                      { top: -8, left: -8, borderTop: "2px solid", borderLeft: "2px solid", borderRight: "none", borderBottom: "none", borderRadius: "4px 0 0 0" },
+                      { top: -8, right: -8, borderTop: "2px solid", borderRight: "2px solid", borderLeft: "none", borderBottom: "none", borderRadius: "0 4px 0 0" },
+                      { bottom: -8, left: -8, borderBottom: "2px solid", borderLeft: "2px solid", borderRight: "none", borderTop: "none", borderRadius: "0 0 0 4px" },
+                      { bottom: -8, right: -8, borderBottom: "2px solid", borderRight: "2px solid", borderLeft: "none", borderTop: "none", borderRadius: "0 0 4px 0" },
+                    ].map((s, i) => (
+                      <div key={i} className="absolute h-5 w-5"
+                        style={{ ...s, borderColor: locked ? "rgba(82,231,255,0.9)" : "rgba(82,231,255,0.5)", transition: "border-color 0.35s ease" }} />
+                    ))}
+
+                    {/* Texto centralizado dentro da área demarcada */}
+                    {step === "camera" && (
+                      <div className="absolute inset-0 flex items-center justify-center px-6">
+                        <p className="text-center font-mono font-black uppercase"
+                          style={{
+                            fontSize: "10px",
+                            letterSpacing: "0.18em",
+                            lineHeight: 1.5,
+                            color: locked ? "rgba(82,231,255,0.95)" : faceProgress > 0 ? "rgba(82,231,255,0.85)" : "rgba(255,255,255,0.55)",
+                            transition: "color 0.3s ease",
+                            textShadow: locked ? "0 0 12px rgba(82,231,255,0.6)" : "none",
+                          }}>
+                          {locked ? "✓" : faceProgress > 0 ? locale.faceStable : locale.faceHint}
+                        </p>
+                      </div>
+                    )}
                   </div>
-                  {hintText !== null && (
-                    <p className="mt-3 font-mono text-[10px] font-black uppercase tracking-[0.2em]"
-                      style={{
-                        color: faceProgress > 0 ? "rgba(82,231,255,0.95)" : "rgba(255,255,255,0.6)",
-                        transition: "color 0.3s ease",
-                      }}>
-                      {hintText}
-                    </p>
-                  )}
                 </div>
               )
             })()}
+
+            {/* Bottom label quando não está em countdown/speaking */}
+            {step === "camera" && (
+              <p className="absolute bottom-[max(env(safe-area-inset-bottom),2rem)] z-20 font-mono text-[9px] uppercase tracking-[0.2em] text-[rgba(255,255,255,0.3)]">
+                {locale.faceHint.toLowerCase().replace("encaixe o rosto no círculo", "área demarcada")}
+              </p>
+            )}
 
             {/* Countdown overlay */}
             <AnimatePresence mode="wait">
@@ -590,15 +645,14 @@ export function WorkoutValidationFlow({
                 <motion.div
                   key={`count-${countdown}`}
                   className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center"
-                  initial={{ opacity: 0, scale: 1.35 }}
+                  initial={{ opacity: 0, scale: 1.4 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.65 }}
-                  transition={{ duration: 0.26 }}
+                  exit={{ opacity: 0, scale: 0.6 }}
+                  transition={{ duration: 0.24 }}
                 >
-                  <span
-                    className="font-black text-white"
-                    style={{ fontSize: "7.5rem", lineHeight: 1, textShadow: "0 0 36px rgba(82,231,255,0.55)" }}
-                  >
+                  <span className="font-black text-white"
+                    style={{ fontSize: "8rem", lineHeight: 1,
+                      textShadow: "0 0 0 transparent, 0 0 40px rgba(82,231,255,0.7), 0 0 80px rgba(82,231,255,0.3)" }}>
                     {countdown}
                   </span>
                 </motion.div>
@@ -607,23 +661,22 @@ export function WorkoutValidationFlow({
               {step === "speaking" && (
                 <motion.div
                   key="phrase"
-                  className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-[rgba(13,35,65,0.66)]"
+                  className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center gap-4"
+                  style={{ background: "rgba(5,13,26,0.72)", backdropFilter: "blur(2px)" }}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.22 }}
                 >
-                  <p className="font-mono text-[9px] uppercase tracking-[0.22em] text-[rgba(82,231,255,0.65)]">
+                  <p className="font-mono text-[9px] uppercase tracking-[0.28em] text-[rgba(82,231,255,0.6)]">
                     {locale.phraseHint}
                   </p>
-                  <p
-                    className="px-8 text-center font-black uppercase text-[var(--guto-cyan)]"
+                  <p className="px-8 text-center font-black uppercase"
                     style={{
-                      fontSize: "clamp(1.5rem,6.5vw,2.1rem)",
-                      letterSpacing: "0.1em",
-                      textShadow: "0 0 28px rgba(82,231,255,0.55)",
-                    }}
-                  >
+                      fontSize: "clamp(1.6rem, 7vw, 2.2rem)",
+                      letterSpacing: "0.1em", color: "#52e7ff",
+                      textShadow: "0 0 32px rgba(82,231,255,0.65), 0 0 64px rgba(82,231,255,0.25)",
+                    }}>
                     {locale.phrase}
                   </p>
                 </motion.div>
@@ -632,15 +685,14 @@ export function WorkoutValidationFlow({
 
             {/* Camera error */}
             {cameraError && (
-              <div className="absolute inset-x-6 bottom-20 z-30 rounded-[1.5rem] bg-[rgba(13,35,65,0.9)] px-6 py-5 text-center" style={{ backdropFilter: "blur(8px)" }}>
-                <p className="mb-4 font-mono text-[10px] uppercase tracking-[0.14em] text-[rgba(255,140,140,0.9)]">
+              <div className="absolute inset-x-6 bottom-20 z-30 rounded-[1.5rem] px-6 py-5 text-center"
+                style={{ background: "rgba(5,13,26,0.92)", border: "1px solid rgba(255,255,255,0.08)", backdropFilter: "blur(8px)" }}>
+                <p className="mb-4 font-mono text-[10px] uppercase tracking-[0.14em] text-[rgba(255,130,130,0.9)]">
                   {cameraError}
                 </p>
-                <button
-                  type="button"
+                <button type="button"
                   onClick={() => { setCameraError(null); stopCamera(); setStep("intro") }}
-                  className="rounded-full border border-[rgba(82,231,255,0.3)] bg-[rgba(82,231,255,0.12)] px-6 py-2.5 font-mono text-[10px] font-black uppercase tracking-[0.16em] text-[var(--guto-cyan)]"
-                >
+                  className="rounded-full border border-[rgba(82,231,255,0.3)] bg-[rgba(82,231,255,0.1)] px-6 py-2.5 font-mono text-[10px] font-black uppercase tracking-[0.16em] text-[var(--guto-cyan)]">
                   {locale.retry}
                 </button>
               </div>
@@ -696,88 +748,161 @@ export function WorkoutValidationFlow({
         {step === "success" && validationResult && (
           <motion.div
             key="success"
-            className="relative flex h-full flex-col items-center justify-center px-6"
-            initial={{ opacity: 0, scale: 0.96 }}
-            animate={{ opacity: 1, scale: 1 }}
+            className="relative flex h-full flex-col items-stretch overflow-hidden"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ duration: 0.35 }}
           >
-            <div className="guto-frost-panel w-full max-w-[22rem] rounded-[2rem] p-6">
-              {/* Badge */}
-              <p className="font-mono text-[9px] font-black uppercase tracking-[0.24em] text-[var(--guto-cyan)]">
-                {locale.badge}
-              </p>
-
-              {/* XP ring */}
-              <div className="my-5 flex flex-col items-center gap-2">
-                <motion.div
-                  className="guto-deboss-deep grid h-24 w-24 place-items-center rounded-full border border-[rgba(82,231,255,0.38)]"
-                  initial={{ scale: 0.7, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ delay: 0.1, duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
-                >
-                  <Zap className="h-8 w-8 text-[var(--guto-cyan)]" style={{ filter: "drop-shadow(0 0 8px rgba(82,231,255,0.45))" }} />
-                </motion.div>
-
-                <motion.p
-                  className="font-mono text-[2rem] font-black tracking-[0.06em] text-[var(--guto-cyan)]"
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.18 }}
-                >
-                  +{validationResult.validation.xp} XP
-                </motion.p>
-
-                <motion.p
-                  className="font-mono text-[9px] uppercase tracking-[0.2em] text-[rgba(13,35,65,0.4)]"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.24 }}
-                >
-                  {locale.xpLabel}
-                </motion.p>
-              </div>
-
-              {/* VALIDADO heading */}
+            {/* Ambient glow background */}
+            <div className="pointer-events-none absolute inset-0 overflow-hidden">
               <motion.div
-                className="guto-slot rounded-[1rem] px-4 py-3 text-center"
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.28 }}
+                className="absolute left-1/2 top-[22%] h-[280px] w-[280px] -translate-x-1/2 -translate-y-1/2 rounded-full"
+                style={{ background: "radial-gradient(circle, rgba(82,231,255,0.18) 0%, transparent 70%)" }}
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.1, duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+              />
+              {/* Ray bursts */}
+              {[0, 45, 90, 135, 180, 225, 270, 315].map((deg, i) => (
+                <motion.div
+                  key={deg}
+                  className="absolute left-1/2 top-[22%] h-[1px] origin-left"
+                  style={{
+                    width: 110,
+                    background: "linear-gradient(90deg, rgba(82,231,255,0.35), transparent)",
+                    transform: `translate(-50%, -50%) rotate(${deg}deg)`,
+                  }}
+                  initial={{ scaleX: 0, opacity: 0 }}
+                  animate={{ scaleX: 1, opacity: 1 }}
+                  transition={{ delay: 0.18 + i * 0.04, duration: 0.5, ease: "easeOut" }}
+                />
+              ))}
+            </div>
+
+            {/* Top status pill */}
+            <motion.div
+              className="mx-auto mt-8 flex items-center gap-2 rounded-full px-5 py-2"
+              style={{ background: "rgba(82,231,255,0.1)", border: "1px solid rgba(82,231,255,0.28)" }}
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.06 }}
+            >
+              <span className="h-1.5 w-1.5 rounded-full bg-[var(--guto-cyan)]" style={{ boxShadow: "0 0 6px rgba(82,231,255,0.8)" }} />
+              <span className="font-mono text-[9px] font-black uppercase tracking-[0.22em] text-[var(--guto-cyan)]">
+                {locale.badge}
+              </span>
+            </motion.div>
+
+            {/* Central achievement icon */}
+            <div className="relative mx-auto mt-7 flex flex-col items-center">
+              <motion.div
+                className="guto-deboss-deep relative grid h-[108px] w-[108px] place-items-center rounded-full border border-[rgba(82,231,255,0.5)]"
+                initial={{ scale: 0.5, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.12, duration: 0.52, ease: [0.22, 1, 0.36, 1] }}
               >
-                <div className="flex items-center justify-center gap-2">
-                  <Check className="h-4 w-4 rounded-full bg-[rgba(82,231,255,0.22)] p-[3px] text-[var(--guto-cyan)]" />
-                  <span className="font-mono text-[12px] font-black uppercase tracking-[0.22em] text-[var(--guto-navy)]">
-                    {locale.validated}
-                  </span>
+                {/* Outer pulsing ring */}
+                <motion.div
+                  className="absolute inset-0 rounded-full border border-[rgba(82,231,255,0.3)]"
+                  animate={{ scale: [1, 1.18, 1], opacity: [0.6, 0, 0.6] }}
+                  transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+                />
+                <motion.div
+                  initial={{ scale: 0, rotate: -30, opacity: 0 }}
+                  animate={{ scale: 1, rotate: 0, opacity: 1 }}
+                  transition={{ delay: 0.28, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                >
+                  <Zap
+                    className="h-11 w-11 text-[var(--guto-cyan)]"
+                    style={{ filter: "drop-shadow(0 0 12px rgba(82,231,255,0.7))" }}
+                  />
+                </motion.div>
+              </motion.div>
+            </div>
+
+            {/* VALIDADO big heading */}
+            <motion.div
+              className="mt-6 flex flex-col items-center gap-1 px-6 text-center"
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.22, duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <h1
+                className="font-mono text-[2.1rem] font-black uppercase leading-none tracking-[0.1em] text-[var(--guto-navy)]"
+                style={{ textShadow: "0 0 32px rgba(82,231,255,0.22)" }}
+              >
+                {locale.validated}
+              </h1>
+              <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.22em] text-[rgba(13,35,65,0.45)]">
+                {locale.xpLabel}
+              </p>
+            </motion.div>
+
+            {/* XP counter */}
+            <motion.div
+              className="mx-auto mt-4"
+              initial={{ opacity: 0, scale: 0.85 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.3, duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <div
+                className="guto-slot flex items-baseline gap-1 rounded-[1.4rem] px-8 py-3"
+              >
+                <span
+                  className="font-mono text-[2.4rem] font-black leading-none tracking-[-0.02em] text-[var(--guto-cyan)]"
+                  style={{ textShadow: "0 0 24px rgba(82,231,255,0.5)" }}
+                >
+                  +{validationResult.validation.xp}
+                </span>
+                <span className="font-mono text-[1rem] font-black tracking-[0.08em] text-[rgba(82,231,255,0.65)]">
+                  XP
+                </span>
+              </div>
+            </motion.div>
+
+            {/* GUTO message card */}
+            {validationResult.validation.gutoMessage && (
+              <motion.div
+                className="mx-6 mt-5"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.38 }}
+              >
+                <div
+                  className="guto-frost-panel rounded-[1.5rem] px-5 py-4 text-center"
+                  style={{ border: "1px solid rgba(82,231,255,0.2)" }}
+                >
+                  <p className="mb-1.5 font-mono text-[9px] font-black uppercase tracking-[0.22em] text-[rgba(82,231,255,0.7)]">
+                    GUTO
+                  </p>
+                  <p className="text-[12.5px] leading-[1.6] text-[rgba(13,35,65,0.68)]">
+                    {validationResult.validation.gutoMessage}
+                  </p>
                 </div>
               </motion.div>
+            )}
 
-              {/* GUTO message */}
-              {validationResult.validation.gutoMessage && (
-                <motion.p
-                  className="mt-4 text-center text-[12px] leading-relaxed text-[rgba(13,35,65,0.62)]"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.34 }}
-                >
-                  {validationResult.validation.gutoMessage}
-                </motion.p>
-              )}
+            {/* Spacer */}
+            <div className="flex-1" />
 
-              {/* CTA */}
+            {/* CTA */}
+            <motion.div
+              className="px-6 pb-8"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.46 }}
+            >
               <motion.button
                 type="button"
                 onClick={() => onComplete(validationResult.validationHistory)}
-                className="guto-deboss-deep mt-6 h-[3.25rem] w-full rounded-[1.2rem] border border-[rgba(82,231,255,0.42)] font-mono text-[11px] font-black uppercase tracking-[0.2em] text-[var(--guto-cyan)]"
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 }}
+                className="guto-deboss-deep h-[3.4rem] w-full rounded-[1.3rem] border border-[rgba(82,231,255,0.5)] font-mono text-[11px] font-black uppercase tracking-[0.22em] text-[var(--guto-cyan)]"
+                style={{ boxShadow: "0 0 20px rgba(82,231,255,0.08)" }}
                 whileTap={{ scale: 0.97 }}
               >
                 {locale.seeInJourney}
               </motion.button>
-            </div>
+            </motion.div>
           </motion.div>
         )}
 
