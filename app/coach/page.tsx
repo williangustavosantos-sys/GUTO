@@ -705,13 +705,12 @@ function CoachInner() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Delete + Reset Dialog — exige digitar USER_ID */}
+      {/* Delete + Reset Dialog */}
       <AlertDialog
         open={deleteConfirm}
         onOpenChange={(open) => {
           if (!open) {
             setDeleteConfirm(false);
-            setDeleteText("");
           }
         }}
       >
@@ -720,30 +719,18 @@ function CoachInner() {
             <AlertDialogTitle className="text-red-400">Excluir definitivamente?</AlertDialogTitle>
             <AlertDialogDescription className="text-white/50">
               Isso apagará memória, treino, dieta, XP, Arena, validações e histórico deste usuário.
-              Se ele abrir o mesmo link novamente, passará pela calibração do zero.
+              Se ele abrir o mesmo link novamente, passará pela calibração do zero. Tem certeza que deseja excluir?
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <div className="px-1 py-3">
-            <p className="text-white/40 text-xs mb-2">
-              Digite <span className="text-red-400 font-bold font-mono">{selected?.userId}</span> para confirmar:
-            </p>
-            <Input
-              value={deleteText}
-              onChange={(e) => setDeleteText(e.target.value)}
-              placeholder={selected?.userId || ""}
-              className="bg-white/5 border-white/20 text-white text-sm h-9 font-mono"
-              autoFocus
-            />
-          </div>
           <AlertDialogFooter>
             <AlertDialogCancel className="bg-white/5 border-white/10 text-white hover:bg-white/10">
               Cancelar
             </AlertDialogCancel>
             <AlertDialogAction
-              disabled={deleteText !== selected?.userId || acting}
+              disabled={acting}
               className="bg-red-600 hover:bg-red-700 text-white disabled:opacity-40 disabled:cursor-not-allowed"
               onClick={async () => {
-                if (!selected || deleteText !== selected.userId) return;
+                if (!selected) return;
                 setActing(true);
                 try {
                   await coachFetch(
