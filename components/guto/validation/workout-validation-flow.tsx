@@ -38,6 +38,7 @@ const copy = {
     validated: "VALIDADO",
     xpLabel: "XP conquistado",
     seeInJourney: "VER NO PERCURSO",
+    faceStable: "Segure firme...",
     noCamera: "Câmera não autorizada. Permita o acesso nas configurações do dispositivo.",
     retry: "TENTAR NOVAMENTE",
     cameraError: "Não foi possível acessar a câmera.",
@@ -62,6 +63,7 @@ const copy = {
     validated: "VALIDATED",
     xpLabel: "XP earned",
     seeInJourney: "SEE IN JOURNEY",
+    faceStable: "Hold still...",
     noCamera: "Camera not allowed. Enable access in your device settings.",
     retry: "TRY AGAIN",
     cameraError: "Could not access the camera.",
@@ -86,6 +88,7 @@ const copy = {
     validated: "VALIDATO",
     xpLabel: "XP guadagnato",
     seeInJourney: "VEDI NEL PERCORSO",
+    faceStable: "Tieni fermo...",
     noCamera: "Fotocamera non autorizzata. Abilita l'accesso nelle impostazioni del dispositivo.",
     retry: "RIPROVA",
     cameraError: "Impossibile accedere alla fotocamera.",
@@ -110,6 +113,7 @@ const copy = {
     validated: "VALIDADO",
     xpLabel: "XP ganado",
     seeInJourney: "VER EN RECORRIDO",
+    faceStable: "Mantén firme...",
     noCamera: "Cámara no autorizada. Permite el acceso en la configuración del dispositivo.",
     retry: "INTENTAR DE NUEVO",
     cameraError: "No se pudo acceder a la cámara.",
@@ -132,6 +136,7 @@ export function WorkoutValidationFlow({
 
   const [step, setStep] = useState<FlowStep>("intro")
   const [countdown, setCountdown] = useState<number | null>(null)
+  const [faceProgress, setFaceProgress] = useState(0) // 0-100, progresso de detecção
   const [cameraError, setCameraError] = useState<string | null>(null)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [validationResult, setValidationResult] = useState<{
@@ -145,6 +150,11 @@ export function WorkoutValidationFlow({
   const imageBase64Ref = useRef<string>("")
   const countdownTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const speakingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // face-detection refs
+  const rafRef = useRef<number | null>(null)
+  const faceStableCountRef = useRef(0)
+  const prevFrameDataRef = useRef<Uint8ClampedArray | null>(null)
+  const faceLockedRef = useRef(false)
 
   const clearTimers = useCallback(() => {
     if (countdownTimerRef.current !== null) {
@@ -158,6 +168,10 @@ export function WorkoutValidationFlow({
   }, [])
 
   const stopCamera = useCallback(() => {
+    if (rafRef.current !== null) {
+      cancelAnimationFrame(rafRef.current)
+      rafRef.current = null
+    }
     clearTimers()
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((track) => track.stop())
@@ -231,22 +245,104 @@ export function WorkoutValidationFlow({
     }
   }, [language])
 
-  // Ref callback no <video> — conecta stream no momento exato da montagem do elemento.
-  // Necessário porque AnimatePresence mode="wait" atrasa a montagem do novo step
-  // até a animação de saída do anterior terminar; useEffect dispara cedo demais
-  // (videoRef.current ainda é null quando step muda para "camera").
+  // Detecção de presença por análise de pixel na região central do frame.
+  // Sem ML — verifica luminosidade (rosto presente) + estabilidade (parado).
+  // Quando estável por ~1s, ring chega a 100% e countdown começa.
+  const startFaceDetection = useCallback((video: HTMLVideoElement) => {
+    const ac = document.createElement("canvas")
+    ac.width = 20
+    ac.height = 20
+    const ctx = ac.getContext("2d", { willReadFrequently: true })
+
+    faceStableCountRef.current = 0
+    faceLockedRef.current = false
+    prevFrameDataRef.current = null
+    setFaceProgress(0)
+
+    const TOTAL = 30 // ~1 s a 30 fps
+
+    if (!ctx) {
+      // Fallback sem canvas: inicia direto após 2 s
+      countdownTimerRef.current = setTimeout(() => {
+        if (streamRef.current) startCameraCountdown()
+      }, 2000)
+      return
+    }
+
+    const analyze = () => {
+      if (!streamRef.current || faceLockedRef.current) return
+
+      const vw = video.videoWidth || 640
+      const vh = video.videoHeight || 480
+      const size = Math.min(vw, vh) * 0.38
+      const sx = (vw - size) / 2
+      const sy = (vh - size) / 2
+
+      try {
+        ctx.drawImage(video, sx, sy, size, size, 0, 0, 20, 20)
+        const { data } = ctx.getImageData(0, 0, 20, 20)
+        const prev = prevFrameDataRef.current
+
+        let bright = 0
+        let motion = 0
+        for (let i = 0; i < data.length; i += 4) {
+          const lum = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114
+          if (lum > 25) bright++
+          if (prev) {
+            motion +=
+              Math.abs(data[i] - prev[i]) +
+              Math.abs(data[i + 1] - prev[i + 1]) +
+              Math.abs(data[i + 2] - prev[i + 2])
+          }
+        }
+
+        prevFrameDataRef.current = new Uint8ClampedArray(data)
+
+        const hasFace = bright / 400 > 0.15          // alguma coisa na região
+        const isStable = !prev || motion / 400 < 20  // pouco movimento
+
+        if (hasFace && isStable) {
+          faceStableCountRef.current = Math.min(TOTAL, faceStableCountRef.current + 1)
+        } else {
+          faceStableCountRef.current = Math.max(0, faceStableCountRef.current - 2)
+        }
+
+        const pct = Math.round((faceStableCountRef.current / TOTAL) * 100)
+        setFaceProgress(pct)
+
+        if (faceStableCountRef.current >= TOTAL) {
+          faceLockedRef.current = true
+          // 400 ms de feedback visual antes de iniciar contagem
+          countdownTimerRef.current = setTimeout(() => {
+            if (streamRef.current) startCameraCountdown()
+          }, 400)
+          return
+        }
+      } catch {
+        // frame ainda não disponível
+      }
+
+      rafRef.current = requestAnimationFrame(analyze)
+    }
+
+    rafRef.current = requestAnimationFrame(analyze)
+  }, [startCameraCountdown])
+
+  // Ref callback no <video> — conecta stream no momento exato da montagem.
+  // AnimatePresence mode="wait" atrasa a montagem do step "camera" até a
+  // animação de saída do "ready" terminar; useEffect dispararia cedo demais.
   const videoCallbackRef = useCallback((node: HTMLVideoElement | null) => {
     videoRef.current = node
     if (!node || !streamRef.current) return
     node.srcObject = streamRef.current
     void node.play().catch(() => {})
-    const onReady = () => { if (streamRef.current) startCameraCountdown() }
+    const onReady = () => { if (streamRef.current) startFaceDetection(node) }
     if (node.readyState >= 2) {
       onReady()
     } else {
       node.addEventListener("canplay", onReady, { once: true })
     }
-  }, [startCameraCountdown])
+  }, [startFaceDetection])
 
   // Call API when uploading
   useEffect(() => {
@@ -434,22 +530,59 @@ export function WorkoutValidationFlow({
               <X className="h-4 w-4 text-white" />
             </button>
 
-            {/* Face ring */}
-            <div className="pointer-events-none relative z-10 flex flex-col items-center">
-              <div
-                className="rounded-full border-[3px] border-[rgba(82,231,255,0.8)]"
-                style={{
-                  width: 220,
-                  height: 220,
-                  boxShadow: "0 0 28px rgba(82,231,255,0.22), inset 0 0 28px rgba(82,231,255,0.05)",
-                }}
-              />
-              {step === "camera" && (
-                <p className="mt-4 font-mono text-[10px] font-black uppercase tracking-[0.2em] text-white/70">
-                  {locale.faceHint}
-                </p>
-              )}
-            </div>
+            {/* Face ring com progresso SVG */}
+            {(() => {
+              const R = 107
+              const CIRC = 2 * Math.PI * R
+              const locked = faceProgress >= 100
+              const dashOffset = CIRC * (1 - faceProgress / 100)
+              const hintText =
+                step !== "camera" ? null
+                : locked ? "✓"
+                : faceProgress > 0 ? locale.faceStable
+                : locale.faceHint
+              return (
+                <div className="pointer-events-none relative z-10 flex flex-col items-center">
+                  <div style={{ width: 220, height: 220, position: "relative" }}>
+                    {/* SVG arc de progresso */}
+                    <svg
+                      width="220" height="220"
+                      className="absolute inset-0"
+                      style={{ transform: "rotate(-90deg)" }}
+                    >
+                      {/* trilho */}
+                      <circle cx="110" cy="110" r={R} fill="none"
+                        stroke="rgba(255,255,255,0.12)" strokeWidth="4" />
+                      {/* progresso */}
+                      <circle cx="110" cy="110" r={R} fill="none"
+                        stroke={locked ? "#52e7ff" : "rgba(82,231,255,0.88)"}
+                        strokeWidth="4" strokeLinecap="round"
+                        strokeDasharray={CIRC}
+                        strokeDashoffset={dashOffset}
+                        style={{ transition: "stroke-dashoffset 0.08s linear, stroke 0.3s ease" }}
+                      />
+                    </svg>
+                    {/* círculo interno guia */}
+                    <div className="absolute inset-0 rounded-full"
+                      style={{
+                        border: `3px solid ${locked ? "rgba(82,231,255,0.5)" : "rgba(255,255,255,0.14)"}`,
+                        boxShadow: locked ? "0 0 28px rgba(82,231,255,0.32)" : "none",
+                        transition: "border-color 0.3s ease, box-shadow 0.3s ease",
+                      }}
+                    />
+                  </div>
+                  {hintText !== null && (
+                    <p className="mt-3 font-mono text-[10px] font-black uppercase tracking-[0.2em]"
+                      style={{
+                        color: faceProgress > 0 ? "rgba(82,231,255,0.95)" : "rgba(255,255,255,0.6)",
+                        transition: "color 0.3s ease",
+                      }}>
+                      {hintText}
+                    </p>
+                  )}
+                </div>
+              )
+            })()}
 
             {/* Countdown overlay */}
             <AnimatePresence mode="wait">
