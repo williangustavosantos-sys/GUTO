@@ -19,7 +19,7 @@ import type { MissionExercise } from "./view-models"
 import { WorkoutValidationFlow } from "./validation/workout-validation-flow"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { getGutoMemory, saveGutoMemory, trackGutoEvent, validateGutoName, type DietMeal, type GutoMemory, type GutoNameValidation, type GutoTelemetryEvent, type GutoWorkoutPlan } from "@/lib/api/guto"
-import { clearGutoBrowserIdentity, getOrCreateGutoVisitTelemetry } from "@/lib/guto/user-id"
+import { clearGutoBrowserIdentity, forceGutoUserId, getOrCreateGutoVisitTelemetry } from "@/lib/guto/user-id"
 import type { EvolutionStage, SupportedLanguage } from "@/types/contract"
 import { translations } from "./translations"
 
@@ -445,14 +445,22 @@ export function GutoApp({
 
     try {
       const search = new URLSearchParams(window.location.search)
+      const forceResetParam = search.get("forceReset") === "1"
+      const inviteUserId = search.get("inviteUserId")
+      const presetName = search.get("presetName")
+
       const shouldReset =
-        search.get("guto-reset") === "1" || readStorageItem(DEBUG_RESET_KEY) === "1"
+        search.get("guto-reset") === "1" || forceResetParam || readStorageItem(DEBUG_RESET_KEY) === "1"
       const shouldSkipIntro = skipIntro || search.get("skip-intro") === "1"
 
       if (shouldReset) {
         removeStorageItem(STORAGE_KEY)
         removeStorageItem(DEBUG_RESET_KEY)
         clearGutoBrowserIdentity()
+      }
+
+      if (inviteUserId) {
+        forceGutoUserId(inviteUserId)
       }
 
       const safeLanguage = isSupportedLanguage(language) ? language : "pt-BR"
@@ -481,7 +489,7 @@ export function GutoApp({
       if (storedRaw) {
         const stored = JSON.parse(storedRaw) as StoredProfile
         const persistedLanguage = isSupportedLanguage(stored.language) ? stored.language : safeLanguage
-        const persistedName = formatGutoName(stored.userName || userName || "")
+        const persistedName = formatGutoName(stored.userName || presetName || userName || "")
 
         setSelectedLanguage(persistedLanguage)
         setDraftName(persistedName)
@@ -489,8 +497,9 @@ export function GutoApp({
         setStage(stored.onboardingComplete ? "system" : shouldSkipIntro ? "language" : "intro")
       } else {
         setSelectedLanguage(safeLanguage)
-        setDraftName(formatGutoName(userName || ""))
-        setCommittedName(formatGutoName(userName || ""))
+        const initialName = formatGutoName(presetName || userName || "")
+        setDraftName(initialName)
+        setCommittedName(initialName)
         setStage(shouldSkipIntro ? "language" : "intro")
       }
     } catch {

@@ -18,6 +18,13 @@ export function getOrCreateGutoUserId() {
   return getOrCreateGutoVisitTelemetry().userId
 }
 
+export function forceGutoUserId(userId: string) {
+  if (typeof window === "undefined") return
+  try {
+    window.localStorage.setItem(GUTO_USER_ID_KEY, userId)
+  } catch {}
+}
+
 export function clearGutoBrowserIdentity() {
   if (typeof window === "undefined") return
 

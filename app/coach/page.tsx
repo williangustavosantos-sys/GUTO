@@ -113,6 +113,12 @@ function CoachInner() {
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [deleteText, setDeleteText] = useState("");
 
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [newStudentName, setNewStudentName] = useState("");
+  const [newStudentCoachId, setNewStudentCoachId] = useState(coachId || "will-coach");
+  const [newStudentNote, setNewStudentNote] = useState("");
+  const [createdStudent, setCreatedStudent] = useState<{ name: string; userId: string; inviteLink: string } | null>(null);
+
   const fetchStudents = useCallback(async () => {
     if (!coachId) {
       setAccessDenied(true);
@@ -208,7 +214,21 @@ function CoachInner() {
           <span className="text-white/40 mx-2">·</span>
           <span className="text-white font-semibold text-sm">Coach Dashboard</span>
         </div>
-        <span className="text-white/30 text-xs font-mono">{coachId}</span>
+        <div className="flex items-center gap-3">
+          <span className="text-white/30 text-xs font-mono hidden md:inline">{coachId}</span>
+          <Button
+            size="sm"
+            onClick={() => {
+              setNewStudentName("");
+              setNewStudentNote("");
+              setCreatedStudent(null);
+              setCreateModalOpen(true);
+            }}
+            className="bg-[#00e5ff] text-[#0a0f1e] hover:bg-[#00e5ff]/80 font-bold h-8 px-4 text-xs tracking-wide"
+          >
+            + Criar aluno
+          </Button>
+        </div>
       </header>
 
       {/* Search + filters */}
@@ -247,11 +267,12 @@ function CoachInner() {
             <p className="text-white font-semibold mb-2">Nenhum aluno ainda</p>
             <p className="text-white/40 text-sm mb-6">Quando alguém usar o GUTO em produção, aparecerá aqui.</p>
             <Button
-              onClick={() =>
-                act(async () => {
-                  await coachFetch("/guto/coach/student/test", coachId, { method: "POST" });
-                }, "Aluno de teste criado com sucesso.")
-              }
+              onClick={() => {
+                setNewStudentName("");
+                setNewStudentNote("");
+                setCreatedStudent(null);
+                setCreateModalOpen(true);
+              }}
               className="bg-[#00e5ff] text-[#0a0f1e] hover:bg-[#00e5ff]/80 font-semibold"
             >
               Criar aluno de teste
@@ -291,6 +312,120 @@ function CoachInner() {
           );
         })}
       </div>
+
+      {/* Create Student Modal */}
+      <AlertDialog open={createModalOpen} onOpenChange={setCreateModalOpen}>
+        <AlertDialogContent className="bg-[#0d1426] border border-white/10 text-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white">
+              {createdStudent ? "Aluno criado com sucesso!" : "Novo Aluno"}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-white/50">
+              {createdStudent 
+                ? "Envie este link para o aluno. Quando ele abrir, começará um fluxo limpo e amarrado a esta identidade."
+                : "Preencha os dados abaixo para gerar um link de acesso limpo."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          {!createdStudent ? (
+            <div className="py-4 flex flex-col gap-3">
+              <div>
+                <label className="text-xs text-white/50 mb-1 block">Nome do aluno *</label>
+                <Input
+                  value={newStudentName}
+                  onChange={(e) => setNewStudentName(e.target.value)}
+                  placeholder="Ex: Carlos"
+                  className="bg-white/5 border-white/20 text-white text-sm h-9"
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="text-xs text-white/50 mb-1 block">Coach ID</label>
+                <Input
+                  value={newStudentCoachId}
+                  onChange={(e) => setNewStudentCoachId(e.target.value)}
+                  className="bg-white/5 border-white/20 text-white/50 text-sm h-9"
+                  disabled
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="py-4 flex flex-col gap-3">
+              <div className="bg-white/5 border border-white/10 p-3 rounded-md">
+                <p className="text-xs text-white/40 mb-1">Nome:</p>
+                <p className="text-sm text-white font-medium mb-3">{createdStudent.name}</p>
+                
+                <p className="text-xs text-white/40 mb-1">ID:</p>
+                <p className="text-sm text-[#00e5ff] font-mono mb-3">{createdStudent.userId}</p>
+                
+                <p className="text-xs text-white/40 mb-1">Link de acesso:</p>
+                <div className="flex gap-2">
+                  <Input 
+                    readOnly 
+                    value={createdStudent.inviteLink} 
+                    className="bg-black/30 border-white/10 text-white/70 text-xs h-8 font-mono" 
+                  />
+                  <Button 
+                    size="sm" 
+                    className="bg-[#00e5ff] text-[#0a0f1e] hover:bg-[#00e5ff]/80 h-8 text-xs font-bold shrink-0"
+                    onClick={() => {
+                      navigator.clipboard.writeText(createdStudent.inviteLink);
+                      toast.success("Link copiado!");
+                    }}
+                  >
+                    Copiar
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <AlertDialogFooter>
+            {!createdStudent ? (
+              <>
+                <AlertDialogCancel className="bg-white/5 border-white/10 text-white hover:bg-white/10" disabled={acting}>
+                  Cancelar
+                </AlertDialogCancel>
+                <Button
+                  className="bg-[#00e5ff] text-[#0a0f1e] hover:bg-[#00e5ff]/80 font-bold"
+                  disabled={!newStudentName.trim() || acting}
+                  onClick={async () => {
+                    setActing(true);
+                    try {
+                      const res = await coachFetch<{ userId: string; name: string; inviteLink: string; student: Student }>(
+                        "/guto/coach/student/create",
+                        coachId,
+                        { method: "POST", body: JSON.stringify({ name: newStudentName }) }
+                      );
+                      setCreatedStudent({
+                        name: res.name,
+                        userId: res.userId,
+                        inviteLink: res.inviteLink
+                      });
+                      // If 'todos' or 'ativos' is selected, the list handles updating because we update students
+                      setStudents((prev) => [res.student, ...prev]);
+                      toast.success("Aluno criado!");
+                    } catch (err) {
+                      toast.error(err instanceof ApiError ? err.message : "Erro ao criar aluno");
+                    } finally {
+                      setActing(false);
+                    }
+                  }}
+                >
+                  {acting ? "Criando..." : "Criar aluno"}
+                </Button>
+              </>
+            ) : (
+              <Button
+                className="bg-white/10 text-white hover:bg-white/20 w-full"
+                onClick={() => setCreateModalOpen(false)}
+              >
+                Fechar
+              </Button>
+            )}
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Student Sheet */}
       <Sheet open={!!selected} onOpenChange={(open) => { if (!open) setSelected(null); }}>
@@ -340,6 +475,7 @@ function CoachInner() {
                     <Button
                       size="sm"
                       disabled={acting}
+                      className="bg-[#00e5ff] text-[#0a0f1e] hover:bg-[#00e5ff]/80 font-semibold"
                       onClick={() =>
                         act(async () => {
                           const updated = await coachFetch<Student>(
@@ -354,7 +490,7 @@ function CoachInner() {
                     >
                       Salvar
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => setEditingName(false)}>✕</Button>
+                    <Button size="sm" variant="outline" className="border-[#00e5ff] text-[#00e5ff] hover:bg-[#00e5ff]/10" onClick={() => setEditingName(false)}>✕</Button>
                   </div>
                 ) : (
                   <Button
