@@ -231,26 +231,22 @@ export function WorkoutValidationFlow({
     }
   }, [language])
 
-  // Connect stream → video, forçar play() e iniciar countdown
-  useEffect(() => {
-    if (step !== "camera") return
-    const video = videoRef.current
-    if (!video || !streamRef.current) return
-
-    video.srcObject = streamRef.current
-    // play() explícito necessário no iOS Safari — autoPlay sozinho não dispara
-    // quando srcObject é atribuído programaticamente após montagem do elemento
-    void video.play().catch(() => {})
-
-    const start = () => { if (streamRef.current) startCameraCountdown() }
-
-    if (video.readyState >= 2) {
-      start()
+  // Ref callback no <video> — conecta stream no momento exato da montagem do elemento.
+  // Necessário porque AnimatePresence mode="wait" atrasa a montagem do novo step
+  // até a animação de saída do anterior terminar; useEffect dispara cedo demais
+  // (videoRef.current ainda é null quando step muda para "camera").
+  const videoCallbackRef = useCallback((node: HTMLVideoElement | null) => {
+    videoRef.current = node
+    if (!node || !streamRef.current) return
+    node.srcObject = streamRef.current
+    void node.play().catch(() => {})
+    const onReady = () => { if (streamRef.current) startCameraCountdown() }
+    if (node.readyState >= 2) {
+      onReady()
     } else {
-      video.addEventListener("canplay", start, { once: true })
-      return () => { video.removeEventListener("canplay", start) }
+      node.addEventListener("canplay", onReady, { once: true })
     }
-  }, [step, startCameraCountdown])
+  }, [startCameraCountdown])
 
   // Call API when uploading
   useEffect(() => {
@@ -417,7 +413,7 @@ export function WorkoutValidationFlow({
             <canvas ref={canvasRef} className="hidden" />
 
             <video
-              ref={videoRef}
+              ref={videoCallbackRef}
               autoPlay
               muted
               playsInline
