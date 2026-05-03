@@ -317,16 +317,11 @@ export function MissionTab({
   return (
     <div className="relative flex h-full min-h-0 flex-col pb-2">
       {/* Header */}
-      <div className="pb-2.5">
-        <div className="flex items-baseline justify-between mb-0.5 pr-10">
-          <p className="font-mono text-[9px] font-black uppercase tracking-[0.22em] text-[var(--guto-cyan)]">
-            {copy.execution}
-          </p>
-          <p className="font-mono text-[9px] uppercase tracking-[0.1em] text-[rgba(13,35,65,0.46)] max-w-[50%] truncate">
-            {workoutPlan?.dateLabel || locale.workoutDate}
-          </p>
-        </div>
-        <h1 className="text-[1.25rem] font-black uppercase leading-tight tracking-[0.08em] text-[var(--guto-navy)]">
+      <div className="px-1 pb-4 pt-2 text-center shrink-0">
+        <p className="font-mono text-[9px] font-black uppercase tracking-[0.22em] text-[var(--guto-cyan)] mb-1">
+          {copy.execution} • {workoutPlan?.dateLabel || locale.workoutDate}
+        </p>
+        <h1 className="mx-auto max-w-[18rem] text-balance text-[1.25rem] font-black uppercase leading-tight tracking-[0.08em] text-[var(--guto-navy)]">
           {workoutPlan?.focus || locale.workoutFocus}
         </h1>
       </div>

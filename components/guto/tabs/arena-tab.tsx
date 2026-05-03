@@ -93,25 +93,38 @@ function RankingCard({
           )}
         </div>
 
-        {/* Name + stage */}
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[13px] font-black tracking-widest text-[var(--guto-navy)]">
-            {item.pairName}
-          </p>
-          <p className={cn("mt-0.5 text-[10px] font-black tracking-widest", stageColor)}>
-            {stageName}
-          </p>
-        </div>
+          <div className="flex items-center justify-between gap-2">
+            {/* Name */}
+            <div className="min-w-0 flex-1 flex flex-col">
+              <p className="truncate text-[15px] font-black tracking-widest text-[var(--guto-navy)]">
+                {item.pairName.toUpperCase().startsWith("GUTO & ") 
+                  ? item.pairName.slice(7).trim() || "USUÁRIO" 
+                  : item.pairName || "USUÁRIO"}
+              </p>
+              <p className="text-[8px] font-black uppercase tracking-widest text-[rgba(13,35,65,0.42)]">
+                DUPLA COM GUTO
+              </p>
+            </div>
+            {/* XP */}
+            <div className="shrink-0 text-right">
+              <p className="text-[15px] font-black leading-none text-[var(--guto-cyan)]">
+                {item.xp.toLocaleString()}{" "}
+                <span className="text-[10px] font-black tracking-widest">{t.arena.xp}</span>
+              </p>
+            </div>
+          </div>
 
-        {/* XP + workouts */}
-        <div className="shrink-0 text-right">
-          <p className="text-[15px] font-black leading-none text-[var(--guto-cyan)]">
-            {item.xp.toLocaleString()}{" "}
-            <span className="text-[10px] font-black tracking-widest">{t.arena.xp}</span>
-          </p>
-          <p className="mt-1 text-[10px] text-[rgba(13,35,65,0.42)]">
-            {item.validatedWorkouts} {t.arena.workoutsValidated}
-          </p>
+          <div className="flex items-center justify-between gap-2 mt-2">
+            {/* Stage */}
+            <p className={cn("text-[10px] font-black tracking-widest", stageColor)}>
+              {stageName}
+            </p>
+            {/* Workouts */}
+            <p className="text-[10px] text-[rgba(13,35,65,0.42)] font-black uppercase tracking-widest">
+              {item.validatedWorkouts} {t.arena.workoutsValidated}
+            </p>
+          </div>
         </div>
       </div>
 
@@ -231,14 +244,13 @@ export function ArenaTab({ userId: _userId, language, translations: t, refreshKe
   return (
     <div className="flex h-full flex-col overflow-hidden">
       {/* Header */}
-      <div className="shrink-0 px-5 pb-4 pt-6">
-        <div className="flex items-center gap-2">
-          <Swords className="h-5 w-5 text-[var(--guto-cyan)]" />
-          <h1 className="text-[1.15rem] font-black tracking-[0.18em] text-[var(--guto-navy)]">
-            {t.arena.tab}
-          </h1>
-        </div>
-        <p className="mt-1 text-[11px] text-[rgba(13,35,65,0.48)]">{t.arena.subtitle}</p>
+      <div className="px-1 pb-4 pt-2 text-center shrink-0">
+        <p className="font-mono text-[9px] font-black uppercase tracking-[0.22em] text-[var(--guto-cyan)] mb-1">
+          {t.arena.subtitle}
+        </p>
+        <h1 className="mx-auto max-w-[18rem] text-balance text-[1.25rem] font-black uppercase leading-tight tracking-[0.08em] text-[var(--guto-navy)]">
+          {t.arena.tab}
+        </h1>
       </div>
 
       {/* Sub-tab strip */}

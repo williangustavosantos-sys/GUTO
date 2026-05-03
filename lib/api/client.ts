@@ -6,10 +6,12 @@ export const API_URL = RAW_API_URL.replace(/\/+$/, "")
 
 export class ApiError extends Error {
   status?: number
-  constructor(message: string, status?: number) {
+  details?: any
+  constructor(message: string, status?: number, details?: any) {
     super(message)
     this.name = "ApiError"
     this.status = status
+    this.details = details
   }
 }
 
@@ -46,11 +48,13 @@ export async function apiRequest<T>(
 
     if (!res.ok) {
       let message = `Erro de API (${res.status})`
+      let details: any = undefined
       try {
         const body = await res.json()
-        message = body?.message || message
+        message = body?.message || body?.error || message
+        details = body
       } catch {}
-      throw new ApiError(message, res.status)
+      throw new ApiError(message, res.status, details)
     }
 
     return (await res.json()) as T

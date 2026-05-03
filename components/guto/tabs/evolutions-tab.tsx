@@ -40,11 +40,13 @@ export function EvolutionsTab({ language, currentEvolution, memory }: Evolutions
 
   return (
     <div className="flex h-full flex-col pb-4">
-      <div className="px-1 pb-5 text-center">
-        <h1 className="mx-auto max-w-[19rem] text-balance text-[1.85rem] font-black leading-tight tracking-[0.12em] text-[var(--guto-navy)]">
+      <div className="px-1 pb-4 pt-2 text-center shrink-0">
+        <p className="font-mono text-[9px] font-black uppercase tracking-[0.22em] text-[var(--guto-cyan)] mb-1">
+          {locale.evoSubtitle}
+        </p>
+        <h1 className="mx-auto max-w-[18rem] text-balance text-[1.25rem] font-black uppercase leading-tight tracking-[0.08em] text-[var(--guto-navy)]">
           {locale.evoTitle}
         </h1>
-        <p className="mx-auto mt-1 max-w-[16rem] text-sm text-[rgba(13,35,65,0.58)]">{locale.evoSubtitle}</p>
       </div>
 
       <div className="flex-1 space-y-3 overflow-y-auto pr-1">

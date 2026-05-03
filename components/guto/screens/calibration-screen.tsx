@@ -72,18 +72,15 @@ export function CalibrationScreen({
 
   return (
     <div
-      className="relative w-full h-full font-tech"
-      style={{ background: "transparent", overflowY: "auto", overflowX: "hidden" }}
+      className="relative w-full min-h-[100dvh] font-tech"
+      style={{ background: "transparent", overflowY: "auto", overflowX: "hidden", WebkitOverflowScrolling: "touch" }}
     >
-      <div className="flex flex-col min-h-full">
+      <div className="flex flex-col min-h-[100dvh] pb-[max(env(safe-area-inset-bottom),16px)]">
       {/* ── Título ── */}
       {/* ── Título ── */}
       <div className="px-1 pb-2 pt-2 text-center shrink-0">
-        <p className="font-mono text-[9px] font-black uppercase tracking-[0.22em] text-[var(--guto-cyan)] mb-1">
-          {t.title}
-        </p>
         <h1 className="mx-auto max-w-[18rem] text-balance text-[1.25rem] font-black uppercase leading-tight tracking-[0.08em] text-[var(--guto-navy)]">
-          {t.subtitle}
+          {t.title}
         </h1>
       </div>
 
@@ -91,7 +88,7 @@ export function CalibrationScreen({
           ZONA SCANNER — ocupa todo o espaço acima do painel
           overflow: visible para o avatar vazar para cima/baixo
       ══════════════════════════════════════════════════════ */}
-      <div className="relative flex-1 mx-2" style={{ minHeight: 260, overflow: "visible" }}>
+      <div className="relative flex-1 mx-2 my-2" style={{ minHeight: 460, overflow: "visible" }}>
 
         {/* ── Glow radial de fundo — centrado na zona ── */}
         <div
@@ -126,15 +123,15 @@ export function CalibrationScreen({
           className="absolute left-1/2 -translate-x-1/2 flex justify-center pointer-events-none"
           style={{
             zIndex: 2,
-            top: "8%",
-            bottom: "5%",
+            top: 100,
+            bottom: 0,
             width: "100%",
           }}
         >
           <motion.div
             animate={{ y: [0, -6, 0] }}
             transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut" }}
-            style={{ height: "100%", display: "flex", alignItems: "center" }}
+            style={{ height: "100%", display: "flex", alignItems: "flex-end" }}
           >
             <Image
               src="/assets/guto/guto-usuario.png"
@@ -142,7 +139,7 @@ export function CalibrationScreen({
               width={155}
               height={420}
               className="object-contain drop-shadow-[0_0_26px_rgba(82,231,255,0.60)]"
-              style={{ height: "85%", width: "auto" }}
+              style={{ height: "100%", width: "auto" }}
               priority
             />
           </motion.div>
@@ -189,7 +186,7 @@ export function CalibrationScreen({
         <GlassBox
           side="left"
           className="absolute left-0 top-1/2 -translate-y-1/2 flex flex-col items-stretch gap-2"
-          style={{ width: 90, zIndex: 10 }}
+          style={{ width: 108, zIndex: 10 }}
         >
           {/* Sexo */}
           <PillChip
@@ -243,7 +240,7 @@ export function CalibrationScreen({
         <GlassBox
           side="right"
           className="absolute right-0 top-1/2 -translate-y-1/2 flex flex-col items-stretch gap-3"
-          style={{ width: 90, zIndex: 10 }}
+          style={{ width: 108, zIndex: 10 }}
         >
           {/* Peso */}
           <div className="flex flex-col items-center gap-0.5">
@@ -555,7 +552,7 @@ function PillChip({
       type="button"
       whileTap={{ scale: 0.93 }}
       onClick={onClick}
-      className="py-[6px] px-3 rounded-full font-black uppercase text-[9px] leading-none transition-all duration-200 text-center whitespace-nowrap"
+      className="py-[6px] px-2.5 rounded-full font-black uppercase text-[9px] leading-none transition-all duration-200 text-center whitespace-nowrap"
       style={{
         ...(flex ? { flex: "1 1 auto" } : { width: "100%" }),
         ...(active

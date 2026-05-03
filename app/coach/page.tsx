@@ -242,9 +242,24 @@ function CoachInner() {
 
       {/* Student list */}
       <div className="px-4 pb-20 flex flex-col gap-3">
-        {filtered.length === 0 && (
+        {students.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 px-4 text-center border border-white/10 border-dashed rounded-xl bg-white/5 mt-4">
+            <p className="text-white font-semibold mb-2">Nenhum aluno ainda</p>
+            <p className="text-white/40 text-sm mb-6">Quando alguém usar o GUTO em produção, aparecerá aqui.</p>
+            <Button
+              onClick={() =>
+                act(async () => {
+                  await coachFetch("/guto/coach/student/test", coachId, { method: "POST" });
+                }, "Aluno de teste criado com sucesso.")
+              }
+              className="bg-[#00e5ff] text-[#0a0f1e] hover:bg-[#00e5ff]/80 font-semibold"
+            >
+              Criar aluno de teste
+            </Button>
+          </div>
+        ) : filtered.length === 0 ? (
           <p className="text-white/30 text-sm text-center py-8">Nenhum aluno encontrado.</p>
-        )}
+        ) : null}
         {filtered.map((s) => {
           const status = getStatusInfo(s);
           return (
@@ -471,7 +486,27 @@ function CoachInner() {
                   className="w-full border-red-500/30 text-red-400 hover:bg-red-500/10"
                   disabled={acting}
                   onClick={() =>
-                    doConfirm("Resetar progresso total", () =>
+                    doConfirm("Arquivar aluno", () =>
+                      act(async () => {
+                        await coachFetch(
+                          `/guto/coach/student/${selected.userId}`,
+                          coachId,
+                          { method: "DELETE" }
+                        );
+                        setSelected(null);
+                      }, "Aluno arquivado.")
+                    )
+                  }
+                >
+                  Arquivar aluno
+                </Button>
+
+                <Button
+                  variant="outline" size="sm"
+                  className="w-full border-red-500/30 text-red-400 hover:bg-red-500/10"
+                  disabled={acting}
+                  onClick={() =>
+                    doConfirm("Zerar aluno", () =>
                       act(async () => {
                         await coachFetch(
                           `/guto/coach/student/${selected.userId}/reset`,
@@ -483,22 +518,23 @@ function CoachInner() {
                           coachId
                         );
                         refreshSelected(updated);
-                      }, "Reset aplicado.")
+                      }, "Aluno zerado. No próximo acesso ele começa do zero.")
                     )
                   }
                 >
-                  Resetar progresso total
+                  Zerar aluno
                 </Button>
+
                 <Button
                   variant="outline" size="sm"
-                  className="w-full border-red-500/50 text-red-400 hover:bg-red-500/10"
+                  className="w-full border-red-500/50 text-red-400 hover:bg-red-500/10 mt-2"
                   disabled={acting}
                   onClick={() => {
                     setDeleteText("");
                     setDeleteConfirm(true);
                   }}
                 >
-                  Excluir e zerar usuário
+                  Excluir definitivamente
                 </Button>
               </CoachSection>
             </>
@@ -533,7 +569,7 @@ function CoachInner() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Delete + Reset Dialog — exige digitar EXCLUIR */}
+      {/* Delete + Reset Dialog — exige digitar USER_ID */}
       <AlertDialog
         open={deleteConfirm}
         onOpenChange={(open) => {
@@ -545,20 +581,20 @@ function CoachInner() {
       >
         <AlertDialogContent className="bg-[#0d1426] border border-white/10 text-white">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-red-400">Excluir e zerar usuário?</AlertDialogTitle>
+            <AlertDialogTitle className="text-red-400">Excluir definitivamente?</AlertDialogTitle>
             <AlertDialogDescription className="text-white/50">
               Isso apagará memória, treino, dieta, XP, Arena, validações e histórico deste usuário.
-              Se ele abrir o mesmo link novamente, começará do zero.
+              Se ele abrir o mesmo link novamente, passará pela calibração do zero.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="px-1 py-3">
             <p className="text-white/40 text-xs mb-2">
-              Digite <span className="text-red-400 font-bold font-mono">EXCLUIR</span> para confirmar:
+              Digite <span className="text-red-400 font-bold font-mono">{selected?.userId}</span> para confirmar:
             </p>
             <Input
               value={deleteText}
               onChange={(e) => setDeleteText(e.target.value)}
-              placeholder="EXCLUIR"
+              placeholder={selected?.userId || ""}
               className="bg-white/5 border-white/20 text-white text-sm h-9 font-mono"
               autoFocus
             />
@@ -568,22 +604,25 @@ function CoachInner() {
               Cancelar
             </AlertDialogCancel>
             <AlertDialogAction
-              disabled={deleteText !== "EXCLUIR" || acting}
+              disabled={deleteText !== selected?.userId || acting}
               className="bg-red-600 hover:bg-red-700 text-white disabled:opacity-40 disabled:cursor-not-allowed"
               onClick={async () => {
-                if (!selected || deleteText !== "EXCLUIR") return;
+                if (!selected || deleteText !== selected.userId) return;
                 setActing(true);
                 try {
                   await coachFetch(
-                    `/guto/coach/student/${selected.userId}`,
+                    `/guto/coach/student/${selected.userId}/hard-delete`,
                     coachId,
-                    { method: "DELETE" }
+                    { 
+                      method: "POST",
+                      headers: { "x-admin-key": process.env.NEXT_PUBLIC_ADMIN_KEY || "" }
+                    }
                   );
                   setStudents((prev) => prev.filter((s) => s.userId !== selected.userId));
                   setSelected(null);
                   setDeleteConfirm(false);
                   setDeleteText("");
-                  toast.success("Usuário excluído. Se abrir o link novamente, começará do zero.");
+                  toast.success("Usuário excluído definitivamente. Ele precisará recalibrar se voltar.");
                 } catch (err) {
                   toast.error(err instanceof ApiError ? err.message : "Erro ao excluir usuário.");
                 } finally {

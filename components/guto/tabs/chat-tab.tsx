@@ -752,14 +752,16 @@ export function ChatTab({
         {isMuted ? <VolumeX className="h-[18px] w-[18px]" /> : <Volume2 className="h-[18px] w-[18px]" />}
       </button>
 
-      {/* Avatar — centralizado no círculo da cápsula, cresce a partir do centro */}
-      <div className="pointer-events-none absolute left-1/2 top-[44%] z-10 -translate-x-1/2 -translate-y-1/2">
-        <GutoOfficialAvatar
-          size="xl"
-          showPlatform={false}
-          evolution={evolution}
-          emotion={isDepleted ? "critical" : latestGuto.avatarEmotion || "default"}
-        />
+      {/* Avatar — ancorado na base */}
+      <div className="guto-chat-avatar-stage pointer-events-none absolute z-10 flex flex-col items-center justify-end pb-[clamp(16px,4vh,32px)]">
+        <div className="relative flex w-[clamp(320px,96vw,440px)] flex-col items-center justify-end">
+          <GutoOfficialAvatar
+            size="xl"
+            showPlatform={false}
+            evolution={evolution}
+            emotion={isDepleted ? "critical" : latestGuto.avatarEmotion || "default"}
+          />
+        </div>
       </div>
 
       {/* Mensagens — z-30 flutua sobre o avatar/cápsula como camada holográfica */}

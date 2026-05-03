@@ -127,14 +127,13 @@ export function PathTab({ language, memory, workoutPlan, currentEvolution, valid
 
   return (
     <div className="flex h-full min-h-0 flex-col pb-3">
-      <div className="px-1 pb-3 text-center">
-        <h1 className="mx-auto max-w-[18rem] text-balance text-[1.55rem] font-black uppercase leading-tight tracking-[0.12em] text-[var(--guto-navy)]">
+      <div className="px-1 pb-4 pt-2 text-center shrink-0">
+        <p className="font-mono text-[9px] font-black uppercase tracking-[0.22em] text-[var(--guto-cyan)] mb-1">
+          {monthLabel}
+        </p>
+        <h1 className="mx-auto max-w-[18rem] text-balance text-[1.25rem] font-black uppercase leading-tight tracking-[0.08em] text-[var(--guto-navy)]">
           {locale.pathTitle}
         </h1>
-
-        <div className="guto-slot mx-auto mt-2 w-fit rounded-full px-4 py-2 text-center font-mono text-[11px] uppercase tracking-[0.18em] text-[rgba(13,35,65,0.6)]">
-          {monthLabel}
-        </div>
       </div>
 
       <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-[1.9rem] px-3 pb-3 pt-4">

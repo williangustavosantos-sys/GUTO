@@ -259,8 +259,21 @@ export function DietTab({ userId, language, onMealDoubt }: DietTabProps) {
     try {
       const newPlan = await generateDietPlan(userId, validLang)
       setPlan(newPlan)
-    } catch {
-      setError("Erro ao gerar dieta. Verifique seu perfil e tente novamente.")
+    } catch (err: any) {
+      if (err.details && err.details.error === "missing_profile_data" && err.details.missingFields) {
+        const missingMap: Record<string, string> = {
+          heightCm: "Falta altura",
+          weightKg: "Falta peso",
+          country: "Falta país",
+          trainingGoal: "Falta objetivo",
+          biologicalSex: "Falta sexo biológico",
+          userAge: "Falta idade"
+        }
+        const fields = err.details.missingFields.map((f: string) => missingMap[f] || f).join(", ")
+        setError(`${fields}`)
+      } else {
+        setError("Erro ao gerar dieta. Verifique seu perfil e tente novamente.")
+      }
     } finally {
       setGenerating(false)
     }
@@ -294,11 +307,11 @@ export function DietTab({ userId, language, onMealDoubt }: DietTabProps) {
     return (
       <div className="relative flex h-full min-h-0 flex-col">
         {/* Header */}
-        <div className="pb-2.5 shrink-0">
-          <p className="font-mono text-[9px] font-black uppercase tracking-[0.22em] text-[var(--guto-cyan)]">
+        <div className="px-1 pb-4 pt-2 text-center shrink-0">
+          <p className="font-mono text-[9px] font-black uppercase tracking-[0.22em] text-[var(--guto-cyan)] mb-1">
             {copy.subtitle}
           </p>
-          <h1 className="text-[1.25rem] font-black uppercase leading-tight tracking-[0.08em] text-[var(--guto-navy)]">
+          <h1 className="mx-auto max-w-[18rem] text-balance text-[1.25rem] font-black uppercase leading-tight tracking-[0.08em] text-[var(--guto-navy)]">
             {copy.title}
           </h1>
         </div>
@@ -364,16 +377,11 @@ export function DietTab({ userId, language, onMealDoubt }: DietTabProps) {
   return (
     <div className="relative flex h-full min-h-0 flex-col pb-2">
       {/* Header */}
-      <div className="pb-2.5 shrink-0">
-        <div className="flex items-baseline justify-between mb-0.5 pr-10">
-          <p className="font-mono text-[9px] font-black uppercase tracking-[0.22em] text-[var(--guto-cyan)]">
-            {copy.subtitle}
-          </p>
-          <p className="font-mono text-[8px] uppercase tracking-[0.08em] text-[rgba(13,35,65,0.42)] max-w-[50%] truncate">
-            {copy.lastUpdated} {formatDate(generatedAt)}
-          </p>
-        </div>
-        <h1 className="text-[1.25rem] font-black uppercase leading-tight tracking-[0.08em] text-[var(--guto-navy)]">
+      <div className="px-1 pb-4 pt-2 text-center shrink-0">
+        <p className="font-mono text-[9px] font-black uppercase tracking-[0.22em] text-[var(--guto-cyan)] mb-1">
+          {copy.subtitle} • {copy.lastUpdated} {formatDate(generatedAt)}
+        </p>
+        <h1 className="mx-auto max-w-[18rem] text-balance text-[1.25rem] font-black uppercase leading-tight tracking-[0.08em] text-[var(--guto-navy)]">
           {copy.title}
         </h1>
       </div>
