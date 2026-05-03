@@ -68,6 +68,38 @@ export interface TranslationDictionary {
     pathologySection: string;
     objectiveSection: string;
     objectiveChips: { fat_loss: string; muscle_gain: string; conditioning: string; mobility_health: string; consistency: string };
+    countryLabel: string;
+    countryPlaceholder: string;
+    heightLabel: string;
+    weightLabel: string;
+    restrictionsLabel: string;
+    restrictionsPlaceholder: string;
+    physicalDataSection: string;
+  };
+  diet: {
+    tab: string;
+    title: string;
+    subtitle: string;
+    generateButton: string;
+    regenerateButton: string;
+    generatingLabel: string;
+    dailyGoalTitle: string;
+    kcalLabel: string;
+    proteinLabel: string;
+    carbsLabel: string;
+    fatLabel: string;
+    objectiveLabel: string;
+    mealDoubtButton: string;
+    emptyTitle: string;
+    emptyBody: string;
+    lastUpdated: string;
+    goalNames: {
+      fat_loss: string;
+      muscle_gain: string;
+      conditioning: string;
+      mobility_health: string;
+      consistency: string;
+    };
   };
   arena: {
     tab: string;
@@ -175,6 +207,38 @@ export const translations: Record<ValidLanguage, TranslationDictionary> = {
       pathologySection: "LIMITAÇÃO PATOLOGIA",
       objectiveSection: "OBJETIVO",
       objectiveChips: { fat_loss: "Emagrecer", muscle_gain: "Hipertrofia", conditioning: "Condicionamento", mobility_health: "Saúde", consistency: "Consistência" },
+      countryLabel: "ONDE MORA",
+      countryPlaceholder: "Ex: Brasil, Itália, EUA...",
+      heightLabel: "ALTURA (cm)",
+      weightLabel: "PESO (kg)",
+      restrictionsLabel: "RESTRIÇÕES ALIMENTARES",
+      restrictionsPlaceholder: "Ex: sem glúten, vegetariano, lactose...",
+      physicalDataSection: "DADOS FÍSICOS",
+    },
+    diet: {
+      tab: "DIETA",
+      title: "DIETA DA SEMANA",
+      subtitle: "Plano base. Adapta pelo chat.",
+      generateButton: "GERAR MINHA DIETA",
+      regenerateButton: "REGENERAR DIETA",
+      generatingLabel: "GUTO calculando...",
+      dailyGoalTitle: "META DIÁRIA",
+      kcalLabel: "kcal",
+      proteinLabel: "Proteína",
+      carbsLabel: "Carbo",
+      fatLabel: "Gordura",
+      objectiveLabel: "Objetivo",
+      mealDoubtButton: "DÚVIDA SOBRE ESTA REFEIÇÃO",
+      emptyTitle: "Dieta ainda não gerada",
+      emptyBody: "Complete seu perfil com altura, peso e país para o GUTO montar seu plano.",
+      lastUpdated: "Atualizado em",
+      goalNames: {
+        fat_loss: "Emagrecer",
+        muscle_gain: "Hipertrofia",
+        conditioning: "Condicionamento",
+        mobility_health: "Saúde",
+        consistency: "Consistência",
+      },
     },
     arena: {
       tab: "ARENA",
@@ -271,6 +335,38 @@ export const translations: Record<ValidLanguage, TranslationDictionary> = {
       pathologySection: "DOLORE E LIMITI",
       objectiveSection: "OBIETTIVO",
       objectiveChips: { fat_loss: "Dimagrire", muscle_gain: "Ipertrofia", conditioning: "Condizionamento", mobility_health: "Salute", consistency: "Costanza" },
+      countryLabel: "DOVE ABITI",
+      countryPlaceholder: "Es: Italia, Brasile, USA...",
+      heightLabel: "ALTEZZA (cm)",
+      weightLabel: "PESO (kg)",
+      restrictionsLabel: "RESTRIZIONI ALIMENTARI",
+      restrictionsPlaceholder: "Es: senza glutine, vegetariano, lattosio...",
+      physicalDataSection: "DATI FISICI",
+    },
+    diet: {
+      tab: "DIETA",
+      title: "DIETA DELLA SETTIMANA",
+      subtitle: "Piano base. Adatta via chat.",
+      generateButton: "CREA LA MIA DIETA",
+      regenerateButton: "RIGENERA DIETA",
+      generatingLabel: "GUTO sta calcolando...",
+      dailyGoalTitle: "OBIETTIVO GIORNALIERO",
+      kcalLabel: "kcal",
+      proteinLabel: "Proteine",
+      carbsLabel: "Carboidrati",
+      fatLabel: "Grassi",
+      objectiveLabel: "Obiettivo",
+      mealDoubtButton: "DUBBIO SU QUESTO PASTO",
+      emptyTitle: "Dieta non ancora creata",
+      emptyBody: "Completa il profilo con altezza, peso e paese per far creare la dieta a GUTO.",
+      lastUpdated: "Aggiornato il",
+      goalNames: {
+        fat_loss: "Dimagrire",
+        muscle_gain: "Ipertrofia",
+        conditioning: "Condizionamento",
+        mobility_health: "Salute",
+        consistency: "Costanza",
+      },
     },
     arena: {
       tab: "ARENA",
@@ -367,6 +463,38 @@ export const translations: Record<ValidLanguage, TranslationDictionary> = {
       pathologySection: "DOLOR Y LIMITACIÓN",
       objectiveSection: "OBJETIVO",
       objectiveChips: { fat_loss: "Adelgazar", muscle_gain: "Hipertrofia", conditioning: "Acondicionamiento", mobility_health: "Salud", consistency: "Consistencia" },
+      countryLabel: "DÓNDE VIVES",
+      countryPlaceholder: "Ej: España, Brasil, México...",
+      heightLabel: "ALTURA (cm)",
+      weightLabel: "PESO (kg)",
+      restrictionsLabel: "RESTRICCIONES ALIMENTARIAS",
+      restrictionsPlaceholder: "Ej: sin gluten, vegetariano, lactosa...",
+      physicalDataSection: "DATOS FÍSICOS",
+    },
+    diet: {
+      tab: "DIETA",
+      title: "DIETA DE LA SEMANA",
+      subtitle: "Plan base. Adapta por el chat.",
+      generateButton: "GENERAR MI DIETA",
+      regenerateButton: "REGENERAR DIETA",
+      generatingLabel: "GUTO calculando...",
+      dailyGoalTitle: "META DIARIA",
+      kcalLabel: "kcal",
+      proteinLabel: "Proteína",
+      carbsLabel: "Carbos",
+      fatLabel: "Grasa",
+      objectiveLabel: "Objetivo",
+      mealDoubtButton: "DUDA SOBRE ESTA COMIDA",
+      emptyTitle: "Dieta aún no generada",
+      emptyBody: "Completa tu perfil con altura, peso y país para que GUTO cree tu plan.",
+      lastUpdated: "Actualizado el",
+      goalNames: {
+        fat_loss: "Adelgazar",
+        muscle_gain: "Hipertrofia",
+        conditioning: "Acondicionamiento",
+        mobility_health: "Salud",
+        consistency: "Consistencia",
+      },
     },
     arena: {
       tab: "ARENA",
@@ -463,6 +591,38 @@ export const translations: Record<ValidLanguage, TranslationDictionary> = {
       pathologySection: "PAIN & LIMITATIONS",
       objectiveSection: "GOAL",
       objectiveChips: { fat_loss: "Lose Fat", muscle_gain: "Hypertrophy", conditioning: "Conditioning", mobility_health: "Health", consistency: "Consistency" },
+      countryLabel: "WHERE YOU LIVE",
+      countryPlaceholder: "E.g.: USA, Brazil, Italy...",
+      heightLabel: "HEIGHT (cm)",
+      weightLabel: "WEIGHT (kg)",
+      restrictionsLabel: "FOOD RESTRICTIONS",
+      restrictionsPlaceholder: "E.g.: gluten-free, vegetarian, dairy-free...",
+      physicalDataSection: "PHYSICAL DATA",
+    },
+    diet: {
+      tab: "DIET",
+      title: "WEEKLY DIET",
+      subtitle: "Base plan. Adapt through chat.",
+      generateButton: "GENERATE MY DIET",
+      regenerateButton: "REGENERATE DIET",
+      generatingLabel: "GUTO calculating...",
+      dailyGoalTitle: "DAILY GOAL",
+      kcalLabel: "kcal",
+      proteinLabel: "Protein",
+      carbsLabel: "Carbs",
+      fatLabel: "Fat",
+      objectiveLabel: "Goal",
+      mealDoubtButton: "QUESTION ABOUT THIS MEAL",
+      emptyTitle: "Diet not generated yet",
+      emptyBody: "Complete your profile with height, weight and country so GUTO can build your plan.",
+      lastUpdated: "Last updated",
+      goalNames: {
+        fat_loss: "Fat Loss",
+        muscle_gain: "Hypertrophy",
+        conditioning: "Conditioning",
+        mobility_health: "Health",
+        consistency: "Consistency",
+      },
     },
     arena: {
       tab: "ARENA",

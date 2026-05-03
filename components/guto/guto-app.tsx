@@ -10,6 +10,7 @@ import { BottomNavigation, type TabType } from "./bottom-navigation"
 import { createGutoEffectRegistry } from "./effects"
 import { ArenaTab } from "./tabs/arena-tab"
 import { ChatTab } from "./tabs/chat-tab"
+import { DietTab } from "./tabs/diet-tab"
 import { EvolutionsTab } from "./tabs/evolutions-tab"
 import { MissionTab } from "./tabs/mission-tab"
 import { PathTab } from "./tabs/path-tab"
@@ -17,7 +18,7 @@ import { CalibrationScreen } from "./screens/calibration-screen"
 import type { MissionExercise } from "./view-models"
 import { WorkoutValidationFlow } from "./validation/workout-validation-flow"
 import { getApiErrorMessage } from "@/lib/api/client"
-import { getGutoMemory, saveGutoMemory, trackGutoEvent, validateGutoName, type GutoMemory, type GutoNameValidation, type GutoTelemetryEvent, type GutoWorkoutPlan } from "@/lib/api/guto"
+import { getGutoMemory, saveGutoMemory, trackGutoEvent, validateGutoName, type DietMeal, type GutoMemory, type GutoNameValidation, type GutoTelemetryEvent, type GutoWorkoutPlan } from "@/lib/api/guto"
 import { clearGutoBrowserIdentity, getOrCreateGutoVisitTelemetry } from "@/lib/guto/user-id"
 import type { EvolutionStage, SupportedLanguage } from "@/types/contract"
 import { translations } from "./translations"
@@ -284,6 +285,7 @@ export function GutoApp({
   const [settingsPathologyDraft, setSettingsPathologyDraft] = useState("")
   const [pendingExerciseQuestion, setPendingExerciseQuestion] =
     useState<PendingExerciseQuestion | null>(null)
+  const [pendingMealQuestion, setPendingMealQuestion] = useState<DietMeal | null>(null)
   const [workoutPlan, setWorkoutPlan] = useState<GutoWorkoutPlan | null>(null)
   const [memory, setMemory] = useState<GutoMemory | null>(null)
   const [gutoUserId, setGutoUserId] = useState("local-user")
@@ -629,6 +631,11 @@ export function GutoApp({
     [persistMemory, trackBehaviorEvent]
   )
 
+  const handleMealDoubt = useCallback((meal: DietMeal) => {
+    setPendingMealQuestion(meal)
+    setActiveTab("guto")
+  }, [])
+
   const handleSeal = useCallback(
     async (confirmedName = false) => {
       const normalizedName = normalizeGutoName(draftName)
@@ -893,6 +900,8 @@ export function GutoApp({
             evolution={evolution}
             pendingExerciseQuestion={pendingExerciseQuestion}
             onExerciseQuestionHandled={() => setPendingExerciseQuestion(null)}
+            pendingMealQuestion={pendingMealQuestion}
+            onMealQuestionHandled={() => setPendingMealQuestion(null)}
             onWorkoutPlanUpdated={setWorkoutPlan}
             isDepleted={isGutoDepleted}
             initialXpGranted={memory?.initialXpGranted}
@@ -951,6 +960,14 @@ export function GutoApp({
             refreshKey={arenaRefreshKey}
           />
         )
+      case "dieta":
+        return (
+          <DietTab
+            userId={gutoUserId}
+            language={selectedLanguage}
+            onMealDoubt={handleMealDoubt}
+          />
+        )
       default:
         return (
           <ChatTab
@@ -966,7 +983,7 @@ export function GutoApp({
           />
         )
     }
-  }, [activeTab, evolution, gutoUserId, handleAdaptedMissionComplete, handleExerciseQuestion, handleMissionComplete, isGutoDepleted, memory, pendingExerciseQuestion, selectedLanguage, userLabel, workoutPlan])
+  }, [activeTab, evolution, gutoUserId, handleAdaptedMissionComplete, handleExerciseQuestion, handleMealDoubt, handleMissionComplete, isGutoDepleted, memory, pendingExerciseQuestion, pendingMealQuestion, selectedLanguage, userLabel, workoutPlan])
 
   if (!isHydrated) {
     return (

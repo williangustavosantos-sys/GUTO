@@ -7,7 +7,7 @@ import { Loader2, Mic, Send, TrendingUp, Volume2, VolumeX } from "lucide-react"
 
 import { API_URL, getApiErrorMessage } from "@/lib/api/client"
 import { getGutoProactive, sendGutoMessage, trackGutoEvent } from "@/lib/api/guto"
-import type { GutoAvatarEmotion, GutoExpectedResponse, GutoWorkoutPlan } from "@/lib/api/guto"
+import type { DietMeal, GutoAvatarEmotion, GutoExpectedResponse, GutoWorkoutPlan } from "@/lib/api/guto"
 import type { EvolutionStage, SupportedLanguage } from "@/types/contract"
 
 import { GutoOfficialAvatar } from "../guto-official-avatar"
@@ -26,6 +26,8 @@ interface ChatTabProps {
   evolution?: EvolutionStage
   pendingExerciseQuestion?: PendingExerciseQuestion | null
   onExerciseQuestionHandled?: () => void
+  pendingMealQuestion?: DietMeal | null
+  onMealQuestionHandled?: () => void
   onWorkoutPlanUpdated?: (plan: GutoWorkoutPlan | null) => void
   isDepleted?: boolean
   initialXpGranted?: boolean
@@ -247,6 +249,8 @@ export function ChatTab({
   evolution = "BABY",
   pendingExerciseQuestion,
   onExerciseQuestionHandled,
+  pendingMealQuestion,
+  onMealQuestionHandled,
   onWorkoutPlanUpdated,
   isDepleted = false,
   initialXpGranted = false,
@@ -672,6 +676,29 @@ export function ChatTab({
       onExerciseQuestionHandled?.()
     })
   }, [isSending, onExerciseQuestionHandled, pendingExerciseQuestion, sendTextToGuto])
+
+  // Handle meal doubt from diet tab
+  const handledMealQuestionRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (!pendingMealQuestion || isSending) return
+    const mealKey = `${pendingMealQuestion.id}-${pendingMealQuestion.name}`
+    if (handledMealQuestionRef.current === mealKey) return
+
+    handledMealQuestionRef.current = mealKey
+    const mealFoodsList = pendingMealQuestion.foods.map((f) => `${f.name} (${f.quantity})`).join(", ")
+    const displayText = `Dúvida sobre: ${pendingMealQuestion.name}`
+    const modelInput = [
+      "O usuário apertou o botão de dúvida em uma refeição da dieta.",
+      `Refeição: ${pendingMealQuestion.name} (${pendingMealQuestion.time}).`,
+      `Alimentos: ${mealFoodsList}.`,
+      `Total: ${pendingMealQuestion.totalKcal} kcal.`,
+      "Responda como melhor amigo direto: aceite a dúvida do usuário sobre substituição ou adaptação desta refeição. Seja objetivo e prático. Máximo 3 frases.",
+    ].join(" ")
+
+    void sendTextToGuto(displayText, modelInput).finally(() => {
+      onMealQuestionHandled?.()
+    })
+  }, [isSending, onMealQuestionHandled, pendingMealQuestion, sendTextToGuto])
 
   const handleSend = async () => {
     if (!input.trim() || isSending) return

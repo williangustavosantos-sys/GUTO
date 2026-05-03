@@ -169,6 +169,16 @@
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.14) 100%),
     url("/assets/guto/FUNDO_APP.JPG") center / cover no-repeat;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* Calibration screen: inputs must not trigger white background flash on iOS */
+.guto-main-screen input[type="text"],
+.guto-main-screen input[type="number"] {
+  -webkit-appearance: none;
+  background-clip: padding-box;
 }
 
 .sala-guto :is(button, input, textarea, select) {

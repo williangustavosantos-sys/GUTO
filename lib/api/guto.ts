@@ -122,6 +122,10 @@ export interface GutoMemory {
   trainingGoal?: "consistency" | "fat_loss" | "muscle_gain" | "conditioning" | "mobility_health"
   preferredTrainingLocation?: "gym" | "home" | "park" | "mixed"
   trainingPathology?: string
+  country?: string
+  heightCm?: number
+  weightKg?: number
+  foodRestrictions?: string
   lastWorkoutCompletedAt?: string
   completedWorkoutDates: string[]
   adaptedMissionDates: string[]
@@ -148,6 +152,42 @@ export interface GutoProactiveResponse {
   expectedResponse?: GutoExpectedResponse | null
   avatarEmotion?: GutoAvatarEmotion
   workoutPlan?: GutoWorkoutPlan | null
+}
+
+// ─── Diet types ───────────────────────────────────────────────────────────────
+
+export interface DietMacros {
+  bmr: number
+  tdee: number
+  targetKcal: number
+  proteinG: number
+  carbsG: number
+  fatG: number
+  goal: string
+}
+
+export interface DietFood {
+  name: string
+  quantity: string
+  kcal: number
+}
+
+export interface DietMeal {
+  id: string
+  name: string
+  time: string
+  foods: DietFood[]
+  totalKcal: number
+  gutoNote: string
+}
+
+export interface DietPlan {
+  userId: string
+  generatedAt: string
+  country: string
+  macros: DietMacros
+  meals: DietMeal[]
+  foodRestrictions?: string
 }
 
 export async function sendGutoMessage(payload: SendGutoMessageRequest) {
@@ -197,6 +237,10 @@ export async function saveGutoMemory(payload: {
   trainingGoal?: "consistency" | "fat_loss" | "muscle_gain" | "conditioning" | "mobility_health"
   preferredTrainingLocation?: "gym" | "home" | "park" | "mixed"
   trainingPathology?: string
+  country?: string
+  heightCm?: number
+  weightKg?: number
+  foodRestrictions?: string
   confirmedName?: boolean
   initialXpRewardSeen?: boolean
 }) {
@@ -320,4 +364,20 @@ export async function getArenaMe(userId: string, arenaGroupId = "will-personal-a
     `/guto/arena/me?userId=${encodeURIComponent(userId)}&arenaGroupId=${encodeURIComponent(arenaGroupId)}`,
     { method: "GET" }
   )
+}
+
+// ─── Diet API ─────────────────────────────────────────────────────────────────
+
+export async function getDietPlan(userId = "local-user") {
+  return apiRequest<DietPlan>(`/guto/diet?userId=${encodeURIComponent(userId)}`, {
+    method: "GET",
+  })
+}
+
+export async function generateDietPlan(userId = "local-user", language: SupportedLanguage = "pt-BR") {
+  return apiRequest<DietPlan>("/guto/diet/generate", {
+    method: "POST",
+    timeoutMs: 40000,
+    body: JSON.stringify({ userId, language }),
+  })
 }
