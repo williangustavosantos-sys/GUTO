@@ -290,6 +290,7 @@ export function GutoApp({
   const [nameGate, setNameGate] = useState<NameGate | null>(null)
   const [isValidatingName, setIsValidatingName] = useState(false)
   const [showValidationFlow, setShowValidationFlow] = useState(false)
+  const [arenaRefreshKey, setArenaRefreshKey] = useState(0)
 
   const timersRef = useRef<number[]>([])
   const pactIntervalRef = useRef<number | null>(null)
@@ -947,6 +948,7 @@ export function GutoApp({
             userId={gutoUserId}
             language={selectedLanguage}
             translations={translations[selectedLanguage]}
+            refreshKey={arenaRefreshKey}
           />
         )
       default:
@@ -1782,9 +1784,16 @@ export function GutoApp({
             workoutFocus={workoutPlan?.focusKey || "full_body"}
             workoutLabel={workoutPlan?.focus || ""}
             onComplete={(validationHistory) => {
+              // Optimistic: update validation history immediately
               setMemory((prev) => prev ? { ...prev, validationHistory } : prev)
               setShowValidationFlow(false)
               setActiveTab("caminho")
+              // Refresh full memory so totalXp, trainedToday, streak sync everywhere
+              getGutoMemory(gutoUserId).then((fresh) => {
+                if (fresh) setMemory(fresh)
+              }).catch(() => {})
+              // Tell ArenaTab to refetch rankings
+              setArenaRefreshKey((k) => k + 1)
             }}
             onClose={() => setShowValidationFlow(false)}
           />

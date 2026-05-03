@@ -19,6 +19,7 @@ interface ArenaTabProps {
   userId: string
   language: string
   translations: TranslationDictionary
+  refreshKey?: number
 }
 
 const ARENA_GROUP = "will-personal-alpha"
@@ -178,7 +179,7 @@ function LoadingState() {
   )
 }
 
-export function ArenaTab({ userId: _userId, language, translations: t }: ArenaTabProps) {
+export function ArenaTab({ userId: _userId, language, translations: t, refreshKey }: ArenaTabProps) {
   const [activeSubTab, setActiveSubTab] = useState<ArenaSubTab>("week")
   const [data, setData] = useState<ArenaRankingResponse | null>(null)
   const [loading, setLoading] = useState(false)
@@ -205,7 +206,7 @@ export function ArenaTab({ userId: _userId, language, translations: t }: ArenaTa
 
   useEffect(() => {
     fetchRanking(activeSubTab)
-  }, [activeSubTab, fetchRanking])
+  }, [activeSubTab, fetchRanking, refreshKey])
 
   const subTabs: { id: ArenaSubTab; label: string }[] = [
     { id: "week", label: t.arena.week },
