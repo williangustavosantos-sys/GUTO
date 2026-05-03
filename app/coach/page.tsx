@@ -490,12 +490,12 @@ function CoachInner() {
                     >
                       Salvar
                     </Button>
-                    <Button size="sm" variant="outline" className="border-[#00e5ff] text-[#00e5ff] hover:bg-[#00e5ff]/10" onClick={() => setEditingName(false)}>✕</Button>
+                    <Button size="sm" variant="outline" className="border-[#00e5ff] text-[#00e5ff] hover:bg-[#00e5ff]/10 bg-transparent" onClick={() => setEditingName(false)}>✕</Button>
                   </div>
                 ) : (
                   <Button
                     variant="outline" size="sm"
-                    className="w-full text-white/70 border-white/20 hover:border-white/50"
+                    className="w-full text-white/70 border-white/20 hover:border-white/50 bg-transparent hover:bg-white/5"
                     onClick={() => setEditingName(true)}
                   >
                     Editar nome
@@ -505,7 +505,7 @@ function CoachInner() {
                 {selected.active ? (
                   <Button
                     variant="outline" size="sm"
-                    className="w-full border-amber-500/40 text-amber-400 hover:bg-amber-500/10"
+                    className="w-full border-amber-500/40 text-amber-400 hover:bg-amber-500/10 bg-transparent"
                     disabled={acting}
                     onClick={() =>
                       act(async () => {
@@ -523,7 +523,7 @@ function CoachInner() {
                 ) : (
                   <Button
                     variant="outline" size="sm"
-                    className="w-full border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10"
+                    className="w-full border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10 bg-transparent"
                     disabled={acting}
                     onClick={() =>
                       act(async () => {
@@ -543,7 +543,7 @@ function CoachInner() {
                 {selected.visibleInArena ? (
                   <Button
                     variant="outline" size="sm"
-                    className="w-full border-slate-500/40 text-slate-300 hover:bg-slate-500/10"
+                    className="w-full border-slate-500/40 text-slate-300 hover:bg-slate-500/10 bg-transparent"
                     disabled={acting}
                     onClick={() =>
                       act(async () => {
@@ -561,7 +561,7 @@ function CoachInner() {
                 ) : (
                   <Button
                     variant="outline" size="sm"
-                    className="w-full border-slate-500/40 text-slate-300 hover:bg-slate-500/10"
+                    className="w-full border-slate-500/40 text-slate-300 hover:bg-slate-500/10 bg-transparent"
                     disabled={acting}
                     onClick={() =>
                       act(async () => {
@@ -591,7 +591,7 @@ function CoachInner() {
                   <Button
                     key={scope}
                     variant="outline" size="sm"
-                    className="w-full text-white/60 border-white/15 hover:border-white/30"
+                    className="w-full text-white/60 border-white/15 hover:border-white/30 bg-transparent hover:bg-white/5"
                     disabled={acting}
                     onClick={() =>
                       doConfirm(label, () =>
@@ -619,7 +619,7 @@ function CoachInner() {
               <CoachSection title="Zona de risco" danger>
                 <Button
                   variant="outline" size="sm"
-                  className="w-full border-red-500/30 text-red-400 hover:bg-red-500/10"
+                  className="w-full border-red-500/30 text-red-400 hover:bg-red-500/10 bg-transparent"
                   disabled={acting}
                   onClick={() =>
                     doConfirm("Arquivar aluno", () =>
@@ -639,7 +639,7 @@ function CoachInner() {
 
                 <Button
                   variant="outline" size="sm"
-                  className="w-full border-red-500/30 text-red-400 hover:bg-red-500/10"
+                  className="w-full border-red-500/30 text-red-400 hover:bg-red-500/10 bg-transparent"
                   disabled={acting}
                   onClick={() =>
                     doConfirm("Zerar aluno", () =>
@@ -663,7 +663,7 @@ function CoachInner() {
 
                 <Button
                   variant="outline" size="sm"
-                  className="w-full border-red-500/50 text-red-400 hover:bg-red-500/10 mt-2"
+                  className="w-full border-red-500/50 text-red-400 hover:bg-red-500/10 mt-2 bg-transparent"
                   disabled={acting}
                   onClick={() => {
                     setDeleteText("");
