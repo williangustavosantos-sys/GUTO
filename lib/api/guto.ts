@@ -174,10 +174,10 @@ export async function trackGutoEvent(payload: {
   })
 }
 
-export async function validateGutoName(name: string) {
+export async function validateGutoName(name: string, userId?: string) {
   return apiRequest<GutoNameValidation>("/guto/validate-name", {
     method: "POST",
-    body: JSON.stringify({ name }),
+    body: JSON.stringify({ name, userId }),
   })
 }
 

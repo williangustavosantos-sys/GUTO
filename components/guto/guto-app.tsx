@@ -220,9 +220,9 @@ function resolveEvolutionStage(totalXp = 0): EvolutionStage {
   return "BABY"
 }
 
-async function resolveGutoNameValidation(value: string) {
+async function resolveGutoNameValidation(value: string, userId?: string) {
   try {
-    return await validateGutoName(value)
+    return await validateGutoName(value, userId)
   } catch {
     return validateGutoNameLocally(value)
   }
@@ -634,7 +634,7 @@ export function GutoApp({
       if (!normalizedName || isValidatingName) return
 
       setIsValidatingName(true)
-      const validation = await resolveGutoNameValidation(normalizedName)
+      const validation = await resolveGutoNameValidation(normalizedName, gutoUserId)
       setIsValidatingName(false)
 
       if (validation.status === "invalid") {
@@ -704,7 +704,7 @@ export function GutoApp({
       if (!normalizedName || isValidatingName) return
 
       setIsValidatingName(true)
-      const validation = await resolveGutoNameValidation(normalizedName)
+      const validation = await resolveGutoNameValidation(normalizedName, gutoUserId)
       setIsValidatingName(false)
 
       if (validation.status === "invalid") {

@@ -23,8 +23,6 @@ interface PathTabProps {
 const pathCopy = {
   "pt-BR": {
     active: "Percurso ativo",
-    visibleFailure: "Falha visível",
-    debt: "Dia perdido fica cravado no material. O vazio cobra.",
     unlocked: "Desbloqueado",
     adapted: "Rota reduzida aceita",
     waitingMission: "Missão ainda não definida",
@@ -34,8 +32,6 @@ const pathCopy = {
   },
   "en-US": {
     active: "Active path",
-    visibleFailure: "Visible failure",
-    debt: "A missed day stays carved into the material. The void charges for it.",
     unlocked: "Unlocked",
     adapted: "Reduced route accepted",
     waitingMission: "Mission not locked yet",
@@ -45,8 +41,6 @@ const pathCopy = {
   },
   "es-ES": {
     active: "Recorrido activo",
-    visibleFailure: "Falla visible",
-    debt: "El día perdido queda grabado en el material. El vacío cobra.",
     unlocked: "Desbloqueado",
     adapted: "Ruta reducida aceptada",
     waitingMission: "Misión todavía no definida",
@@ -56,8 +50,6 @@ const pathCopy = {
   },
   "it-IT": {
     active: "Percorso attivo",
-    visibleFailure: "Errore visibile",
-    debt: "Il giorno perso resta inciso nel materiale. Il vuoto presenta il conto.",
     unlocked: "Sbloccato",
     adapted: "Rotta ridotta accettata",
     waitingMission: "Missione non ancora definita",
@@ -274,18 +266,6 @@ export function PathTab({ language, memory, workoutPlan, currentEvolution, valid
             <span>{locale.pathQuote}</span>
           </blockquote>
         </motion.div>
-      </div>
-
-      <div className="mt-3 grid grid-cols-[1fr_auto] items-center gap-3 rounded-[1.5rem] border border-white/70 bg-white/38 px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
-        <div>
-          <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-[rgba(13,35,65,0.38)]">
-            {copy.visibleFailure}
-          </p>
-          <p className="mt-1 text-xs leading-snug text-[rgba(13,35,65,0.62)]">{copy.debt}</p>
-        </div>
-        <div className="guto-deboss-deep grid h-11 w-11 place-items-center rounded-full">
-          <Flame className="h-4 w-4 text-[var(--guto-cyan)]" />
-        </div>
       </div>
 
       {validationHistory && validationHistory.length > 0 && (
