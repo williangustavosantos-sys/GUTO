@@ -323,16 +323,24 @@ export function PathTab({ language, memory, workoutPlan, currentEvolution, valid
       {/* Poster modal */}
       {selectedPoster && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(13,35,65,0.88)] p-6"
-          style={{ backdropFilter: "blur(8px)" }}
+          className="fixed inset-0 z-50 flex flex-col items-center justify-center p-6"
+          style={{ background: "rgba(237,242,247,0.92)", backdropFilter: "blur(16px)" }}
           onClick={() => setSelectedPoster(null)}
         >
           <img
             src={selectedPoster}
             alt="Validation poster"
-            className="max-h-full max-w-full rounded-[1.5rem] object-contain shadow-[0_8px_48px_rgba(0,0,0,0.5)]"
+            className="max-h-[80vh] max-w-full rounded-[1.5rem] object-contain shadow-[0_8px_40px_rgba(13,35,65,0.18)]"
             onClick={(e) => e.stopPropagation()}
           />
+          <button
+            type="button"
+            onClick={() => setSelectedPoster(null)}
+            className="mt-5 rounded-full border border-[rgba(82,231,255,0.4)] bg-white/70 px-8 py-2.5 font-mono text-[10px] font-black uppercase tracking-[0.2em] text-[var(--guto-navy)]"
+            style={{ boxShadow: "0 2px 12px rgba(13,35,65,0.08)" }}
+          >
+            FECHAR
+          </button>
         </div>
       )}
     </div>

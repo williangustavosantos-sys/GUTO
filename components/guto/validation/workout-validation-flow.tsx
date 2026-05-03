@@ -259,13 +259,15 @@ export function WorkoutValidationFlow({
     prevFrameDataRef.current = null
     setFaceProgress(0)
 
-    const TOTAL = 30 // ~1 s a 30 fps
+    // ~1.7s a 30 fps — tempo suficiente para o usuário estabilizar o rosto
+    const TOTAL = 50
+    let warmupFrames = 20 // descarta os primeiros frames enquanto a câmera calibra
 
     if (!ctx) {
-      // Fallback sem canvas: inicia direto após 2 s
+      // Fallback sem canvas: inicia direto após 3 s
       countdownTimerRef.current = setTimeout(() => {
         if (streamRef.current) startCameraCountdown()
-      }, 2000)
+      }, 3000)
       return
     }
 
@@ -283,11 +285,24 @@ export function WorkoutValidationFlow({
         const { data } = ctx.getImageData(0, 0, 20, 20)
         const prev = prevFrameDataRef.current
 
+        prevFrameDataRef.current = new Uint8ClampedArray(data)
+
+        // Descarta frames iniciais — câmera ainda ajustando exposição
+        if (warmupFrames > 0) {
+          warmupFrames--
+          rafRef.current = requestAnimationFrame(analyze)
+          return
+        }
+
         let bright = 0
         let motion = 0
+        let lumSum = 0
+        let lumSumSq = 0
         for (let i = 0; i < data.length; i += 4) {
           const lum = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114
-          if (lum > 25) bright++
+          if (lum > 40) bright++
+          lumSum += lum
+          lumSumSq += lum * lum
           if (prev) {
             motion +=
               Math.abs(data[i] - prev[i]) +
@@ -296,15 +311,21 @@ export function WorkoutValidationFlow({
           }
         }
 
-        prevFrameDataRef.current = new Uint8ClampedArray(data)
+        const N = 400
+        const lumMean = lumSum / N
+        // variância de luminosidade — faces têm sombras e gradientes, fundos lisos não
+        const lumVariance = lumSumSq / N - lumMean * lumMean
 
-        const hasFace = bright / 400 > 0.15          // alguma coisa na região
-        const isStable = !prev || motion / 400 < 20  // pouco movimento
+        // Rosto presente: região central claramente iluminada (>40% de pixels > lum 40)
+        //   e com variação de luz (não é um fundo liso)
+        const hasFace = bright / N > 0.42 && lumVariance > 180
+        // Estável: deve haver frame anterior para comparar + movimento pequeno
+        const isStable = prev !== null && motion / N < 14
 
         if (hasFace && isStable) {
           faceStableCountRef.current = Math.min(TOTAL, faceStableCountRef.current + 1)
         } else {
-          faceStableCountRef.current = Math.max(0, faceStableCountRef.current - 2)
+          faceStableCountRef.current = Math.max(0, faceStableCountRef.current - 4)
         }
 
         const pct = Math.round((faceStableCountRef.current / TOTAL) * 100)
@@ -459,28 +480,12 @@ export function WorkoutValidationFlow({
                 {locale.readyTitle}
               </h1>
 
-              {/* Face circle preview */}
-              <div className="flex flex-col items-center py-2">
-                <div
-                  className="guto-deboss-deep grid place-items-center rounded-full"
-                  style={{
-                    width: 180,
-                    height: 180,
-                    boxShadow: "inset 5px 5px 14px rgba(129,141,156,0.18), inset -7px -7px 15px rgba(255,255,255,0.96), 0 0 0 3px rgba(82,231,255,0.38)",
-                  }}
-                >
-                  <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-[rgba(13,35,65,0.35)]">
-                    {locale.faceHint}
-                  </span>
-                </div>
-              </div>
-
-              {/* Phrase preview */}
-              <div className="guto-slot mt-4 rounded-[1rem] px-4 py-3 text-center">
-                <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-[rgba(13,35,65,0.42)]">
+              {/* Phrase */}
+              <div className="guto-slot rounded-[1.2rem] px-5 py-5 text-center">
+                <p className="font-mono text-[9px] uppercase tracking-[0.2em] text-[rgba(13,35,65,0.38)]">
                   {locale.phraseHint}
                 </p>
-                <p className="mt-1 font-black uppercase tracking-[0.08em] text-[var(--guto-navy)]" style={{ fontSize: "clamp(0.9rem,4vw,1.1rem)" }}>
+                <p className="mt-2 font-black uppercase leading-tight tracking-[0.06em] text-[var(--guto-navy)]" style={{ fontSize: "clamp(1rem,5vw,1.25rem)" }}>
                   {locale.phrase}
                 </p>
               </div>
