@@ -24,7 +24,7 @@ import type { EvolutionStage, SupportedLanguage } from "@/types/contract"
 import { translations } from "./translations"
 
 type AppStage = "intro" | "language" | "naming" | "calibration" | "pact" | "system" | "settings"
-type SettingsMode = "menu" | "language" | "name" | "profile" | "goal" | "location" | "pathology"
+type SettingsMode = "menu" | "language" | "name" | "profile" | "goal" | "location" | "pathology" | "physicaldata" | "residence" | "food_restrictions"
 
 interface StoredProfile {
   language: SupportedLanguage
@@ -85,6 +85,9 @@ const stageCopy: Record<
     settingsGoal: string
     settingsLocation: string
     settingsPathology: string
+    settingsPhysicalData: string
+    settingsResidence: string
+    settingsFoodRestrictions: string
     settingsSave: string
   }
 > = {
@@ -107,6 +110,9 @@ const stageCopy: Record<
     settingsGoal: "Objetivo",
     settingsLocation: "Local",
     settingsPathology: "Limitações",
+    settingsPhysicalData: "Peso / Altura",
+    settingsResidence: "Onde Mora",
+    settingsFoodRestrictions: "Restrições",
     settingsSave: "Salvar",
   },
   "en-US": {
@@ -128,6 +134,9 @@ const stageCopy: Record<
     settingsGoal: "Goal",
     settingsLocation: "Location",
     settingsPathology: "Limitations",
+    settingsPhysicalData: "Weight / Height",
+    settingsResidence: "Where You Live",
+    settingsFoodRestrictions: "Restrictions",
     settingsSave: "Save",
   },
   "es-ES": {
@@ -149,6 +158,9 @@ const stageCopy: Record<
     settingsGoal: "Objetivo",
     settingsLocation: "Local",
     settingsPathology: "Limitaciones",
+    settingsPhysicalData: "Peso / Altura",
+    settingsResidence: "Dónde Vives",
+    settingsFoodRestrictions: "Restricciones",
     settingsSave: "Guardar",
   },
   "it-IT": {
@@ -170,6 +182,9 @@ const stageCopy: Record<
     settingsGoal: "Obiettivo",
     settingsLocation: "Luogo",
     settingsPathology: "Limitazioni",
+    settingsPhysicalData: "Peso / Altezza",
+    settingsResidence: "Dove Abiti",
+    settingsFoodRestrictions: "Restrizioni",
     settingsSave: "Salva",
   },
 }

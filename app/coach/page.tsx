@@ -110,6 +110,8 @@ function CoachInner() {
   const [editingName, setEditingName] = useState(false);
   const [confirm, setConfirm] = useState<{ label: string; onConfirm: () => Promise<void> } | null>(null);
   const [acting, setActing] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [deleteText, setDeleteText] = useState("");
 
   const fetchStudents = useCallback(async () => {
     if (!coachId) {
@@ -489,23 +491,14 @@ function CoachInner() {
                 </Button>
                 <Button
                   variant="outline" size="sm"
-                  className="w-full border-red-500/30 text-red-400 hover:bg-red-500/10"
+                  className="w-full border-red-500/50 text-red-400 hover:bg-red-500/10"
                   disabled={acting}
-                  onClick={() =>
-                    doConfirm("Arquivar aluno", () =>
-                      act(async () => {
-                        await coachFetch(
-                          `/guto/coach/student/${selected.userId}`,
-                          coachId,
-                          { method: "DELETE" }
-                        );
-                        await fetchStudents();
-                        setSelected(null);
-                      }, "Aluno arquivado.")
-                    )
-                  }
+                  onClick={() => {
+                    setDeleteText("");
+                    setDeleteConfirm(true);
+                  }}
                 >
-                  Arquivar aluno
+                  Excluir e zerar usuário
                 </Button>
               </CoachSection>
             </>
@@ -535,6 +528,70 @@ function CoachInner() {
               }}
             >
               Confirmar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete + Reset Dialog — exige digitar EXCLUIR */}
+      <AlertDialog
+        open={deleteConfirm}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteConfirm(false);
+            setDeleteText("");
+          }
+        }}
+      >
+        <AlertDialogContent className="bg-[#0d1426] border border-white/10 text-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-red-400">Excluir e zerar usuário?</AlertDialogTitle>
+            <AlertDialogDescription className="text-white/50">
+              Isso apagará memória, treino, dieta, XP, Arena, validações e histórico deste usuário.
+              Se ele abrir o mesmo link novamente, começará do zero.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="px-1 py-3">
+            <p className="text-white/40 text-xs mb-2">
+              Digite <span className="text-red-400 font-bold font-mono">EXCLUIR</span> para confirmar:
+            </p>
+            <Input
+              value={deleteText}
+              onChange={(e) => setDeleteText(e.target.value)}
+              placeholder="EXCLUIR"
+              className="bg-white/5 border-white/20 text-white text-sm h-9 font-mono"
+              autoFocus
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-white/5 border-white/10 text-white hover:bg-white/10">
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deleteText !== "EXCLUIR" || acting}
+              className="bg-red-600 hover:bg-red-700 text-white disabled:opacity-40 disabled:cursor-not-allowed"
+              onClick={async () => {
+                if (!selected || deleteText !== "EXCLUIR") return;
+                setActing(true);
+                try {
+                  await coachFetch(
+                    `/guto/coach/student/${selected.userId}`,
+                    coachId,
+                    { method: "DELETE" }
+                  );
+                  setStudents((prev) => prev.filter((s) => s.userId !== selected.userId));
+                  setSelected(null);
+                  setDeleteConfirm(false);
+                  setDeleteText("");
+                  toast.success("Usuário excluído. Se abrir o link novamente, começará do zero.");
+                } catch (err) {
+                  toast.error(err instanceof ApiError ? err.message : "Erro ao excluir usuário.");
+                } finally {
+                  setActing(false);
+                }
+              }}
+            >
+              Excluir permanentemente
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

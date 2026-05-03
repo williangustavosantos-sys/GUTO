@@ -185,7 +185,7 @@ export const translations: Record<ValidLanguage, TranslationDictionary> = {
     pathXpReward: "+100 XP",
     pathQuote: "Você já é mais forte do que ontem. O melhor ainda está por vir.",
     calibration: {
-      title: "Calibragem do sistema",
+      title: "Calibragem inicial",
       subtitle: "Antes de eu te puxar, preciso entender o teu corpo.",
       ageLabel: "Idade",
       sexLabel: "Sexo biológico",
@@ -313,7 +313,7 @@ export const translations: Record<ValidLanguage, TranslationDictionary> = {
     pathXpReward: "+100 XP",
     pathQuote: "Sei già più forte di ieri. Il meglio deve ancora venire.",
     calibration: {
-      title: "Calibrazione del sistema",
+      title: "Calibrazione iniziale",
       subtitle: "Prima di spingerti, devo capire il tuo corpo.",
       ageLabel: "Età",
       sexLabel: "Sesso biologico",
@@ -441,7 +441,7 @@ export const translations: Record<ValidLanguage, TranslationDictionary> = {
     pathXpReward: "+100 XP",
     pathQuote: "Ya eres más fuerte que ayer. Lo mejor está por venir.",
     calibration: {
-      title: "Calibración del sistema",
+      title: "Calibración inicial",
       subtitle: "Antes de empujarte, necesito entender tu cuerpo.",
       ageLabel: "Edad",
       sexLabel: "Sexo biológico",
@@ -569,7 +569,7 @@ export const translations: Record<ValidLanguage, TranslationDictionary> = {
     pathXpReward: "+100 XP",
     pathQuote: "You are already stronger than yesterday. The best is yet to come.",
     calibration: {
-      title: "System calibration",
+      title: "Initial calibration",
       subtitle: "Before I push you, I need to read your body.",
       ageLabel: "Age",
       sexLabel: "Biological sex",
