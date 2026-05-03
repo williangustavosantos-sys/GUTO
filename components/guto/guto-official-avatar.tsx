@@ -55,7 +55,7 @@ const sizeClasses = {
   sm: "w-24 h-24",
   md: "w-32 h-32",
   lg: "w-40 h-40",
-  xl: "w-[min(84vw,22.5rem)] h-[min(84vw,22.5rem)]",
+  xl: "w-[min(96vw,34rem)] h-[min(96vw,34rem)]",
 }
 
 function stripVideoMatte(

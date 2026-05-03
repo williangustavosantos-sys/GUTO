@@ -725,16 +725,17 @@ export function ChatTab({
         {isMuted ? <VolumeX className="h-[18px] w-[18px]" /> : <Volume2 className="h-[18px] w-[18px]" />}
       </button>
 
-      <div className="pointer-events-none absolute left-1/2 top-[45%] z-10 h-[min(51dvh,430px)] w-[min(96vw,28rem)] -translate-x-1/2 -translate-y-1/2">
+      {/* Avatar — centralizado no círculo da cápsula, cresce a partir do centro */}
+      <div className="pointer-events-none absolute left-1/2 top-[44%] z-10 -translate-x-1/2 -translate-y-1/2">
         <GutoOfficialAvatar
           size="xl"
           showPlatform={false}
           evolution={evolution}
           emotion={isDepleted ? "critical" : latestGuto.avatarEmotion || "default"}
-          className="h-full w-full"
         />
       </div>
 
+      {/* Mensagens — z-30 flutua sobre o avatar/cápsula como camada holográfica */}
       <div
         ref={scrollRef}
         className="absolute left-0 right-0 top-[54%] bottom-[calc(var(--guto-chat-input-bottom)+72px)] z-30 overflow-y-auto px-5 pb-3"
@@ -747,9 +748,15 @@ export function ChatTab({
               animate={{ opacity: 1, y: 0 }}
               className={
                 message.isGuto
-                  ? "mx-auto w-full max-w-[20rem] rounded-[18px] border border-[var(--guto-cyan)]/80 bg-white px-4 py-3 text-center font-mono text-[clamp(11px,2.8vw,13px)] font-black leading-snug text-[var(--guto-navy)] shadow-[inset_0_1px_0_rgba(255,255,255,0.86),0_18px_38px_rgba(137,151,168,0.12)]"
-                  : "ml-auto max-w-[70%] rounded-[18px] border border-white/80 bg-white/95 px-4 py-2 text-right text-xs font-semibold leading-snug text-[rgba(13,35,65,0.68)] shadow-[0_12px_26px_rgba(137,151,168,0.1)]"
+                  ? "mx-auto w-full max-w-[20rem] rounded-[20px] border border-[rgba(82,231,255,0.72)] px-4 py-3 text-center font-mono text-[clamp(11px,2.8vw,13px)] font-black leading-snug text-[var(--guto-navy)]"
+                  : "ml-auto max-w-[70%] rounded-[18px] border border-white/80 bg-white/90 px-4 py-2 text-right text-xs font-semibold leading-snug text-[rgba(13,35,65,0.68)] shadow-[0_12px_26px_rgba(137,151,168,0.1)]"
               }
+              style={message.isGuto ? {
+                background: "linear-gradient(180deg, rgba(255,255,255,0.88) 0%, rgba(248,251,255,0.82) 100%)",
+                backdropFilter: "blur(18px)",
+                WebkitBackdropFilter: "blur(18px)",
+                boxShadow: "inset 0 1px 0 rgba(255,255,255,0.96), 0 8px 32px rgba(82,231,255,0.10), 0 2px 12px rgba(13,35,65,0.06)",
+              } : undefined}
             >
               {message.text}
             </motion.div>

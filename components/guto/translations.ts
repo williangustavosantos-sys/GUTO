@@ -122,7 +122,7 @@ export const translations: Record<ValidLanguage, TranslationDictionary> = {
     ],
 
     // Path Tab
-    pathTitle: "CAMINHO DO GUTO",
+    pathTitle: "PERCURSO",
     pathSubtitle: "O percurso mostra execução, ausência e consequência.",
     pathMonth: "ABRIL 2024",
     pathDayLabel: "Quarta, Peito e tríceps",
@@ -199,7 +199,7 @@ export const translations: Record<ValidLanguage, TranslationDictionary> = {
       "Esecuzione controllata. Nessuna fretta.",
       "Tempo giusto = muscolo giusto."
     ],
-    pathTitle: "PERCORSO DI GUTO",
+    pathTitle: "PERCORSO",
     pathSubtitle: "Il percorso mostra esecuzione, assenza e conseguenza.",
     pathMonth: "APRILE 2024",
     pathDayLabel: "Mercoledì, Petto e tricipiti",
@@ -276,7 +276,7 @@ export const translations: Record<ValidLanguage, TranslationDictionary> = {
       "Ejecución controlada. Sin prisa.",
       "Tiempo correcto = músculo correcto."
     ],
-    pathTitle: "CAMINO DE GUTO",
+    pathTitle: "RECORRIDO",
     pathSubtitle: "El camino muestra ejecución, ausencia y consecuencia.",
     pathMonth: "ABRIL 2024",
     pathDayLabel: "Miércoles, Pecho y tríceps",
@@ -353,7 +353,7 @@ export const translations: Record<ValidLanguage, TranslationDictionary> = {
       "Controlled execution. No rushing.",
       "Right timing = right muscle."
     ],
-    pathTitle: "GUTO’S PATH",
+    pathTitle: "JOURNEY",
     pathSubtitle: "The path shows execution, absence, and consequence.",
     pathMonth: "APRIL 2024",
     pathDayLabel: "Wednesday, Chest and triceps",
