@@ -52,13 +52,15 @@ export async function apiRequest<T>(
     })
 
     if (res.status === 401) {
-      if (typeof window !== "undefined") {
+      const body = await res.json().catch(() => ({}))
+      const isLoginEndpoint = path.includes("/login")
+      if (!isLoginEndpoint && typeof window !== "undefined") {
         window.localStorage.removeItem("guto-auth-token")
         if (!window.location.pathname.includes("/login") && !window.location.pathname.includes("/convite")) {
           window.location.href = "/login"
         }
       }
-      throw new ApiError("Sessão expirada. Faça login novamente.", 401)
+      throw new ApiError(body.message || "Credenciais inválidas.", 401)
     }
 
     if (res.status === 403) {
