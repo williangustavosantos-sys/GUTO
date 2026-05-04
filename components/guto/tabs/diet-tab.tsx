@@ -1,32 +1,29 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Flame, Zap, Wheat, Droplets, RefreshCw, ChevronDown, ChevronUp, MessageCircle } from "lucide-react"
+import { Flame, Zap, Wheat, Droplets, RefreshCw, ChevronDown, ChevronUp } from "lucide-react"
 
-import { getDietPlan, generateDietPlan, type DietPlan, type DietMeal } from "@/lib/api/guto"
+import { getDietPlan, generateDietPlan, type DietPlan, type DietMeal, type DietFood } from "@/lib/api/guto"
 import { getLanguage } from "../translations"
 import type { ValidLanguage } from "../translations"
 
-// ─── Local copy ───────────────────────────────────────────────────────────────
+// ─── Copy ────────────────────────────────────────────────────────────────────
 
 const dietCopy = {
   "pt-BR": {
     title: "DIETA DA SEMANA",
-    subtitle: "Plano base. Adapta pelo chat.",
-    generateButton: "GERAR MINHA DIETA",
     regenerateButton: "REGENERAR DIETA",
     generatingLabel: "GUTO calculando...",
-    dailyGoalTitle: "META DIÁRIA",
-    kcalLabel: "kcal",
+    generatingSubtitle: "Montando sua dieta personalizada...",
+    dailyTarget: "META DO DIA",
+    perDay: "por dia",
     proteinLabel: "Proteína",
     carbsLabel: "Carbo",
     fatLabel: "Gordura",
     objectiveLabel: "Objetivo",
-    mealDoubtButton: "DÚVIDA SOBRE ESTA REFEIÇÃO",
     emptyTitle: "Dieta ainda não gerada",
     emptyBody: "Complete seu perfil com altura, peso e país para o GUTO montar seu plano.",
-    lastUpdated: "Atualizado em",
     goalNames: {
       fat_loss: "Emagrecer",
       muscle_gain: "Hipertrofia",
@@ -37,20 +34,17 @@ const dietCopy = {
   },
   "en-US": {
     title: "WEEKLY DIET",
-    subtitle: "Base plan. Adapt through chat.",
-    generateButton: "GENERATE MY DIET",
     regenerateButton: "REGENERATE DIET",
     generatingLabel: "GUTO calculating...",
-    dailyGoalTitle: "DAILY GOAL",
-    kcalLabel: "kcal",
+    generatingSubtitle: "Building your personalized plan...",
+    dailyTarget: "DAILY TARGET",
+    perDay: "per day",
     proteinLabel: "Protein",
     carbsLabel: "Carbs",
     fatLabel: "Fat",
     objectiveLabel: "Goal",
-    mealDoubtButton: "QUESTION ABOUT THIS MEAL",
     emptyTitle: "Diet not generated yet",
     emptyBody: "Complete your profile with height, weight and country so GUTO can build your plan.",
-    lastUpdated: "Last updated",
     goalNames: {
       fat_loss: "Fat Loss",
       muscle_gain: "Hypertrophy",
@@ -61,20 +55,17 @@ const dietCopy = {
   },
   "es-ES": {
     title: "DIETA DE LA SEMANA",
-    subtitle: "Plan base. Adapta por el chat.",
-    generateButton: "GENERAR MI DIETA",
     regenerateButton: "REGENERAR DIETA",
     generatingLabel: "GUTO calculando...",
-    dailyGoalTitle: "META DIARIA",
-    kcalLabel: "kcal",
+    generatingSubtitle: "Creando tu plan personalizado...",
+    dailyTarget: "META DEL DÍA",
+    perDay: "por día",
     proteinLabel: "Proteína",
     carbsLabel: "Carbos",
     fatLabel: "Grasa",
     objectiveLabel: "Objetivo",
-    mealDoubtButton: "DUDA SOBRE ESTA COMIDA",
     emptyTitle: "Dieta aún no generada",
     emptyBody: "Completa tu perfil con altura, peso y país para que GUTO cree tu plan.",
-    lastUpdated: "Actualizado el",
     goalNames: {
       fat_loss: "Adelgazar",
       muscle_gain: "Hipertrofia",
@@ -85,20 +76,17 @@ const dietCopy = {
   },
   "it-IT": {
     title: "DIETA DELLA SETTIMANA",
-    subtitle: "Piano base. Adatta via chat.",
-    generateButton: "CREA LA MIA DIETA",
     regenerateButton: "RIGENERA DIETA",
     generatingLabel: "GUTO sta calcolando...",
-    dailyGoalTitle: "OBIETTIVO GIORNALIERO",
-    kcalLabel: "kcal",
+    generatingSubtitle: "Creando il tuo piano personale...",
+    dailyTarget: "OBIETTIVO GIORNALIERO",
+    perDay: "al giorno",
     proteinLabel: "Proteine",
     carbsLabel: "Carboidrati",
     fatLabel: "Grassi",
     objectiveLabel: "Obiettivo",
-    mealDoubtButton: "DUBBIO SU QUESTO PASTO",
     emptyTitle: "Dieta non ancora creata",
     emptyBody: "Completa il profilo con altezza, peso e paese per far creare la dieta a GUTO.",
-    lastUpdated: "Aggiornato il",
     goalNames: {
       fat_loss: "Dimagrire",
       muscle_gain: "Ipertrofia",
@@ -109,114 +97,142 @@ const dietCopy = {
   },
 } as const
 
+// Emoji per meal ID
+const MEAL_EMOJI: Record<string, string> = {
+  cafe: "☕",
+  lanche1: "🍎",
+  almoco: "🍽️",
+  lanche2: "🥜",
+  jantar: "🌙",
+}
+
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface DietTabProps {
   userId: string
   language: string
-  onMealDoubt: (meal: DietMeal) => void
+  onFoodDoubt: (food: DietFood, meal: DietMeal) => void
+  memory: import("@/lib/api/guto").GutoMemory | null
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function getWeekRange(generatedAt: string): string {
+  const start = new Date(generatedAt)
+  start.setHours(0, 0, 0, 0)
+  const end = new Date(start)
+  end.setDate(start.getDate() + 6)
+  const fmt = (d: Date) =>
+    d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" })
+  return `${fmt(start)} – ${fmt(end)}`
 }
 
 // ─── Meal Card ────────────────────────────────────────────────────────────────
 
 function MealCard({
   meal,
-  copy,
-  onDoubt,
+  onFoodDoubt,
   index,
 }: {
   meal: DietMeal
-  copy: (typeof dietCopy)[ValidLanguage]
-  onDoubt: (meal: DietMeal) => void
+  onFoodDoubt: (food: DietFood, meal: DietMeal) => void
   index: number
 }) {
-  const [expanded, setExpanded] = useState(true)
+  const [expanded, setExpanded] = useState(false)
+  const emoji = MEAL_EMOJI[meal.id] ?? "🥗"
 
   return (
     <motion.div
-      className="guto-frost-panel rounded-[1.25rem] overflow-hidden"
+      className="rounded-[1.1rem] border border-white/60 bg-white/30 overflow-hidden"
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.06 }}
+      transition={{ delay: index * 0.05, duration: 0.22 }}
     >
-      {/* Header */}
+      {/* Header row — always visible */}
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
-        className="w-full flex items-center justify-between px-4 py-3"
+        className="w-full flex items-center gap-2.5 px-3.5 py-3"
         aria-expanded={expanded}
       >
-        <div className="flex items-center gap-2.5 min-w-0">
-          <span className="font-mono text-[9px] text-[var(--guto-cyan)] font-black tracking-[0.1em] shrink-0">
-            {meal.time}
-          </span>
-          <h2 className="text-[13px] font-black uppercase tracking-[0.06em] text-[var(--guto-navy)] truncate">
-            {meal.name}
-          </h2>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <span className="text-[11px] font-black text-[var(--guto-navy)]/60">
-            {meal.totalKcal} <span className="text-[9px] font-mono">kcal</span>
+        {/* Emoji */}
+        <span className="text-[16px] shrink-0">{emoji}</span>
+
+        {/* Time */}
+        <span className="font-mono text-[9px] font-black tracking-[0.06em] text-[var(--guto-cyan)] shrink-0">
+          {meal.time}
+        </span>
+
+        {/* Name */}
+        <h2 className="flex-1 text-left text-[12px] font-black uppercase leading-tight tracking-[0.05em] text-[var(--guto-navy)]">
+          {meal.name}
+        </h2>
+
+        {/* Total kcal + chevron */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          <span className="font-mono text-[11px] font-black text-[var(--guto-navy)]/55">
+            {meal.totalKcal}
+            <span className="text-[8px] font-normal ml-0.5 text-[var(--guto-navy)]/35">kcal</span>
           </span>
           {expanded
             ? <ChevronUp className="h-3.5 w-3.5 text-[var(--guto-cyan)]" />
-            : <ChevronDown className="h-3.5 w-3.5 text-[rgba(13,35,65,0.35)]" />
+            : <ChevronDown className="h-3.5 w-3.5 text-[rgba(13,35,65,0.28)]" />
           }
         </div>
       </button>
 
-      {/* Body */}
+      {/* Expanded body */}
       <AnimatePresence initial={false}>
         {expanded && (
           <motion.div
             key="body"
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.22 }}
-            className="overflow-hidden"
+            initial={{ height: 0 }}
+            animate={{ height: "auto" }}
+            exit={{ height: 0 }}
+            transition={{ duration: 0.2, ease: "easeInOut" }}
+            style={{ overflow: "hidden" }}
           >
-            <div className="px-4 pb-3 flex flex-col gap-2">
-              {/* Food list */}
-              <div className="flex flex-col gap-1">
-                {meal.foods.map((food, i) => (
-                  <div key={i} className="flex items-center justify-between">
-                    <span className="text-[12px] text-[var(--guto-navy)]/80 leading-snug flex-1 pr-2">
-                      {food.name}
-                    </span>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="font-mono text-[10px] font-black text-[var(--guto-navy)]/55 bg-[rgba(82,231,255,0.10)] px-2 py-0.5 rounded-full">
-                        {food.quantity}
-                      </span>
-                      <span className="font-mono text-[9px] text-[var(--guto-navy)]/35">
-                        {food.kcal}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
+            <div className="mx-3.5 h-px bg-[rgba(82,231,255,0.18)]" />
 
-              {/* Divider */}
-              <div className="h-px bg-[rgba(82,231,255,0.2)]" />
+            <div className="px-3.5 pt-2.5 pb-3 flex flex-col gap-0">
+              {/* Food rows */}
+              {meal.foods.map((food, i) => (
+                <div
+                  key={i}
+                  className="flex items-center gap-2 py-2 border-b border-[rgba(13,35,65,0.06)] last:border-0"
+                >
+                  {/* Food name */}
+                  <span className="flex-1 text-[12px] leading-snug text-[var(--guto-navy)]/85">
+                    {food.name}
+                  </span>
+
+                  {/* Quantity badge */}
+                  <span className="font-mono text-[9px] font-black text-[var(--guto-navy)]/50 bg-[rgba(82,231,255,0.12)] px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap">
+                    {food.quantity}
+                  </span>
+
+                  {/* ? button — per food item */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onFoodDoubt(food, meal)
+                    }}
+                    aria-label={`Dúvida sobre ${food.name}`}
+                    className="h-6 w-6 rounded-full border border-[rgba(82,231,255,0.45)] bg-[rgba(82,231,255,0.10)] text-[var(--guto-cyan)] font-black text-[11px] flex items-center justify-center shrink-0 active:scale-90 transition-transform"
+                  >
+                    ?
+                  </button>
+                </div>
+              ))}
 
               {/* Guto note */}
               {meal.gutoNote && (
-                <p className="text-[10px] leading-snug text-[rgba(13,35,65,0.60)] italic">
-                  <span className="not-italic font-black text-[var(--guto-cyan)] mr-1">GUTO:</span>
+                <p className="text-[10px] leading-snug text-[rgba(13,35,65,0.50)] italic pt-2">
+                  <span className="not-italic font-black text-[var(--guto-cyan)] mr-1">GUTO</span>
                   {meal.gutoNote}
                 </p>
               )}
-
-              {/* Doubt button */}
-              <button
-                type="button"
-                onClick={() => onDoubt(meal)}
-                className="flex items-center justify-center gap-1.5 w-full h-9 rounded-full border border-[rgba(82,231,255,0.4)] bg-[rgba(82,231,255,0.06)] text-[var(--guto-cyan)] font-mono text-[9px] font-black uppercase tracking-[0.12em] transition-all active:scale-[0.97]"
-                aria-label={`${copy.mealDoubtButton}: ${meal.name}`}
-              >
-                <MessageCircle className="h-3.5 w-3.5" />
-                {copy.mealDoubtButton}
-              </button>
             </div>
           </motion.div>
         )}
@@ -227,91 +243,111 @@ function MealCard({
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export function DietTab({ userId, language, onMealDoubt }: DietTabProps) {
+export function DietTab({ userId, language, onFoodDoubt, memory }: DietTabProps) {
   const validLang = getLanguage(language)
   const copy = dietCopy[validLang]
 
   const [plan, setPlan] = useState<DietPlan | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [generating, setGenerating] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [status, setStatus] = useState<"loading" | "generating" | "error" | "ready">("loading")
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [retrying, setRetrying] = useState(false)
 
-  const loadPlan = useCallback(async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      let fetched = await getDietPlan(userId)
-      if (!fetched) {
-        setGenerating(true)
-        fetched = await generateDietPlan(userId, validLang)
+  function isPlanStale(generatedAt: string): boolean {
+    const planDate = new Date(generatedAt)
+    const now = new Date()
+    const lastSunday = new Date(now)
+    lastSunday.setDate(now.getDate() - now.getDay())
+    lastSunday.setHours(0, 0, 0, 0)
+    return planDate < lastSunday
+  }
+
+  function isProfileComplete(): boolean {
+    if (!memory) return false
+    return Boolean(
+      memory.heightCm && memory.heightCm > 0 &&
+      memory.weightKg && memory.weightKg > 0 &&
+      memory.trainingGoal &&
+      memory.biologicalSex &&
+      memory.userAge &&
+      (memory.trainingLevel || memory.trainingStatus)
+    )
+  }
+
+  useEffect(() => {
+    if (!userId) return
+    let cancelled = false
+
+    const hardTimeout = setTimeout(() => {
+      if (!cancelled) {
+        cancelled = true
+        setStatus("error")
+        setErrorMsg("Timeout: geração demorou demais. Tente novamente.")
       }
-      setPlan(fetched)
-    } catch (err: any) {
-      setPlan(null)
-      if (err.details && err.details.error === "missing_profile_fields" && err.details.missing) {
-        const missingMap: Record<string, string> = {
-          heightCm: "Falta altura",
-          weightKg: "Falta peso",
-          country: "Falta país",
-          trainingGoal: "Falta objetivo",
-          biologicalSex: "Falta sexo biológico",
-          userAge: "Falta idade",
-          trainingLevel: "Falta nível de treino"
+    }, 50_000)
+
+    const run = async () => {
+      setStatus("loading")
+      setErrorMsg(null)
+      try {
+        let fetched = await getDietPlan(userId)
+        if (cancelled) return
+
+        if (fetched && isPlanStale(fetched.generatedAt)) fetched = null
+
+        if (!fetched) {
+          setStatus("generating")
+          fetched = await generateDietPlan(userId, validLang)
+          if (cancelled) return
         }
-        const fields = err.details.missing.map((f: string) => missingMap[f] || f).join(", ")
-        setError(`${fields}`)
-      } else {
-        setError("Erro ao carregar ou gerar dieta. Verifique seu perfil.")
+
+        setPlan(fetched)
+        setStatus("ready")
+      } catch (err: any) {
+        if (cancelled) return
+        setPlan(null)
+        setStatus("error")
+        if (err.details?.error !== "missing_profile_fields") {
+          setErrorMsg(err.message || "Erro ao gerar dieta.")
+        }
+      } finally {
+        clearTimeout(hardTimeout)
       }
-    } finally {
-      setLoading(false)
-      setGenerating(false)
+    }
+
+    void run()
+    return () => {
+      cancelled = true
+      clearTimeout(hardTimeout)
     }
   }, [userId, validLang])
 
-  useEffect(() => {
-    void loadPlan()
-  }, [loadPlan])
-
-  const handleGenerate = async () => {
-    setGenerating(true)
-    setError(null)
+  const handleRetry = async () => {
+    if (retrying) return
+    setRetrying(true)
+    setErrorMsg(null)
     try {
       const newPlan = await generateDietPlan(userId, validLang)
       setPlan(newPlan)
+      setStatus("ready")
     } catch (err: any) {
-      if (err.details && err.details.error === "missing_profile_fields" && err.details.missing) {
-        const missingMap: Record<string, string> = {
-          heightCm: "Falta altura",
-          weightKg: "Falta peso",
-          country: "Falta país",
-          trainingGoal: "Falta objetivo",
-          biologicalSex: "Falta sexo biológico",
-          userAge: "Falta idade",
-          trainingLevel: "Falta nível de treino"
-        }
-        const fields = err.details.missing.map((f: string) => missingMap[f] || f).join(", ")
-        setError(`${fields}`)
-      } else {
-        setError("Erro ao gerar dieta. Verifique seu perfil e tente novamente.")
-      }
+      setStatus("error")
+      setErrorMsg(err.message || "Erro ao gerar dieta.")
     } finally {
-      setGenerating(false)
+      setRetrying(false)
     }
   }
 
-  const formatDate = (iso: string) => {
-    try {
-      return new Date(iso).toLocaleDateString(validLang, { day: "2-digit", month: "2-digit", year: "numeric" })
-    } catch {
-      return iso
-    }
+  const retryLabel: Record<ValidLanguage, string> = {
+    "pt-BR": "Falha ao gerar. Tente novamente.",
+    "en-US": "Failed to generate. Try again.",
+    "it-IT": "Errore nella creazione. Riprova.",
+    "es-ES": "Error al generar. Inténtalo de nuevo.",
   }
 
-  // ── Loading state
-  if (loading) {
+  // ── Loading / Generating ──────────────────────────────────────────────────
+  if (status === "loading" || status === "generating") {
     return (
-      <div className="relative flex h-full min-h-0 items-center justify-center">
+      <div className="flex h-full min-h-0 flex-col items-center justify-center gap-3">
         <motion.div
           animate={{ opacity: [0.4, 1, 0.4] }}
           transition={{ duration: 1.5, repeat: Infinity }}
@@ -319,196 +355,151 @@ export function DietTab({ userId, language, onMealDoubt }: DietTabProps) {
         >
           {copy.generatingLabel}
         </motion.div>
+        {status === "generating" && (
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.6 }}
+            className="font-mono text-[8px] uppercase tracking-[0.14em] text-[rgba(13,35,65,0.35)] text-center max-w-[200px]"
+          >
+            {copy.generatingSubtitle}
+          </motion.p>
+        )}
       </div>
     )
   }
 
-  // ── Empty state
+  // ── Empty / Error ─────────────────────────────────────────────────────────
   if (!plan) {
+    const profileComplete = isProfileComplete()
+    const bodyText = !profileComplete ? copy.emptyBody : errorMsg || retryLabel[validLang]
+
     return (
-      <div className="relative flex h-full min-h-0 flex-col">
-        {/* Header */}
-        <div className="px-1 pb-4 pt-2 text-center shrink-0">
-          <p className="font-mono text-[9px] font-black uppercase tracking-[0.22em] text-[var(--guto-cyan)] mb-1">
-            {copy.subtitle}
-          </p>
-          <h1 className="mx-auto max-w-[18rem] text-balance text-[1.25rem] font-black uppercase leading-tight tracking-[0.08em] text-[var(--guto-navy)]">
+      <div className="flex h-full min-h-0 flex-col">
+        <div className="shrink-0 pb-3 pt-1 text-center">
+          <h1 className="text-[1.15rem] font-black uppercase leading-tight tracking-[0.08em] text-[var(--guto-navy)]">
             {copy.title}
           </h1>
         </div>
-
-        <div className="flex-1 flex flex-col items-center justify-center gap-6 pb-4">
-          {/* Empty illustration */}
-          <div className="relative w-28 h-28 flex items-center justify-center">
+        <div className="flex-1 flex flex-col items-center justify-center gap-5 pb-4">
+          <div className="relative w-20 h-20 flex items-center justify-center">
             <div className="absolute inset-0 rounded-full bg-[rgba(82,231,255,0.10)] blur-xl" />
             <motion.div
-              animate={{ rotate: [0, 10, -10, 0], scale: [1, 1.05, 1] }}
+              animate={{ rotate: [0, 8, -8, 0], scale: [1, 1.04, 1] }}
               transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-              className="relative text-5xl"
+              className="relative text-4xl"
             >
               🥗
             </motion.div>
           </div>
-
           <div className="text-center max-w-[240px]">
-            <h2 className="text-[1.1rem] font-black uppercase leading-tight tracking-[0.06em] text-[var(--guto-navy)] mb-2">
+            <h2 className="text-[0.95rem] font-black uppercase leading-tight tracking-[0.06em] text-[var(--guto-navy)] mb-2">
               {copy.emptyTitle}
             </h2>
-            <p className="text-[12px] leading-relaxed text-[rgba(13,35,65,0.60)]">
-              {copy.emptyBody}
-            </p>
+            <p className="text-[12px] leading-relaxed text-[rgba(13,35,65,0.60)]">{bodyText}</p>
           </div>
-
-          {error && (
-            <p className="text-[11px] text-red-500/70 text-center max-w-[220px] leading-snug">
-              {error}
-            </p>
+          {profileComplete && (
+            <motion.button
+              type="button"
+              whileTap={{ scale: 0.97 }}
+              onClick={handleRetry}
+              disabled={retrying}
+              className="h-10 px-6 rounded-full border border-[rgba(82,231,255,0.5)] bg-[rgba(82,231,255,0.08)] text-[var(--guto-cyan)] font-mono text-[9px] font-black uppercase tracking-[0.18em] flex items-center gap-2 disabled:opacity-40"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+              {copy.regenerateButton}
+            </motion.button>
           )}
-
-          <motion.button
-            type="button"
-            whileTap={{ scale: 0.97 }}
-            disabled={generating}
-            onClick={handleGenerate}
-            className="h-12 px-8 rounded-full bg-[var(--guto-cyan)] text-[var(--guto-navy)] font-black uppercase tracking-[0.18em] text-[12px] shadow-[0_6px_20px_rgba(82,231,255,0.35)] disabled:opacity-50 flex items-center gap-2"
-          >
-            {generating ? (
-              <>
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                >
-                  <RefreshCw className="h-4 w-4" />
-                </motion.div>
-                {copy.generatingLabel}
-              </>
-            ) : (
-              copy.generateButton
-            )}
-          </motion.button>
         </div>
       </div>
     )
   }
 
-  // ── Plan view
+  // ── Plan view ─────────────────────────────────────────────────────────────
   const { macros, meals, generatedAt } = plan
   const goalName = copy.goalNames[macros.goal] || macros.goal
+  const weekRange = getWeekRange(generatedAt)
 
   return (
-    <div className="relative flex h-full min-h-0 flex-col pb-2">
-      {/* Header */}
-      <div className="px-1 pb-4 pt-2 text-center shrink-0">
-        <p className="font-mono text-[9px] font-black uppercase tracking-[0.22em] text-[var(--guto-cyan)] mb-1">
-          {copy.subtitle} • {copy.lastUpdated} {formatDate(generatedAt)}
-        </p>
-        <h1 className="mx-auto max-w-[18rem] text-balance text-[1.25rem] font-black uppercase leading-tight tracking-[0.08em] text-[var(--guto-navy)]">
+    <div className="flex h-full min-h-0 flex-col">
+
+      {/* ── Header ── */}
+      <div className="shrink-0 pb-2.5 pt-0.5 text-center">
+        <h1 className="text-[1.1rem] font-black uppercase leading-tight tracking-[0.08em] text-[var(--guto-navy)]">
           {copy.title}
         </h1>
+        <p className="font-mono text-[8px] uppercase tracking-[0.12em] text-[rgba(13,35,65,0.40)] mt-0.5">
+          {weekRange}
+        </p>
       </div>
 
-      {/* Macros card */}
+      {/* ── Summary card ── */}
       <motion.div
-        className="shrink-0 rounded-[1.1rem] border border-white/70 bg-white/36 mb-3 overflow-hidden"
-        initial={{ opacity: 0, y: -4 }}
+        className="shrink-0 mb-3 rounded-[1.1rem] border border-white/60 bg-white/30"
+        initial={{ opacity: 0, y: -6 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
+        transition={{ duration: 0.28 }}
       >
-        {/* Title bar */}
-        <div className="flex items-center justify-between px-3 py-2 border-b border-[rgba(82,231,255,0.15)]">
-          <span className="font-mono text-[8px] font-black uppercase tracking-[0.2em] text-[var(--guto-navy)]/50">
-            {copy.dailyGoalTitle}
-          </span>
-          <span className="font-mono text-[8px] uppercase tracking-[0.08em] text-[var(--guto-cyan)] bg-[rgba(82,231,255,0.12)] px-2 py-0.5 rounded-full">
-            {copy.objectiveLabel}: {goalName}
-          </span>
-        </div>
-
-        {/* Kcal + macros */}
-        <div className="flex items-center px-3 py-2.5 gap-3">
-          {/* Big kcal */}
-          <div className="flex items-end gap-1">
-            <Flame className="h-4 w-4 text-[var(--guto-cyan)] mb-0.5 shrink-0" />
+        {/* Kcal row */}
+        <div className="flex items-center justify-between px-4 pt-3 pb-2">
+          <div className="flex items-end gap-1.5">
+            <Flame className="h-4 w-4 text-[var(--guto-cyan)] mb-px shrink-0" />
             <span className="text-[24px] font-black leading-none text-[var(--guto-navy)]">
               {macros.targetKcal}
             </span>
-            <span className="font-mono text-[9px] text-[var(--guto-navy)]/50 mb-0.5">
-              {copy.kcalLabel}
-            </span>
+            <div className="flex flex-col mb-0.5">
+              <span className="font-mono text-[8px] leading-none text-[var(--guto-navy)]/40">kcal</span>
+              <span className="font-mono text-[7px] leading-none text-[var(--guto-navy)]/30">{copy.perDay}</span>
+            </div>
           </div>
+          <span className="font-mono text-[8px] font-black uppercase tracking-[0.1em] text-[var(--guto-navy)] bg-[rgba(82,231,255,0.15)] px-2.5 py-1 rounded-full">
+            {goalName}
+          </span>
+        </div>
 
-          <div className="h-8 w-px bg-[rgba(13,35,65,0.08)]" />
+        {/* Divider */}
+        <div className="mx-4 h-px bg-[rgba(82,231,255,0.15)]" />
 
-          {/* Macros */}
-          <div className="flex-1 grid grid-cols-3 gap-1">
-            <MacroChip
-              icon={<Zap className="h-3 w-3" />}
-              label={copy.proteinLabel}
-              value={`${macros.proteinG}g`}
-              color="cyan"
-            />
-            <MacroChip
-              icon={<Wheat className="h-3 w-3" />}
-              label={copy.carbsLabel}
-              value={`${macros.carbsG}g`}
-              color="amber"
-            />
-            <MacroChip
-              icon={<Droplets className="h-3 w-3" />}
-              label={copy.fatLabel}
-              value={`${macros.fatG}g`}
-              color="sky"
-            />
-          </div>
+        {/* Macros row */}
+        <div className="flex items-center px-4 py-2.5">
+          <MacroPill icon={<Zap className="h-3 w-3" />} label={copy.proteinLabel} value={`${macros.proteinG}g`} color="cyan" />
+          <div className="w-px h-6 bg-[rgba(13,35,65,0.07)]" />
+          <MacroPill icon={<Wheat className="h-3 w-3" />} label={copy.carbsLabel} value={`${macros.carbsG}g`} color="amber" />
+          <div className="w-px h-6 bg-[rgba(13,35,65,0.07)]" />
+          <MacroPill icon={<Droplets className="h-3 w-3" />} label={copy.fatLabel} value={`${macros.fatG}g`} color="sky" />
         </div>
       </motion.div>
 
-      {/* Meal list */}
-      <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto flex flex-col gap-2 pb-3 pt-0.5">
+      {/* ── Scrollable meals ── */}
+      <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto flex flex-col gap-2 pb-2">
         {meals.map((meal, i) => (
           <MealCard
             key={meal.id}
             meal={meal}
-            copy={copy}
-            onDoubt={onMealDoubt}
+            onFoodDoubt={onFoodDoubt}
             index={i}
           />
         ))}
 
-        {/* Regenerate button */}
+        {/* Regenerate — subtle, at bottom */}
         <motion.button
           type="button"
           whileTap={{ scale: 0.97 }}
-          disabled={generating}
-          onClick={handleGenerate}
-          className="mt-1 flex items-center justify-center gap-2 w-full h-10 rounded-[1rem] border border-[rgba(82,231,255,0.4)] bg-transparent font-mono text-[9px] font-black uppercase tracking-[0.14em] text-[var(--guto-cyan)] disabled:opacity-40"
-          aria-label={copy.regenerateButton}
+          onClick={handleRetry}
+          disabled={retrying}
+          className="mt-1 flex items-center justify-center gap-2 w-full h-9 rounded-[0.85rem] border border-[rgba(82,231,255,0.25)] bg-transparent text-[var(--guto-cyan)]/60 font-mono text-[8px] font-black uppercase tracking-[0.14em] disabled:opacity-40"
         >
-          {generating ? (
-            <>
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-              >
-                <RefreshCw className="h-3.5 w-3.5" />
-              </motion.div>
-              {copy.generatingLabel}
-            </>
-          ) : (
-            <>
-              <RefreshCw className="h-3.5 w-3.5" />
-              {copy.regenerateButton}
-            </>
-          )}
+          <RefreshCw className="h-3 w-3" />
+          {copy.regenerateButton}
         </motion.button>
       </div>
     </div>
   )
 }
 
-// ─── MacroChip ─────────────────────────────────────────────────────────────────
+// ─── MacroPill ─────────────────────────────────────────────────────────────────
 
-function MacroChip({
+function MacroPill({
   icon,
   label,
   value,
@@ -519,17 +510,12 @@ function MacroChip({
   value: string
   color: "cyan" | "amber" | "sky"
 }) {
-  const colorMap = {
-    cyan: "text-[var(--guto-cyan)]",
-    amber: "text-amber-500",
-    sky: "text-sky-500",
-  }
-
+  const colorMap = { cyan: "text-[var(--guto-cyan)]", amber: "text-amber-500", sky: "text-sky-400" }
   return (
-    <div className="flex flex-col items-center gap-0.5">
-      <div className={`${colorMap[color]}`}>{icon}</div>
-      <span className="text-[13px] font-black leading-none text-[var(--guto-navy)]">{value}</span>
-      <span className="font-mono text-[7px] uppercase tracking-[0.1em] text-[rgba(13,35,65,0.42)]">{label}</span>
+    <div className="flex flex-col items-center gap-0.5 flex-1">
+      <div className={colorMap[color]}>{icon}</div>
+      <span className="text-[14px] font-black leading-none text-[var(--guto-navy)]">{value}</span>
+      <span className="font-mono text-[7px] uppercase tracking-[0.1em] text-[rgba(13,35,65,0.38)] mt-0.5">{label}</span>
     </div>
   )
 }

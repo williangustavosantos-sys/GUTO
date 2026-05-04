@@ -1,4 +1,4 @@
-import { apiRequest } from "./client"
+import { apiRequest, ApiError } from "./client"
 
 export type SupportedLanguage = "pt-BR" | "it-IT" | "es-ES" | "en-US"
 export type WorkoutLocationMode = "gym" | "home" | "park"
@@ -369,15 +369,20 @@ export async function getArenaMe(userId: string, arenaGroupId = "will-personal-a
 // ─── Diet API ─────────────────────────────────────────────────────────────────
 
 export async function getDietPlan(userId = "local-user") {
-  return apiRequest<DietPlan>(`/guto/diet?userId=${encodeURIComponent(userId)}`, {
-    method: "GET",
-  })
+  try {
+    return await apiRequest<DietPlan>(`/guto/diet?userId=${encodeURIComponent(userId)}`, {
+      method: "GET",
+    })
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 404) return null
+    throw err
+  }
 }
 
 export async function generateDietPlan(userId = "local-user", language: SupportedLanguage = "pt-BR") {
   return apiRequest<DietPlan>("/guto/diet/generate", {
     method: "POST",
-    timeoutMs: 40000,
+    timeoutMs: 45000,
     body: JSON.stringify({ userId, language }),
   })
 }

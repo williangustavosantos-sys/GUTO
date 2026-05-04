@@ -26,8 +26,8 @@ interface ChatTabProps {
   evolution?: EvolutionStage
   pendingExerciseQuestion?: PendingExerciseQuestion | null
   onExerciseQuestionHandled?: () => void
-  pendingMealQuestion?: DietMeal | null
-  onMealQuestionHandled?: () => void
+  pendingFoodQuestion?: { food: DietMeal["foods"][0]; meal: DietMeal } | null
+  onFoodQuestionHandled?: () => void
   onWorkoutPlanUpdated?: (plan: GutoWorkoutPlan | null) => void
   isDepleted?: boolean
   initialXpGranted?: boolean
@@ -250,8 +250,8 @@ export function ChatTab({
   evolution = "BABY",
   pendingExerciseQuestion,
   onExerciseQuestionHandled,
-  pendingMealQuestion,
-  onMealQuestionHandled,
+  pendingFoodQuestion,
+  onFoodQuestionHandled,
   onWorkoutPlanUpdated,
   isDepleted = false,
   initialXpGranted = false,
@@ -680,49 +680,55 @@ export function ChatTab({
   }, [isSending, onExerciseQuestionHandled, pendingExerciseQuestion, sendTextToGuto])
 
   // Handle meal doubt from diet tab
-  const handledMealQuestionRef = useRef<string | null>(null)
-  useEffect(() => {
-    if (!pendingMealQuestion || isSending) return
-    const mealKey = `${pendingMealQuestion.id}-${pendingMealQuestion.name}`
-    if (handledMealQuestionRef.current === mealKey) return
+  // Keeps the diet context active for follow-up replies so GUTO knows it's a nutrition thread
+  const activeDietContextRef = useRef<string | null>(null)
+  const handledFoodQuestionRef = useRef<string | null>(null)
 
-    handledMealQuestionRef.current = mealKey
-    const mealFoodsList = pendingMealQuestion.foods.map((f) => `${f.name} (${f.quantity})`).join(", ")
-    const displayText = `Dúvida sobre: ${pendingMealQuestion.name}`
-    
-    // Pegar o objetivo e dados da memória
+  useEffect(() => {
+    if (!pendingFoodQuestion || isSending) return
+    const { food, meal } = pendingFoodQuestion
+    const key = `${food.name}-${meal.id}`
+    if (handledFoodQuestionRef.current === key) return
+    handledFoodQuestionRef.current = key
+
     const goalMap: Record<string, string> = {
       fat_loss: "Emagrecimento",
       muscle_gain: "Hipertrofia",
       conditioning: "Condicionamento",
       mobility_health: "Saúde",
-      consistency: "Consistência"
+      consistency: "Consistência",
     }
     const goalLabel = memory?.trainingGoal ? goalMap[memory.trainingGoal] || memory.trainingGoal : "não informado"
-    const weightLabel = memory?.weightKg ? `${memory.weightKg} kg` : "não informado"
-    const heightLabel = memory?.heightCm ? `${memory.heightCm} cm` : "não informado"
-    const restrictionsLabel = memory?.foodRestrictions || "nenhuma"
+    const sexLabel = memory?.biologicalSex === "female" ? "mulher" : memory?.biologicalSex === "male" ? "homem" : "não informado"
+    const countryLabel = memory?.country ? `mora em ${memory.country}` : ""
+    const mealFoodsList = meal.foods.map((f) => `${f.name} (${f.quantity})`).join(", ")
+    const profileStr = [sexLabel, memory?.userAge ? `${memory.userAge} anos` : "", memory?.heightCm ? `${memory.heightCm}cm` : "", memory?.weightKg ? `${memory.weightKg}kg` : "", countryLabel].filter(Boolean).join(", ")
 
-    const modelInput = [
-      "O usuário apertou o botão de dúvida em uma refeição da dieta.",
-      `Refeição: ${pendingMealQuestion.name} (${pendingMealQuestion.time}).`,
-      `Alimentos: ${mealFoodsList}.`,
-      `Total: ${pendingMealQuestion.totalKcal} kcal.`,
-      `Objetivo: ${goalLabel}`,
-      `Peso: ${weightLabel}`,
-      `Altura: ${heightLabel}`,
-      `Restrição alimentar: ${restrictionsLabel}`,
-      "Responda como melhor amigo direto: aceite a dúvida do usuário sobre substituição ou adaptação desta refeição. Seja objetivo e prático. Máximo 3 frases.",
-    ].join(" ")
+    const dietCtx = `[CONTEXTO DIETA — responda sobre NUTRIÇÃO, não sobre treino] Alimento: "${food.name}" (${food.quantity}). Refeição: "${meal.name}" (${meal.time}). Refeição completa: ${mealFoodsList}. Objetivo: ${goalLabel}. Perfil: ${profileStr}. Restrições: ${memory?.foodRestrictions || "nenhuma"}.`
+
+    // Store context so follow-up messages carry it
+    activeDietContextRef.current = dietCtx
+
+    const displayText = `❓ ${food.name} (${food.quantity})`
+    const modelInput = `${dietCtx} O usuário vai fazer uma dúvida sobre este alimento. Aguarde e responda com substituição, porção ou esclarecimento. Direto, máximo 2 frases.`
 
     void sendTextToGuto(displayText, modelInput).finally(() => {
-      onMealQuestionHandled?.()
+      onFoodQuestionHandled?.()
     })
-  }, [isSending, onMealQuestionHandled, pendingMealQuestion, sendTextToGuto])
+  }, [isSending, onFoodQuestionHandled, pendingFoodQuestion, sendTextToGuto, memory])
 
   const handleSend = async () => {
     if (!input.trim() || isSending) return
-    await sendTextToGuto(input.trim())
+    const text = input.trim()
+    // If there's an active diet context, include it so GUTO doesn't deflect to training
+    const dietCtx = activeDietContextRef.current
+    if (dietCtx) {
+      // Clear after user sends their question (one follow-up cycle is enough)
+      activeDietContextRef.current = null
+      await sendTextToGuto(text, `${dietCtx} Pergunta do usuário: ${text}`)
+    } else {
+      await sendTextToGuto(text)
+    }
   }
 
   const latestGuto = messages[lastGutoIndex] ?? messages[0]

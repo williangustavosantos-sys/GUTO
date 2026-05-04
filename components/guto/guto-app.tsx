@@ -18,7 +18,7 @@ import { CalibrationScreen } from "./screens/calibration-screen"
 import type { MissionExercise } from "./view-models"
 import { WorkoutValidationFlow } from "./validation/workout-validation-flow"
 import { getApiErrorMessage } from "@/lib/api/client"
-import { getGutoMemory, saveGutoMemory, trackGutoEvent, validateGutoName, type DietMeal, type GutoMemory, type GutoNameValidation, type GutoTelemetryEvent, type GutoWorkoutPlan } from "@/lib/api/guto"
+import { getGutoMemory, saveGutoMemory, trackGutoEvent, validateGutoName, type DietFood, type DietMeal, type GutoMemory, type GutoNameValidation, type GutoTelemetryEvent, type GutoWorkoutPlan } from "@/lib/api/guto"
 import { clearGutoBrowserIdentity, forceGutoUserId, getOrCreateGutoVisitTelemetry } from "@/lib/guto/user-id"
 import type { EvolutionStage, SupportedLanguage } from "@/types/contract"
 import { translations } from "./translations"
@@ -302,7 +302,7 @@ export function GutoApp({
   const [settingsPathologyDraft, setSettingsPathologyDraft] = useState("")
   const [pendingExerciseQuestion, setPendingExerciseQuestion] =
     useState<PendingExerciseQuestion | null>(null)
-  const [pendingMealQuestion, setPendingMealQuestion] = useState<DietMeal | null>(null)
+  const [pendingFoodQuestion, setPendingFoodQuestion] = useState<{ food: DietFood; meal: DietMeal } | null>(null)
   const [workoutPlan, setWorkoutPlan] = useState<GutoWorkoutPlan | null>(null)
   const [memory, setMemory] = useState<GutoMemory | null>(null)
   const [gutoUserId, setGutoUserId] = useState("local-user")
@@ -370,14 +370,17 @@ export function GutoApp({
   )
 
   const persistMemory = useCallback(
-    (payload: Parameters<typeof saveGutoMemory>[0]) => {
-      void saveGutoMemory({
-        userId: gutoUserId,
-        language: selectedLanguage,
-        ...payload,
-      }).catch((error) => {
+    async (payload: Parameters<typeof saveGutoMemory>[0]) => {
+      setMemory((prev) => (prev ? { ...prev, ...payload } : (payload as import("@/lib/api/guto").GutoMemory)))
+      try {
+        await saveGutoMemory({
+          userId: gutoUserId,
+          language: selectedLanguage,
+          ...payload,
+        })
+      } catch (error) {
         console.warn(`Memória do GUTO não sincronizada: ${getApiErrorMessage(error)}`)
-      })
+      }
     },
     [gutoUserId, selectedLanguage]
   )
@@ -655,16 +658,24 @@ export function GutoApp({
   )
 
   const handleCalibrationComplete = useCallback(
-    (calibration: Parameters<typeof saveGutoMemory>[0]) => {
+    async (calibration: Parameters<typeof saveGutoMemory>[0]) => {
       setStage("pact")
-      persistMemory(calibration)
+      await persistMemory(calibration)
       trackBehaviorEvent("calibration_completed", { ...calibration })
+      
+      // Proactively trigger diet generation in background so it's ready when they open the tab
+      try {
+        const { generateDietPlan } = await import("@/lib/api/guto")
+        await generateDietPlan(gutoUserId, selectedLanguage)
+      } catch (err) {
+        console.warn("[GUTO] Proactive diet generation failed:", err)
+      }
     },
-    [persistMemory, trackBehaviorEvent]
+    [gutoUserId, persistMemory, selectedLanguage, trackBehaviorEvent]
   )
 
-  const handleMealDoubt = useCallback((meal: DietMeal) => {
-    setPendingMealQuestion(meal)
+  const handleFoodDoubt = useCallback((food: DietFood, meal: DietMeal) => {
+    setPendingFoodQuestion({ food, meal })
     setActiveTab("guto")
   }, [])
 
@@ -933,8 +944,8 @@ export function GutoApp({
             memory={memory}
             pendingExerciseQuestion={pendingExerciseQuestion}
             onExerciseQuestionHandled={() => setPendingExerciseQuestion(null)}
-            pendingMealQuestion={pendingMealQuestion}
-            onMealQuestionHandled={() => setPendingMealQuestion(null)}
+            pendingFoodQuestion={pendingFoodQuestion}
+            onFoodQuestionHandled={() => setPendingFoodQuestion(null)}
             onWorkoutPlanUpdated={setWorkoutPlan}
             isDepleted={isGutoDepleted}
             initialXpGranted={memory?.initialXpGranted}
@@ -998,7 +1009,8 @@ export function GutoApp({
           <DietTab
             userId={gutoUserId}
             language={selectedLanguage}
-            onMealDoubt={handleMealDoubt}
+            onFoodDoubt={handleFoodDoubt}
+            memory={memory}
           />
         )
       default:
@@ -1017,7 +1029,7 @@ export function GutoApp({
           />
         )
     }
-  }, [activeTab, evolution, gutoUserId, handleAdaptedMissionComplete, handleExerciseQuestion, handleMealDoubt, handleMissionComplete, isGutoDepleted, memory, pendingExerciseQuestion, pendingMealQuestion, selectedLanguage, userLabel, workoutPlan])
+  }, [activeTab, evolution, gutoUserId, handleAdaptedMissionComplete, handleExerciseQuestion, handleFoodDoubt, handleMissionComplete, isGutoDepleted, memory, pendingExerciseQuestion, pendingFoodQuestion, selectedLanguage, userLabel, workoutPlan])
 
   if (!isHydrated) {
     return (
