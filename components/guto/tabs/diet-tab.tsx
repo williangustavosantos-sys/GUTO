@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion } from "framer-motion"
 import { Flame, Zap, Wheat, Droplets, RefreshCw, ChevronDown, ChevronUp } from "lucide-react"
 
 import { getDietPlan, generateDietPlan, type DietPlan, type DietMeal, type DietFood } from "@/lib/api/guto"
@@ -181,62 +181,57 @@ function MealCard({
         </div>
       </button>
 
-      {/* Expanded body */}
-      <AnimatePresence initial={false}>
-        {expanded && (
-          <motion.div
-            key="body"
-            initial={{ height: 0 }}
-            animate={{ height: "auto" }}
-            exit={{ height: 0 }}
-            transition={{ duration: 0.2, ease: "easeInOut" }}
-            style={{ overflow: "hidden" }}
-          >
-            <div className="mx-3.5 h-px bg-[rgba(82,231,255,0.18)]" />
+      {/* Expanded body — CSS max-height transition, safe on iOS Safari */}
+      <div
+        style={{
+          maxHeight: expanded ? "600px" : "0px",
+          overflow: "hidden",
+          transition: "max-height 0.22s ease-in-out",
+        }}
+      >
+        <div className="mx-3.5 h-px bg-[rgba(82,231,255,0.18)]" />
 
-            <div className="px-3.5 pt-2.5 pb-3 flex flex-col gap-0">
-              {/* Food rows */}
-              {meal.foods.map((food, i) => (
-                <div
-                  key={i}
-                  className="flex items-center gap-2 py-2 border-b border-[rgba(13,35,65,0.06)] last:border-0"
-                >
-                  {/* Food name */}
-                  <span className="flex-1 text-[12px] leading-snug text-[var(--guto-navy)]/85">
-                    {food.name}
-                  </span>
+        <div className="px-3.5 pt-2.5 pb-3 flex flex-col gap-0">
+          {/* Food rows */}
+          {meal.foods.map((food, i) => (
+            <div
+              key={i}
+              className="flex items-center gap-2 py-2 border-b border-[rgba(13,35,65,0.06)] last:border-0"
+            >
+              {/* Food name */}
+              <span className="flex-1 text-[12px] leading-snug text-[var(--guto-navy)]/85">
+                {food.name}
+              </span>
 
-                  {/* Quantity badge */}
-                  <span className="font-mono text-[9px] font-black text-[var(--guto-navy)]/50 bg-[rgba(82,231,255,0.12)] px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap">
-                    {food.quantity}
-                  </span>
+              {/* Quantity badge */}
+              <span className="font-mono text-[9px] font-black text-[var(--guto-navy)]/50 bg-[rgba(82,231,255,0.12)] px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap">
+                {food.quantity}
+              </span>
 
-                  {/* ? button — per food item */}
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onFoodDoubt(food, meal)
-                    }}
-                    aria-label={`Dúvida sobre ${food.name}`}
-                    className="h-6 w-6 rounded-full border border-[rgba(82,231,255,0.45)] bg-[rgba(82,231,255,0.10)] text-[var(--guto-cyan)] font-black text-[11px] flex items-center justify-center shrink-0 active:scale-90 transition-transform"
-                  >
-                    ?
-                  </button>
-                </div>
-              ))}
-
-              {/* Guto note */}
-              {meal.gutoNote && (
-                <p className="text-[10px] leading-snug text-[rgba(13,35,65,0.50)] italic pt-2">
-                  <span className="not-italic font-black text-[var(--guto-cyan)] mr-1">GUTO</span>
-                  {meal.gutoNote}
-                </p>
-              )}
+              {/* ? button — per food item */}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onFoodDoubt(food, meal)
+                }}
+                aria-label={`Dúvida sobre ${food.name}`}
+                className="h-7 w-7 rounded-full border border-[rgba(82,231,255,0.45)] bg-[rgba(82,231,255,0.10)] text-[var(--guto-cyan)] font-black text-[12px] flex items-center justify-center shrink-0 active:scale-90 transition-transform touch-manipulation"
+              >
+                ?
+              </button>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          ))}
+
+          {/* Guto note */}
+          {meal.gutoNote && (
+            <p className="text-[10px] leading-snug text-[rgba(13,35,65,0.50)] italic pt-2">
+              <span className="not-italic font-black text-[var(--guto-cyan)] mr-1">GUTO</span>
+              {meal.gutoNote}
+            </p>
+          )}
+        </div>
+      </div>
     </motion.div>
   )
 }
