@@ -376,6 +376,7 @@ export function GutoApp({
   const persistMemory = useCallback(
     async (payload: Parameters<typeof saveGutoMemory>[0]) => {
       setMemory((prev) => (prev ? { ...prev, ...payload } : (payload as import("@/lib/api/guto").GutoMemory)))
+      if (!user?.userId) return
       try {
         await saveGutoMemory({
           userId: gutoUserId,
@@ -386,11 +387,12 @@ export function GutoApp({
         console.warn(`Memória do GUTO não sincronizada: ${getApiErrorMessage(error)}`)
       }
     },
-    [gutoUserId, selectedLanguage]
+    [gutoUserId, selectedLanguage, user?.userId]
   )
 
   const trackBehaviorEvent = useCallback(
     (event: GutoTelemetryEvent, metadata?: Record<string, unknown>) => {
+      if (!user?.userId) return
       void trackGutoEvent({
         event,
         userId: gutoUserId,
@@ -400,7 +402,7 @@ export function GutoApp({
         console.warn(`Evento do GUTO não registrado: ${getApiErrorMessage(error)}`)
       })
     },
-    [gutoUserId, selectedLanguage]
+    [gutoUserId, selectedLanguage, user?.userId]
   )
 
   useEffect(() => {
@@ -864,6 +866,7 @@ export function GutoApp({
   ])
 
   useEffect(() => {
+    if (!user?.userId) return
     let cancelled = false
 
     void getGutoMemory(gutoUserId)
@@ -882,7 +885,7 @@ export function GutoApp({
     return () => {
       cancelled = true
     }
-  }, [gutoUserId])
+  }, [gutoUserId, user?.userId])
 
   const stopHold = useCallback(() => {
     if (stage !== "pact" || pactProgress >= 100 || pactCompleteRef.current) return
