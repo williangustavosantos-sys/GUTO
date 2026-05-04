@@ -23,11 +23,12 @@ export function getApiErrorMessage(error: unknown) {
 
 interface RequestOptions extends RequestInit {
   timeoutMs?: number
+  token?: string
 }
 
 export async function apiRequest<T>(
   path: string,
-  { timeoutMs = 15000, ...init }: RequestOptions = {}
+  { timeoutMs = 15000, token, ...init }: RequestOptions = {}
 ): Promise<T> {
   if (!API_URL) {
     throw new ApiError("NEXT_PUBLIC_API_URL ausente. Configure a URL pública do Cérebro do GUTO.")
@@ -36,15 +37,39 @@ export async function apiRequest<T>(
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), timeoutMs)
 
+  // Tenta pegar token do localStorage se não foi passado explicitamente
+  const activeToken = token || (typeof window !== "undefined" ? window.localStorage.getItem("guto-auth-token") : undefined)
+
   try {
     const res = await fetch(`${API_URL}${path}`, {
       ...init,
       headers: {
         "Content-Type": "application/json",
+        ...(activeToken ? { "Authorization": `Bearer ${activeToken}` } : {}),
         ...(init.headers || {}),
       },
       signal: controller.signal,
     })
+
+    if (res.status === 401) {
+      if (typeof window !== "undefined") {
+        window.localStorage.removeItem("guto-auth-token")
+        if (!window.location.pathname.includes("/login") && !window.location.pathname.includes("/convite")) {
+          window.location.href = "/login"
+        }
+      }
+      throw new ApiError("Sessão expirada. Faça login novamente.", 401)
+    }
+
+    if (res.status === 403) {
+      const body = await res.json().catch(() => ({}))
+      if (body.code === "ACCESS_PAUSED") {
+        if (typeof window !== "undefined" && !window.location.pathname.includes("/acesso-pausado")) {
+          window.location.href = "/acesso-pausado"
+        }
+      }
+      throw new ApiError(body.message || "Acesso negado.", 403, body)
+    }
 
     if (!res.ok) {
       let message = `Erro de API (${res.status})`

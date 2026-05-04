@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { AnimatePresence, motion } from "framer-motion"
 import { Activity, ArrowLeft, Check, Dumbbell, Fingerprint, Languages, MapPin, Send, Settings, UserRound, Volume2, Zap } from "lucide-react"
 
@@ -19,7 +20,7 @@ import type { MissionExercise } from "./view-models"
 import { WorkoutValidationFlow } from "./validation/workout-validation-flow"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { getGutoMemory, saveGutoMemory, trackGutoEvent, validateGutoName, type DietFood, type DietMeal, type GutoMemory, type GutoNameValidation, type GutoTelemetryEvent, type GutoWorkoutPlan } from "@/lib/api/guto"
-import { clearGutoBrowserIdentity, forceGutoUserId, getOrCreateGutoVisitTelemetry } from "@/lib/guto/user-id"
+import { useAuth } from "@/components/auth-provider"
 import type { EvolutionStage, SupportedLanguage } from "@/types/contract"
 import { translations } from "./translations"
 
@@ -280,7 +281,9 @@ export function GutoApp({
   language: string
   skipIntro?: boolean
 }) {
-  const [isHydrated, setIsHydrated] = useState(true)
+  const { user } = useAuth()
+  const router = useRouter()
+  const [isHydrated, setIsHydrated] = useState(false)
   const [stage, setStage] = useState<AppStage>(skipIntro ? "language" : "intro")
   const [selectedLanguage, setSelectedLanguage] = useState<SupportedLanguage>("pt-BR")
   const [draftName, setDraftName] = useState("")
@@ -305,7 +308,7 @@ export function GutoApp({
   const [pendingFoodQuestion, setPendingFoodQuestion] = useState<{ food: DietFood; meal: DietMeal } | null>(null)
   const [workoutPlan, setWorkoutPlan] = useState<GutoWorkoutPlan | null>(null)
   const [memory, setMemory] = useState<GutoMemory | null>(null)
-  const [gutoUserId, setGutoUserId] = useState("local-user")
+  const [gutoUserId, setGutoUserId] = useState(user?.userId || "guest")
   const [nameGate, setNameGate] = useState<NameGate | null>(null)
   const [isValidatingName, setIsValidatingName] = useState(false)
   const [showValidationFlow, setShowValidationFlow] = useState(false)
@@ -340,9 +343,10 @@ export function GutoApp({
 
   const persistProfile = useCallback(
     (next: Partial<StoredProfile>) => {
-      if (typeof window === "undefined") return
+      if (typeof window === "undefined" || !user?.userId) return
 
-      const existingRaw = readStorageItem(STORAGE_KEY)
+      const storageKey = `${STORAGE_KEY}-${user.userId}`
+      const existingRaw = readStorageItem(storageKey)
       let existing: StoredProfile = {
         language: selectedLanguage,
         userName: committedName,
@@ -353,7 +357,7 @@ export function GutoApp({
         try {
           existing = JSON.parse(existingRaw) as StoredProfile
         } catch {
-          removeStorageItem(STORAGE_KEY)
+          removeStorageItem(storageKey)
         }
       }
 
@@ -364,9 +368,9 @@ export function GutoApp({
         ...next,
       }
 
-      writeStorageItem(STORAGE_KEY, JSON.stringify(payload))
+      writeStorageItem(storageKey, JSON.stringify(payload))
     },
-    [committedName, selectedLanguage]
+    [committedName, selectedLanguage, user?.userId]
   )
 
   const persistMemory = useCallback(
@@ -448,13 +452,25 @@ export function GutoApp({
   useEffect(() => {
     if (typeof window === "undefined") return
 
+    if (!user?.userId) {
+      const savedLang = localStorage.getItem("guto-selected-language")
+      if (savedLang && isSupportedLanguage(savedLang)) setSelectedLanguage(savedLang as SupportedLanguage)
+      setIsHydrated(true)
+      return
+    }
+
     try {
+      const currentUserId = user.userId
+      setGutoUserId(currentUserId)
+
       const search = new URLSearchParams(window.location.search)
       const forceResetParam = search.get("forceReset") === "1"
-      const inviteUserId = search.get("inviteUserId")
       const presetName = search.get("presetName")
 
-      const storedVersion = parseInt(readStorageItem(STORAGE_VERSION_KEY) ?? "0", 10)
+      const userStorageKey = `${STORAGE_KEY}-${currentUserId}`
+      const userVersionKey = `${STORAGE_VERSION_KEY}-${currentUserId}`
+
+      const storedVersion = parseInt(readStorageItem(userVersionKey) ?? "0", 10)
       const versionOutdated = storedVersion < STORAGE_VERSION
 
       const shouldReset =
@@ -462,40 +478,15 @@ export function GutoApp({
       const shouldSkipIntro = skipIntro || search.get("skip-intro") === "1"
 
       if (shouldReset) {
-        removeStorageItem(STORAGE_KEY)
+        removeStorageItem(userStorageKey)
         removeStorageItem(DEBUG_RESET_KEY)
-        clearGutoBrowserIdentity()
-        writeStorageItem(STORAGE_VERSION_KEY, String(STORAGE_VERSION))
+        writeStorageItem(userVersionKey, String(STORAGE_VERSION))
       } else {
-        writeStorageItem(STORAGE_VERSION_KEY, String(STORAGE_VERSION))
-      }
-
-      if (inviteUserId) {
-        forceGutoUserId(inviteUserId)
+        writeStorageItem(userVersionKey, String(STORAGE_VERSION))
       }
 
       const safeLanguage = isSupportedLanguage(language) ? language : "pt-BR"
-      const visit = getOrCreateGutoVisitTelemetry()
-      setGutoUserId(visit.userId)
-      if (visit.isNewUser) {
-        void trackGutoEvent({
-          event: "user_created",
-          userId: visit.userId,
-          language: safeLanguage,
-        }).catch((error) => {
-          console.warn(`Evento do GUTO não registrado: ${getApiErrorMessage(error)}`)
-        })
-      }
-      if (visit.returnedNextDay) {
-        void trackGutoEvent({
-          event: "user_returned_next_day",
-          userId: visit.userId,
-          language: safeLanguage,
-        }).catch((error) => {
-          console.warn(`Evento do GUTO não registrado: ${getApiErrorMessage(error)}`)
-        })
-      }
-      const storedRaw = readStorageItem(STORAGE_KEY)
+      const storedRaw = readStorageItem(userStorageKey)
 
       if (storedRaw) {
         const stored = JSON.parse(storedRaw) as StoredProfile
@@ -527,7 +518,7 @@ export function GutoApp({
       clearScheduled()
       clearPactInterval()
     }
-  }, [clearPactInterval, clearScheduled, language, skipIntro, userName])
+  }, [clearPactInterval, clearScheduled, language, skipIntro, user?.userId, userName])
 
   const startSystem = useCallback(
     (finalName: string, finalLanguage: SupportedLanguage) => {
@@ -622,6 +613,15 @@ export function GutoApp({
 
       effectRegistry.emit("language_select", { meta: { language: lang } })
       setSelectedLanguage(lang)
+
+      if (!user) {
+        if (typeof window !== "undefined") {
+          localStorage.setItem("guto-selected-language", lang)
+        }
+        router.push(`/login?lang=${lang}`)
+        return
+      }
+
       setActiveLanguageGlow(lang)
       setNameGate(null)
       setRotatingLanguage(true)
@@ -633,7 +633,7 @@ export function GutoApp({
         setActiveLanguageGlow(null)
       }, 560)
     },
-    [effectRegistry, persistMemory, persistProfile, rotatingLanguage, schedule]
+    [effectRegistry, persistMemory, persistProfile, rotatingLanguage, router, schedule, user]
   )
 
   const commitOnboardingName = useCallback(

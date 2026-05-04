@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next"
 import { Analytics } from "@vercel/analytics/next"
+import { AuthProvider } from "@/components/auth-provider"
 import "./globals.css"
 
 export const metadata: Metadata = {
@@ -70,9 +71,11 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" className="bg-background">
       <body className="font-sans text-foreground">
-        <main className="mx-auto flex h-dvh w-full max-w-[430px] flex-col overflow-hidden bg-white">
-          {children}
-        </main>
+        <AuthProvider>
+          <main className="mx-auto flex h-dvh w-full max-w-[430px] flex-col overflow-hidden bg-white">
+            {children}
+          </main>
+        </AuthProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>

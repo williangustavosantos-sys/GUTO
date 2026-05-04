@@ -1,8 +1,9 @@
 "use client";
 
 import { Suspense, useState, useEffect, useCallback } from "react";
-import { useSearchParams } from "next/navigation";
-import { API_URL, ApiError } from "@/lib/api/client";
+import { useRouter } from "next/navigation";
+import { apiRequest, ApiError } from "@/lib/api/client";
+import { useAuth } from "@/components/auth-provider";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import {
   AlertDialog,
@@ -19,19 +20,16 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
+import { AdminUser } from "@/lib/api/admin";
 
 // ─── Types ────────────────────────────────────────────────────────────────
 
 type AvatarStage = "baby" | "teen" | "adult" | "elite";
 
-interface Student {
-  userId: string;
+interface Student extends AdminUser {
   name: string;
-  role: "student" | "coach" | "admin";
-  coachId: string;
-  active: boolean;
-  visibleInArena: boolean;
-  archived: boolean;
+  subscriptionStatus: string;
+  createdAt: string;
   weeklyXp: number;
   monthlyXp: number;
   totalXp: number;
@@ -40,7 +38,6 @@ interface Student {
   validationsTotal: number;
   lastValidationAt: string | null;
   lastActiveAt: string | null;
-  createdAt: string;
 }
 
 interface RankingItem {
@@ -61,8 +58,8 @@ interface RankingsData {
   individual: { items: RankingItem[] };
 }
 
+type DashboardTab = "alunos" | "rankings" | "logs";
 type FilterTab = "ativos" | "pausados" | "arquivados" | "todos";
-type DashboardTab = "alunos" | "rankings";
 type ResetScope = "weekly" | "monthly" | "individual" | "validationHistory" | "all";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
@@ -88,43 +85,17 @@ function avatarStageLabel(stage: AvatarStage): string {
   return map[stage] ?? stage;
 }
 
-// ─── API helper ───────────────────────────────────────────────────────────
-
-async function coachFetch<T>(path: string, coachId: string, init: RequestInit = {}): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, {
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      "x-coach-id": coachId,
-      ...(init.headers ?? {}),
-    },
-  });
-  if (!res.ok) {
-    let message = `Erro (${res.status})`;
-    try {
-      const body = (await res.json()) as { message?: string };
-      message = body?.message || message;
-    } catch {
-      // ignore parse error
-    }
-    throw new ApiError(message, res.status);
-  }
-  if (res.status === 204) return undefined as T;
-  return res.json() as Promise<T>;
-}
-
-// ─── Inner component (useSearchParams must be inside Suspense) ─────────
+// ─── Inner component (Suspense required for useSearchParams if used) ─────────
 
 function CoachInner() {
-  const searchParams = useSearchParams();
-  const coachId = searchParams.get("coachId") ?? "";
+  const { user, isLoading: authLoading } = useAuth();
+  const router = useRouter();
 
   const [activeDashboardTab, setActiveDashboardTab] = useState<DashboardTab>("alunos");
   const [students, setStudents] = useState<Student[]>([]);
   const [rankings, setRankings] = useState<RankingsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingRankings, setLoadingRankings] = useState(false);
-  const [accessDenied, setAccessDenied] = useState(false);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<FilterTab>("ativos");
   const [selected, setSelected] = useState<Student | null>(null);
@@ -136,51 +107,49 @@ function CoachInner() {
 
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [newStudentName, setNewStudentName] = useState("");
-  const [newStudentCoachId] = useState(coachId || "will-coach");
   const [createdStudent, setCreatedStudent] = useState<{ name: string; userId: string; inviteLink: string } | null>(null);
 
-  const fetchStudents = useCallback(async () => {
-    if (!coachId) {
-      setAccessDenied(true);
-      setLoading(false);
-      return;
+  useEffect(() => {
+    if (!authLoading && (!user || (user.role !== "coach" && user.role !== "admin" && user.role !== "super_admin"))) {
+      router.push("/admin/login");
     }
+  }, [user, authLoading, router]);
+
+  const fetchStudents = useCallback(async () => {
+    if (!user) return;
     try {
-      const data = await coachFetch<{ students: Student[] }>(
-        "/guto/coach/students?includeArchived=true",
-        coachId
+      const data = await apiRequest<{ students: Student[] }>(
+        "/guto/coach/students?includeArchived=true"
       );
       setStudents(data.students);
     } catch (err) {
-      if (err instanceof ApiError && err.status === 401) {
-        setAccessDenied(true);
-      }
+      console.error("Failed to fetch students", err);
     } finally {
       setLoading(false);
     }
-  }, [coachId]);
+  }, [user]);
 
   const fetchRankings = useCallback(async () => {
     setLoadingRankings(true);
     try {
-      const data = await coachFetch<RankingsData>("/guto/coach/rankings", coachId);
+      const data = await apiRequest<RankingsData>("/guto/coach/rankings");
       setRankings(data);
     } catch (err) {
       toast.error("Erro ao carregar rankings.");
     } finally {
       setLoadingRankings(false);
     }
-  }, [coachId]);
+  }, []);
 
   useEffect(() => {
-    void fetchStudents();
-  }, [fetchStudents]);
+    if (user) void fetchStudents();
+  }, [fetchStudents, user]);
 
   useEffect(() => {
-    if (activeDashboardTab === "rankings") {
+    if (activeDashboardTab === "rankings" && user) {
       void fetchRankings();
     }
-  }, [activeDashboardTab, fetchRankings]);
+  }, [activeDashboardTab, fetchRankings, user]);
 
   const refreshSelected = useCallback((updated: Student) => {
     setStudents((prev) => prev.map((s) => (s.userId === updated.userId ? updated : s)));
@@ -223,23 +192,16 @@ function CoachInner() {
     return matchSearch && matchFilter;
   });
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-[#0a0f1e] flex items-center justify-center">
-        <p className="text-[#00e5ff] text-sm tracking-widest uppercase animate-pulse">Carregando…</p>
+        <p className="text-[#00e5ff] text-sm tracking-widest uppercase animate-pulse">Sincronizando…</p>
       </div>
     );
   }
 
-  if (accessDenied) {
-    return (
-      <div className="min-h-screen bg-[#0a0f1e] flex flex-col items-center justify-center gap-3 px-6">
-        <p className="text-white text-xl font-bold tracking-tight">Acesso negado</p>
-        <p className="text-slate-400 text-sm text-center">
-          Você não tem permissão para acessar o painel Coach. Certifique-se de usar o link correto.
-        </p>
-      </div>
-    );
+  if (!user || (user.role !== "coach" && user.role !== "admin" && user.role !== "super_admin")) {
+    return null;
   }
 
   return (
@@ -251,9 +213,11 @@ function CoachInner() {
         <div className="flex flex-col">
           <div className="flex items-center gap-2">
             <span className="text-[#00e5ff] font-black tracking-[0.2em] text-sm">GUTO</span>
-            <Badge variant="outline" className="text-[10px] h-4 border-white/20 text-white/40 font-mono">COACH</Badge>
+            <Badge variant="outline" className="text-[10px] h-4 border-white/20 text-white/40 font-mono">
+              {user.role.toUpperCase()}
+            </Badge>
           </div>
-          <span className="text-white/40 text-[10px] font-mono mt-1">{coachId}</span>
+          <span className="text-white/40 text-[10px] font-mono mt-1">{user.userId}</span>
         </div>
 
         <Button
@@ -401,7 +365,7 @@ function CoachInner() {
                 const confirmed = window.confirm("!!! AÇÃO IRREVERSÍVEL !!!\n\nIsso apagará TODOS os registros de todos os alunos, rankings e memórias do sistema.\n\nTem certeza absoluta?");
                 if (confirmed) {
                   act(async () => {
-                    await coachFetch("/guto/coach/nuke-all", coachId, { method: "POST" });
+                    await apiRequest("/guto/coach/nuke-all", { method: "POST" });
                     window.location.reload();
                   }, "SISTEMA ZERADO TOTALMENTE.");
                 }
@@ -461,7 +425,7 @@ function CoachInner() {
               <div className="flex flex-col gap-2 opacity-40">
                 <label className="text-[10px] font-black uppercase tracking-widest">Vinculado ao Coach</label>
                 <Input
-                  value={newStudentCoachId}
+                  value={user?.userId || "..."}
                   className="bg-white/5 border-white/10 text-white/50 text-xs h-10 rounded-xl px-4"
                   disabled
                 />
@@ -514,9 +478,8 @@ function CoachInner() {
                   onClick={async () => {
                     setActing(true);
                     try {
-                      const res = await coachFetch<{ userId: string; name: string; inviteLink: string; student: Student }>(
+                      const res = await apiRequest<{ userId: string; name: string; inviteLink: string; student: Student }>(
                         "/guto/coach/student/create",
-                        coachId,
                         { method: "POST", body: JSON.stringify({ name: newStudentName }) }
                       );
                       setCreatedStudent({
@@ -571,6 +534,12 @@ function CoachInner() {
                       {getStatusInfo(selected).text}
                     </Badge>
                   } />
+                  <DataRow label="Assinatura" value={
+                    <Badge variant={selected.subscriptionStatus === "active" ? "default" : "secondary"} className="text-[9px] font-black uppercase">
+                      {selected.subscriptionStatus.replace("_", " ")}
+                    </Badge>
+                  } />
+                  <DataRow label="Expira em" value={selected.subscriptionEndsAt ? new Date(selected.subscriptionEndsAt).toLocaleDateString() : "—"} />
                   <DataRow label="Arena" value={selected.visibleInArena ? "Visível" : "Oculto"} />
                   <DataRow label="Criado em" value={new Date(selected.createdAt).toLocaleDateString()} />
                 </CoachSection>
@@ -601,9 +570,8 @@ function CoachInner() {
                         className="bg-[#00e5ff] text-[#0a0f1e] hover:bg-white font-bold"
                         onClick={() =>
                           act(async () => {
-                            const updated = await coachFetch<Student>(
+                            const updated = await apiRequest<Student>(
                               `/guto/coach/student/${selected.userId}`,
-                              coachId,
                               { method: "PATCH", body: JSON.stringify({ name: editName }) }
                             );
                             refreshSelected(updated);
@@ -626,15 +594,33 @@ function CoachInner() {
 
                   <Button
                     variant="outline" size="sm"
+                    className="w-full text-emerald-500 border-white/5 hover:border-emerald-500/50 bg-transparent py-5"
+                    disabled={acting}
+                    onClick={() =>
+                      act(async () => {
+                        const updated = await apiRequest<Student>(
+                          `/auth/admin/users/${selected.userId}/subscription`,
+                          { method: "PATCH", body: JSON.stringify({ extendDays: 30 }) }
+                        );
+                        // Refresh student view since subscription changed
+                        const fullStudent = await apiRequest<Student>(`/guto/coach/student/${selected.userId}`);
+                        refreshSelected(fullStudent);
+                      }, "Acesso renovado por 30 dias.")
+                    }
+                  >
+                    🔋 Renovar 30 Dias
+                  </Button>
+
+                  <Button
+                    variant="outline" size="sm"
                     className={`w-full py-5 bg-transparent border-white/5 ${
                       selected.active ? "text-amber-500 hover:border-amber-500/50" : "text-emerald-500 hover:border-emerald-500/50"
                     }`}
                     disabled={acting}
                     onClick={() =>
                       act(async () => {
-                        const updated = await coachFetch<Student>(
+                        const updated = await apiRequest<Student>(
                           `/guto/coach/student/${selected.userId}/access`,
-                          coachId,
                           { method: "PATCH", body: JSON.stringify({ active: !selected.active }) }
                         );
                         refreshSelected(updated);
@@ -650,9 +636,8 @@ function CoachInner() {
                     disabled={acting}
                     onClick={() =>
                       act(async () => {
-                        const updated = await coachFetch<Student>(
+                        const updated = await apiRequest<Student>(
                           `/guto/coach/student/${selected.userId}`,
-                          coachId,
                           { method: "PATCH", body: JSON.stringify({ visibleInArena: !selected.visibleInArena }) }
                         );
                         refreshSelected(updated);
@@ -680,14 +665,12 @@ function CoachInner() {
                       onClick={() =>
                         doConfirm(`Deseja ${label.toLowerCase()}?`, () =>
                           act(async () => {
-                            await coachFetch(
+                            await apiRequest(
                               `/guto/coach/student/${selected.userId}/reset`,
-                              coachId,
                               { method: "POST", body: JSON.stringify({ scope }) }
                             );
-                            const updated = await coachFetch<Student>(
-                              `/guto/coach/student/${selected.userId}`,
-                              coachId
+                            const updated = await apiRequest<Student>(
+                              `/guto/coach/student/${selected.userId}`
                             );
                             refreshSelected(updated);
                           }, "Reset realizado.")
@@ -762,9 +745,8 @@ function CoachInner() {
                 if (!selected) return;
                 setActing(true);
                 try {
-                  await coachFetch(
+                  await apiRequest(
                     `/guto/coach/student/${selected.userId}/hard-delete`,
-                    coachId,
                     { method: "POST" }
                   );
                   setStudents((prev) => prev.filter((s) => s.userId !== selected.userId));
