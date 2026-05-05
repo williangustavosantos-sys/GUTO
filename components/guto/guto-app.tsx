@@ -373,6 +373,9 @@ export function GutoApp({
 
   const timersRef = useRef<number[]>([])
   const pactIntervalRef = useRef<number | null>(null)
+  const introSafetyTimerRef = useRef<number | null>(null)
+  const introCompleteRef = useRef(false)
+  const introStartedRef = useRef(false)
   const pactCompleteRef = useRef(false)
   const portalVideoRef = useRef<HTMLVideoElement | null>(null)
   const shellRef = useRef<HTMLDivElement | null>(null)
@@ -395,6 +398,13 @@ export function GutoApp({
     if (pactIntervalRef.current) {
       window.clearInterval(pactIntervalRef.current)
       pactIntervalRef.current = null
+    }
+  }, [])
+
+  const clearIntroSafetyTimer = useCallback(() => {
+    if (introSafetyTimerRef.current) {
+      window.clearTimeout(introSafetyTimerRef.current)
+      introSafetyTimerRef.current = null
     }
   }, [])
 
@@ -599,8 +609,9 @@ export function GutoApp({
     return () => {
       clearScheduled()
       clearPactInterval()
+      clearIntroSafetyTimer()
     }
-  }, [authLoading, clearPactInterval, clearScheduled, language, skipIntro, user?.userId, userName])
+  }, [authLoading, clearIntroSafetyTimer, clearPactInterval, clearScheduled, language, skipIntro, user?.userId, userName])
 
   useEffect(() => {
     if (authLoading || !isHydrated) return
@@ -625,6 +636,15 @@ export function GutoApp({
 
     router.replace(`/login?lang=${lang}`)
   }, [authLoading, isHydrated, router, selectedLanguage, stage, user])
+
+  useEffect(() => {
+    if (stage === "intro") {
+      introCompleteRef.current = false
+      introStartedRef.current = false
+      clearIntroSafetyTimer()
+      setIntroNeedsActivation(true)
+    }
+  }, [clearIntroSafetyTimer, stage])
 
   const startSystem = useCallback(
     (finalName: string, finalLanguage: SupportedLanguage) => {
@@ -658,14 +678,17 @@ export function GutoApp({
   )
 
   const handleIntroComplete = useCallback(() => {
-    console.log("[GUTO_FLOW] handleIntroComplete chamado. Avançando stage para 'language'");
+    if (introCompleteRef.current) return
+    introCompleteRef.current = true
+    clearIntroSafetyTimer()
+    console.log("[GUTO_FLOW] intro complete -> language")
     effectRegistry.emit("portal_open")
     setStage("language")
-  }, [effectRegistry])
+  }, [clearIntroSafetyTimer, effectRegistry])
 
   const restartPortalVideo = useCallback(() => {
     const video = portalVideoRef.current
-    if (!video) return
+    if (!video || introStartedRef.current) return
 
     video.pause()
     video.controls = false
@@ -676,17 +699,19 @@ export function GutoApp({
   }, [])
 
   const activateIntroSound = useCallback(() => {
-    console.log("[GUTO_INTRO] Botão INICIAR GUTO clicado.")
+    console.log("[GUTO_INTRO] button clicked")
+    clearIntroSafetyTimer()
+    introStartedRef.current = true
+    introCompleteRef.current = false
     setIntroNeedsActivation(false)
 
     const video = portalVideoRef.current
     if (!video) {
-      console.log("[GUTO_INTRO] portalVideoRef: null — avançando direto.")
+      console.log("[GUTO_INTRO] play failed, trying muted")
       handleIntroComplete()
       return
     }
 
-    console.log("[GUTO_INTRO] portalVideoRef: encontrado — tentando play com som.")
     video.muted = false
     video.defaultMuted = false
     video.volume = 1
@@ -696,33 +721,44 @@ export function GutoApp({
     video.setAttribute("webkit-playsinline", "")
     try { video.currentTime = 0 } catch { /* iOS pode rejeitar antes do metadata */ }
 
-    // Avançar de qualquer forma após breve janela visual (max 2.4s)
-    // O vídeo é experiência visual, não portão.
-    const safetyTimer = window.setTimeout(() => {
-      console.log("[GUTO_INTRO] safety timeout disparado — chamando handleIntroComplete.")
-      handleIntroComplete()
-    }, 2400)
+    const armSafetyFallback = () => {
+      clearIntroSafetyTimer()
+      const durationMs =
+        Number.isFinite(video.duration) && video.duration > 0
+          ? Math.max(7000, Math.round(video.duration * 1000) + 1000)
+          : 9000
+      introSafetyTimerRef.current = window.setTimeout(() => {
+        console.log("[GUTO_INTRO] safety fallback")
+        handleIntroComplete()
+      }, durationMs)
+    }
+
+    const handleStarted = () => {
+      console.log("[GUTO_INTRO] play started")
+      armSafetyFallback()
+    }
 
     video
       .play()
-      .then(() => {
-        console.log("[GUTO_INTRO] play() com som OK.")
-        // Avanço já garantido pelo safetyTimer acima
-      })
+      .then(handleStarted)
       .catch(() => {
-        // Fallback: tenta muted
+        console.log("[GUTO_INTRO] play failed, trying muted")
         video.muted = true
         video.defaultMuted = true
-        video.play()
-          .then(() => {
-            console.log("[GUTO_INTRO] play() muted OK.")
-          })
+        video
+          .play()
+          .then(handleStarted)
           .catch(() => {
-            console.log("[GUTO_INTRO] play() falhou — limpando timer e avançando agora.")
-            window.clearTimeout(safetyTimer)
+            clearIntroSafetyTimer()
+            console.log("[GUTO_INTRO] safety fallback")
             handleIntroComplete()
           })
       })
+  }, [clearIntroSafetyTimer, handleIntroComplete])
+
+  const handleIntroVideoEnded = useCallback(() => {
+    console.log("[GUTO_INTRO] ended")
+    handleIntroComplete()
   }, [handleIntroComplete])
 
   const handleLanguageSelect = useCallback(
@@ -1241,10 +1277,7 @@ export function GutoApp({
               disablePictureInPicture
               controls={false}
               onLoadedMetadata={restartPortalVideo}
-              onEnded={() => {
-                console.log("[GUTO_INTRO] onEnded disparado pelo vídeo.")
-                handleIntroComplete()
-              }}
+              onEnded={handleIntroVideoEnded}
             >
               <source src="/assets/guto/abertura-guto.mp4#t=0.001" type="video/mp4" />
             </video>
@@ -1272,8 +1305,8 @@ export function GutoApp({
                         handleIntroComplete()
                         return
                       }
-                      console.log("[GUTO_INTRO] Botão ENTRAR clicado. Indo para /login.")
-                      router.push("/login")
+                      console.log("[GUTO_INTRO] Botão ENTRAR clicado. Indo para idioma.")
+                      handleIntroComplete()
                     }}
                     className="guto-intro-skip rounded-full px-4 py-2 text-[10px] font-black uppercase tracking-normal shadow-sm"
                   >
@@ -1348,9 +1381,14 @@ export function GutoApp({
           >
             <div className="flex w-full max-w-sm flex-col items-center">
               <div className="mb-8 flex flex-col items-center text-center">
-                <div className="guto-deboss mb-5 flex h-16 w-16 items-center justify-center rounded-full">
-                  <Image src="/icon-guto.svg" alt="GUTO" width={32} height={32} className="opacity-80" />
-                </div>
+                <Image
+                  src="/assets/guto/logo_guto.png"
+                  alt="GUTO"
+                  width={180}
+                  height={60}
+                  priority
+                  className="mb-5 h-auto w-[180px] max-w-[78%] object-contain drop-shadow-sm"
+                />
                 {inviteLoading && (
                   <Loader2 className="h-6 w-6 animate-spin text-[var(--guto-cyan)]" />
                 )}
