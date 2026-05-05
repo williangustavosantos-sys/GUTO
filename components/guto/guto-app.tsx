@@ -27,6 +27,7 @@ import { translations } from "./translations"
 
 type AppStage = "intro" | "language" | "invite_claim" | "naming" | "calibration" | "pact" | "system" | "settings"
 type SettingsMode = "menu" | "language" | "name" | "profile" | "goal" | "location" | "pathology" | "physicaldata" | "residence" | "food_restrictions"
+type IntroPlaybackState = "idle" | "starting" | "playing" | "finishing" | "finished"
 
 const PENDING_INVITE_TOKEN_KEY = "guto-pending-invite-token"
 const ENTRY_MODE_KEY = "guto-entry-mode"
@@ -56,6 +57,7 @@ const STORAGE_VERSION_KEY = "guto-storage-version"
 const DEBUG_RESET_KEY = "guto-debug-reset"
 const HOLD_INTERVAL_MS = 16
 const HOLD_INCREMENT = (HOLD_INTERVAL_MS / 1600) * 100
+const INTRO_PLAYBACK_DELAY_MS = 4500
 
 const languages = [
   { id: "pt-BR" as const, label: "Português", asset: "/assets/guto/idioma-portugues.svg" },
@@ -345,6 +347,7 @@ export function GutoApp({
   const [pactProgress, setPactProgress] = useState(0)
   const [whiteout, setWhiteout] = useState(false)
   const [introNeedsActivation, setIntroNeedsActivation] = useState(true)
+  const [introPlaybackState, setIntroPlaybackState] = useState<IntroPlaybackState>("idle")
   const [settingsMode, setSettingsMode] = useState<SettingsMode>("menu")
   const [settingsNameDraft, setSettingsNameDraft] = useState("")
   const [settingsSexDraft, setSettingsSexDraft] = useState<"male" | "female" | null>(null)
@@ -374,10 +377,9 @@ export function GutoApp({
   const timersRef = useRef<number[]>([])
   const pactIntervalRef = useRef<number | null>(null)
   const introSafetyTimerRef = useRef<number | null>(null)
-  const introCompleteRef = useRef(false)
+  const introFinishedRef = useRef(false)
   const introStartedRef = useRef(false)
   const introStartedAtRef = useRef(0)
-  const introMinimumMsRef = useRef(7000)
   const pactCompleteRef = useRef(false)
   const portalVideoRef = useRef<HTMLVideoElement | null>(null)
   const shellRef = useRef<HTMLDivElement | null>(null)
@@ -641,10 +643,11 @@ export function GutoApp({
 
   useEffect(() => {
     if (stage === "intro") {
-      introCompleteRef.current = false
+      introFinishedRef.current = false
       introStartedRef.current = false
       clearIntroSafetyTimer()
       setIntroNeedsActivation(true)
+      setIntroPlaybackState("idle")
     }
   }, [clearIntroSafetyTimer, stage])
 
@@ -680,22 +683,31 @@ export function GutoApp({
   )
 
   const handleIntroComplete = useCallback(() => {
-    if (introCompleteRef.current) return
-    introCompleteRef.current = true
+    if (introFinishedRef.current) return
+    introFinishedRef.current = true
     clearIntroSafetyTimer()
-    console.log("[GUTO_FLOW] intro complete -> language")
     effectRegistry.emit("portal_open")
+    setIntroPlaybackState("finished")
+    console.log("[GUTO_FLOW] intro finished, moving to language")
     setStage("language")
   }, [clearIntroSafetyTimer, effectRegistry])
 
-  const completeIntroAfterMinimum = useCallback(() => {
+  const finishIntroAfterPlaybackDelay = useCallback((reason: string, videoDuration?: number) => {
+    if (introFinishedRef.current) return
     clearIntroSafetyTimer()
-    const elapsed = Date.now() - introStartedAtRef.current
-    const remainingMs = Math.max(0, introMinimumMsRef.current - elapsed)
+    setIntroPlaybackState("finishing")
+
+    let delayMs = 4500
+    if (videoDuration && Number.isFinite(videoDuration) && videoDuration > 0) {
+      delayMs = videoDuration * 1000 + 300
+    }
+    delayMs = Math.max(3800, Math.min(delayMs, 5200))
+
+    console.log("[GUTO_INTRO] scheduled finish ms", delayMs, "reason:", reason)
+
     introSafetyTimerRef.current = window.setTimeout(() => {
-      console.log("[GUTO_INTRO] safety fallback")
       handleIntroComplete()
-    }, remainingMs)
+    }, delayMs)
   }, [clearIntroSafetyTimer, handleIntroComplete])
 
   const restartPortalVideo = useCallback(() => {
@@ -711,18 +723,34 @@ export function GutoApp({
   }, [])
 
   const activateIntroSound = useCallback(() => {
-    console.log("[GUTO_INTRO] button clicked")
+    console.log("[GUTO_INTRO] start clicked")
     clearIntroSafetyTimer()
     introStartedRef.current = true
     introStartedAtRef.current = Date.now()
-    introCompleteRef.current = false
+    introFinishedRef.current = false
+    setIntroPlaybackState("starting")
     setIntroNeedsActivation(false)
+
+    const pendingInvite = pendingInviteToken || readStorageItem(PENDING_INVITE_TOKEN_KEY)
+    if (pendingInvite || readStorageItem(ENTRY_MODE_KEY) === "invite") {
+      console.log("[GUTO_INTRO] invite pending, but intro will still play")
+    }
 
     const video = portalVideoRef.current
     if (!video) {
-      console.log("[GUTO_INTRO] play failed, trying muted")
-      handleIntroComplete()
+      console.log("[GUTO_INTRO] video element not found")
+      finishIntroAfterPlaybackDelay("no-video")
       return
+    }
+
+    console.log("[GUTO_INTRO] video element found")
+    console.log("[GUTO_INTRO] video src/currentSrc", video.src || video.currentSrc)
+
+    let duration = video.duration
+    if (Number.isFinite(duration) && duration > 0) {
+      console.log("[GUTO_INTRO] video duration", duration)
+    } else {
+      duration = 0
     }
 
     video.muted = false
@@ -732,54 +760,46 @@ export function GutoApp({
     video.playsInline = true
     video.setAttribute("playsinline", "")
     video.setAttribute("webkit-playsinline", "")
-    video.pause()
+    
     if (video.readyState === 0) {
       video.load()
     }
     try { video.currentTime = 0 } catch { /* iOS pode rejeitar antes do metadata */ }
 
-    const armSafetyFallback = () => {
-      clearIntroSafetyTimer()
-      introMinimumMsRef.current =
-        Number.isFinite(video.duration) && video.duration > 0
-          ? Math.max(7000, Math.round(video.duration * 1000) + 1000)
-          : 9000
-      introSafetyTimerRef.current = window.setTimeout(() => {
-        console.log("[GUTO_INTRO] safety fallback")
-        handleIntroComplete()
-      }, introMinimumMsRef.current)
-    }
-
     const handleStarted = () => {
-      console.log("[GUTO_INTRO] play started")
-      armSafetyFallback()
+      console.log("[GUTO_INTRO] play success")
+      setIntroPlaybackState("playing")
+      finishIntroAfterPlaybackDelay("play-success", video.duration)
     }
 
-    video
-      .play()
-      .then(handleStarted)
-      .catch(() => {
-        console.log("[GUTO_INTRO] play failed, trying muted")
+    const playPromise = video.play()
+    if (playPromise !== undefined) {
+      playPromise.then(handleStarted).catch(() => {
+        console.log("[GUTO_INTRO] play failed, retry muted")
         video.muted = true
         video.defaultMuted = true
-        video
-          .play()
-          .then(handleStarted)
-          .catch(() => {
-            clearIntroSafetyTimer()
-            introMinimumMsRef.current = 9000
-            completeIntroAfterMinimum()
+        video.setAttribute("muted", "")
+        try { video.currentTime = 0 } catch {}
+        
+        const mutedPromise = video.play()
+        if (mutedPromise !== undefined) {
+          mutedPromise.then(handleStarted).catch(() => {
+            console.log("[GUTO_INTRO] muted play failed")
+            finishIntroAfterPlaybackDelay("muted-play-failed", video.duration)
           })
+        } else {
+          finishIntroAfterPlaybackDelay("muted-play-fallback", video.duration)
+        }
       })
-  }, [clearIntroSafetyTimer, completeIntroAfterMinimum, handleIntroComplete])
+    } else {
+      finishIntroAfterPlaybackDelay("play-fallback", video.duration)
+    }
+  }, [clearIntroSafetyTimer, finishIntroAfterPlaybackDelay, pendingInviteToken])
 
   const handleIntroVideoEnded = useCallback(() => {
-    const video = portalVideoRef.current
     if (!introStartedRef.current) return
-    if (video && Number.isFinite(video.duration) && video.duration > 1 && video.currentTime < video.duration - 0.25) return
     console.log("[GUTO_INTRO] ended")
-    completeIntroAfterMinimum()
-  }, [completeIntroAfterMinimum])
+  }, [])
 
   const handleLanguageSelect = useCallback(
     (lang: SupportedLanguage) => {
@@ -794,6 +814,7 @@ export function GutoApp({
           const pendingToken = localStorage.getItem(PENDING_INVITE_TOKEN_KEY)
           const entryMode = localStorage.getItem(ENTRY_MODE_KEY)
           if (pendingToken) {
+            console.log("[GUTO_FLOW] language selected, invite flow")
             setPendingInviteToken(pendingToken)
             setActiveLanguageGlow(lang)
             setRotatingLanguage(true)
@@ -808,6 +829,7 @@ export function GutoApp({
             localStorage.removeItem(ENTRY_MODE_KEY)
           }
         }
+        console.log("[GUTO_FLOW] language selected, normal login flow")
         router.push(`/login?lang=${lang}`)
         return
       }
@@ -1284,6 +1306,7 @@ export function GutoApp({
           <motion.section
             key="intro"
             className="absolute inset-0 z-40 overflow-hidden bg-white"
+            data-intro-playback-state={introPlaybackState}
             initial={{ opacity: 1 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -1317,16 +1340,8 @@ export function GutoApp({
                   <button
                     type="button"
                     onClick={() => {
-                      const pendingToken = localStorage.getItem(PENDING_INVITE_TOKEN_KEY)
-                      const entryMode = localStorage.getItem(ENTRY_MODE_KEY)
-                      if (pendingToken || entryMode === "invite") {
-                        console.log("[GUTO_INTRO] Botão ENTRAR clicado com convite pendente. Indo para idioma.")
-                        if (pendingToken) setPendingInviteToken(pendingToken)
-                        handleIntroComplete()
-                        return
-                      }
-                      console.log("[GUTO_INTRO] Botão ENTRAR clicado. Indo para idioma.")
-                      handleIntroComplete()
+                      console.log("[GUTO_INTRO] Botão ENTRAR clicado. Indo para login.")
+                      router.push(`/login?lang=${selectedLanguage}`)
                     }}
                     className="guto-intro-skip rounded-full px-4 py-2 text-[10px] font-black uppercase tracking-normal shadow-sm"
                   >
