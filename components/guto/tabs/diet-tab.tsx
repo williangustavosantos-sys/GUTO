@@ -5,6 +5,7 @@ import { motion } from "framer-motion"
 import { Flame, Zap, Wheat, Droplets, RefreshCw, ChevronDown, ChevronUp } from "lucide-react"
 
 import { getDietPlan, generateDietPlan, type DietPlan, type DietMeal, type DietFood } from "@/lib/api/guto"
+import { sanitizeDietPlan } from "@/lib/diet-plan"
 import { getLanguage } from "../translations"
 import type { ValidLanguage } from "../translations"
 
@@ -22,6 +23,7 @@ const dietCopy = {
     carbsLabel: "Carbo",
     fatLabel: "Gordura",
     objectiveLabel: "Objetivo",
+    foodQuestionLabel: "Dúvida sobre",
     emptyTitle: "Dieta ainda não gerada",
     emptyBody: "Complete seu perfil com altura, peso e país para o GUTO montar seu plano.",
     goalNames: {
@@ -43,6 +45,7 @@ const dietCopy = {
     carbsLabel: "Carbs",
     fatLabel: "Fat",
     objectiveLabel: "Goal",
+    foodQuestionLabel: "Question about",
     emptyTitle: "Diet not generated yet",
     emptyBody: "Complete your profile with height, weight and country so GUTO can build your plan.",
     goalNames: {
@@ -64,6 +67,7 @@ const dietCopy = {
     carbsLabel: "Carbos",
     fatLabel: "Grasa",
     objectiveLabel: "Objetivo",
+    foodQuestionLabel: "Duda sobre",
     emptyTitle: "Dieta aún no generada",
     emptyBody: "Completa tu perfil con altura, peso y país para que GUTO cree tu plan.",
     goalNames: {
@@ -85,6 +89,7 @@ const dietCopy = {
     carbsLabel: "Carboidrati",
     fatLabel: "Grassi",
     objectiveLabel: "Obiettivo",
+    foodQuestionLabel: "Dubbio su",
     emptyTitle: "Dieta non ancora creata",
     emptyBody: "Completa il profilo con altezza, peso e paese per far creare la dieta a GUTO.",
     goalNames: {
@@ -117,13 +122,13 @@ interface DietTabProps {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function getWeekRange(generatedAt: string): string {
+function getWeekRange(generatedAt: string, language: ValidLanguage): string {
   const start = new Date(generatedAt)
   start.setHours(0, 0, 0, 0)
   const end = new Date(start)
   end.setDate(start.getDate() + 6)
   const fmt = (d: Date) =>
-    d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" })
+    d.toLocaleDateString(language, { day: "2-digit", month: "2-digit", year: "numeric" })
   return `${fmt(start)} – ${fmt(end)}`
 }
 
@@ -133,17 +138,19 @@ function MealCard({
   meal,
   onFoodDoubt,
   index,
+  foodQuestionLabel,
 }: {
   meal: DietMeal
   onFoodDoubt: (food: DietFood, meal: DietMeal) => void
   index: number
+  foodQuestionLabel: string
 }) {
   const [expanded, setExpanded] = useState(false)
   const emoji = MEAL_EMOJI[meal.id] ?? "🥗"
 
   return (
     <motion.div
-      className="rounded-[1.1rem] border border-white/60 bg-white/30 overflow-hidden"
+      className="rounded-[1.1rem] border border-white/60 bg-white/30"
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05, duration: 0.22 }}
@@ -164,7 +171,7 @@ function MealCard({
         </span>
 
         {/* Name */}
-        <h2 className="flex-1 text-left text-[12px] font-black uppercase leading-tight tracking-[0.05em] text-[var(--guto-navy)]">
+        <h2 className="min-w-0 flex-1 break-words text-left text-[12px] font-black uppercase leading-tight tracking-[0.05em] text-[var(--guto-navy)]">
           {meal.name}
         </h2>
 
@@ -182,29 +189,28 @@ function MealCard({
       </button>
 
       {/* Expanded body — CSS max-height transition, safe on iOS Safari */}
-      <div
-        style={{
-          maxHeight: expanded ? "600px" : "0px",
-          overflow: "hidden",
-          transition: "max-height 0.22s ease-in-out",
-        }}
-      >
-        <div className="mx-3.5 h-px bg-[rgba(82,231,255,0.18)]" />
+      {expanded && (
+        <motion.div
+          initial={{ opacity: 0, y: -4 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.18 }}
+        >
+          <div className="mx-3.5 h-px bg-[rgba(82,231,255,0.18)]" />
 
-        <div className="px-3.5 pt-2.5 pb-3 flex flex-col gap-0">
+          <div className="px-3.5 pt-2.5 pb-3 flex flex-col gap-0">
           {/* Food rows */}
           {meal.foods.map((food, i) => (
             <div
               key={i}
-              className="flex items-center gap-2 py-2 border-b border-[rgba(13,35,65,0.06)] last:border-0"
+              className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-2 gap-y-1 py-2 border-b border-[rgba(13,35,65,0.06)] last:border-0 max-[360px]:grid-cols-[minmax(0,1fr)_auto]"
             >
               {/* Food name */}
-              <span className="flex-1 text-[12px] leading-snug text-[var(--guto-navy)]/85">
+              <span className="min-w-0 break-words text-[12px] leading-snug text-[var(--guto-navy)]/85">
                 {food.name}
               </span>
 
               {/* Quantity badge */}
-              <span className="font-mono text-[9px] font-black text-[var(--guto-navy)]/50 bg-[rgba(82,231,255,0.12)] px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap">
+              <span className="justify-self-end font-mono text-[9px] font-black text-[var(--guto-navy)]/50 bg-[rgba(82,231,255,0.12)] px-2 py-0.5 rounded-full whitespace-nowrap max-[360px]:col-start-1 max-[360px]:row-start-2 max-[360px]:justify-self-start">
                 {food.quantity}
               </span>
 
@@ -215,8 +221,8 @@ function MealCard({
                   e.stopPropagation()
                   onFoodDoubt(food, meal)
                 }}
-                aria-label={`Dúvida sobre ${food.name}`}
-                className="h-7 w-7 rounded-full border border-[rgba(82,231,255,0.45)] bg-[rgba(82,231,255,0.10)] text-[var(--guto-cyan)] font-black text-[12px] flex items-center justify-center shrink-0 active:scale-90 transition-transform touch-manipulation"
+                aria-label={`${foodQuestionLabel} ${food.name}`}
+                className="h-7 w-7 rounded-full border border-[rgba(82,231,255,0.45)] bg-[rgba(82,231,255,0.10)] text-[var(--guto-cyan)] font-black text-[12px] flex items-center justify-center active:scale-90 transition-transform touch-manipulation max-[360px]:col-start-2 max-[360px]:row-span-2"
               >
                 ?
               </button>
@@ -230,8 +236,9 @@ function MealCard({
               {meal.gutoNote}
             </p>
           )}
-        </div>
-      </div>
+          </div>
+        </motion.div>
+      )}
     </motion.div>
   )
 }
@@ -295,7 +302,7 @@ export function DietTab({ userId, language, onFoodDoubt, memory }: DietTabProps)
           if (cancelled) return
         }
 
-        setPlan(fetched)
+        setPlan(sanitizeDietPlan(fetched, memory, validLang))
         setStatus("ready")
       } catch (err: any) {
         if (cancelled) return
@@ -314,7 +321,7 @@ export function DietTab({ userId, language, onFoodDoubt, memory }: DietTabProps)
       cancelled = true
       clearTimeout(hardTimeout)
     }
-  }, [userId, validLang])
+  }, [userId, validLang, memory])
 
   const handleRetry = async () => {
     if (retrying) return
@@ -322,7 +329,7 @@ export function DietTab({ userId, language, onFoodDoubt, memory }: DietTabProps)
     setErrorMsg(null)
     try {
       const newPlan = await generateDietPlan(userId, validLang)
-      setPlan(newPlan)
+      setPlan(sanitizeDietPlan(newPlan, memory, validLang))
       setStatus("ready")
     } catch (err: any) {
       setStatus("error")
@@ -413,7 +420,7 @@ export function DietTab({ userId, language, onFoodDoubt, memory }: DietTabProps)
   // ── Plan view ─────────────────────────────────────────────────────────────
   const { macros, meals, generatedAt } = plan
   const goalName = copy.goalNames[macros.goal] || macros.goal
-  const weekRange = getWeekRange(generatedAt)
+  const weekRange = getWeekRange(generatedAt, validLang)
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -466,13 +473,14 @@ export function DietTab({ userId, language, onFoodDoubt, memory }: DietTabProps)
       </motion.div>
 
       {/* ── Scrollable meals ── */}
-      <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto flex flex-col gap-2 pb-2">
+      <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto flex flex-col gap-2 pb-[calc(6rem+env(safe-area-inset-bottom))] overscroll-contain">
         {meals.map((meal, i) => (
           <MealCard
             key={meal.id}
             meal={meal}
             onFoodDoubt={onFoodDoubt}
             index={i}
+            foodQuestionLabel={copy.foodQuestionLabel}
           />
         ))}
 

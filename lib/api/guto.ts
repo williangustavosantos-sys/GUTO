@@ -170,6 +170,9 @@ export interface DietFood {
   name: string
   quantity: string
   kcal: number
+  proteinG?: number
+  carbsG?: number
+  fatG?: number
 }
 
 export interface DietMeal {
