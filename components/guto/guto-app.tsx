@@ -24,6 +24,7 @@ import { useAuth } from "@/components/auth-provider"
 import { getInvite, claimInvite } from "@/lib/api/auth"
 import type { EvolutionStage, SupportedLanguage } from "@/types/contract"
 import { translations } from "./translations"
+import { gutoAudio } from "@/lib/audio-haptics"
 
 type AppStage = "intro" | "language" | "invite_claim" | "naming" | "calibration" | "pact" | "system" | "settings"
 type SettingsMode = "menu" | "language" | "name" | "profile" | "goal" | "location" | "pathology" | "physicaldata" | "residence" | "food_restrictions"
@@ -31,6 +32,7 @@ type IntroPlaybackState = "idle" | "starting" | "playing" | "finishing" | "finis
 
 const PENDING_INVITE_TOKEN_KEY = "guto-pending-invite-token"
 const ENTRY_MODE_KEY = "guto-entry-mode"
+const SELECTED_LANGUAGE_KEY = "guto-selected-language"
 const PRIVATE_STAGES = new Set<AppStage>(["naming", "calibration", "pact", "system", "settings"])
 
 interface StoredProfile {
@@ -322,6 +324,15 @@ function clearPendingInviteStorage() {
   removeStorageItem(ENTRY_MODE_KEY)
 }
 
+function getPublicEntryStage(hasInviteToken: boolean, skipIntro: boolean): AppStage {
+  if (skipIntro) return hasInviteToken ? "invite_claim" : "language"
+  return "intro"
+}
+
+function getAuthenticatedEntryStage(stored?: StoredProfile | null): AppStage {
+  if (!stored) return "system"
+  return stored.onboardingComplete ? "system" : "naming"
+}
 
 export function GutoApp({
   userName,
@@ -476,6 +487,15 @@ export function GutoApp({
     [gutoUserId, selectedLanguage, user?.userId]
   )
 
+  const previousStageRef = useRef<AppStage | null>(null)
+
+  useEffect(() => {
+    if (previousStageRef.current && previousStageRef.current !== stage) {
+      gutoAudio.playGutoFeedback('transition')
+    }
+    previousStageRef.current = stage
+  }, [stage])
+
   useEffect(() => {
     const shell = shellRef.current
     if (!shell || typeof window === "undefined") return
@@ -534,9 +554,11 @@ export function GutoApp({
       if (savedInviteToken) {
         setPendingInviteToken(savedInviteToken)
         if (savedEntryMode !== "invite") localStorage.setItem(ENTRY_MODE_KEY, "invite")
-        setStage("intro")
+        setStage(getPublicEntryStage(true, skipIntro))
       } else if (savedEntryMode === "invite") {
         localStorage.removeItem(ENTRY_MODE_KEY)
+      } else {
+        setStage(getPublicEntryStage(false, skipIntro))
       }
       setIsHydrated(true)
       return
@@ -581,7 +603,12 @@ export function GutoApp({
         window.history.replaceState({}, document.title, url.toString());
       }
 
-      const safeLanguage = isSupportedLanguage(language) ? language : "pt-BR"
+      const savedLang = readStorageItem(SELECTED_LANGUAGE_KEY)
+      const safeLanguage = isSupportedLanguage(savedLang || "")
+        ? (savedLang as SupportedLanguage)
+        : isSupportedLanguage(language)
+          ? language
+          : "pt-BR"
       const storedRaw = readStorageItem(userStorageKey)
 
       if (storedRaw) {
@@ -593,25 +620,25 @@ export function GutoApp({
         setDraftName(persistedName)
         setCommittedName(persistedName)
         
-        // Unauthenticated users MUST go through the intro ritual
-        if (!user) {
-          setStage(shouldSkipIntro ? "language" : "intro")
-        } else {
-          setStage(stored.onboardingComplete ? "system" : shouldSkipIntro ? "language" : "intro")
-        }
+        setStage(getAuthenticatedEntryStage(stored))
       } else {
         setSelectedLanguage(safeLanguage)
         const initialName = formatGutoName(presetName || userName || "")
         setDraftName(initialName)
         setCommittedName(initialName)
-        setStage(shouldSkipIntro ? "language" : "intro")
+        setStage(getAuthenticatedEntryStage(null))
       }
     } catch {
-      const safeLanguage = isSupportedLanguage(language) ? language : "pt-BR"
+      const savedLang = readStorageItem(SELECTED_LANGUAGE_KEY)
+      const safeLanguage = isSupportedLanguage(savedLang || "")
+        ? (savedLang as SupportedLanguage)
+        : isSupportedLanguage(language)
+          ? language
+          : "pt-BR"
       setSelectedLanguage(safeLanguage)
       setDraftName(formatGutoName(userName || ""))
       setCommittedName(formatGutoName(userName || ""))
-      setStage(skipIntro ? "language" : "intro")
+      setStage("system")
     } finally {
       setIsHydrated(true)
     }
@@ -644,24 +671,13 @@ export function GutoApp({
       return
     }
 
-    // AUTHENTICATED users flow:
-    if (!PRIVATE_STAGES.has(stage)) return
-
-    const savedInviteToken = readStorageItem(PENDING_INVITE_TOKEN_KEY)
-    const savedLang = readStorageItem("guto-selected-language")
-    const lang = isSupportedLanguage(savedLang || "") ? savedLang : selectedLanguage
-
-    if (savedInviteToken) {
-      setPendingInviteToken(savedInviteToken)
-      writeStorageItem(ENTRY_MODE_KEY, "invite")
-      setStage("intro")
+    // AUTHENTICATED users flow: intro/language/invite are public ritual only.
+    if (!PRIVATE_STAGES.has(stage)) {
+      clearPendingInviteStorage()
+      setPendingInviteToken(null)
+      setStage("system")
       return
     }
-
-    // This part should technically only be reached if something is wrong, 
-    // as student users should be at "system" or "settings"
-    // but we keep it for safety.
-    if (!user) router.replace(`/login?lang=${lang}`)
   }, [authLoading, isHydrated, router, selectedLanguage, stage, user])
 
   useEffect(() => {
@@ -679,6 +695,8 @@ export function GutoApp({
     (finalName: string, finalLanguage: SupportedLanguage) => {
       if (pactCompleteRef.current) return
       pactCompleteRef.current = true
+      gutoAudio.stopGutoSound("hold_charge")
+      gutoAudio.playGutoFeedback("hold_complete")
 
       effectRegistry.emit("whiteout")
       persistProfile({
@@ -732,6 +750,7 @@ export function GutoApp({
 
   // ── Single entry point for the intro — always 4000ms, no variable timers ──
   const startIntroVideo = useCallback(() => {
+    gutoAudio.playGutoFeedback("tap")
     if (introStartedRef.current) return // prevent double-tap
     console.log("[GUTO_FLOW] start intro clicked")
     clearIntroSafetyTimer()
@@ -805,6 +824,7 @@ export function GutoApp({
 
   const handleLanguageSelect = useCallback(
     (lang: SupportedLanguage) => {
+      gutoAudio.playGutoFeedback("select")
       if (rotatingLanguage) return
 
       effectRegistry.emit("language_select", { meta: { language: lang } })
@@ -813,7 +833,7 @@ export function GutoApp({
 
       if (!user) {
         if (typeof window !== "undefined") {
-          localStorage.setItem("guto-selected-language", lang)
+          localStorage.setItem(SELECTED_LANGUAGE_KEY, lang)
           const pendingToken = localStorage.getItem(PENDING_INVITE_TOKEN_KEY)
           
           if (pendingToken) {
@@ -898,6 +918,7 @@ export function GutoApp({
 
   const handleSeal = useCallback(
     async (confirmedName = false) => {
+      gutoAudio.playGutoFeedback("tap")
       const normalizedName = normalizeGutoName(draftName)
       if (!normalizedName || isValidatingName) return
 
@@ -906,6 +927,7 @@ export function GutoApp({
       setIsValidatingName(false)
 
       if (validation.status === "invalid") {
+        gutoAudio.playGutoFeedback("error")
         setNameGate({
           status: "invalid",
           normalized: validation.normalized,
@@ -916,6 +938,7 @@ export function GutoApp({
       }
 
       if (validation.status === "confirm" && !confirmedName) {
+        gutoAudio.playGutoFeedback("error")
         setNameGate({
           status: "confirm",
           normalized: validation.normalized,
@@ -931,6 +954,7 @@ export function GutoApp({
   )
 
   const openSettings = useCallback(() => {
+    gutoAudio.playGutoFeedback("tap")
     setSettingsNameDraft(committedName || formatGutoName(userName || ""))
     setSettingsSexDraft(memory?.biologicalSex === "male" || memory?.biologicalSex === "female" ? memory.biologicalSex : null)
     setSettingsAgeDraft(memory?.userAge ? String(memory.userAge) : "")
@@ -943,6 +967,7 @@ export function GutoApp({
   }, [committedName, memory, userName])
 
   const handleSettingsBack = useCallback(() => {
+    gutoAudio.playGutoFeedback("tap")
     setActiveLanguageGlow(null)
 
     if (settingsMode !== "menu") {
@@ -955,6 +980,7 @@ export function GutoApp({
 
   const handleSettingsLanguageSelect = useCallback(
     (lang: SupportedLanguage) => {
+      gutoAudio.playGutoFeedback("select")
       effectRegistry.emit("language_select", { meta: { language: lang, source: "settings" } })
       setSelectedLanguage(lang)
       setActiveLanguageGlow(null)
@@ -1088,6 +1114,14 @@ export function GutoApp({
       .then((memory) => {
         if (cancelled) return
         setMemory(memory)
+        if (memory?.language && isSupportedLanguage(memory.language)) {
+          setSelectedLanguage(memory.language)
+        }
+        if (memory?.name && memory.name.toLocaleLowerCase("pt-BR") !== "operador") {
+          const memoryName = formatGutoName(memory.name)
+          setDraftName((prev) => prev || memoryName)
+          setCommittedName((prev) => prev || memoryName)
+        }
         setEvolution(resolveEvolutionStage(memory?.totalXp || 0))
         if (memory?.lastWorkoutPlan?.exercises?.length) {
           setWorkoutPlan(memory.lastWorkoutPlan)
@@ -1105,6 +1139,7 @@ export function GutoApp({
   const stopHold = useCallback(() => {
     if (stage !== "pact" || pactProgress >= 100 || pactCompleteRef.current) return
     clearPactInterval()
+    gutoAudio.stopGutoSound('hold_charge')
     setIsHoldingPact(false)
     setPactProgress(0)
   }, [clearPactInterval, pactProgress, stage])
@@ -1136,8 +1171,16 @@ export function GutoApp({
   const handleInviteClaim = useCallback(async () => {
     if (!pendingInviteToken || inviteSubmitting) return
     const ic = inviteClaimCopy[selectedLanguage]
-    if (invitePassword !== inviteConfirmPassword) { setInviteError(ic.mismatch); return }
-    if (invitePassword.length < 6) { setInviteError(ic.tooShort); return }
+    if (invitePassword !== inviteConfirmPassword) {
+      gutoAudio.playGutoFeedback("error")
+      setInviteError(ic.mismatch)
+      return
+    }
+    if (invitePassword.length < 6) {
+      gutoAudio.playGutoFeedback("error")
+      setInviteError(ic.tooShort)
+      return
+    }
     setInviteSubmitting(true)
     setInviteError(null)
     try {
@@ -1145,9 +1188,14 @@ export function GutoApp({
       setInviteSuccess(true)
       clearPendingInviteStorage()
       setPendingInviteToken(null)
-      schedule(() => { login({ ...res, role: res.role ?? "student" }); router.push("/") }, 2000)
+      schedule(() => {
+        login({ ...res, role: res.role ?? "student" })
+        setStage("system")
+        router.replace("/")
+      }, 2000)
     } catch (err: unknown) {
       void err
+      gutoAudio.playGutoFeedback("error")
       setInviteError(ic.activationFailed)
       setInviteSubmitting(false)
     }
@@ -1167,6 +1215,7 @@ export function GutoApp({
       language: selectedLanguage,
       xpEvent: "complete_daily_mission",
     })
+    gutoAudio.playGutoFeedback("success")
     setMemory(updated)
     setEvolution(resolveEvolutionStage(updated.totalXp || 0))
     trackBehaviorEvent("mission_completed", { missionType: "daily" })
@@ -1179,13 +1228,18 @@ export function GutoApp({
       language: selectedLanguage,
       xpEvent: "accept_adapted_mission",
     })
+    gutoAudio.playGutoFeedback("success")
     setMemory(updated)
     setEvolution(resolveEvolutionStage(updated.totalXp || 0))
     trackBehaviorEvent("mission_completed", { missionType: "adapted" })
     setActiveTab("caminho")
   }, [gutoUserId, selectedLanguage, trackBehaviorEvent])
 
-  const userLabel = committedName || formatGutoName(userName || "")
+  const memoryName =
+    memory?.name && memory.name.toLocaleLowerCase("pt-BR") !== "operador"
+      ? formatGutoName(memory.name)
+      : ""
+  const userLabel = committedName || memoryName || formatGutoName(userName || "")
   const locale = stageCopy[selectedLanguage]
   const isGutoDepleted = (memory?.totalXp ?? 100) === 0
   const canSaveSettingsName =
@@ -1715,7 +1769,11 @@ export function GutoApp({
 
               <motion.button
                 type="button"
-                onPointerDown={() => setIsHoldingPact(true)}
+                onPointerDown={() => {
+                  if (isHoldingPact || pactCompleteRef.current) return
+                  gutoAudio.playGutoFeedback("hold_charge")
+                  setIsHoldingPact(true)
+                }}
                 onPointerUp={stopHold}
                 onPointerLeave={stopHold}
                 onPointerCancel={stopHold}
@@ -1859,7 +1917,7 @@ export function GutoApp({
                 <motion.button
                   type="button"
                   whileTap={{ scale: 0.96 }}
-                  onClick={() => setSettingsMode("language")}
+                  onClick={() => { gutoAudio.playGutoFeedback("tap"); setSettingsMode("language"); }}
                   aria-label={locale.settingsLanguage}
                   className="guto-language-card guto-settings-choice-card group relative flex flex-col items-center justify-center gap-2 overflow-hidden rounded-[18px] p-4"
                 >
@@ -1870,7 +1928,7 @@ export function GutoApp({
                 <motion.button
                   type="button"
                   whileTap={{ scale: 0.96 }}
-                  onClick={() => setSettingsMode("name")}
+                  onClick={() => { gutoAudio.playGutoFeedback("tap"); setSettingsMode("name"); }}
                   aria-label={locale.settingsName}
                   className="guto-language-card guto-settings-choice-card group relative flex flex-col items-center justify-center gap-2 overflow-hidden rounded-[18px] p-4"
                 >
@@ -1881,7 +1939,7 @@ export function GutoApp({
                 <motion.button
                   type="button"
                   whileTap={{ scale: 0.96 }}
-                  onClick={() => setSettingsMode("profile")}
+                  onClick={() => { gutoAudio.playGutoFeedback("tap"); setSettingsMode("profile"); }}
                   aria-label={locale.settingsProfile}
                   className="guto-language-card guto-settings-choice-card group relative flex flex-col items-center justify-center gap-2 overflow-hidden rounded-[18px] p-4"
                 >
@@ -1892,7 +1950,7 @@ export function GutoApp({
                 <motion.button
                   type="button"
                   whileTap={{ scale: 0.96 }}
-                  onClick={() => setSettingsMode("goal")}
+                  onClick={() => { gutoAudio.playGutoFeedback("tap"); setSettingsMode("goal"); }}
                   aria-label={locale.settingsGoal}
                   className="guto-language-card guto-settings-choice-card group relative flex flex-col items-center justify-center gap-2 overflow-hidden rounded-[18px] p-4"
                 >
@@ -1903,7 +1961,7 @@ export function GutoApp({
                 <motion.button
                   type="button"
                   whileTap={{ scale: 0.96 }}
-                  onClick={() => setSettingsMode("location")}
+                  onClick={() => { gutoAudio.playGutoFeedback("tap"); setSettingsMode("location"); }}
                   aria-label={locale.settingsLocation}
                   className="guto-language-card guto-settings-choice-card group relative flex flex-col items-center justify-center gap-2 overflow-hidden rounded-[18px] p-4"
                 >
@@ -1914,7 +1972,7 @@ export function GutoApp({
                 <motion.button
                   type="button"
                   whileTap={{ scale: 0.96 }}
-                  onClick={() => setSettingsMode("pathology")}
+                  onClick={() => { gutoAudio.playGutoFeedback("tap"); setSettingsMode("pathology"); }}
                   aria-label={locale.settingsPathology}
                   className="guto-language-card guto-settings-choice-card group relative flex flex-col items-center justify-center gap-2 overflow-hidden rounded-[18px] p-4"
                 >

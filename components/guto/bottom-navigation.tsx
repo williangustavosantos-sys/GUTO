@@ -4,6 +4,7 @@ import { motion } from "framer-motion"
 import { Dumbbell, MapPin, MessageCircle, Swords, TrendingUp, UtensilsCrossed } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+import { gutoAudio } from "@/lib/audio-haptics"
 
 export type TabType = "guto" | "caminho" | "evolucoes" | "missao" | "arena" | "dieta"
 
@@ -50,7 +51,11 @@ export function BottomNavigation({ activeTab, onTabChange, language }: BottomNav
             <motion.button
               key={tab.id}
               type="button"
-              onClick={() => onTabChange(tab.id)}
+              onClick={() => {
+                if (isActive) return
+                gutoAudio.playGutoFeedback('select')
+                onTabChange(tab.id)
+              }}
               aria-current={isActive ? "page" : undefined}
               aria-label={tabLabels[safeLanguage][tab.labelKey]}
               className={cn(

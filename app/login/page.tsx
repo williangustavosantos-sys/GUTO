@@ -6,6 +6,7 @@ import Image from "next/image"
 import { useAuth } from "@/components/auth-provider"
 import { loginUser } from "@/lib/api/auth"
 import { getApiErrorMessage } from "@/lib/api/client"
+import { gutoAudio } from "@/lib/audio-haptics"
 import { Loader2 } from "lucide-react"
 
 type Lang = "pt-BR" | "it-IT" | "en-US" | "es-ES"
@@ -97,6 +98,7 @@ function LoginPageContent() {
       login(res)
       router.push("/")
     } catch (err) {
+      gutoAudio.playGutoFeedback("error")
       setError(getApiErrorMessage(err))
     } finally {
       setIsLoading(false)
@@ -160,6 +162,7 @@ function LoginPageContent() {
 
           <button
             type="submit"
+            onPointerDown={() => gutoAudio.playGutoFeedback("tap")}
             disabled={isLoading}
             className="mt-2 flex h-14 w-full items-center justify-center rounded-full bg-[var(--guto-cyan)] font-mono text-xs font-black uppercase tracking-[0.2em] text-[var(--guto-navy)] shadow-[0_4px_20px_rgba(82,231,255,0.3)] transition-all active:scale-95 disabled:opacity-50"
           >

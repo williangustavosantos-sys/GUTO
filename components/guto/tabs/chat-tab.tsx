@@ -13,6 +13,7 @@ import type { EvolutionStage, SupportedLanguage } from "@/types/contract"
 import { GutoOfficialAvatar } from "../guto-official-avatar"
 import { getLanguage, translations } from "../translations"
 import type { MissionExercise } from "../view-models"
+import { gutoAudio } from "@/lib/audio-haptics"
 
 interface PendingExerciseQuestion {
   id: string
@@ -90,42 +91,60 @@ interface StoredChatState {
   expectedResponseMessageId: string | null
 }
 
-const chatCopy: Record<SupportedLanguage, { channel: string; speaking: string; micUnavailable: string; unmute: string; mute: string }> = {
+const chatCopy: Record<
+  SupportedLanguage,
+  {
+    channel: string
+    speaking: string
+    micUnavailable: string
+    micNoSpeech: string
+    unmute: string
+    mute: string
+    opening: (name: string) => string
+  }
+> = {
   "pt-BR": {
     channel: "Canal do oráculo",
     speaking: "falando",
-    micUnavailable: "O microfone de fala não está disponível neste navegador. Escreve a resposta em uma frase curta.",
+    micUnavailable: "Este navegador não liberou reconhecimento de fala aqui. Digita em uma frase curta que eu sigo contigo.",
+    micNoSpeech: "Não entrou voz suficiente. Segura o microfone e fala uma frase direta.",
     unmute: "Ativar fala do GUTO",
     mute: "Silenciar fala do GUTO",
+    opening: (name) => `${name ? `${name}, ` : ""}chegou. Missão viva. Me diz em uma frase: vai treinar agora ou precisa ajustar a rota?`,
   },
   "en-US": {
     channel: "Oracle channel",
     speaking: "speaking",
-    micUnavailable: "Speech microphone is not available in this browser. Type the answer in one short sentence.",
+    micUnavailable: "This browser did not expose speech recognition here. Type one short sentence and I will keep this moving.",
+    micNoSpeech: "Not enough voice came through. Hold the mic and say one direct sentence.",
     unmute: "Enable GUTO voice",
     mute: "Mute GUTO voice",
+    opening: (name) => `${name ? `${name}, ` : ""}you are in. Mission stays alive. Tell me in one sentence: training now or adjusting the route?`,
   },
   "es-ES": {
     channel: "Canal del oráculo",
     speaking: "hablando",
-    micUnavailable: "El micrófono de voz no está disponible en este navegador. Escribe la respuesta en una frase corta.",
+    micUnavailable: "Este navegador no expuso reconocimiento de voz aquí. Escribe una frase corta y seguimos.",
+    micNoSpeech: "No entró suficiente voz. Mantén el micrófono y di una frase directa.",
     unmute: "Activar voz de GUTO",
     mute: "Silenciar voz de GUTO",
+    opening: (name) => `${name ? `${name}, ` : ""}llegaste. La misión sigue viva. Dime en una frase: entrenas ahora o ajustamos la ruta?`,
   },
   "it-IT": {
     channel: "Canale dell'oracolo",
     speaking: "parlando",
-    micUnavailable: "Il microfono vocale non è disponibile in questo browser. Scrivi la risposta in una frase breve.",
+    micUnavailable: "Questo browser non ha esposto il riconoscimento vocale qui. Scrivi una frase breve e andiamo avanti.",
+    micNoSpeech: "Non è arrivata abbastanza voce. Tieni premuto il microfono e di una frase diretta.",
     unmute: "Attiva la voce di GUTO",
     mute: "Silenzia la voce di GUTO",
+    opening: (name) => `${name ? `${name}, ` : ""}sei dentro. La missione resta viva. Dimmi in una frase: ti alleni ora o adattiamo la rotta?`,
   },
 }
-
-// Opening message is now handled entirely by the backend via /guto/proactive
 
 const PROACTIVE_CHECK_INTERVAL_MS = 60_000
 const FIRST_MESSAGE_SENT_KEY_PREFIX = "guto-first-message-sent"
 const CHAT_STATE_KEY_PREFIX = "guto-chat-state"
+const INITIAL_XP_REWARD_SEEN_KEY_PREFIX = "guto-initial-xp-reward-seen"
 const STALE_AUDIO_FAILURE_TEXT = "O áudio falhou. Sem perder o ritmo: escreve a mesma resposta em uma frase curta."
 
 function formatDisplayName(value: string) {
@@ -184,6 +203,26 @@ function shouldTrackFirstMessage(userId: string) {
 
 function getChatStateKey(userId: string) {
   return `${CHAT_STATE_KEY_PREFIX}:${userId}`
+}
+
+function getInitialXpRewardSeenKey(userId: string) {
+  return `${INITIAL_XP_REWARD_SEEN_KEY_PREFIX}:${userId}`
+}
+
+function readInitialXpRewardSeen(userId: string) {
+  if (typeof window === "undefined") return false
+  try {
+    return window.localStorage.getItem(getInitialXpRewardSeenKey(userId)) === "true"
+  } catch {
+    return false
+  }
+}
+
+function writeInitialXpRewardSeen(userId: string) {
+  if (typeof window === "undefined") return
+  try {
+    window.localStorage.setItem(getInitialXpRewardSeenKey(userId), "true")
+  } catch {}
 }
 
 function readStoredChatState(userId: string): StoredChatState | null {
@@ -259,14 +298,24 @@ export function ChatTab({
   const copy = chatCopy[validLang]
   const brandName = formatDisplayName(userName || "")
   const storedChatState = useMemo(() => readStoredChatState(userId), [userId])
+  const localOpeningMessage = useMemo<Message>(
+    () => ({
+      id: `g-local-opening-${userId}-${validLang}`,
+      text: copy.opening(brandName),
+      isGuto: true,
+      timestamp: new Date(),
+      avatarEmotion: "default",
+    }),
+    [brandName, copy, userId, validLang]
+  )
   const initialChatState = useMemo(
     () =>
       storedChatState || {
-        messages: [],
+        messages: [localOpeningMessage],
         expectedResponse: null,
         expectedResponseMessageId: null,
       },
-    [storedChatState]
+    [localOpeningMessage, storedChatState]
   )
 
   const [messages, setMessages] = useState<Message[]>(initialChatState.messages)
@@ -289,7 +338,7 @@ export function ChatTab({
   const lastProactiveKeyRef = useRef<string | null>(null)
   const arrivalBriefingRequestedRef = useRef(false)
   const shouldForceArrivalBriefingRef = useRef((() => {
-    if (!storedChatState || storedChatState.messages.length === 0) return true
+    if (!storedChatState || storedChatState.messages.length === 0) return false
     const lastMsg = storedChatState.messages[storedChatState.messages.length - 1]
     if (!lastMsg || !lastMsg.timestamp) return true
     const timeDiff = Date.now() - new Date(lastMsg.timestamp).getTime()
@@ -297,6 +346,27 @@ export function ChatTab({
   })())
   const pendingExpectedResponseRef = useRef<GutoExpectedResponse | null>(initialChatState.expectedResponse)
   const pendingExpectedResponseMessageIdRef = useRef<string | null>(initialChatState.expectedResponseMessageId)
+
+  const previousMessagesLengthRef = useRef(messages.length)
+
+  useEffect(() => {
+    if (messages.length > previousMessagesLengthRef.current) {
+      const newMessages = messages.slice(previousMessagesLengthRef.current)
+      if (newMessages.some((m) => m.isGuto)) {
+        gutoAudio.playGutoFeedback("message")
+      }
+    }
+    previousMessagesLengthRef.current = messages.length
+  }, [messages])
+
+  useEffect(() => {
+    if (isSending) {
+      gutoAudio.playGutoSound("guto_typing_loop")
+    } else {
+      gutoAudio.stopGutoSound("guto_typing_loop")
+    }
+    return () => gutoAudio.stopGutoSound("guto_typing_loop")
+  }, [isSending])
 
   useEffect(() => {
     messagesRef.current = messages
@@ -320,14 +390,16 @@ export function ChatTab({
 
   
   useEffect(() => {
-    if (initialXpGranted && !initialXpRewardSeen) {
+    if (initialXpGranted && !initialXpRewardSeen && !readInitialXpRewardSeen(userId)) {
+      writeInitialXpRewardSeen(userId)
+      onXpRewardSeen?.()
       const timer = setTimeout(() => {
+        gutoAudio.playGutoFeedback("success")
         setShowXpReward(true)
-        onXpRewardSeen?.()
       }, 1500)
       return () => clearTimeout(timer)
     }
-  }, [initialXpGranted, initialXpRewardSeen, onXpRewardSeen])
+  }, [initialXpGranted, initialXpRewardSeen, onXpRewardSeen, userId])
 
   useEffect(() => {
     scrollRef.current?.scrollTo({
@@ -350,8 +422,11 @@ export function ChatTab({
     [messages]
   )
 
-  const playBase64Mp3 = useCallback(async (audioBase64: string) => {
-    if (!audioBase64 || audioBase64.length < 100) return
+  const playBase64Mp3 = useCallback(async (audioBase64: string, meta?: Record<string, unknown>) => {
+    if (!audioBase64 || audioBase64.length < 100) {
+      console.warn("[GUTO_VOICE] empty_audio_payload", meta)
+      return
+    }
 
     try {
       if (currentAudioRef.current) {
@@ -367,30 +442,50 @@ export function ChatTab({
       audio.onerror = () => setIsSpeaking(false)
 
       await audio.play()
+      console.info("[GUTO_VOICE] playback_started", meta)
     } catch (error) {
       setIsSpeaking(false)
-      console.error("Erro ao reproduzir áudio:", error)
+      console.error("[GUTO_VOICE] playback_failed", { ...meta, error })
     }
   }, [])
 
   const synthesizeAndPlay = useCallback(async (text: string, lang: SupportedLanguage) => {
     try {
+      console.info("[GUTO_VOICE] request", { language: lang, textLength: text.length })
+      const token =
+        typeof window !== "undefined" ? window.localStorage.getItem("guto-auth-token") : null
       const response = await fetch(`${API_URL}/voz`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({ text, language: lang }),
       })
 
       const data = await response.json()
 
       if (!response.ok || !data?.audioContent) {
-        console.error("Falha ao gerar voz:", data)
+        console.error("[GUTO_VOICE] synthesis_failed", {
+          status: response.status,
+          language: lang,
+          data,
+        })
         return
       }
 
-      await playBase64Mp3(data.audioContent)
+      console.info("[GUTO_VOICE] synthesis_ok", {
+        language: lang,
+        voiceUsed: data.voiceUsed,
+        languageCode: data.languageCode,
+      })
+      await playBase64Mp3(data.audioContent, {
+        language: lang,
+        voiceUsed: data.voiceUsed,
+        languageCode: data.languageCode,
+      })
     } catch (error) {
-      console.error("Erro na rota /voz:", error)
+      console.error("[GUTO_VOICE] request_failed", { language: lang, error })
     }
   }, [playBase64Mp3])
 
@@ -474,6 +569,24 @@ export function ChatTab({
     if (isSending || isRecording) return
 
     const SpeechRecognition = getBrowserSpeechRecognition()
+    const userAgent = typeof navigator !== "undefined" ? navigator.userAgent : "unknown"
+    let microphonePermission = "unknown"
+    try {
+      const permission = await navigator.permissions?.query({ name: "microphone" as PermissionName })
+      microphonePermission = permission?.state || "unknown"
+    } catch {
+      microphonePermission = "unavailable"
+    }
+
+    console.info("[GUTO_MIC] start", {
+      userAgent,
+      microphonePermission,
+      speechRecognitionAvailable: Boolean(SpeechRecognition),
+      nativeSpeechRecognition: typeof window !== "undefined" ? Boolean(window.SpeechRecognition) : false,
+      webkitSpeechRecognition: typeof window !== "undefined" ? Boolean(window.webkitSpeechRecognition) : false,
+      language: getLanguage(language),
+    })
+
     if (SpeechRecognition) {
       try {
         const recognition = new SpeechRecognition()
@@ -494,7 +607,11 @@ export function ChatTab({
         }
 
         recognition.onerror = (event) => {
-          console.warn("Reconhecimento de voz indisponível:", event.error)
+          console.warn("[GUTO_MIC] recognition_error", {
+            error: event.error,
+            microphonePermission,
+            speechRecognitionAvailable: true,
+          })
         }
 
         recognition.onend = () => {
@@ -505,15 +622,17 @@ export function ChatTab({
           const transcript = speechTranscriptRef.current.trim()
           speechResultHandledRef.current = true
           if (transcript) {
+            console.info("[GUTO_MIC] transcript_ready", { length: transcript.length })
             void sendTextToGuto(transcript)
             return
           }
 
+          console.info("[GUTO_MIC] no_transcript", { microphonePermission })
           setMessages((prev) => [
             ...prev,
             {
               id: `g-speech-empty-${Date.now()}`,
-              text: copy.micUnavailable,
+              text: copy.micNoSpeech,
               isGuto: true,
               timestamp: new Date(),
               avatarEmotion: "default",
@@ -524,13 +643,23 @@ export function ChatTab({
         speechRecognitionRef.current = recognition
         recognition.start()
         setIsRecording(true)
+        console.info("[GUTO_MIC] recognition_started")
         return
       } catch (error) {
-        console.warn("Reconhecimento de voz do navegador falhou:", error)
+        console.warn("[GUTO_MIC] recognition_start_failed", {
+          error,
+          microphonePermission,
+          speechRecognitionAvailable: true,
+        })
         speechRecognitionRef.current = null
       }
     }
 
+    console.warn("[GUTO_MIC] speech_recognition_unavailable", {
+      userAgent,
+      microphonePermission,
+      speechRecognitionAvailable: false,
+    })
     setMessages((prev) => [
       ...prev,
       {
@@ -548,7 +677,7 @@ export function ChatTab({
       try {
         speechRecognitionRef.current.stop()
       } catch (error) {
-        console.warn("Falha ao parar reconhecimento de voz:", error)
+        console.warn("[GUTO_MIC] recognition_stop_failed", { error })
       }
       return
     }
@@ -744,7 +873,8 @@ export function ChatTab({
 
       <button
         type="button"
-        onClick={() =>
+        onClick={() => {
+          gutoAudio.playGutoFeedback("tap")
           setIsMuted((prev) => {
             const next = !prev
             try {
@@ -767,7 +897,7 @@ export function ChatTab({
             }
             return next
           })
-        }
+        }}
         className="guto-chat-sound-toggle absolute z-40"
         data-audio-active={!isMuted}
         aria-label={isMuted ? copy.unmute : copy.mute}
@@ -822,7 +952,10 @@ export function ChatTab({
           <div className="flex h-[42px] items-center gap-3">
             <motion.button
               type="button"
-              onPointerDown={startRecording}
+              onPointerDown={() => {
+                gutoAudio.playGutoFeedback("tap")
+                startRecording()
+              }}
               onPointerUp={stopRecording}
               onPointerLeave={() => isRecording && stopRecording()}
               disabled={isSending}
@@ -849,7 +982,10 @@ export function ChatTab({
 
             <motion.button
               type="button"
-              onClick={handleSend}
+              onClick={() => {
+                gutoAudio.playGutoFeedback("tap")
+                void handleSend()
+              }}
               disabled={isSending || !input.trim()}
               className="grid h-[34px] w-[34px] shrink-0 place-items-center rounded-full text-[var(--guto-cyan)] disabled:opacity-35"
               whileTap={{ scale: isSending ? 1 : 0.94 }}
