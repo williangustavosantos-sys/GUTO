@@ -18,7 +18,7 @@ const T = {
     passLabel: "Senha",
     passPH: "••••••••",
     cta: "ENTRAR",
-    hint: "Precisa de convite? Fale com seu coach.",
+    hint: "Acesso restrito. Você precisa de convite para ativar o GUTO.",
   },
   "it-IT": {
     subtitle: "Accesso Riservato",
@@ -27,7 +27,7 @@ const T = {
     passLabel: "Password",
     passPH: "••••••••",
     cta: "ACCEDI",
-    hint: "Hai bisogno di un invito? Parla con il tuo coach.",
+    hint: "Accesso riservato. Ti serve un invito per attivare GUTO.",
   },
   "en-US": {
     subtitle: "Restricted Access",
@@ -36,7 +36,7 @@ const T = {
     passLabel: "Password",
     passPH: "••••••••",
     cta: "ENTER",
-    hint: "Need an invite? Talk to your coach.",
+    hint: "Restricted access. You need an invite to activate GUTO.",
   },
   "es-ES": {
     subtitle: "Acceso Restringido",
@@ -45,7 +45,7 @@ const T = {
     passLabel: "Contraseña",
     passPH: "••••••••",
     cta: "ENTRAR",
-    hint: "¿Necesitas invitación? Habla con tu coach.",
+    hint: "Acceso restringido. Necesitas una invitación para activar GUTO.",
   },
 } as const
 
@@ -64,6 +64,16 @@ function LoginPageContent() {
   const router = useRouter()
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      const pendingInviteToken = localStorage.getItem("guto-pending-invite-token")
+      const entryMode = localStorage.getItem("guto-entry-mode")
+      if (pendingInviteToken) {
+        router.replace("/")
+        return
+      }
+      if (entryMode === "invite") localStorage.removeItem("guto-entry-mode")
+    }
+
     const fromQuery = searchParams.get("lang") ?? ""
     const fromStorage = typeof window !== "undefined"
       ? localStorage.getItem("guto-selected-language") ?? ""
@@ -74,7 +84,7 @@ function LoginPageContent() {
         ? fromStorage
         : "pt-BR"
     setLang(resolved)
-  }, [searchParams])
+  }, [router, searchParams])
 
   const t = T[lang]
 

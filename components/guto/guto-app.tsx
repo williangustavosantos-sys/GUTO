@@ -28,6 +28,10 @@ import { translations } from "./translations"
 type AppStage = "intro" | "language" | "invite_claim" | "naming" | "calibration" | "pact" | "system" | "settings"
 type SettingsMode = "menu" | "language" | "name" | "profile" | "goal" | "location" | "pathology" | "physicaldata" | "residence" | "food_restrictions"
 
+const PENDING_INVITE_TOKEN_KEY = "guto-pending-invite-token"
+const ENTRY_MODE_KEY = "guto-entry-mode"
+const PRIVATE_STAGES = new Set<AppStage>(["naming", "calibration", "pact", "system", "settings"])
+
 interface StoredProfile {
   language: SupportedLanguage
   userName: string
@@ -194,32 +198,41 @@ const stageCopy: Record<
 }
 
 const inviteClaimCopy: Record<SupportedLanguage, {
-  greetingPrefix: string; invited: string; createPass: string; confirmPass: string
+  title: string; greetingPrefix: string; invited: string; createPass: string; confirmPass: string
   mismatch: string; tooShort: string; cta: string; activated: string; starting: string; back: string
+  invalid: string; activationFailed: string
 }> = {
   "pt-BR": {
+    title: "Ativar acesso",
     greetingPrefix: "Ol\u00e1,", invited: "Voc\u00ea foi convidado para entrar no GUTO.",
     createPass: "Criar Senha", confirmPass: "Confirmar Senha",
     mismatch: "As senhas n\u00e3o coincidem.", tooShort: "A senha deve ter pelo menos 6 caracteres.",
     cta: "ATIVAR MEU GUTO", activated: "CONTA ATIVADA COM SUCESSO.", starting: "Iniciando sistema...", back: "Voltar para o In\u00edcio",
+    invalid: "Convite inv\u00e1lido, expirado ou j\u00e1 utilizado.", activationFailed: "Erro ao ativar convite. Tente novamente.",
   },
   "en-US": {
+    title: "Activate access",
     greetingPrefix: "Hi,", invited: "You've been invited to join GUTO.",
     createPass: "Create Password", confirmPass: "Confirm Password",
     mismatch: "Passwords don't match.", tooShort: "Password must be at least 6 characters.",
     cta: "ACTIVATE MY GUTO", activated: "ACCOUNT ACTIVATED SUCCESSFULLY.", starting: "Starting system...", back: "Back to Start",
+    invalid: "Invalid, expired, or already used invite.", activationFailed: "Could not activate invite. Try again.",
   },
   "es-ES": {
+    title: "Activar acceso",
     greetingPrefix: "Hola,", invited: "Has sido invitado a unirte a GUTO.",
     createPass: "Crear Contrase\u00f1a", confirmPass: "Confirmar Contrase\u00f1a",
     mismatch: "Las contrase\u00f1as no coinciden.", tooShort: "La contrase\u00f1a debe tener al menos 6 caracteres.",
     cta: "ACTIVAR MI GUTO", activated: "CUENTA ACTIVADA CON \u00c9XITO.", starting: "Iniciando sistema...", back: "Volver al Inicio",
+    invalid: "Invitaci\u00f3n inv\u00e1lida, expirada o ya utilizada.", activationFailed: "No se pudo activar la invitaci\u00f3n. Int\u00e9ntalo de nuevo.",
   },
   "it-IT": {
+    title: "Attiva accesso",
     greetingPrefix: "Ciao,", invited: "Sei stato invitato a entrare in GUTO.",
     createPass: "Crea Password", confirmPass: "Conferma Password",
     mismatch: "Le password non corrispondono.", tooShort: "La password deve avere almeno 6 caratteri.",
     cta: "ATTIVA IL MIO GUTO", activated: "ACCOUNT ATTIVATO CON SUCCESSO.", starting: "Avvio sistema...", back: "Torna all'Inizio",
+    invalid: "Invito non valido, scaduto o gi\u00e0 utilizzato.", activationFailed: "Impossibile attivare l'invito. Riprova.",
   },
 }
 
@@ -302,6 +315,11 @@ function removeStorageItem(key: string) {
   }
 }
 
+function clearPendingInviteStorage() {
+  removeStorageItem(PENDING_INVITE_TOKEN_KEY)
+  removeStorageItem(ENTRY_MODE_KEY)
+}
+
 
 export function GutoApp({
   userName,
@@ -312,7 +330,7 @@ export function GutoApp({
   language: string
   skipIntro?: boolean
 }) {
-  const { user, login } = useAuth()
+  const { user, login, isLoading: authLoading } = useAuth()
   const router = useRouter()
   const [isHydrated, setIsHydrated] = useState(false)
   const [stage, setStage] = useState<AppStage>(skipIntro ? "language" : "intro")
@@ -492,10 +510,20 @@ export function GutoApp({
 
   useEffect(() => {
     if (typeof window === "undefined") return
+    if (authLoading) return
 
     if (!user?.userId) {
       const savedLang = localStorage.getItem("guto-selected-language")
+      const savedInviteToken = localStorage.getItem(PENDING_INVITE_TOKEN_KEY)
+      const savedEntryMode = localStorage.getItem(ENTRY_MODE_KEY)
       if (savedLang && isSupportedLanguage(savedLang)) setSelectedLanguage(savedLang as SupportedLanguage)
+      if (savedInviteToken) {
+        setPendingInviteToken(savedInviteToken)
+        if (savedEntryMode !== "invite") localStorage.setItem(ENTRY_MODE_KEY, "invite")
+        setStage("intro")
+      } else if (savedEntryMode === "invite") {
+        localStorage.removeItem(ENTRY_MODE_KEY)
+      }
       setIsHydrated(true)
       return
     }
@@ -572,7 +600,31 @@ export function GutoApp({
       clearScheduled()
       clearPactInterval()
     }
-  }, [clearPactInterval, clearScheduled, language, skipIntro, user?.userId, userName])
+  }, [authLoading, clearPactInterval, clearScheduled, language, skipIntro, user?.userId, userName])
+
+  useEffect(() => {
+    if (authLoading || !isHydrated) return
+
+    if (user && user.role !== "student") {
+      router.replace("/coach")
+      return
+    }
+
+    if (user || !PRIVATE_STAGES.has(stage)) return
+
+    const savedInviteToken = readStorageItem(PENDING_INVITE_TOKEN_KEY)
+    const savedLang = readStorageItem("guto-selected-language")
+    const lang = isSupportedLanguage(savedLang || "") ? savedLang : selectedLanguage
+
+    if (savedInviteToken) {
+      setPendingInviteToken(savedInviteToken)
+      writeStorageItem(ENTRY_MODE_KEY, "invite")
+      setStage("intro")
+      return
+    }
+
+    router.replace(`/login?lang=${lang}`)
+  }, [authLoading, isHydrated, router, selectedLanguage, stage, user])
 
   const startSystem = useCallback(
     (finalName: string, finalLanguage: SupportedLanguage) => {
@@ -683,7 +735,8 @@ export function GutoApp({
       if (!user) {
         if (typeof window !== "undefined") {
           localStorage.setItem("guto-selected-language", lang)
-          const pendingToken = localStorage.getItem("guto-pending-invite-token")
+          const pendingToken = localStorage.getItem(PENDING_INVITE_TOKEN_KEY)
+          const entryMode = localStorage.getItem(ENTRY_MODE_KEY)
           if (pendingToken) {
             setPendingInviteToken(pendingToken)
             setActiveLanguageGlow(lang)
@@ -694,6 +747,9 @@ export function GutoApp({
               setActiveLanguageGlow(null)
             }, 560)
             return
+          }
+          if (entryMode === "invite") {
+            localStorage.removeItem(ENTRY_MODE_KEY)
           }
         }
         router.push(`/login?lang=${lang}`)
@@ -985,12 +1041,14 @@ export function GutoApp({
       })
       .catch((err: unknown) => {
         if (cancelled) return
-        const msg = err instanceof Error ? err.message : "Convite inv\u00e1lido ou expirado."
-        setInviteError(msg)
+        void err
+        clearPendingInviteStorage()
+        setPendingInviteToken(null)
+        setInviteError(inviteClaimCopy[selectedLanguage].invalid)
         setInviteLoading(false)
       })
     return () => { cancelled = true }
-  }, [stage, pendingInviteToken])
+  }, [stage, pendingInviteToken, selectedLanguage])
 
   const handleInviteClaim = useCallback(async () => {
     if (!pendingInviteToken || inviteSubmitting) return
@@ -1002,11 +1060,12 @@ export function GutoApp({
     try {
       const res = await claimInvite(pendingInviteToken, invitePassword)
       setInviteSuccess(true)
-      try { localStorage.removeItem("guto-pending-invite-token") } catch { /* ignore */ }
-      schedule(() => { login(res); router.push("/") }, 2000)
+      clearPendingInviteStorage()
+      setPendingInviteToken(null)
+      schedule(() => { login({ ...res, role: res.role ?? "student" }); router.push("/") }, 2000)
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Erro ao ativar convite."
-      setInviteError(msg)
+      void err
+      setInviteError(ic.activationFailed)
       setInviteSubmitting(false)
     }
   }, [pendingInviteToken, inviteSubmitting, selectedLanguage, invitePassword, inviteConfirmPassword, login, router, schedule])
@@ -1151,7 +1210,7 @@ export function GutoApp({
     }
   }, [activeTab, evolution, gutoUserId, handleAdaptedMissionComplete, handleExerciseQuestion, handleFoodDoubt, handleMissionComplete, isGutoDepleted, memory, pendingExerciseQuestion, pendingFoodQuestion, selectedLanguage, userLabel, workoutPlan])
 
-  if (!isHydrated) {
+  if (authLoading || !isHydrated || (user && user.role !== "student")) {
     return (
       <div className="sala-guto flex min-h-dvh items-center justify-center">
         <div className="guto-chrome-text text-5xl font-black tracking-[0.28em]">GUTO</div>
@@ -1205,6 +1264,14 @@ export function GutoApp({
                   <button
                     type="button"
                     onClick={() => {
+                      const pendingToken = localStorage.getItem(PENDING_INVITE_TOKEN_KEY)
+                      const entryMode = localStorage.getItem(ENTRY_MODE_KEY)
+                      if (pendingToken || entryMode === "invite") {
+                        console.log("[GUTO_INTRO] Botão ENTRAR clicado com convite pendente. Indo para idioma.")
+                        if (pendingToken) setPendingInviteToken(pendingToken)
+                        handleIntroComplete()
+                        return
+                      }
                       console.log("[GUTO_INTRO] Botão ENTRAR clicado. Indo para /login.")
                       router.push("/login")
                     }}
@@ -1289,6 +1356,9 @@ export function GutoApp({
                 )}
                 {!inviteLoading && inviteClaimData && !inviteSuccess && (
                   <>
+                    <p className="mb-2 font-mono text-[10px] font-black uppercase tracking-[0.24em] text-[rgba(13,35,65,0.45)]">
+                      {inviteClaimCopy[selectedLanguage].title}
+                    </p>
                     <h1 className="font-mono text-sm font-black uppercase tracking-[0.1em] text-[var(--guto-navy)]">
                       {inviteClaimCopy[selectedLanguage].greetingPrefix}{" "}
                       <span className="text-[var(--guto-cyan)]">{inviteClaimData.name}</span>
@@ -1366,7 +1436,7 @@ export function GutoApp({
               {!inviteLoading && !inviteClaimData && !inviteSuccess && (
                 <button
                   type="button"
-                  onClick={() => router.push("/login")}
+                  onClick={() => router.push(`/login?lang=${selectedLanguage}`)}
                   className="mt-8 font-mono text-[10px] font-black uppercase tracking-widest text-[var(--guto-cyan)] underline"
                 >
                   {inviteClaimCopy[selectedLanguage].back}
