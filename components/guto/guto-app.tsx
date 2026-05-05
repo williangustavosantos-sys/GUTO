@@ -739,10 +739,20 @@ export function GutoApp({
     introStartedAtRef.current = Date.now()
     introFinishedRef.current = false
     setIntroPlaybackState("starting")
-    setIntroNeedsActivation(false)
 
     const video = portalVideoRef.current
-    
+
+    // SAFARI FIX: Reset to frame 0 BEFORE making the video visible.
+    // Safari pre-buffers frames during preload, so we must seek back
+    // imperatively before the visibility state change triggers a re-render.
+    if (video) {
+      video.pause()
+      try { video.currentTime = 0 } catch { /* Safari rejects before metadata — ignore */ }
+    }
+
+    // Now safe to reveal the video (React re-render will show frame 0)
+    setIntroNeedsActivation(false)
+
     // Safety timer is the MASTER control: 4000ms fixed
     console.log("[GUTO_FLOW] starting 4000ms master timer")
     introSafetyTimerRef.current = window.setTimeout(completeIntroToLanguage, INTRO_VIDEO_MS)
@@ -752,36 +762,41 @@ export function GutoApp({
       return
     }
 
-    console.log("[GUTO_FLOW] video play attempt")
     video.controls = false
     video.playsInline = true
     video.setAttribute("playsinline", "")
     video.setAttribute("webkit-playsinline", "")
-    
-    // Try unmuted first
-    video.muted = false
-    video.defaultMuted = false
-    video.volume = 1
 
-    video.play()
-      .then(() => {
-        console.log("[GUTO_FLOW] video play success")
-        setIntroPlaybackState("playing")
-      })
-      .catch(() => {
-        console.log("[GUTO_FLOW] video play failed, trying muted")
-        video.muted = true
-        video.defaultMuted = true
-        video.setAttribute("muted", "")
-        video.play()
-          .then(() => {
-            console.log("[GUTO_FLOW] video play success (muted)")
-            setIntroPlaybackState("playing")
-          })
-          .catch(() => {
-            console.log("[GUTO_FLOW] muted play failed, fallback visual only")
-          })
-      })
+    // Use requestAnimationFrame so the seek to 0 has been painted
+    // before we start playback — critical for Safari
+    requestAnimationFrame(() => {
+      console.log("[GUTO_FLOW] video play attempt")
+
+      // Try unmuted first
+      video.muted = false
+      video.defaultMuted = false
+      video.volume = 1
+
+      video.play()
+        .then(() => {
+          console.log("[GUTO_FLOW] video play success")
+          setIntroPlaybackState("playing")
+        })
+        .catch(() => {
+          console.log("[GUTO_FLOW] video play failed, trying muted")
+          video.muted = true
+          video.defaultMuted = true
+          video.setAttribute("muted", "")
+          video.play()
+            .then(() => {
+              console.log("[GUTO_FLOW] video play success (muted)")
+              setIntroPlaybackState("playing")
+            })
+            .catch(() => {
+              console.log("[GUTO_FLOW] muted play failed, fallback visual only")
+            })
+        })
+    })
   }, [clearIntroSafetyTimer, completeIntroToLanguage])
 
   const handleIntroVideoEnded = useCallback(() => {
