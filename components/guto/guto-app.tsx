@@ -518,12 +518,25 @@ export function GutoApp({
         search.get("guto-reset") === "1" || forceResetParam || readStorageItem(DEBUG_RESET_KEY) === "1" || versionOutdated
       const shouldSkipIntro = skipIntro || search.get("skip-intro") === "1"
 
+      console.log(`[GUTO_FLOW] useEffect init - guto-reset detected: ${shouldReset}`);
+
       if (shouldReset) {
         removeStorageItem(userStorageKey)
         removeStorageItem(DEBUG_RESET_KEY)
         writeStorageItem(userVersionKey, String(STORAGE_VERSION))
       } else {
         writeStorageItem(userVersionKey, String(STORAGE_VERSION))
+      }
+
+      // Cleanup URL parameters precisely once without triggering a re-render
+      if (search.has("guto-reset") || search.has("forceReset") || search.has("skip-intro")) {
+        console.log("[GUTO_FLOW] Removendo parametros guto-reset e skip-intro da URL...");
+        const url = new URL(window.location.href);
+        url.searchParams.delete("guto-reset");
+        url.searchParams.delete("skip-intro");
+        url.searchParams.delete("forceReset");
+        url.searchParams.delete("presetName");
+        window.history.replaceState({}, document.title, url.toString());
       }
 
       const safeLanguage = isSupportedLanguage(language) ? language : "pt-BR"
@@ -593,6 +606,7 @@ export function GutoApp({
   )
 
   const handleIntroComplete = useCallback(() => {
+    console.log("[GUTO_FLOW] handleIntroComplete chamado. Avançando stage para 'language'");
     effectRegistry.emit("portal_open")
     setStage("language")
   }, [effectRegistry])
@@ -610,39 +624,50 @@ export function GutoApp({
   }, [])
 
   const activateIntroSound = useCallback(() => {
+    console.log("[GUTO_INTRO] Botão INICIAR GUTO clicado.")
+    setIntroNeedsActivation(false)
+
     const video = portalVideoRef.current
     if (!video) {
-      setIntroNeedsActivation(false)
+      console.log("[GUTO_INTRO] portalVideoRef: null — avançando direto.")
+      handleIntroComplete()
       return
     }
 
-    video.defaultMuted = false
+    console.log("[GUTO_INTRO] portalVideoRef: encontrado — tentando play com som.")
     video.muted = false
+    video.defaultMuted = false
     video.volume = 1
     video.controls = false
     video.playsInline = true
     video.setAttribute("playsinline", "")
     video.setAttribute("webkit-playsinline", "")
-    try {
-      video.currentTime = 0
-    } catch {
-      // iOS can reject seeking before metadata is fully ready.
-    }
+    try { video.currentTime = 0 } catch { /* iOS pode rejeitar antes do metadata */ }
+
+    // Avançar de qualquer forma após breve janela visual (max 2.4s)
+    // O vídeo é experiência visual, não portão.
+    const safetyTimer = window.setTimeout(() => {
+      console.log("[GUTO_INTRO] safety timeout disparado — chamando handleIntroComplete.")
+      handleIntroComplete()
+    }, 2400)
+
     video
       .play()
       .then(() => {
-        setIntroNeedsActivation(false)
+        console.log("[GUTO_INTRO] play() com som OK.")
+        // Avanço já garantido pelo safetyTimer acima
       })
       .catch(() => {
-        video.defaultMuted = true
+        // Fallback: tenta muted
         video.muted = true
-        video
-          .play()
+        video.defaultMuted = true
+        video.play()
           .then(() => {
-            setIntroNeedsActivation(false)
+            console.log("[GUTO_INTRO] play() muted OK.")
           })
           .catch(() => {
-            setIntroNeedsActivation(false)
+            console.log("[GUTO_INTRO] play() falhou — limpando timer e avançando agora.")
+            window.clearTimeout(safetyTimer)
             handleIntroComplete()
           })
       })
@@ -1157,29 +1182,36 @@ export function GutoApp({
               disablePictureInPicture
               controls={false}
               onLoadedMetadata={restartPortalVideo}
-              onEnded={handleIntroComplete}
+              onEnded={() => {
+                console.log("[GUTO_INTRO] onEnded disparado pelo vídeo.")
+                handleIntroComplete()
+              }}
             >
               <source src="/assets/guto/abertura-guto.mp4#t=0.001" type="video/mp4" />
             </video>
 
             {introNeedsActivation && (
               <div className="absolute inset-0 z-10 grid place-items-center bg-white/8 backdrop-blur-[1px]">
-                <div className="flex flex-col items-center gap-3">
+                <div className="flex flex-col items-center gap-3 relative z-50 pointer-events-auto">
                   <button
                     type="button"
                     onClick={activateIntroSound}
-                    className="guto-intro-sound-button inline-flex items-center gap-3 rounded-full px-5 py-3 text-[11px] font-black uppercase tracking-normal"
+                    className="guto-intro-sound-button inline-flex items-center gap-3 rounded-full px-5 py-3 text-[11px] font-black uppercase tracking-normal shadow-md"
                     aria-label="Ativar som original do GUTO"
                   >
                     <Volume2 className="h-5 w-5" />
                     INICIAR GUTO
                   </button>
-                  <Link
-                    href="/?skip-intro=1&guto-reset=1"
-                    className="guto-intro-skip rounded-full px-4 py-2 text-[10px] font-black uppercase tracking-normal"
+                  <button
+                    type="button"
+                    onClick={() => {
+                      console.log("[GUTO_INTRO] Botão ENTRAR clicado. Indo para /login.")
+                      router.push("/login")
+                    }}
+                    className="guto-intro-skip rounded-full px-4 py-2 text-[10px] font-black uppercase tracking-normal shadow-sm"
                   >
                     Entrar
-                  </Link>
+                  </button>
                 </div>
               </div>
             )}
