@@ -549,7 +549,7 @@ export function GutoApp({
 
       writeStorageItem(storageKey, JSON.stringify(payload))
     },
-    [committedName, selectedLanguage, user?.userId]
+    [committedName, selectedLanguage, user]
   )
 
   const persistMemory = useCallback(
