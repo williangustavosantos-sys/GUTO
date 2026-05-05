@@ -6,13 +6,17 @@ export const API_URL = RAW_API_URL.replace(/\/+$/, "")
 
 export class ApiError extends Error {
   status?: number
-  details?: any
-  constructor(message: string, status?: number, details?: any) {
+  details?: unknown
+  constructor(message: string, status?: number, details?: unknown) {
     super(message)
     this.name = "ApiError"
     this.status = status
     this.details = details
   }
+}
+
+function isApiErrorBody(value: unknown): value is { message?: string; error?: string; code?: string } {
+  return typeof value === "object" && value !== null
 }
 
 export function getApiErrorMessage(error: unknown) {
@@ -60,30 +64,31 @@ export async function apiRequest<T>(
           window.location.href = "/login"
         }
       }
-      throw new ApiError(body.message || "Credenciais inválidas.", 401)
+      throw new ApiError(isApiErrorBody(body) ? body.message || "Credenciais inválidas." : "Credenciais inválidas.", 401)
     }
 
     if (res.status === 403) {
       const body = await res.json().catch(() => ({}))
-      if (body.code === "ACCESS_PAUSED") {
+      if (isApiErrorBody(body) && body.code === "ACCESS_PAUSED") {
         if (typeof window !== "undefined" && !window.location.pathname.includes("/acesso-pausado")) {
           window.location.href = "/acesso-pausado"
         }
       }
-      throw new ApiError(body.message || "Acesso negado.", 403, body)
+      throw new ApiError(isApiErrorBody(body) ? body.message || "Acesso negado." : "Acesso negado.", 403, body)
     }
 
     if (!res.ok) {
       let message = `Erro de API (${res.status})`
-      let details: any = undefined
+      let details: unknown = undefined
       try {
         const body = await res.json()
-        message = body?.message || body?.error || message
+        message = isApiErrorBody(body) ? body.message || body.error || message : message
         details = body
       } catch {}
       throw new ApiError(message, res.status, details)
     }
 
+    if (res.status === 204) return undefined as T
     return (await res.json()) as T
   } catch (err) {
     if (err instanceof DOMException && err.name === "AbortError") {

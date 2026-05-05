@@ -116,6 +116,10 @@ export function validateDietPlan(plan: DietPlan) {
 }
 
 export function sanitizeDietPlan(plan: DietPlan, memory: GutoMemory | null, language: SupportedLanguage): DietPlan {
+  if (plan.lockedByCoach || plan.manualOverride || plan.source === "coach_manual" || plan.source === "mixed") {
+    return plan
+  }
+
   const validation = validateDietPlan(plan)
   logValidation(validation)
   if (validation.valid) return plan

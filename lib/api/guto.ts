@@ -35,9 +35,13 @@ export interface GutoWorkoutExercise {
   muscleGroup: string
   sets: number
   reps: string
+  load?: string | null
   rest: string
+  restSeconds?: number
   cue: string
   note: string
+  alternatives?: string[]
+  order?: number
   videoUrl: string
   videoProvider: "local"
   sourceFileName: string
@@ -55,12 +59,39 @@ export type WorkoutFocus =
   | "full_body"
 
 export interface GutoWorkoutPlan {
+  studentId?: string
+  title?: string
   focus: string
   focusKey?: WorkoutFocus
+  weekDay?: string
+  goal?: string
+  location?: string
   dateLabel: string
   scheduledFor: string
   summary: string
   exercises: GutoWorkoutExercise[]
+  blocks?: Array<{
+    name: string
+    exercises: Array<Partial<GutoWorkoutExercise> & {
+      name: string
+      load?: string | null
+      restSeconds?: number
+      notes?: string
+      alternatives?: string[]
+    }>
+  }>
+  estimatedDurationMinutes?: number
+  difficulty?: string
+  coachNotes?: string
+  manualOverride?: boolean
+  editedBy?: string
+  editedAt?: string
+  editReason?: string
+  planSource?: "ai_generated" | "admin_override" | "coach_override"
+  source?: "guto_generated" | "coach_manual" | "mixed"
+  lockedByCoach?: boolean
+  updatedBy?: string
+  updatedAt?: string
 }
 
 export interface GutoExpectedResponse {
@@ -173,6 +204,7 @@ export interface DietFood {
   proteinG?: number
   carbsG?: number
   fatG?: number
+  notes?: string
 }
 
 export interface DietMeal {
@@ -182,15 +214,29 @@ export interface DietMeal {
   foods: DietFood[]
   totalKcal: number
   gutoNote: string
+  alternatives?: string[]
 }
 
 export interface DietPlan {
   userId: string
+  title?: string
   generatedAt: string
   country: string
   macros: DietMacros
   meals: DietMeal[]
+  goal?: string
+  coachNotes?: string
+  restrictions?: string
   foodRestrictions?: string
+  manualOverride?: boolean
+  editedBy?: string
+  editedAt?: string
+  editReason?: string
+  planSource?: "ai_generated" | "admin_override" | "coach_override"
+  source?: "guto_generated" | "coach_manual" | "mixed"
+  lockedByCoach?: boolean
+  updatedBy?: string
+  updatedAt?: string
 }
 
 export async function sendGutoMessage(payload: SendGutoMessageRequest) {
