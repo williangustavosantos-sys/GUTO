@@ -719,6 +719,10 @@ export function GutoApp({
     video.playsInline = true
     video.setAttribute("playsinline", "")
     video.setAttribute("webkit-playsinline", "")
+    video.pause()
+    if (video.readyState === 0) {
+      video.load()
+    }
     try { video.currentTime = 0 } catch { /* iOS pode rejeitar antes do metadata */ }
 
     const armSafetyFallback = () => {
@@ -751,12 +755,17 @@ export function GutoApp({
           .catch(() => {
             clearIntroSafetyTimer()
             console.log("[GUTO_INTRO] safety fallback")
-            handleIntroComplete()
+            introSafetyTimerRef.current = window.setTimeout(() => {
+              handleIntroComplete()
+            }, 9000)
           })
       })
   }, [clearIntroSafetyTimer, handleIntroComplete])
 
   const handleIntroVideoEnded = useCallback(() => {
+    const video = portalVideoRef.current
+    if (!introStartedRef.current) return
+    if (video && Number.isFinite(video.duration) && video.duration > 1 && video.currentTime < video.duration - 0.25) return
     console.log("[GUTO_INTRO] ended")
     handleIntroComplete()
   }, [handleIntroComplete])
@@ -1279,7 +1288,7 @@ export function GutoApp({
               onLoadedMetadata={restartPortalVideo}
               onEnded={handleIntroVideoEnded}
             >
-              <source src="/assets/guto/abertura-guto.mp4#t=0.001" type="video/mp4" />
+              <source src="/assets/guto/abertura-guto.mp4" type="video/mp4" />
             </video>
 
             {introNeedsActivation && (
