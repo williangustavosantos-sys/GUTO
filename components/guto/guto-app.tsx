@@ -726,7 +726,8 @@ export function GutoApp({
     video.defaultMuted = true
     video.muted = true
     video.volume = 1
-    video.currentTime = 0
+    // Force back to frame 0 so Safari doesn't show a pre-buffered frame
+    try { video.currentTime = 0 } catch { /* ignore Safari timing errors */ }
   }, [])
 
   // ── Single entry point for the intro — always 4000ms, no variable timers ──
@@ -1304,6 +1305,7 @@ export function GutoApp({
             <video
               ref={portalVideoRef}
               className="absolute inset-0 h-full w-full object-cover"
+              style={{ visibility: introNeedsActivation ? "hidden" : "visible" }}
               playsInline
               webkit-playsinline="true"
               preload="auto"
@@ -1311,6 +1313,7 @@ export function GutoApp({
               disablePictureInPicture
               controls={false}
               onLoadedMetadata={restartPortalVideo}
+              onCanPlay={restartPortalVideo}
               onEnded={handleIntroVideoEnded}
             >
               <source src="/assets/guto/abertura-guto.mp4" type="video/mp4" />
