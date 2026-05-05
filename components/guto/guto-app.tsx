@@ -57,7 +57,7 @@ const STORAGE_VERSION_KEY = "guto-storage-version"
 const DEBUG_RESET_KEY = "guto-debug-reset"
 const HOLD_INTERVAL_MS = 16
 const HOLD_INCREMENT = (HOLD_INTERVAL_MS / 1600) * 100
-const INTRO_PLAYBACK_DELAY_MS = 4500
+const INTRO_VIDEO_MS = 4000
 
 const languages = [
   { id: "pt-BR" as const, label: "Português", asset: "/assets/guto/idioma-portugues.svg" },
@@ -592,7 +592,13 @@ export function GutoApp({
         setSelectedLanguage(persistedLanguage)
         setDraftName(persistedName)
         setCommittedName(persistedName)
-        setStage(stored.onboardingComplete ? "system" : shouldSkipIntro ? "language" : "intro")
+        
+        // Unauthenticated users MUST go through the intro ritual
+        if (!user) {
+          setStage(shouldSkipIntro ? "language" : "intro")
+        } else {
+          setStage(stored.onboardingComplete ? "system" : shouldSkipIntro ? "language" : "intro")
+        }
       } else {
         setSelectedLanguage(safeLanguage)
         const initialName = formatGutoName(presetName || userName || "")
@@ -625,7 +631,21 @@ export function GutoApp({
       return
     }
 
-    if (user || !PRIVATE_STAGES.has(stage)) return
+    // VISITORS (unauthenticated) flow: Always Intro -> Video -> Language
+    // Never redirect to login if we haven't reached the language selection stage yet
+    if (!user) {
+      if (stage !== "intro" && stage !== "language" && stage !== "invite_claim") {
+        // If somehow in a private stage without being logged in, reset to intro
+        if (PRIVATE_STAGES.has(stage)) {
+          console.log("[GUTO_FLOW] Unauthorized access to private stage, resetting to intro")
+          setStage("intro")
+        }
+      }
+      return
+    }
+
+    // AUTHENTICATED users flow:
+    if (!PRIVATE_STAGES.has(stage)) return
 
     const savedInviteToken = readStorageItem(PENDING_INVITE_TOKEN_KEY)
     const savedLang = readStorageItem("guto-selected-language")
@@ -638,11 +658,15 @@ export function GutoApp({
       return
     }
 
-    router.replace(`/login?lang=${lang}`)
+    // This part should technically only be reached if something is wrong, 
+    // as student users should be at "system" or "settings"
+    // but we keep it for safety.
+    if (!user) router.replace(`/login?lang=${lang}`)
   }, [authLoading, isHydrated, router, selectedLanguage, stage, user])
 
   useEffect(() => {
     if (stage === "intro") {
+      console.log("[GUTO_FLOW] intro screen mounted")
       introFinishedRef.current = false
       introStartedRef.current = false
       clearIntroSafetyTimer()
@@ -682,33 +706,16 @@ export function GutoApp({
     [effectRegistry, persistMemory, persistProfile, schedule, trackBehaviorEvent]
   )
 
-  const handleIntroComplete = useCallback(() => {
+  // ── Unique completer: ONLY sets stage to language, never decides login/invite ─
+  const completeIntroToLanguage = useCallback(() => {
     if (introFinishedRef.current) return
     introFinishedRef.current = true
     clearIntroSafetyTimer()
     effectRegistry.emit("portal_open")
     setIntroPlaybackState("finished")
-    console.log("[GUTO_FLOW] intro finished, moving to language")
+    console.log("[GUTO_FLOW] intro finished -> language")
     setStage("language")
   }, [clearIntroSafetyTimer, effectRegistry])
-
-  const finishIntroAfterPlaybackDelay = useCallback((reason: string, videoDuration?: number) => {
-    if (introFinishedRef.current) return
-    clearIntroSafetyTimer()
-    setIntroPlaybackState("finishing")
-
-    let delayMs = 4500
-    if (videoDuration && Number.isFinite(videoDuration) && videoDuration > 0) {
-      delayMs = videoDuration * 1000 + 300
-    }
-    delayMs = Math.max(3800, Math.min(delayMs, 5200))
-
-    console.log("[GUTO_INTRO] scheduled finish ms", delayMs, "reason:", reason)
-
-    introSafetyTimerRef.current = window.setTimeout(() => {
-      handleIntroComplete()
-    }, delayMs)
-  }, [clearIntroSafetyTimer, handleIntroComplete])
 
   const restartPortalVideo = useCallback(() => {
     const video = portalVideoRef.current
@@ -722,8 +729,10 @@ export function GutoApp({
     video.currentTime = 0
   }, [])
 
-  const activateIntroSound = useCallback(() => {
-    console.log("[GUTO_INTRO] start clicked")
+  // ── Single entry point for the intro — always 4000ms, no variable timers ──
+  const startIntroVideo = useCallback(() => {
+    if (introStartedRef.current) return // prevent double-tap
+    console.log("[GUTO_FLOW] start intro clicked")
     clearIntroSafetyTimer()
     introStartedRef.current = true
     introStartedAtRef.current = Date.now()
@@ -731,74 +740,51 @@ export function GutoApp({
     setIntroPlaybackState("starting")
     setIntroNeedsActivation(false)
 
-    const pendingInvite = pendingInviteToken || readStorageItem(PENDING_INVITE_TOKEN_KEY)
-    if (pendingInvite || readStorageItem(ENTRY_MODE_KEY) === "invite") {
-      console.log("[GUTO_INTRO] invite pending, but intro will still play")
-    }
-
     const video = portalVideoRef.current
+    
+    // Safety timer is the MASTER control: 4000ms fixed
+    console.log("[GUTO_FLOW] starting 4000ms master timer")
+    introSafetyTimerRef.current = window.setTimeout(completeIntroToLanguage, INTRO_VIDEO_MS)
+
     if (!video) {
-      console.log("[GUTO_INTRO] video element not found")
-      finishIntroAfterPlaybackDelay("no-video")
+      console.log("[GUTO_FLOW] video play attempt — no element, using timer only")
       return
     }
 
-    console.log("[GUTO_INTRO] video element found")
-    console.log("[GUTO_INTRO] video src/currentSrc", video.src || video.currentSrc)
-
-    let duration = video.duration
-    if (Number.isFinite(duration) && duration > 0) {
-      console.log("[GUTO_INTRO] video duration", duration)
-    } else {
-      duration = 0
-    }
-
-    video.muted = false
-    video.defaultMuted = false
-    video.volume = 1
+    console.log("[GUTO_FLOW] video play attempt")
     video.controls = false
     video.playsInline = true
     video.setAttribute("playsinline", "")
     video.setAttribute("webkit-playsinline", "")
     
-    if (video.readyState === 0) {
-      video.load()
-    }
-    try { video.currentTime = 0 } catch { /* iOS pode rejeitar antes do metadata */ }
+    // Try unmuted first
+    video.muted = false
+    video.defaultMuted = false
+    video.volume = 1
 
-    const handleStarted = () => {
-      console.log("[GUTO_INTRO] play success")
-      setIntroPlaybackState("playing")
-      finishIntroAfterPlaybackDelay("play-success", video.duration)
-    }
-
-    const playPromise = video.play()
-    if (playPromise !== undefined) {
-      playPromise.then(handleStarted).catch(() => {
-        console.log("[GUTO_INTRO] play failed, retry muted")
+    video.play()
+      .then(() => {
+        console.log("[GUTO_FLOW] video play success")
+        setIntroPlaybackState("playing")
+      })
+      .catch(() => {
+        console.log("[GUTO_FLOW] video play failed, trying muted")
         video.muted = true
         video.defaultMuted = true
         video.setAttribute("muted", "")
-        try { video.currentTime = 0 } catch {}
-        
-        const mutedPromise = video.play()
-        if (mutedPromise !== undefined) {
-          mutedPromise.then(handleStarted).catch(() => {
-            console.log("[GUTO_INTRO] muted play failed")
-            finishIntroAfterPlaybackDelay("muted-play-failed", video.duration)
+        video.play()
+          .then(() => {
+            console.log("[GUTO_FLOW] video play success (muted)")
+            setIntroPlaybackState("playing")
           })
-        } else {
-          finishIntroAfterPlaybackDelay("muted-play-fallback", video.duration)
-        }
+          .catch(() => {
+            console.log("[GUTO_FLOW] muted play failed, fallback visual only")
+          })
       })
-    } else {
-      finishIntroAfterPlaybackDelay("play-fallback", video.duration)
-    }
-  }, [clearIntroSafetyTimer, finishIntroAfterPlaybackDelay, pendingInviteToken])
+  }, [clearIntroSafetyTimer, completeIntroToLanguage])
 
   const handleIntroVideoEnded = useCallback(() => {
-    if (!introStartedRef.current) return
-    console.log("[GUTO_INTRO] ended")
+    console.log("[GUTO_FLOW] video playback ended naturally")
   }, [])
 
   const handleLanguageSelect = useCallback(
@@ -807,14 +793,16 @@ export function GutoApp({
 
       effectRegistry.emit("language_select", { meta: { language: lang } })
       setSelectedLanguage(lang)
+      console.log("[GUTO_FLOW] language selected", lang)
 
       if (!user) {
         if (typeof window !== "undefined") {
           localStorage.setItem("guto-selected-language", lang)
           const pendingToken = localStorage.getItem(PENDING_INVITE_TOKEN_KEY)
-          const entryMode = localStorage.getItem(ENTRY_MODE_KEY)
+          
           if (pendingToken) {
-            console.log("[GUTO_FLOW] language selected, invite flow")
+            console.log("[GUTO_FLOW] pending invite", true)
+            console.log("[GUTO_FLOW] after language target", "invite_claim")
             setPendingInviteToken(pendingToken)
             setActiveLanguageGlow(lang)
             setRotatingLanguage(true)
@@ -825,15 +813,16 @@ export function GutoApp({
             }, 560)
             return
           }
-          if (entryMode === "invite") {
-            localStorage.removeItem(ENTRY_MODE_KEY)
-          }
         }
-        console.log("[GUTO_FLOW] language selected, normal login flow")
-        router.push(`/login?lang=${lang}`)
+        
+        console.log("[GUTO_FLOW] pending invite", false)
+        const target = `/login?lang=${lang}`
+        console.log("[GUTO_FLOW] after language target", target)
+        router.push(target)
         return
       }
 
+      // If user is already logged in (re-selecting language or returning)
       setActiveLanguageGlow(lang)
       setNameGate(null)
       setRotatingLanguage(true)
@@ -1316,7 +1305,9 @@ export function GutoApp({
               ref={portalVideoRef}
               className="absolute inset-0 h-full w-full object-cover"
               playsInline
+              webkit-playsinline="true"
               preload="auto"
+              muted
               disablePictureInPicture
               controls={false}
               onLoadedMetadata={restartPortalVideo}
@@ -1330,22 +1321,13 @@ export function GutoApp({
                 <div className="flex flex-col items-center gap-3 relative z-50 pointer-events-auto">
                   <button
                     type="button"
-                    onClick={activateIntroSound}
+                    id="guto-start-button"
+                    onClick={startIntroVideo}
                     className="guto-intro-sound-button inline-flex items-center gap-3 rounded-full px-5 py-3 text-[11px] font-black uppercase tracking-normal shadow-md"
-                    aria-label="Ativar som original do GUTO"
+                    aria-label="Iniciar GUTO"
                   >
                     <Volume2 className="h-5 w-5" />
                     INICIAR GUTO
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      console.log("[GUTO_INTRO] Botão ENTRAR clicado. Indo para login.")
-                      router.push(`/login?lang=${selectedLanguage}`)
-                    }}
-                    className="guto-intro-skip rounded-full px-4 py-2 text-[10px] font-black uppercase tracking-normal shadow-sm"
-                  >
-                    Entrar
                   </button>
                 </div>
               </div>
