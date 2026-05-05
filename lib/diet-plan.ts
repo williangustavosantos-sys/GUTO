@@ -141,14 +141,39 @@ export function createCalculatedDietPlan(
   const heightCm = memory.heightCm ?? 170
   const age = memory.userAge ?? memory.trainingAge ?? 30
   const bmr = Math.round(10 * weightKg + 6.25 * heightCm - 5 * age + (sex === "male" ? 5 : -161))
-  const tdee = Math.round(bmr * getActivityFactor(memory))
+  const activityFactor = getActivityFactor(memory)
+  const tdee = Math.round(bmr * activityFactor)
   const goalMultiplier = getGoalMultiplier(memory.trainingGoal)
-  const rawTarget = Math.round(tdee * goalMultiplier)
+  const minKcal = sex === "female" ? 1400 : 1600
+  const rawTarget = Math.max(minKcal, Math.round(tdee * goalMultiplier))
   const proteinG = Math.round(weightKg * getProteinPerKg(memory.trainingGoal))
   const fatG = Math.round(weightKg * getFatPerKg(memory.trainingGoal))
   const carbsG = Math.max(80, Math.round((rawTarget - proteinG * 4 - fatG * 9) / 4))
   const targetKcal = proteinG * 4 + carbsG * 4 + fatG * 9
   const meals = buildMeals(targetKcal, language)
+
+  if (process.env.NODE_ENV === "development") {
+    console.info("[GUTO_DIET_INPUT]", {
+      sex,
+      age,
+      heightCm,
+      weightKg,
+      goal: memory.trainingGoal,
+      trainingLevel: memory.trainingLevel || memory.trainingStatus,
+      location: memory.preferredTrainingLocation,
+    })
+    console.info("[GUTO_DIET_CALC]", {
+      bmr,
+      activityFactor,
+      tdee,
+      goalMultiplier,
+      rawTarget,
+      targetKcal,
+      proteinG,
+      carbsG,
+      fatG,
+    })
+  }
 
   return {
     userId,
@@ -174,35 +199,37 @@ function hasDietProfile(memory: GutoMemory): boolean {
 
 function getActivityFactor(memory: GutoMemory): number {
   const baseByLevel: Record<string, number> = {
-    beginner: 1.35,
-    returning: 1.45,
-    consistent: 1.55,
-    advanced: 1.68,
+    beginner: 1.3,
+    returning: 1.4,
+    consistent: 1.48,
+    advanced: 1.62,
   }
   const level = memory.trainingLevel || memory.trainingStatus || "returning"
   const base = baseByLevel[level] ?? 1.45
-  const locationBoost = memory.preferredTrainingLocation === "gym" ? 0.02 : 0
-  return Math.min(1.75, base + locationBoost)
+  if (level === "advanced") return 1.7
+  if (memory.preferredTrainingLocation === "gym") return Math.min(1.55, base + 0.04)
+  if (memory.preferredTrainingLocation === "home") return Math.min(1.4, base)
+  return Math.min(1.5, base)
 }
 
 function getGoalMultiplier(goal?: string): number {
-  if (goal === "muscle_gain") return 1.08
-  if (goal === "fat_loss") return 0.84
+  if (goal === "muscle_gain") return 1.1
+  if (goal === "fat_loss") return 0.82
   if (goal === "conditioning") return 1
   if (goal === "mobility_health") return 0.95
-  return 0.98
+  return 1
 }
 
 function getProteinPerKg(goal?: string): number {
   if (goal === "muscle_gain") return 1.9
-  if (goal === "fat_loss") return 2
+  if (goal === "fat_loss") return 1.9
   if (goal === "conditioning") return 1.7
-  return 1.8
+  return 1.7
 }
 
 function getFatPerKg(goal?: string): number {
   if (goal === "fat_loss") return 0.8
-  if (goal === "muscle_gain") return 0.95
+  if (goal === "muscle_gain") return 0.9
   return 0.85
 }
 
@@ -280,9 +307,11 @@ function reconcileDietPlan(plan: DietPlan): DietPlan {
 
 function logValidation(validation: ReturnType<typeof validateDietPlan>) {
   if (process.env.NODE_ENV !== "development") return
-  console.info("[GUTO_DIET] daily target", validation.targetKcal)
-  console.info("[GUTO_DIET] macro kcal", validation.macroKcal)
-  console.info("[GUTO_DIET] meals kcal sum", validation.mealsKcal)
-  console.info("[GUTO_DIET] meal validation", validation.mealValidation)
+  console.info("[GUTO_DIET_VALIDATE]", {
+    targetKcal: validation.targetKcal,
+    macroKcal: validation.macroKcal,
+    mealsKcal: validation.mealsKcal,
+    mealValidation: validation.mealValidation,
+  })
   if (!validation.valid) console.error("[GUTO_DIET_ERROR]", validation)
 }

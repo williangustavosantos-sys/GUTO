@@ -14,6 +14,7 @@ import { GutoOfficialAvatar } from "../guto-official-avatar"
 import { getLanguage, translations } from "../translations"
 import type { MissionExercise } from "../view-models"
 import { gutoAudio } from "@/lib/audio-haptics"
+import { firstRealGutoName } from "@/lib/guto-profile"
 
 interface PendingExerciseQuestion {
   id: string
@@ -110,7 +111,7 @@ const chatCopy: Record<
     micNoSpeech: "Não entrou voz suficiente. Segura o microfone e fala uma frase direta.",
     unmute: "Ativar fala do GUTO",
     mute: "Silenciar fala do GUTO",
-    opening: (name) => `${name ? `${name}, ` : ""}chegou. Missão viva. Me diz em uma frase: vai treinar agora ou precisa ajustar a rota?`,
+    opening: (name) => `Finalmente${name ? `, ${name}` : ""}. Tava te esperando. Enquanto isso, já organizei nosso plano daqui pra frente. Estamos juntos — bora começar?`,
   },
   "en-US": {
     channel: "Oracle channel",
@@ -119,7 +120,7 @@ const chatCopy: Record<
     micNoSpeech: "Not enough voice came through. Hold the mic and say one direct sentence.",
     unmute: "Enable GUTO voice",
     mute: "Mute GUTO voice",
-    opening: (name) => `${name ? `${name}, ` : ""}you are in. Mission stays alive. Tell me in one sentence: training now or adjusting the route?`,
+    opening: (name) => `Finally${name ? `, ${name}` : ""}. I was waiting for you. In the meantime, I already organized our plan from here. I'm with you — ready to start?`,
   },
   "es-ES": {
     channel: "Canal del oráculo",
@@ -128,7 +129,7 @@ const chatCopy: Record<
     micNoSpeech: "No entró suficiente voz. Mantén el micrófono y di una frase directa.",
     unmute: "Activar voz de GUTO",
     mute: "Silenciar voz de GUTO",
-    opening: (name) => `${name ? `${name}, ` : ""}llegaste. La misión sigue viva. Dime en una frase: entrenas ahora o ajustamos la ruta?`,
+    opening: (name) => `Por fin${name ? `, ${name}` : ""}. Te estaba esperando. Mientras tanto, ya organicé nuestro plan desde aquí. Estoy contigo — ¿empezamos?`,
   },
   "it-IT": {
     channel: "Canale dell'oracolo",
@@ -137,7 +138,7 @@ const chatCopy: Record<
     micNoSpeech: "Non è arrivata abbastanza voce. Tieni premuto il microfono e di una frase diretta.",
     unmute: "Attiva la voce di GUTO",
     mute: "Silenzia la voce di GUTO",
-    opening: (name) => `${name ? `${name}, ` : ""}sei dentro. La missione resta viva. Dimmi in una frase: ti alleni ora o adattiamo la rotta?`,
+    opening: (name) => `Finalmente${name ? `, ${name}` : ""}. Ti stavo aspettando. Nel frattempo ho già organizzato il nostro piano da qui in avanti. Sono con te — iniziamo?`,
   },
 }
 
@@ -148,7 +149,7 @@ const INITIAL_XP_REWARD_SEEN_KEY_PREFIX = "guto-initial-xp-reward-seen"
 const STALE_AUDIO_FAILURE_TEXT = "O áudio falhou. Sem perder o ritmo: escreve a mesma resposta em uma frase curta."
 
 function formatDisplayName(value: string) {
-  return value.replace(/\s+/g, " ").trim().toLocaleUpperCase()
+  return firstRealGutoName(value)
 }
 
 function normalizeAvatarEmotion(value?: string): GutoAvatarEmotion {
@@ -247,6 +248,7 @@ function readStoredChatState(userId: string): StoredChatState | null {
       : []
 
     if (!messages.length) return null
+    if (!messages.some((message) => !message.isGuto)) return null
     return {
       messages: removeConsecutiveDuplicateGutoMessages(
         messages.filter((message) => !isStaleAudioFailureMessage(message))

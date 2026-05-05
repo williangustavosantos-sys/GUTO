@@ -58,6 +58,20 @@ const sizeClasses = {
   xl: "w-[min(96vw,34rem)] h-[min(96vw,34rem)]",
 }
 
+function AvatarInstantFallback({ showPlatform }: { showPlatform: boolean }) {
+  return (
+    <div className="pointer-events-none absolute inset-0 z-0 flex flex-col items-center justify-center">
+      <div className="relative h-[62%] w-[44%] rounded-[999px] border border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.82),rgba(225,236,247,0.48))] shadow-[inset_0_10px_26px_rgba(255,255,255,0.9),0_22px_44px_rgba(82,231,255,0.12)]">
+        <div className="absolute left-[24%] top-[34%] h-3 w-3 rounded-full bg-[var(--guto-navy)] shadow-[0_0_14px_rgba(82,231,255,0.55)]" />
+        <div className="absolute right-[24%] top-[34%] h-3 w-3 rounded-full bg-[var(--guto-navy)] shadow-[0_0_14px_rgba(82,231,255,0.55)]" />
+      </div>
+      {showPlatform && (
+        <div className="mt-[-0.25rem] h-4 w-[34%] rounded-full border border-white/70 bg-white/60 shadow-[0_10px_24px_rgba(82,231,255,0.12)]" />
+      )}
+    </div>
+  )
+}
+
 function stripVideoMatte(
   ctx: CanvasRenderingContext2D,
   width: number,
@@ -325,6 +339,7 @@ export function GutoOfficialAvatar({
             sizeClasses[size]
           )}
         >
+          <AvatarInstantFallback showPlatform={false} />
           <video
             ref={nativeVideoRef}
             key={`${assetKey}-${nativeAlphaSource.src}`}
@@ -336,7 +351,10 @@ export function GutoOfficialAvatar({
             controls={false}
             controlsList="nodownload noplaybackrate nofullscreen"
             preload="auto"
-            className="guto-official-avatar-video pointer-events-none absolute inset-0 h-full w-full object-contain"
+            className={cn(
+              "guto-official-avatar-video pointer-events-none absolute inset-0 z-10 h-full w-full object-contain transition-opacity duration-150",
+              nativeVideoReady ? "opacity-100" : "opacity-0"
+            )}
           >
             <source src={`/assets/guto/${nativeAlphaSource.src}`} type={nativeAlphaSource.type} />
           </video>
@@ -363,6 +381,7 @@ export function GutoOfficialAvatar({
           sizeClasses[size]
         )}
       >
+        <AvatarInstantFallback showPlatform={false} />
         <canvas
           ref={canvasRef}
           className="guto-official-avatar-canvas relative z-10 h-full w-full object-contain transition-opacity duration-150"

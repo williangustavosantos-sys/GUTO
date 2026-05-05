@@ -1362,34 +1362,36 @@ export function GutoApp({
     formatGutoName(settingsNameDraft) !== userLabel &&
     !isValidatingName
 
+  const chatContent = useMemo(() => (
+    <ChatTab
+      key={`chat-${gutoUserId}`}
+      userId={gutoUserId}
+      userName={userLabel}
+      language={selectedLanguage}
+      evolution={evolution}
+      memory={memory}
+      pendingExerciseQuestion={pendingExerciseQuestion}
+      onExerciseQuestionHandled={() => setPendingExerciseQuestion(null)}
+      pendingFoodQuestion={pendingFoodQuestion}
+      onFoodQuestionHandled={() => setPendingFoodQuestion(null)}
+      onWorkoutPlanUpdated={setWorkoutPlan}
+      isDepleted={isGutoDepleted}
+      initialXpGranted={memory?.initialXpGranted}
+      initialXpRewardSeen={memory?.initialXpRewardSeen}
+      onXpRewardSeen={() => {
+        if (memory) {
+          const updated = { ...memory, initialXpRewardSeen: true };
+          setMemory(updated);
+          persistMemory({ initialXpRewardSeen: true });
+        }
+      }}
+    />
+  ), [evolution, gutoUserId, isGutoDepleted, memory, pendingExerciseQuestion, pendingFoodQuestion, persistMemory, selectedLanguage, userLabel])
+
   const tabContent = useMemo(() => {
     switch (activeTab) {
       case "guto":
-        return (
-          <ChatTab
-            key={`chat-${gutoUserId}`}
-            userId={gutoUserId}
-            userName={userLabel}
-            language={selectedLanguage}
-            evolution={evolution}
-            memory={memory}
-            pendingExerciseQuestion={pendingExerciseQuestion}
-            onExerciseQuestionHandled={() => setPendingExerciseQuestion(null)}
-            pendingFoodQuestion={pendingFoodQuestion}
-            onFoodQuestionHandled={() => setPendingFoodQuestion(null)}
-            onWorkoutPlanUpdated={setWorkoutPlan}
-            isDepleted={isGutoDepleted}
-            initialXpGranted={memory?.initialXpGranted}
-            initialXpRewardSeen={memory?.initialXpRewardSeen}
-            onXpRewardSeen={() => {
-              if (memory) {
-                const updated = { ...memory, initialXpRewardSeen: true };
-                setMemory(updated);
-                persistMemory({ initialXpRewardSeen: true });
-              }
-            }}
-          />
-        )
+        return null
       case "caminho":
         return (
           <PathTab
@@ -1447,22 +1449,9 @@ export function GutoApp({
           />
         )
       default:
-        return (
-          <ChatTab
-            key={`chat-${gutoUserId}`}
-            userId={gutoUserId}
-            userName={userLabel}
-            language={selectedLanguage}
-            evolution={evolution}
-            memory={memory}
-            pendingExerciseQuestion={pendingExerciseQuestion}
-            onExerciseQuestionHandled={() => setPendingExerciseQuestion(null)}
-            onWorkoutPlanUpdated={setWorkoutPlan}
-            isDepleted={isGutoDepleted}
-          />
-        )
+        return null
     }
-  }, [activeTab, evolution, gutoUserId, handleAdaptedMissionComplete, handleExerciseQuestion, handleFoodDoubt, handleMissionComplete, isGutoDepleted, memory, pendingExerciseQuestion, pendingFoodQuestion, selectedLanguage, userLabel, workoutMissingFields, workoutPlan])
+  }, [activeTab, gutoUserId, handleAdaptedMissionComplete, handleExerciseQuestion, handleFoodDoubt, handleMissionComplete, memory, selectedLanguage, userLabel, workoutMissingFields, workoutPlan])
 
   if (authLoading || !isHydrated || (user && user.role !== "student")) {
     return (
@@ -1943,20 +1932,13 @@ export function GutoApp({
             animate={{ opacity: 1 }}
           >
             <div className="relative flex min-h-0 flex-1 flex-col">
-              {activeTab === "guto" ? (
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={activeTab}
-                    className="min-h-0 flex-1"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.24 }}
-                  >
-                    {tabContent}
-                  </motion.div>
-                </AnimatePresence>
-              ) : (
+              <div
+                className={activeTab === "guto" ? "min-h-0 flex-1" : "pointer-events-none absolute inset-0 opacity-0"}
+                aria-hidden={activeTab !== "guto"}
+              >
+                {chatContent}
+              </div>
+              {activeTab !== "guto" && (
                 <div className="mx-4 mb-[var(--guto-bottom-nav-space)] mt-[max(env(safe-area-inset-top),1.1rem)] flex min-h-0 flex-1 flex-col">
                 <div className="guto-deboss flex min-h-0 flex-1 flex-col rounded-[2.25rem] px-4 py-4">
                   <div className="custom-scrollbar min-h-0 flex-1 overflow-y-auto">
