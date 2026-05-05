@@ -77,7 +77,7 @@ function LoginPageContent() {
 
     const fromQuery = searchParams.get("lang") ?? ""
     const fromStorage = typeof window !== "undefined"
-      ? localStorage.getItem("guto-selected-language") ?? ""
+      ? localStorage.getItem("guto-onboarding-language") || localStorage.getItem("guto-selected-language") || ""
       : ""
     const resolved = isSupportedLang(fromQuery)
       ? fromQuery

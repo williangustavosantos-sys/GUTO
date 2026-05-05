@@ -58,20 +58,6 @@ const sizeClasses = {
   xl: "w-[min(96vw,34rem)] h-[min(96vw,34rem)]",
 }
 
-function AvatarInstantFallback({ showPlatform }: { showPlatform: boolean }) {
-  return (
-    <div className="pointer-events-none absolute inset-0 z-0 flex flex-col items-center justify-center">
-      <div className="relative h-[62%] w-[44%] rounded-[999px] border border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.82),rgba(225,236,247,0.48))] shadow-[inset_0_10px_26px_rgba(255,255,255,0.9),0_22px_44px_rgba(82,231,255,0.12)]">
-        <div className="absolute left-[24%] top-[34%] h-3 w-3 rounded-full bg-[var(--guto-navy)] shadow-[0_0_14px_rgba(82,231,255,0.55)]" />
-        <div className="absolute right-[24%] top-[34%] h-3 w-3 rounded-full bg-[var(--guto-navy)] shadow-[0_0_14px_rgba(82,231,255,0.55)]" />
-      </div>
-      {showPlatform && (
-        <div className="mt-[-0.25rem] h-4 w-[34%] rounded-full border border-white/70 bg-white/60 shadow-[0_10px_24px_rgba(82,231,255,0.12)]" />
-      )}
-    </div>
-  )
-}
-
 function stripVideoMatte(
   ctx: CanvasRenderingContext2D,
   width: number,
@@ -148,6 +134,7 @@ export function GutoOfficialAvatar({
   const [canUseWebmAlphaVideo, setCanUseWebmAlphaVideo] = useState(false)
   const [isSafari, setIsSafari] = useState(false)
   const [nativeVideoReady, setNativeVideoReady] = useState(false)
+  const [canvasReady, setCanvasReady] = useState(false)
   const nativeAlphaSource =
     sources.alphaApple &&
     !isSafari &&
@@ -182,6 +169,10 @@ export function GutoOfficialAvatar({
 
   useEffect(() => {
     setNativeVideoReady(false)
+    setCanvasReady(false)
+    if (process.env.NODE_ENV === "development") {
+      console.info("[GUTO_AVATAR] loading without visual fallback:", assetKey)
+    }
   }, [assetKey])
 
   useEffect(() => {
@@ -211,7 +202,12 @@ export function GutoOfficialAvatar({
         video.setAttribute("loop", "")
         video.removeAttribute("controls")
         await video.play()
-        if (!cancelled) setNativeVideoReady(true)
+        if (!cancelled) {
+          setNativeVideoReady(true)
+          if (process.env.NODE_ENV === "development") {
+            console.info("[GUTO_AVATAR] real avatar ready:", assetKey)
+          }
+        }
       } catch {
         if (!cancelled) setNativeVideoReady(false)
       }
@@ -252,6 +248,12 @@ export function GutoOfficialAvatar({
 
     const draw = () => {
       if (cancelled || !video.videoWidth || !video.videoHeight) return
+      if (!canvasReady) {
+        setCanvasReady(true)
+        if (process.env.NODE_ENV === "development") {
+          console.info("[GUTO_AVATAR] real avatar ready:", assetKey)
+        }
+      }
 
       const cssWidth = Math.round(canvas.clientWidth || 360)
       const cssHeight = Math.round(canvas.clientHeight || 360)
@@ -328,7 +330,7 @@ export function GutoOfficialAvatar({
         frameRef.current = null
       }
     }
-  }, [assetKey, canUseNativeAlphaVideo, nativeVideoReady, sources.alphaApple, sources.preferCanvas])
+  }, [assetKey, canvasReady, canUseNativeAlphaVideo, nativeVideoReady, sources.alphaApple, sources.preferCanvas])
 
   if (canUseNativeAlphaVideo && nativeAlphaSource) {
     return (
@@ -339,7 +341,6 @@ export function GutoOfficialAvatar({
             sizeClasses[size]
           )}
         >
-          <AvatarInstantFallback showPlatform={false} />
           <video
             ref={nativeVideoRef}
             key={`${assetKey}-${nativeAlphaSource.src}`}
@@ -381,10 +382,12 @@ export function GutoOfficialAvatar({
           sizeClasses[size]
         )}
       >
-        <AvatarInstantFallback showPlatform={false} />
         <canvas
           ref={canvasRef}
-          className="guto-official-avatar-canvas relative z-10 h-full w-full object-contain transition-opacity duration-150"
+          className={cn(
+            "guto-official-avatar-canvas relative z-10 h-full w-full object-contain transition-opacity duration-150",
+            canvasReady ? "opacity-100" : "opacity-0"
+          )}
         />
 
         <video

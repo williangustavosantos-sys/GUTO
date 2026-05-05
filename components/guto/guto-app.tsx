@@ -30,6 +30,7 @@ import {
   formatGutoDisplayName,
   hasCompleteGutoCalibration,
   isGenericGutoName,
+  resolveGutoLanguage,
   resolveGutoProfile,
   type StoredGutoProfile,
 } from "@/lib/guto-profile"
@@ -42,6 +43,7 @@ type IntroPlaybackState = "idle" | "starting" | "playing" | "finishing" | "finis
 const PENDING_INVITE_TOKEN_KEY = "guto-pending-invite-token"
 const ENTRY_MODE_KEY = "guto-entry-mode"
 const SELECTED_LANGUAGE_KEY = "guto-selected-language"
+const ONBOARDING_LANGUAGE_KEY = "guto-onboarding-language"
 const PRIVATE_STAGES = new Set<AppStage>(["naming", "calibration", "pact", "system", "settings"])
 
 interface StoredProfile extends StoredGutoProfile {
@@ -335,6 +337,29 @@ function clearPendingInviteStorage() {
   removeStorageItem(ENTRY_MODE_KEY)
 }
 
+function writeLanguageStorage(language: SupportedLanguage) {
+  writeStorageItem(SELECTED_LANGUAGE_KEY, language)
+  writeStorageItem(ONBOARDING_LANGUAGE_KEY, language)
+}
+
+function readResolvedStoredLanguage({
+  localProfileLanguage,
+  memoryLanguage,
+  fallbackLanguage,
+}: {
+  localProfileLanguage?: string | null
+  memoryLanguage?: string | null
+  fallbackLanguage?: string | null
+}) {
+  return resolveGutoLanguage({
+    onboardingLanguage: readStorageItem(ONBOARDING_LANGUAGE_KEY),
+    localProfileLanguage,
+    memoryLanguage,
+    globalStoredLanguage: readStorageItem(SELECTED_LANGUAGE_KEY),
+    fallbackLanguage,
+  })
+}
+
 function getPublicEntryStage(hasInviteToken: boolean, skipIntro: boolean): AppStage {
   if (skipIntro) return hasInviteToken ? "invite_claim" : "language"
   return "intro"
@@ -599,10 +624,10 @@ export function GutoApp({
     let cancelled = false
 
     if (!user?.userId) {
-      const savedLang = localStorage.getItem("guto-selected-language")
+      const savedLang = readResolvedStoredLanguage({ fallbackLanguage: language })
       const savedInviteToken = localStorage.getItem(PENDING_INVITE_TOKEN_KEY)
       const savedEntryMode = localStorage.getItem(ENTRY_MODE_KEY)
-      if (savedLang && isSupportedLanguage(savedLang)) setSelectedLanguage(savedLang as SupportedLanguage)
+      setSelectedLanguage(savedLang)
       if (savedInviteToken) {
         setPendingInviteToken(savedInviteToken)
         if (savedEntryMode !== "invite") localStorage.setItem(ENTRY_MODE_KEY, "invite")
@@ -655,12 +680,6 @@ export function GutoApp({
           window.history.replaceState({}, document.title, url.toString());
         }
 
-        const savedLang = readStorageItem(SELECTED_LANGUAGE_KEY)
-        const safeLanguage = isSupportedLanguage(savedLang || "")
-          ? (savedLang as SupportedLanguage)
-          : isSupportedLanguage(language)
-            ? language
-            : "pt-BR"
         const storedRaw = readStorageItem(userStorageKey)
         let stored: StoredProfile | null = null
 
@@ -687,11 +706,14 @@ export function GutoApp({
           setWorkoutPlan(loadedMemory.lastWorkoutPlan?.exercises?.length ? loadedMemory.lastWorkoutPlan : null)
         }
 
-        const persistedLanguage = isSupportedLanguage(stored?.language || "")
-          ? stored!.language
-          : loadedMemory?.language && isSupportedLanguage(loadedMemory.language)
-            ? loadedMemory.language
-            : safeLanguage
+        const persistedLanguage = readResolvedStoredLanguage({
+          localProfileLanguage: stored?.language,
+          memoryLanguage: loadedMemory?.language,
+          fallbackLanguage: language,
+        })
+        if (process.env.NODE_ENV === "development") {
+          console.info("[GUTO_LANGUAGE] resolved after auth:", persistedLanguage)
+        }
         const resolvedProfile = resolveGutoProfile({
           user,
           stored,
@@ -701,6 +723,10 @@ export function GutoApp({
         const resolvedName = resolvedProfile.displayName
 
         setSelectedLanguage(persistedLanguage)
+        writeStorageItem(SELECTED_LANGUAGE_KEY, persistedLanguage)
+        if (process.env.NODE_ENV === "development") {
+          console.info("[GUTO_LANGUAGE] applied in private app:", persistedLanguage)
+        }
         setDraftName(resolvedName)
         setCommittedName(resolvedName)
         if (resolvedName) {
@@ -712,12 +738,7 @@ export function GutoApp({
         setStage(resolveAuthenticatedStage(user, stored, loadedMemory))
       } catch {
         if (cancelled) return
-        const savedLang = readStorageItem(SELECTED_LANGUAGE_KEY)
-        const safeLanguage = isSupportedLanguage(savedLang || "")
-          ? (savedLang as SupportedLanguage)
-          : isSupportedLanguage(language)
-            ? language
-            : "pt-BR"
+        const safeLanguage = readResolvedStoredLanguage({ fallbackLanguage: language })
         setSelectedLanguage(safeLanguage)
         setDraftName(formatGutoName(userName || ""))
         setCommittedName(formatGutoName(userName || ""))
@@ -918,11 +939,14 @@ export function GutoApp({
 
       effectRegistry.emit("language_select", { meta: { language: lang } })
       setSelectedLanguage(lang)
+      writeLanguageStorage(lang)
+      if (process.env.NODE_ENV === "development") {
+        console.info("[GUTO_LANGUAGE] onboarding selected:", lang)
+      }
       console.log("[GUTO_FLOW] language selected", lang)
 
       if (!user) {
         if (typeof window !== "undefined") {
-          localStorage.setItem(SELECTED_LANGUAGE_KEY, lang)
           const pendingToken = localStorage.getItem(PENDING_INVITE_TOKEN_KEY)
           
           if (pendingToken) {
@@ -1073,6 +1097,10 @@ export function GutoApp({
       gutoAudio.playGutoFeedback("select")
       effectRegistry.emit("language_select", { meta: { language: lang, source: "settings" } })
       setSelectedLanguage(lang)
+      writeLanguageStorage(lang)
+      if (process.env.NODE_ENV === "development") {
+        console.info("[GUTO_LANGUAGE] applied in private app:", lang)
+      }
       setActiveLanguageGlow(null)
       setSettingsMode("menu")
       setStage("system")
@@ -1204,9 +1232,12 @@ export function GutoApp({
       .then((memory) => {
         if (cancelled) return
         setMemory(memory)
-        if (memory?.language && isSupportedLanguage(memory.language)) {
-          setSelectedLanguage(memory.language)
-        }
+        const resolvedLanguage = readResolvedStoredLanguage({
+          memoryLanguage: memory?.language,
+          fallbackLanguage: selectedLanguage,
+        })
+        setSelectedLanguage(resolvedLanguage)
+        writeStorageItem(SELECTED_LANGUAGE_KEY, resolvedLanguage)
         if (memory?.name && memory.name.toLocaleLowerCase("pt-BR") !== "operador") {
           const memoryName = formatGutoName(memory.name)
           setDraftName((prev) => prev || memoryName)
@@ -1224,7 +1255,7 @@ export function GutoApp({
     return () => {
       cancelled = true
     }
-  }, [gutoUserId, user?.userId])
+  }, [gutoUserId, selectedLanguage, user?.userId])
 
   useEffect(() => {
     if (!memory || workoutPlan?.exercises?.length) return
@@ -1292,6 +1323,7 @@ export function GutoApp({
         login({ ...res, role: res.role ?? "student" })
         const inviteResolvedName = firstRealGutoName(res.name, inviteClaimData?.name)
         setGutoUserId(res.userId)
+        writeLanguageStorage(selectedLanguage)
         if (inviteResolvedName) {
           setDraftName(inviteResolvedName)
           setCommittedName(inviteResolvedName)
