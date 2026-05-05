@@ -39,6 +39,8 @@ interface StoredProfile {
   language: SupportedLanguage
   userName: string
   onboardingComplete: boolean
+  calibrationComplete?: boolean
+  pactAccepted?: boolean
 }
 
 interface PendingExerciseQuestion {
@@ -329,9 +331,58 @@ function getPublicEntryStage(hasInviteToken: boolean, skipIntro: boolean): AppSt
   return "intro"
 }
 
-function getAuthenticatedEntryStage(stored?: StoredProfile | null): AppStage {
-  if (!stored) return "system"
-  return stored.onboardingComplete ? "system" : "naming"
+function hasStoredName(profile?: StoredProfile | null) {
+  return Boolean(formatGutoName(profile?.userName || ""))
+}
+
+function hasMemoryName(memory?: GutoMemory | null) {
+  const memoryName = formatGutoName(memory?.name || "")
+  return Boolean(memoryName && memoryName.toLocaleLowerCase("pt-BR") !== "operador")
+}
+
+function hasMemoryCalibration(memory?: GutoMemory | null) {
+  return Boolean(
+    memory?.heightCm && memory.heightCm > 0 &&
+    memory?.weightKg && memory.weightKg > 0 &&
+    memory?.trainingGoal &&
+    memory?.biologicalSex &&
+    memory?.userAge &&
+    (memory?.trainingLevel || memory?.trainingStatus) &&
+    memory?.preferredTrainingLocation
+  )
+}
+
+function resolveAuthenticatedStage(
+  user: { userId: string } | null | undefined,
+  profile?: StoredProfile | null,
+  memory?: GutoMemory | null
+): AppStage {
+  if (!user) return "intro"
+
+  console.log("[GUTO_ONBOARDING] authenticated user detected", user.userId)
+  console.log("[GUTO_ONBOARDING] profile loaded", Boolean(profile))
+
+  if (profile?.onboardingComplete || profile?.pactAccepted) {
+    console.log("[GUTO_ONBOARDING] complete -> system")
+    console.log("[GUTO_ONBOARDING] resolved stage system")
+    return "system"
+  }
+
+  if (!hasStoredName(profile) && !hasMemoryName(memory)) {
+    console.log("[GUTO_ONBOARDING] missing name")
+    console.log("[GUTO_ONBOARDING] resolved stage naming")
+    return "naming"
+  }
+
+  if (!profile?.calibrationComplete && !hasMemoryCalibration(memory)) {
+    console.log("[GUTO_ONBOARDING] missing calibration")
+    console.log("[GUTO_ONBOARDING] resolved stage calibration")
+    return "calibration"
+  }
+
+  console.log("[GUTO_ONBOARDING] missing pact")
+  console.log("[GUTO_ONBOARDING] resolved stage pact")
+  return "pact"
 }
 
 export function GutoApp({
@@ -545,6 +596,7 @@ export function GutoApp({
   useEffect(() => {
     if (typeof window === "undefined") return
     if (authLoading) return
+    let cancelled = false
 
     if (!user?.userId) {
       const savedLang = localStorage.getItem("guto-selected-language")
@@ -564,86 +616,109 @@ export function GutoApp({
       return
     }
 
-    try {
-      const currentUserId = user.userId
-      setGutoUserId(currentUserId)
+    const hydrateAuthenticatedUser = async () => {
+      try {
+        const currentUserId = user.userId
+        setGutoUserId(currentUserId)
 
-      const search = new URLSearchParams(window.location.search)
-      const forceResetParam = search.get("forceReset") === "1"
-      const presetName = search.get("presetName")
+        const search = new URLSearchParams(window.location.search)
+        const forceResetParam = search.get("forceReset") === "1"
+        const presetName = search.get("presetName")
 
-      const userStorageKey = `${STORAGE_KEY}-${currentUserId}`
-      const userVersionKey = `${STORAGE_VERSION_KEY}-${currentUserId}`
+        const userStorageKey = `${STORAGE_KEY}-${currentUserId}`
+        const userVersionKey = `${STORAGE_VERSION_KEY}-${currentUserId}`
 
-      const storedVersion = parseInt(readStorageItem(userVersionKey) ?? "0", 10)
-      const versionOutdated = storedVersion < STORAGE_VERSION
+        const storedVersion = parseInt(readStorageItem(userVersionKey) ?? "0", 10)
+        const versionOutdated = storedVersion < STORAGE_VERSION
 
-      const shouldReset =
-        search.get("guto-reset") === "1" || forceResetParam || readStorageItem(DEBUG_RESET_KEY) === "1" || versionOutdated
-      const shouldSkipIntro = skipIntro || search.get("skip-intro") === "1"
+        const shouldReset =
+          search.get("guto-reset") === "1" || forceResetParam || readStorageItem(DEBUG_RESET_KEY) === "1" || versionOutdated
 
-      console.log(`[GUTO_FLOW] useEffect init - guto-reset detected: ${shouldReset}`);
+        console.log(`[GUTO_FLOW] useEffect init - guto-reset detected: ${shouldReset}`);
 
-      if (shouldReset) {
-        removeStorageItem(userStorageKey)
-        removeStorageItem(DEBUG_RESET_KEY)
-        writeStorageItem(userVersionKey, String(STORAGE_VERSION))
-      } else {
-        writeStorageItem(userVersionKey, String(STORAGE_VERSION))
-      }
+        if (shouldReset) {
+          removeStorageItem(userStorageKey)
+          removeStorageItem(DEBUG_RESET_KEY)
+          writeStorageItem(userVersionKey, String(STORAGE_VERSION))
+        } else {
+          writeStorageItem(userVersionKey, String(STORAGE_VERSION))
+        }
 
-      // Cleanup URL parameters precisely once without triggering a re-render
-      if (search.has("guto-reset") || search.has("forceReset") || search.has("skip-intro")) {
-        console.log("[GUTO_FLOW] Removendo parametros guto-reset e skip-intro da URL...");
-        const url = new URL(window.location.href);
-        url.searchParams.delete("guto-reset");
-        url.searchParams.delete("skip-intro");
-        url.searchParams.delete("forceReset");
-        url.searchParams.delete("presetName");
-        window.history.replaceState({}, document.title, url.toString());
-      }
+        // Cleanup URL parameters precisely once without triggering a re-render
+        if (search.has("guto-reset") || search.has("forceReset") || search.has("skip-intro")) {
+          console.log("[GUTO_FLOW] Removendo parametros guto-reset e skip-intro da URL...");
+          const url = new URL(window.location.href);
+          url.searchParams.delete("guto-reset");
+          url.searchParams.delete("skip-intro");
+          url.searchParams.delete("forceReset");
+          url.searchParams.delete("presetName");
+          window.history.replaceState({}, document.title, url.toString());
+        }
 
-      const savedLang = readStorageItem(SELECTED_LANGUAGE_KEY)
-      const safeLanguage = isSupportedLanguage(savedLang || "")
-        ? (savedLang as SupportedLanguage)
-        : isSupportedLanguage(language)
-          ? language
-          : "pt-BR"
-      const storedRaw = readStorageItem(userStorageKey)
+        const savedLang = readStorageItem(SELECTED_LANGUAGE_KEY)
+        const safeLanguage = isSupportedLanguage(savedLang || "")
+          ? (savedLang as SupportedLanguage)
+          : isSupportedLanguage(language)
+            ? language
+            : "pt-BR"
+        const storedRaw = readStorageItem(userStorageKey)
+        let stored: StoredProfile | null = null
 
-      if (storedRaw) {
-        const stored = JSON.parse(storedRaw) as StoredProfile
-        const persistedLanguage = isSupportedLanguage(stored.language) ? stored.language : safeLanguage
-        const persistedName = formatGutoName(stored.userName || presetName || userName || "")
+        if (storedRaw) {
+          try {
+            stored = JSON.parse(storedRaw) as StoredProfile
+          } catch {
+            removeStorageItem(userStorageKey)
+          }
+        }
+
+        let loadedMemory: GutoMemory | null = null
+        try {
+          loadedMemory = await getGutoMemory(currentUserId)
+        } catch {
+          loadedMemory = null
+        }
+
+        if (cancelled) return
+
+        if (loadedMemory) {
+          setMemory(loadedMemory)
+          setEvolution(resolveEvolutionStage(loadedMemory.totalXp || 0))
+          setWorkoutPlan(loadedMemory.lastWorkoutPlan?.exercises?.length ? loadedMemory.lastWorkoutPlan : null)
+        }
+
+        const persistedLanguage = isSupportedLanguage(stored?.language || "")
+          ? stored!.language
+          : loadedMemory?.language && isSupportedLanguage(loadedMemory.language)
+            ? loadedMemory.language
+            : safeLanguage
+        const resolvedName = formatGutoName(stored?.userName || loadedMemory?.name || presetName || userName || "")
 
         setSelectedLanguage(persistedLanguage)
-        setDraftName(persistedName)
-        setCommittedName(persistedName)
-        
-        setStage(getAuthenticatedEntryStage(stored))
-      } else {
+        setDraftName(resolvedName)
+        setCommittedName(resolvedName)
+        setStage(resolveAuthenticatedStage(user, stored, loadedMemory))
+      } catch {
+        if (cancelled) return
+        const savedLang = readStorageItem(SELECTED_LANGUAGE_KEY)
+        const safeLanguage = isSupportedLanguage(savedLang || "")
+          ? (savedLang as SupportedLanguage)
+          : isSupportedLanguage(language)
+            ? language
+            : "pt-BR"
         setSelectedLanguage(safeLanguage)
-        const initialName = formatGutoName(presetName || userName || "")
-        setDraftName(initialName)
-        setCommittedName(initialName)
-        setStage(getAuthenticatedEntryStage(null))
+        setDraftName(formatGutoName(userName || ""))
+        setCommittedName(formatGutoName(userName || ""))
+        setStage(resolveAuthenticatedStage(user, null, null))
+      } finally {
+        if (!cancelled) setIsHydrated(true)
       }
-    } catch {
-      const savedLang = readStorageItem(SELECTED_LANGUAGE_KEY)
-      const safeLanguage = isSupportedLanguage(savedLang || "")
-        ? (savedLang as SupportedLanguage)
-        : isSupportedLanguage(language)
-          ? language
-          : "pt-BR"
-      setSelectedLanguage(safeLanguage)
-      setDraftName(formatGutoName(userName || ""))
-      setCommittedName(formatGutoName(userName || ""))
-      setStage("system")
-    } finally {
-      setIsHydrated(true)
     }
 
+    void hydrateAuthenticatedUser()
+
     return () => {
+      cancelled = true
       clearScheduled()
       clearPactInterval()
       clearIntroSafetyTimer()
@@ -671,14 +746,14 @@ export function GutoApp({
       return
     }
 
-    // AUTHENTICATED users flow: intro/language/invite are public ritual only.
+    // AUTHENTICATED users flow: public stages are not repeated, but private onboarding cannot be skipped.
     if (!PRIVATE_STAGES.has(stage)) {
       clearPendingInviteStorage()
       setPendingInviteToken(null)
-      setStage("system")
+      setStage(resolveAuthenticatedStage(user, null, memory))
       return
     }
-  }, [authLoading, isHydrated, router, selectedLanguage, stage, user])
+  }, [authLoading, isHydrated, memory, router, stage, user])
 
   useEffect(() => {
     if (stage === "intro") {
@@ -702,6 +777,8 @@ export function GutoApp({
       persistProfile({
         language: finalLanguage,
         userName: finalName,
+        calibrationComplete: true,
+        pactAccepted: true,
         onboardingComplete: true,
       })
       persistMemory({
@@ -897,6 +974,7 @@ export function GutoApp({
   const handleCalibrationComplete = useCallback(
     async (calibration: Parameters<typeof saveGutoMemory>[0]) => {
       setStage("pact")
+      persistProfile({ calibrationComplete: true, onboardingComplete: false })
       await persistMemory(calibration)
       trackBehaviorEvent("calibration_completed", { ...calibration })
       
@@ -1189,8 +1267,10 @@ export function GutoApp({
       clearPendingInviteStorage()
       setPendingInviteToken(null)
       schedule(() => {
+        console.log("[GUTO_INVITE] claim success -> resolve onboarding stage")
         login({ ...res, role: res.role ?? "student" })
-        setStage("system")
+        setGutoUserId(res.userId)
+        setStage(resolveAuthenticatedStage({ userId: res.userId }, null, null))
         router.replace("/")
       }, 2000)
     } catch (err: unknown) {

@@ -95,6 +95,7 @@ function LoginPageContent() {
     setError(null)
     try {
       const res = await loginUser(emailOrId, password)
+      console.log("[GUTO_LOGIN] login success -> resolve onboarding stage")
       login(res)
       router.push("/")
     } catch (err) {
