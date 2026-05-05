@@ -121,12 +121,7 @@ const chatCopy: Record<SupportedLanguage, { channel: string; speaking: string; m
   },
 }
 
-const openingMessage: Record<SupportedLanguage, (name: string) => string> = {
-  "pt-BR": (name) => name ? `${name}, finalmente chegou, estava te esperando, enquanto isso já analisei tudo e já montei um treino para a gente evoluir junto. Bora?` : `Finalmente chegou, estava te esperando, enquanto isso já analisei tudo e já montei um treino para a gente evoluir junto. Bora?`,
-  "en-US": (name) => name ? `${name}, you finally arrived, I was waiting for you. Meanwhile I analyzed everything and put together a workout so we can evolve together. Let's go?` : `You finally arrived, I was waiting for you. Meanwhile I analyzed everything and put together a workout so we can evolve together. Let's go?`,
-  "es-ES": (name) => name ? `${name}, finalmente llegaste, te estaba esperando, mientras tanto ya analicé todo y armé un entrenamiento para que evolucionemos juntos. ¿Vamos?` : `Finalmente llegaste, te estaba esperando, mientras tanto ya analicé todo y armé un entrenamiento para que evolucionemos juntos. ¿Vamos?`,
-  "it-IT": (name) => name ? `${name}, finalmente sei arrivato, ti stavo aspettando, nel frattempo ho analizzato tutto e ho preparato un allenamento per farci evolvere insieme. Andiamo?` : `Finalmente sei arrivato, ti stavo aspettando, nel frattempo ho analizzato tutto e ho preparato un allenamento per farci evolvere insieme. Andiamo?`,
-}
+// Opening message is now handled entirely by the backend via /guto/proactive
 
 const PROACTIVE_CHECK_INTERVAL_MS = 60_000
 const FIRST_MESSAGE_SENT_KEY_PREFIX = "guto-first-message-sent"
@@ -263,24 +258,15 @@ export function ChatTab({
   const locale = translations[validLang]
   const copy = chatCopy[validLang]
   const brandName = formatDisplayName(userName || "")
-  const initialGutoMessage = openingMessage[validLang](brandName)
   const storedChatState = useMemo(() => readStoredChatState(userId), [userId])
   const initialChatState = useMemo(
     () =>
       storedChatState || {
-        messages: [
-          {
-            id: "guto-initial",
-            text: initialGutoMessage,
-            isGuto: true,
-            timestamp: new Date(),
-            avatarEmotion: "default" as GutoAvatarEmotion,
-          },
-        ],
+        messages: [],
         expectedResponse: null,
         expectedResponseMessageId: null,
       },
-    [initialGutoMessage, storedChatState]
+    [storedChatState]
   )
 
   const [messages, setMessages] = useState<Message[]>(initialChatState.messages)
@@ -302,7 +288,13 @@ export function ChatTab({
   const sendInFlightRef = useRef(false)
   const lastProactiveKeyRef = useRef<string | null>(null)
   const arrivalBriefingRequestedRef = useRef(false)
-  const shouldForceArrivalBriefingRef = useRef(!storedChatState)
+  const shouldForceArrivalBriefingRef = useRef((() => {
+    if (!storedChatState || storedChatState.messages.length === 0) return true
+    const lastMsg = storedChatState.messages[storedChatState.messages.length - 1]
+    if (!lastMsg || !lastMsg.timestamp) return true
+    const timeDiff = Date.now() - new Date(lastMsg.timestamp).getTime()
+    return timeDiff > 4 * 60 * 60 * 1000 // 4 hours
+  })())
   const pendingExpectedResponseRef = useRef<GutoExpectedResponse | null>(initialChatState.expectedResponse)
   const pendingExpectedResponseMessageIdRef = useRef<string | null>(initialChatState.expectedResponseMessageId)
 
@@ -316,23 +308,16 @@ export function ChatTab({
   }, [messages, userId])
 
   useEffect(() => {
-    setMessages((current) => {
-      if (current.length !== 1 || current[0]?.id !== "guto-initial") return current
+    if (typeof window === "undefined") return
+    try {
+      const stored = window.localStorage.getItem(`guto-voice-enabled-${userId}`)
+      if (stored === "true") {
+        setIsMuted(false)
+      }
+    } catch {}
+  }, [userId])
 
-      pendingExpectedResponseRef.current = null
-      pendingExpectedResponseMessageIdRef.current = null
 
-      const next = [
-        {
-          ...current[0],
-          text: initialGutoMessage,
-          avatarEmotion: "default" as GutoAvatarEmotion,
-        },
-      ]
-      messagesRef.current = next
-      return next
-    })
-  }, [initialGutoMessage])
   
   useEffect(() => {
     if (initialXpGranted && !initialXpRewardSeen) {
@@ -451,7 +436,7 @@ export function ChatTab({
       pendingExpectedResponseMessageIdRef.current = data.expectedResponse ? messageId : null
 
       setMessages((prev) => {
-        if (forceArrivalBriefing && prev.length === 1 && prev[0]?.id === "guto-initial") {
+        if (forceArrivalBriefing && prev.length === 0) {
           return [gutoMessage]
         }
 
@@ -731,7 +716,7 @@ export function ChatTab({
     }
   }
 
-  const latestGuto = messages[lastGutoIndex] ?? messages[0]
+  const latestGuto = messages[lastGutoIndex] ?? messages[0] ?? { avatarEmotion: "default" as GutoAvatarEmotion }
   const visibleMessages = messages.slice(-8)
 
   return (
@@ -762,10 +747,23 @@ export function ChatTab({
         onClick={() =>
           setIsMuted((prev) => {
             const next = !prev
+            try {
+              window.localStorage.setItem(`guto-voice-enabled-${userId}`, next ? "false" : "true")
+            } catch {}
+
             if (next && currentAudioRef.current) {
               currentAudioRef.current.pause()
               currentAudioRef.current = null
               setIsSpeaking(false)
+            } else if (!next) {
+              const testPhrases: Record<SupportedLanguage, string> = {
+                "pt-BR": "Voz ativada. Agora eu estou contigo.",
+                "en-US": "Voice enabled. I am with you now.",
+                "es-ES": "Voz activada. Ahora estoy contigo.",
+                "it-IT": "Voce attivata. Ora sono con te."
+              }
+              const phrase = testPhrases[validLang as SupportedLanguage] || testPhrases["pt-BR"]
+              void synthesizeAndPlay(phrase, validLang as SupportedLanguage)
             }
             return next
           })
