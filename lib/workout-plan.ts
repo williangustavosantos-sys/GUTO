@@ -1,5 +1,5 @@
 import type { GutoMemory, GutoWorkoutExercise, GutoWorkoutPlan, WorkoutFocus } from "@/lib/api/guto"
-import { getMissingCalibrationFields, hasCompleteGutoCalibration } from "@/lib/guto-profile"
+import { getMissingCalibrationFields, hasCompleteGutoCalibration, isSupportedGutoLanguage, type GutoLanguage } from "@/lib/guto-profile"
 
 const todayKey = () => new Date().toISOString().slice(0, 10)
 
@@ -104,6 +104,151 @@ const exerciseCatalog: Record<string, GutoWorkoutExercise> = {
   },
 }
 
+const WORKOUT_FOCUS_TITLES: Record<WorkoutFocus, Record<GutoLanguage, string>> = {
+  full_body: {
+    "pt-BR": "Força total",
+    "it-IT": "Forza totale",
+    "en-US": "Full-body strength",
+    "es-ES": "Fuerza total",
+  },
+  legs_core: {
+    "pt-BR": "Inferiores e core",
+    "it-IT": "Gambe e core",
+    "en-US": "Legs and core",
+    "es-ES": "Piernas y core",
+  },
+  chest_triceps: {
+    "pt-BR": "Peito, ombro e tríceps",
+    "it-IT": "Petto, spalle e tricipiti",
+    "en-US": "Chest, shoulders and triceps",
+    "es-ES": "Pecho, hombros y tríceps",
+  },
+  back_biceps: {
+    "pt-BR": "Costas e bíceps",
+    "it-IT": "Schiena e bicipiti",
+    "en-US": "Back and biceps",
+    "es-ES": "Espalda y bíceps",
+  },
+  shoulders_abs: {
+    "pt-BR": "Ombros e abdômen",
+    "it-IT": "Spalle e addome",
+    "en-US": "Shoulders and abs",
+    "es-ES": "Hombros y abdomen",
+  },
+}
+
+const GENERIC_WORKOUT_TITLES = new Set([
+  "treino do dia",
+  "today's workout",
+  "allenamento del giorno",
+  "entrenamiento del dia",
+  "missao do dia",
+  "mission of the day",
+  "missione del giorno",
+  "mision del dia",
+])
+
+type ExerciseCopy = Partial<Pick<GutoWorkoutExercise, "name" | "cue" | "note">>
+
+const EXERCISE_COPY_BY_ID: Record<string, Record<GutoLanguage, ExerciseCopy>> = {
+  "aquecimento-esteira": {
+    "pt-BR": { name: "Caminhada na esteira inclinada", cue: "Ritmo firme. Aquece sem gastar a missão.", note: "Aumente a inclinação só se estiver sem dor." },
+    "it-IT": { name: "Camminata sul tapis roulant in salita", cue: "Ritmo deciso. Scalda senza bruciare la missione.", note: "Aumenta l'inclinazione solo se non hai dolore." },
+    "en-US": { name: "Incline treadmill walk", cue: "Firm pace. Warm up without spending the mission.", note: "Increase the incline only if there is no pain." },
+    "es-ES": { name: "Caminata en cinta inclinada", cue: "Ritmo firme. Calienta sin gastar la misión.", note: "Sube la inclinación solo si no hay dolor." },
+  },
+  "peito-supino-reto": {
+    "pt-BR": { name: "Supino reto", cue: "Controle a descida. Empurra sem perder postura.", note: "Carga forte, execução limpa." },
+    "it-IT": { name: "Panca piana", cue: "Controlla la discesa. Spingi senza perdere postura.", note: "Carico serio, esecuzione pulita." },
+    "en-US": { name: "Bench press", cue: "Control the way down. Press without losing position.", note: "Strong load, clean execution." },
+    "es-ES": { name: "Press de banca", cue: "Controla la bajada. Empuja sin perder postura.", note: "Carga fuerte, ejecución limpia." },
+  },
+  "costas-remada-baixa": {
+    "pt-BR": { name: "Remada baixa na polia", cue: "Puxa com as costas, não com pressa.", note: "Pausa curta no fim do movimento." },
+    "it-IT": { name: "Rematore basso al cavo", cue: "Tira con la schiena, non con la fretta.", note: "Pausa breve alla fine del movimento." },
+    "en-US": { name: "Cable row", cue: "Pull with your back, not with haste.", note: "Short pause at the end of the movement." },
+    "es-ES": { name: "Remo en polea baja", cue: "Tira con la espalda, no con prisa.", note: "Pausa corta al final del movimiento." },
+  },
+  "pernas-legpress-45": {
+    "pt-BR": { name: "Leg press 45", cue: "Amplitude segura. Joelho acompanha a ponta do pé.", note: "Se houver dor no joelho, reduza amplitude e carga." },
+    "it-IT": { name: "Leg press 45", cue: "Ampiezza sicura. Il ginocchio segue la punta del piede.", note: "Se il ginocchio dà fastidio, riduci ampiezza e carico." },
+    "en-US": { name: "Leg press 45", cue: "Safe range. Knee tracks over the toes.", note: "If the knee hurts, reduce range and load." },
+    "es-ES": { name: "Leg press 45", cue: "Rango seguro. La rodilla sigue la punta del pie.", note: "Si duele la rodilla, reduce rango y carga." },
+  },
+  "ombro-desenvolvimento": {
+    "pt-BR": { name: "Desenvolvimento sentado", cue: "Tronco firme. Sobe sem compensar lombar.", note: "Pare antes de transformar técnica em ego." },
+    "it-IT": { name: "Military press seduto", cue: "Busto fermo. Sali senza compensare con la lombare.", note: "Fermati prima che la tecnica diventi ego." },
+    "en-US": { name: "Seated shoulder press", cue: "Firm torso. Press without arching the low back.", note: "Stop before technique turns into ego." },
+    "es-ES": { name: "Press de hombro sentado", cue: "Torso firme. Sube sin compensar con la lumbar.", note: "Para antes de convertir la técnica en ego." },
+  },
+  "abdomen-prancha": {
+    "pt-BR": { name: "Prancha isométrica", cue: "Quadril firme. Respira e segura.", note: "Missão termina com controle, não com desespero." },
+    "it-IT": { name: "Plank isometrico", cue: "Bacino fermo. Respira e tieni.", note: "La missione finisce con controllo, non con disperazione." },
+    "en-US": { name: "Plank", cue: "Hips firm. Breathe and hold.", note: "The mission ends with control, not desperation." },
+    "es-ES": { name: "Plancha isométrica", cue: "Cadera firme. Respira y aguanta.", note: "La misión termina con control, no con desesperación." },
+  },
+  "peito-flexao": {
+    "pt-BR": { name: "Flexão", cue: "Corpo em bloco. Desce com controle.", note: "Use apoio no joelho se precisar manter execução." },
+    "it-IT": { name: "Flessioni", cue: "Corpo compatto. Scendi con controllo.", note: "Usa le ginocchia se serve per mantenere l'esecuzione." },
+    "en-US": { name: "Push-up", cue: "Body as one block. Lower with control.", note: "Use knee support if needed to keep execution clean." },
+    "es-ES": { name: "Flexiones", cue: "Cuerpo en bloque. Baja con control.", note: "Apoya rodillas si hace falta para mantener ejecución." },
+  },
+}
+
+const EXERCISE_COPY_ALIASES: Record<string, keyof typeof EXERCISE_COPY_BY_ID> = {
+  caminhada_esteira_inclinada: "aquecimento-esteira",
+  supino_reto: "peito-supino-reto",
+  remada_baixa_polia: "costas-remada-baixa",
+  legpress_45: "pernas-legpress-45",
+  desenvolvimento_sentado: "ombro-desenvolvimento",
+  prancha_isometrica: "abdomen-prancha",
+  flexao: "peito-flexao",
+}
+
+function normalizeLanguage(language: string): GutoLanguage {
+  return isSupportedGutoLanguage(language) ? language : "pt-BR"
+}
+
+function normalizeTitle(value?: string) {
+  return (value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLocaleLowerCase("pt-BR")
+}
+
+export function getLocalizedWorkoutTitle(focusKey: WorkoutFocus | undefined, language: string) {
+  const validLang = normalizeLanguage(language)
+  return WORKOUT_FOCUS_TITLES[focusKey || "full_body"][validLang]
+}
+
+export function localizeGutoWorkoutPlan(plan: GutoWorkoutPlan | null | undefined, language: string): GutoWorkoutPlan | null {
+  if (!plan) return null
+  const validLang = normalizeLanguage(language)
+  const normalizedFocus = normalizeTitle(plan.focus)
+  const shouldReplaceFocus = Boolean(plan.focusKey) || GENERIC_WORKOUT_TITLES.has(normalizedFocus)
+  const localizedFocus = shouldReplaceFocus ? getLocalizedWorkoutTitle(plan.focusKey, validLang) : plan.focus
+  const localizedExercises = plan.exercises.map((exercise) => {
+    const copyKey = EXERCISE_COPY_BY_ID[exercise.id] ? exercise.id : EXERCISE_COPY_ALIASES[exercise.id]
+    const copy = copyKey ? EXERCISE_COPY_BY_ID[copyKey]?.[validLang] : undefined
+    return copy ? { ...exercise, ...copy } : exercise
+  })
+
+  if (process.env.NODE_ENV === "development") {
+    console.info("[GUTO_WORKOUT] localized plan language", validLang)
+  }
+
+  return {
+    ...plan,
+    focus: localizedFocus,
+    dateLabel: plan.scheduledFor
+      ? new Date(plan.scheduledFor).toLocaleDateString(validLang, { weekday: "long", day: "2-digit", month: "2-digit" })
+      : plan.dateLabel,
+    exercises: localizedExercises,
+  }
+}
+
 export function getWorkoutMissingFields(memory?: GutoMemory | null) {
   return getMissingCalibrationFields(memory)
 }
@@ -111,21 +256,31 @@ export function getWorkoutMissingFields(memory?: GutoMemory | null) {
 export function createLocalWorkoutPlan(memory: GutoMemory, language: string): GutoWorkoutPlan | null {
   if (!hasCompleteGutoCalibration(memory)) return null
 
+  const validLang = normalizeLanguage(language)
   const isGym = memory.preferredTrainingLocation === "gym"
   const focusKey: WorkoutFocus = memory.trainingGoal === "muscle_gain" && isGym ? "full_body" : "full_body"
   const pathology = `${memory.trainingPathology || ""} ${memory.trainingLimitations || ""}`.toLocaleLowerCase("pt-BR")
   const avoidLegLoad = /joelho|knee|rodilla|ginocchio|quadril|anca/.test(pathology)
+
   const base = isGym
     ? ["esteira", "supino", "remada", avoidLegLoad ? "prancha" : "legpress", "ombro", "prancha"]
     : ["esteira", "flexao", "remada", "ombro", "prancha"]
-  const exercises = base.map((key) => exerciseCatalog[key])
+
+  const exercises = base.map((key) => {
+    const exercise = { ...exerciseCatalog[key] }
+    const copy = EXERCISE_COPY_BY_ID[exercise.id]?.[validLang]
+    return copy ? { ...exercise, ...copy } : exercise
+  })
 
   return {
-    focus: language === "en-US" ? "Mission of the day" : language === "it-IT" ? "Missione del giorno" : language === "es-ES" ? "Misión del día" : "Missão do dia",
+    focus: getLocalizedWorkoutTitle(focusKey, validLang),
     focusKey,
-    dateLabel: new Date().toLocaleDateString(language, { weekday: "long", day: "2-digit", month: "2-digit" }),
+    dateLabel: new Date().toLocaleDateString(validLang, { weekday: "long", day: "2-digit", month: "2-digit" }),
     scheduledFor: todayKey(),
-    summary: "Plano local gerado a partir da calibragem salva.",
+    summary: validLang === "en-US" ? "Local plan based on your calibration." :
+             validLang === "it-IT" ? "Piano locale basato sulla tua calibrazione." :
+             validLang === "es-ES" ? "Plan local basado en tu calibración." :
+             "Plano local gerado a partir da calibragem salva.",
     exercises,
   }
 }

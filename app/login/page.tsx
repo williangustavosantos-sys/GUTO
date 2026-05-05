@@ -7,6 +7,7 @@ import { useAuth } from "@/components/auth-provider"
 import { loginUser } from "@/lib/api/auth"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { gutoAudio } from "@/lib/audio-haptics"
+import { resolveGutoLanguage } from "@/lib/guto-profile"
 import { Loader2 } from "lucide-react"
 
 type Lang = "pt-BR" | "it-IT" | "en-US" | "es-ES"
@@ -76,14 +77,14 @@ function LoginPageContent() {
     }
 
     const fromQuery = searchParams.get("lang") ?? ""
-    const fromStorage = typeof window !== "undefined"
-      ? localStorage.getItem("guto-onboarding-language") || localStorage.getItem("guto-selected-language") || ""
-      : ""
-    const resolved = isSupportedLang(fromQuery)
-      ? fromQuery
-      : isSupportedLang(fromStorage)
-        ? fromStorage
-        : "pt-BR"
+    const onboardingLanguage = typeof window !== "undefined" ? localStorage.getItem("guto-onboarding-language") : null
+    const selectedLanguage = typeof window !== "undefined" ? localStorage.getItem("guto-selected-language") : null
+    const resolved = resolveGutoLanguage({
+      scope: "onboarding",
+      onboardingLanguage: isSupportedLang(fromQuery) ? fromQuery : onboardingLanguage,
+      globalStoredLanguage: selectedLanguage,
+      fallbackLanguage: "pt-BR",
+    })
     setLang(resolved)
   }, [router, searchParams])
 

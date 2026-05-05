@@ -15,10 +15,10 @@ interface BottomNavigationProps {
 }
 
 const tabLabels: Record<"pt-BR" | "it-IT" | "es-ES" | "en-US", Record<TabType, string>> = {
-  "pt-BR": { guto: "GUTO", caminho: "PERC.", evolucoes: "EVO.", missao: "TREINO", arena: "ARENA", dieta: "DIETA" },
-  "it-IT": { guto: "GUTO", caminho: "PERC.", evolucoes: "EVO.", missao: "TRAIN", arena: "ARENA", dieta: "DIETA" },
-  "es-ES": { guto: "GUTO", caminho: "REC.", evolucoes: "EVO.", missao: "ENTR.", arena: "ARENA", dieta: "DIETA" },
-  "en-US": { guto: "GUTO", caminho: "JOURNEY", evolucoes: "EVOLVE", missao: "WORKOUT", arena: "ARENA", dieta: "DIET" },
+  "pt-BR": { guto: "GUTO", caminho: "PERCURSO", evolucoes: "EVOLUIR", missao: "MISSÃO", arena: "ARENA", dieta: "DIETA" },
+  "it-IT": { guto: "GUTO", caminho: "PERCORSO", evolucoes: "EVOLUZIONE", missao: "MISSIONE", arena: "ARENA", dieta: "DIETA" },
+  "es-ES": { guto: "GUTO", caminho: "RECORRIDO", evolucoes: "EVOLUCIÓN", missao: "MISIÓN", arena: "ARENA", dieta: "DIETA" },
+  "en-US": { guto: "GUTO", caminho: "JOURNEY", evolucoes: "EVOLVE", missao: "MISSION", arena: "ARENA", dieta: "DIET" },
 }
 
 const tabs = [

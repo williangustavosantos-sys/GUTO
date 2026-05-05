@@ -2,6 +2,7 @@ import type { AuthUser } from "@/lib/api/auth"
 import type { GutoMemory } from "@/lib/api/guto"
 
 export type GutoLanguage = "pt-BR" | "it-IT" | "es-ES" | "en-US"
+export type GutoLanguageScope = "onboarding" | "private"
 
 export type StoredGutoProfile = {
   language?: string
@@ -27,25 +28,26 @@ export function isSupportedGutoLanguage(value?: string | null): value is GutoLan
 }
 
 export function resolveGutoLanguage({
+  scope = "private",
+  sessionLanguage,
   onboardingLanguage,
   localProfileLanguage,
   memoryLanguage,
   globalStoredLanguage,
   fallbackLanguage,
 }: {
+  scope?: GutoLanguageScope
+  sessionLanguage?: string | null
   onboardingLanguage?: string | null
   localProfileLanguage?: string | null
   memoryLanguage?: string | null
   globalStoredLanguage?: string | null
   fallbackLanguage?: string | null
 }): GutoLanguage {
-  const candidates = [
-    onboardingLanguage,
-    localProfileLanguage,
-    memoryLanguage,
-    globalStoredLanguage,
-    fallbackLanguage,
-  ]
+  const candidates =
+    scope === "onboarding"
+      ? [onboardingLanguage, localProfileLanguage, memoryLanguage, globalStoredLanguage, fallbackLanguage]
+      : [sessionLanguage, localProfileLanguage, memoryLanguage, onboardingLanguage, globalStoredLanguage, fallbackLanguage]
 
   for (const candidate of candidates) {
     if (isSupportedGutoLanguage(candidate)) return candidate

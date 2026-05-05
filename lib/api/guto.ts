@@ -246,6 +246,7 @@ export async function saveGutoMemory(payload: {
   foodRestrictions?: string
   confirmedName?: boolean
   initialXpRewardSeen?: boolean
+  lastWorkoutPlan?: GutoWorkoutPlan | null
 }) {
   return apiRequest<GutoMemory>("/guto/memory", {
     method: "POST",
