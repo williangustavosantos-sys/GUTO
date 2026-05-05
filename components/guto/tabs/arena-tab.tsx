@@ -20,6 +20,7 @@ interface ArenaTabProps {
   language: string
   translations: TranslationDictionary
   refreshKey?: number
+  currentUserName?: string
 }
 
 const ARENA_GROUP = "will-personal-alpha"
@@ -44,15 +45,26 @@ function RankingCard({
   item,
   language,
   t,
+  currentUserName,
+  currentUserId,
 }: {
   item: ArenaRankingItem
   language: string
   t: TranslationDictionary
+  currentUserName?: string
+  currentUserId: string
 }) {
   const PositionIcon = positionIcons[item.position - 1] ?? null
   const stageColor = avatarStageColor[item.avatarStage] ?? "text-[var(--guto-cyan)]"
   const stageName = avatarStageLabel[item.avatarStage]?.[language] ?? item.avatarStage.toUpperCase()
   const isOnFire = item.status === "EM CHAMAS" || item.status === "ON FIRE"
+  const rawName = item.pairName.toUpperCase().startsWith("GUTO & ")
+    ? item.pairName.slice(7).trim()
+    : item.pairName
+  const isGenericName = /^operador\s*#?\d*$/i.test(rawName || "") || /^operator\s*#?\d*$/i.test(rawName || "")
+  const displayName = item.userId === currentUserId && currentUserName && isGenericName
+    ? currentUserName
+    : rawName || "USUÁRIO"
 
   return (
     <motion.div
@@ -98,9 +110,7 @@ function RankingCard({
             {/* Name */}
             <div className="min-w-0 flex-1 flex flex-col">
               <p className="truncate text-[15px] font-black tracking-widest text-[var(--guto-navy)]">
-                {item.pairName.toUpperCase().startsWith("GUTO & ") 
-                  ? item.pairName.slice(7).trim() || "USUÁRIO" 
-                  : item.pairName || "USUÁRIO"}
+                {displayName}
               </p>
               <p className="text-[8px] font-black uppercase tracking-widest text-[rgba(13,35,65,0.42)]">
                 DUPLA COM GUTO
@@ -192,7 +202,7 @@ function LoadingState() {
   )
 }
 
-export function ArenaTab({ userId: _userId, language, translations: t, refreshKey }: ArenaTabProps) {
+export function ArenaTab({ userId, language, translations: t, refreshKey, currentUserName }: ArenaTabProps) {
   const [activeSubTab, setActiveSubTab] = useState<ArenaSubTab>("week")
   const [data, setData] = useState<ArenaRankingResponse | null>(null)
   const [loading, setLoading] = useState(false)
@@ -308,7 +318,14 @@ export function ArenaTab({ userId: _userId, language, translations: t, refreshKe
               className="flex flex-col gap-3"
             >
               {data.items.map((item) => (
-                <RankingCard key={item.userId} item={item} language={language} t={t} />
+                <RankingCard
+                  key={item.userId}
+                  item={item}
+                  language={language}
+                  t={t}
+                  currentUserId={userId}
+                  currentUserName={currentUserName}
+                />
               ))}
             </motion.div>
           )}

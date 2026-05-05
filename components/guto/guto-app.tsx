@@ -25,6 +25,15 @@ import { getInvite, claimInvite } from "@/lib/api/auth"
 import type { EvolutionStage, SupportedLanguage } from "@/types/contract"
 import { translations } from "./translations"
 import { gutoAudio } from "@/lib/audio-haptics"
+import {
+  firstRealGutoName,
+  formatGutoDisplayName,
+  hasCompleteGutoCalibration,
+  isGenericGutoName,
+  resolveGutoProfile,
+  type StoredGutoProfile,
+} from "@/lib/guto-profile"
+import { createLocalWorkoutPlan, getWorkoutMissingFields } from "@/lib/workout-plan"
 
 type AppStage = "intro" | "language" | "invite_claim" | "naming" | "calibration" | "pact" | "system" | "settings"
 type SettingsMode = "menu" | "language" | "name" | "profile" | "goal" | "location" | "pathology" | "physicaldata" | "residence" | "food_restrictions"
@@ -35,7 +44,7 @@ const ENTRY_MODE_KEY = "guto-entry-mode"
 const SELECTED_LANGUAGE_KEY = "guto-selected-language"
 const PRIVATE_STAGES = new Set<AppStage>(["naming", "calibration", "pact", "system", "settings"])
 
-interface StoredProfile {
+interface StoredProfile extends StoredGutoProfile {
   language: SupportedLanguage
   userName: string
   onboardingComplete: boolean
@@ -247,7 +256,7 @@ function isSupportedLanguage(value: string): value is SupportedLanguage {
 }
 
 function formatGutoName(value: string) {
-  return value.replace(/\s+/g, " ").trimStart().toLocaleUpperCase()
+  return formatGutoDisplayName(value)
 }
 
 function normalizeGutoName(value: string) {
@@ -332,24 +341,15 @@ function getPublicEntryStage(hasInviteToken: boolean, skipIntro: boolean): AppSt
 }
 
 function hasStoredName(profile?: StoredProfile | null) {
-  return Boolean(formatGutoName(profile?.userName || ""))
+  return Boolean(firstRealGutoName(profile?.userName))
 }
 
 function hasMemoryName(memory?: GutoMemory | null) {
-  const memoryName = formatGutoName(memory?.name || "")
-  return Boolean(memoryName && memoryName.toLocaleLowerCase("pt-BR") !== "operador")
+  return Boolean(firstRealGutoName(memory?.name))
 }
 
 function hasMemoryCalibration(memory?: GutoMemory | null) {
-  return Boolean(
-    memory?.heightCm && memory.heightCm > 0 &&
-    memory?.weightKg && memory.weightKg > 0 &&
-    memory?.trainingGoal &&
-    memory?.biologicalSex &&
-    memory?.userAge &&
-    (memory?.trainingLevel || memory?.trainingStatus) &&
-    memory?.preferredTrainingLocation
-  )
+  return hasCompleteGutoCalibration(memory)
 }
 
 function resolveAuthenticatedStage(
@@ -692,11 +692,23 @@ export function GutoApp({
           : loadedMemory?.language && isSupportedLanguage(loadedMemory.language)
             ? loadedMemory.language
             : safeLanguage
-        const resolvedName = formatGutoName(stored?.userName || loadedMemory?.name || presetName || userName || "")
+        const resolvedProfile = resolveGutoProfile({
+          user,
+          stored,
+          memory: loadedMemory,
+          fallbackName: firstRealGutoName(presetName, userName),
+        })
+        const resolvedName = resolvedProfile.displayName
 
         setSelectedLanguage(persistedLanguage)
         setDraftName(resolvedName)
         setCommittedName(resolvedName)
+        if (resolvedName) {
+          persistProfile({ userName: resolvedName, language: persistedLanguage, onboardingComplete: Boolean(stored?.onboardingComplete) })
+          if (!loadedMemory || isGenericGutoName(loadedMemory.name)) {
+            void persistMemory({ name: resolvedName, language: persistedLanguage })
+          }
+        }
         setStage(resolveAuthenticatedStage(user, stored, loadedMemory))
       } catch {
         if (cancelled) return
@@ -1214,6 +1226,15 @@ export function GutoApp({
     }
   }, [gutoUserId, user?.userId])
 
+  useEffect(() => {
+    if (!memory || workoutPlan?.exercises?.length) return
+    const localPlan = createLocalWorkoutPlan(memory, selectedLanguage)
+    if (!localPlan) return
+    console.log("[GUTO_WORKOUT] complete calibration -> local workout fallback")
+    setWorkoutPlan(localPlan)
+    void persistMemory({ lastWorkoutPlan: localPlan } as Parameters<typeof saveGutoMemory>[0]).catch(() => {})
+  }, [memory, persistMemory, selectedLanguage, workoutPlan])
+
   const stopHold = useCallback(() => {
     if (stage !== "pact" || pactProgress >= 100 || pactCompleteRef.current) return
     clearPactInterval()
@@ -1269,8 +1290,20 @@ export function GutoApp({
       schedule(() => {
         console.log("[GUTO_INVITE] claim success -> resolve onboarding stage")
         login({ ...res, role: res.role ?? "student" })
+        const inviteResolvedName = firstRealGutoName(res.name, inviteClaimData?.name)
         setGutoUserId(res.userId)
-        setStage(resolveAuthenticatedStage({ userId: res.userId }, null, null))
+        if (inviteResolvedName) {
+          setDraftName(inviteResolvedName)
+          setCommittedName(inviteResolvedName)
+          writeStorageItem(`${STORAGE_KEY}-${res.userId}`, JSON.stringify({
+            language: selectedLanguage,
+            userName: inviteResolvedName,
+            onboardingComplete: false,
+          }))
+          void saveGutoMemory({ userId: res.userId, name: inviteResolvedName, language: selectedLanguage }).catch(() => {})
+        }
+        console.log("[GUTO_ONBOARDING] resolved stage naming")
+        setStage("naming")
         router.replace("/")
       }, 2000)
     } catch (err: unknown) {
@@ -1279,7 +1312,7 @@ export function GutoApp({
       setInviteError(ic.activationFailed)
       setInviteSubmitting(false)
     }
-  }, [pendingInviteToken, inviteSubmitting, selectedLanguage, invitePassword, inviteConfirmPassword, login, router, schedule])
+  }, [pendingInviteToken, inviteSubmitting, selectedLanguage, invitePassword, inviteConfirmPassword, inviteClaimData, login, router, schedule])
 
   const handleExerciseQuestion = useCallback((exercise: MissionExercise) => {
     setPendingExerciseQuestion({
@@ -1315,11 +1348,13 @@ export function GutoApp({
     setActiveTab("caminho")
   }, [gutoUserId, selectedLanguage, trackBehaviorEvent])
 
-  const memoryName =
-    memory?.name && memory.name.toLocaleLowerCase("pt-BR") !== "operador"
-      ? formatGutoName(memory.name)
-      : ""
-  const userLabel = committedName || memoryName || formatGutoName(userName || "")
+  const resolvedProfile = resolveGutoProfile({
+    user,
+    memory,
+    fallbackName: firstRealGutoName(committedName, userName),
+  })
+  const userLabel = resolvedProfile.displayName || firstRealGutoName(committedName, userName) || ""
+  const workoutMissingFields = getWorkoutMissingFields(memory)
   const locale = stageCopy[selectedLanguage]
   const isGutoDepleted = (memory?.totalXp ?? 100) === 0
   const canSaveSettingsName =
@@ -1389,6 +1424,7 @@ export function GutoApp({
             onMissionComplete={handleMissionComplete}
             onAdaptedMissionComplete={handleAdaptedMissionComplete}
             onValidateWorkout={() => setShowValidationFlow(true)}
+            missingProfileFields={workoutMissingFields}
           />
         )
       case "arena":
@@ -1398,6 +1434,7 @@ export function GutoApp({
             language={selectedLanguage}
             translations={translations[selectedLanguage]}
             refreshKey={arenaRefreshKey}
+            currentUserName={userLabel}
           />
         )
       case "dieta":
@@ -1425,7 +1462,7 @@ export function GutoApp({
           />
         )
     }
-  }, [activeTab, evolution, gutoUserId, handleAdaptedMissionComplete, handleExerciseQuestion, handleFoodDoubt, handleMissionComplete, isGutoDepleted, memory, pendingExerciseQuestion, pendingFoodQuestion, selectedLanguage, userLabel, workoutPlan])
+  }, [activeTab, evolution, gutoUserId, handleAdaptedMissionComplete, handleExerciseQuestion, handleFoodDoubt, handleMissionComplete, isGutoDepleted, memory, pendingExerciseQuestion, pendingFoodQuestion, selectedLanguage, userLabel, workoutMissingFields, workoutPlan])
 
   if (authLoading || !isHydrated || (user && user.role !== "student")) {
     return (

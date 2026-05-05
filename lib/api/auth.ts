@@ -2,6 +2,8 @@ import { apiRequest } from "./client"
 
 export interface AuthUser {
   userId: string
+  name?: string
+  email?: string
   role: "admin" | "coach" | "student" | "super_admin"
   coachId?: string
   active?: boolean

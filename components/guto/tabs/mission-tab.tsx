@@ -20,6 +20,7 @@ interface MissionTabProps {
   onMissionComplete: () => Promise<void> | void
   onAdaptedMissionComplete: () => Promise<void> | void
   onValidateWorkout: () => void
+  missingProfileFields?: string[]
 }
 
 const MUSCLE_GROUP_LABEL: Record<string, Record<string, string>> = {
@@ -27,6 +28,13 @@ const MUSCLE_GROUP_LABEL: Record<string, Record<string, string>> = {
   "en-US": { aquecimento: "Warm-up", peito: "Chest", costas: "Back", ombro: "Shoulder", bracos: "Arms", pernas: "Legs", abdomen: "Core", triceps: "Triceps" },
   "it-IT": { aquecimento: "Riscaldamento", peito: "Petto", costas: "Schiena", ombro: "Spalla", bracos: "Braccia", pernas: "Gambe", abdomen: "Addome", triceps: "Tricipiti" },
   "es-ES": { aquecimento: "Calentamiento", peito: "Pecho", costas: "Espalda", ombro: "Hombro", bracos: "Brazos", pernas: "Piernas", abdomen: "Abdomen", triceps: "Tríceps" },
+}
+
+const MISSING_FIELD_LABEL: Record<string, Record<string, string>> = {
+  "pt-BR": { idade: "idade", sexo: "sexo", objetivo: "objetivo", nível: "nível", local: "local", altura: "altura", peso: "peso" },
+  "en-US": { idade: "age", sexo: "sex", objetivo: "goal", nível: "level", local: "location", altura: "height", peso: "weight" },
+  "it-IT": { idade: "età", sexo: "sesso", objetivo: "obiettivo", nível: "livello", local: "luogo", altura: "altezza", peso: "peso" },
+  "es-ES": { idade: "edad", sexo: "sexo", objetivo: "objetivo", nível: "nivel", local: "lugar", altura: "altura", peso: "peso" },
 }
 
 const missionCopy = {
@@ -52,6 +60,7 @@ const missionCopy = {
     askGuto: "Perguntar ao GUTO",
     emptyTitle: "Sem treino definido",
     emptyBody: "O GUTO ainda precisa fechar quando, onde, nível, idade e dor antes de liberar a missão.",
+    missingPrefix: "Falta fechar",
     warmup: "Aquecimento",
     mainSection: "Parte Principal",
     validateWorkout: "VALIDAR TREINO",
@@ -78,6 +87,7 @@ const missionCopy = {
     askGuto: "Ask GUTO",
     emptyTitle: "No workout locked",
     emptyBody: "GUTO still needs when, where, level, age, and pain before releasing the mission.",
+    missingPrefix: "Still missing",
     warmup: "Warm-Up",
     mainSection: "Main Workout",
     validateWorkout: "VALIDATE WORKOUT",
@@ -104,6 +114,7 @@ const missionCopy = {
     askGuto: "Preguntar a GUTO",
     emptyTitle: "Sin entreno definido",
     emptyBody: "GUTO todavía necesita cuándo, dónde, nivel, edad y dolor antes de liberar la misión.",
+    missingPrefix: "Falta cerrar",
     warmup: "Calentamiento",
     mainSection: "Parte Principal",
     validateWorkout: "VALIDAR ENTRENAMIENTO",
@@ -130,6 +141,7 @@ const missionCopy = {
     askGuto: "Chiedi a GUTO",
     emptyTitle: "Allenamento non definito",
     emptyBody: "GUTO deve ancora chiudere quando, dove, livello, età e fastidi prima di liberare la missione.",
+    missingPrefix: "Manca ancora",
     warmup: "Riscaldamento",
     mainSection: "Parte Principale",
     validateWorkout: "VALIDA ALLENAMENTO",
@@ -149,10 +161,12 @@ export function MissionTab({
   onMissionComplete: _onMissionComplete,
   onAdaptedMissionComplete: _onAdaptedMissionComplete,
   onValidateWorkout,
+  missingProfileFields = [],
 }: MissionTabProps) {
   const validLang = getLanguage(language)
   const locale = translations[validLang]
   const copy = missionCopy[validLang]
+  const missingLabels = missingProfileFields.map((field) => MISSING_FIELD_LABEL[validLang]?.[field] || field)
   const [started, setStarted] = useState(false)
   const [completedExerciseIds, setCompletedExerciseIds] = useState<string[]>([])
   const exercises = useMemo(() => workoutPlan?.exercises || [], [workoutPlan])
@@ -197,7 +211,7 @@ export function MissionTab({
             {copy.emptyTitle}
           </h1>
           <p className="mt-3 text-[12px] leading-relaxed text-[rgba(13,35,65,0.62)]">
-            {copy.emptyBody}
+            {missingLabels.length ? `${copy.missingPrefix}: ${missingLabels.join(", ")}.` : copy.emptyBody}
           </p>
         </div>
       </div>

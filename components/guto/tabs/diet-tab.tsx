@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { motion } from "framer-motion"
 import { Flame, Zap, Wheat, Droplets, RefreshCw, ChevronDown, ChevronUp } from "lucide-react"
 
@@ -146,10 +146,19 @@ function MealCard({
   foodQuestionLabel: string
 }) {
   const [expanded, setExpanded] = useState(false)
+  const cardRef = useRef<HTMLDivElement | null>(null)
   const emoji = MEAL_EMOJI[meal.id] ?? "🥗"
+
+  useEffect(() => {
+    if (!expanded) return
+    window.setTimeout(() => {
+      cardRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" })
+    }, 80)
+  }, [expanded])
 
   return (
     <motion.div
+      ref={cardRef}
       className="rounded-[1.1rem] border border-white/60 bg-white/30"
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
@@ -473,7 +482,7 @@ export function DietTab({ userId, language, onFoodDoubt, memory }: DietTabProps)
       </motion.div>
 
       {/* ── Scrollable meals ── */}
-      <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto flex flex-col gap-2 pb-[calc(6rem+env(safe-area-inset-bottom))] overscroll-contain">
+      <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto flex flex-col gap-2 pb-[calc(8rem+env(safe-area-inset-bottom))] overscroll-contain [scroll-padding-bottom:calc(8rem+env(safe-area-inset-bottom))] [-webkit-overflow-scrolling:touch]">
         {meals.map((meal, i) => (
           <MealCard
             key={meal.id}

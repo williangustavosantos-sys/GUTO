@@ -36,6 +36,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setToken(data.token)
     setUser({
       userId: data.userId,
+      name: data.name,
+      email: data.email,
       role: data.role,
       coachId: data.coachId,
       subscriptionStatus: data.subscriptionStatus,
