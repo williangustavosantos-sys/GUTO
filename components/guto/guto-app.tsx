@@ -376,6 +376,8 @@ export function GutoApp({
   const introSafetyTimerRef = useRef<number | null>(null)
   const introCompleteRef = useRef(false)
   const introStartedRef = useRef(false)
+  const introStartedAtRef = useRef(0)
+  const introMinimumMsRef = useRef(7000)
   const pactCompleteRef = useRef(false)
   const portalVideoRef = useRef<HTMLVideoElement | null>(null)
   const shellRef = useRef<HTMLDivElement | null>(null)
@@ -686,6 +688,16 @@ export function GutoApp({
     setStage("language")
   }, [clearIntroSafetyTimer, effectRegistry])
 
+  const completeIntroAfterMinimum = useCallback(() => {
+    clearIntroSafetyTimer()
+    const elapsed = Date.now() - introStartedAtRef.current
+    const remainingMs = Math.max(0, introMinimumMsRef.current - elapsed)
+    introSafetyTimerRef.current = window.setTimeout(() => {
+      console.log("[GUTO_INTRO] safety fallback")
+      handleIntroComplete()
+    }, remainingMs)
+  }, [clearIntroSafetyTimer, handleIntroComplete])
+
   const restartPortalVideo = useCallback(() => {
     const video = portalVideoRef.current
     if (!video || introStartedRef.current) return
@@ -702,6 +714,7 @@ export function GutoApp({
     console.log("[GUTO_INTRO] button clicked")
     clearIntroSafetyTimer()
     introStartedRef.current = true
+    introStartedAtRef.current = Date.now()
     introCompleteRef.current = false
     setIntroNeedsActivation(false)
 
@@ -727,14 +740,14 @@ export function GutoApp({
 
     const armSafetyFallback = () => {
       clearIntroSafetyTimer()
-      const durationMs =
+      introMinimumMsRef.current =
         Number.isFinite(video.duration) && video.duration > 0
           ? Math.max(7000, Math.round(video.duration * 1000) + 1000)
           : 9000
       introSafetyTimerRef.current = window.setTimeout(() => {
         console.log("[GUTO_INTRO] safety fallback")
         handleIntroComplete()
-      }, durationMs)
+      }, introMinimumMsRef.current)
     }
 
     const handleStarted = () => {
@@ -754,21 +767,19 @@ export function GutoApp({
           .then(handleStarted)
           .catch(() => {
             clearIntroSafetyTimer()
-            console.log("[GUTO_INTRO] safety fallback")
-            introSafetyTimerRef.current = window.setTimeout(() => {
-              handleIntroComplete()
-            }, 9000)
+            introMinimumMsRef.current = 9000
+            completeIntroAfterMinimum()
           })
       })
-  }, [clearIntroSafetyTimer, handleIntroComplete])
+  }, [clearIntroSafetyTimer, completeIntroAfterMinimum, handleIntroComplete])
 
   const handleIntroVideoEnded = useCallback(() => {
     const video = portalVideoRef.current
     if (!introStartedRef.current) return
     if (video && Number.isFinite(video.duration) && video.duration > 1 && video.currentTime < video.duration - 0.25) return
     console.log("[GUTO_INTRO] ended")
-    handleIntroComplete()
-  }, [handleIntroComplete])
+    completeIntroAfterMinimum()
+  }, [completeIntroAfterMinimum])
 
   const handleLanguageSelect = useCallback(
     (lang: SupportedLanguage) => {
