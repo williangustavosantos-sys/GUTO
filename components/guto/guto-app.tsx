@@ -5,7 +5,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { AnimatePresence, motion } from "framer-motion"
-import { Activity, ArrowLeft, Check, Dumbbell, Fingerprint, Languages, MapPin, Send, Settings, UserRound, Volume2, Zap } from "lucide-react"
+import { Activity, ArrowLeft, Check, CheckCircle2, Dumbbell, Fingerprint, Languages, Loader2, MapPin, Send, Settings, UserRound, Volume2, Zap } from "lucide-react"
 
 import { BottomNavigation, type TabType } from "./bottom-navigation"
 import { createGutoEffectRegistry } from "./effects"
@@ -21,10 +21,11 @@ import { WorkoutValidationFlow } from "./validation/workout-validation-flow"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { getGutoMemory, saveGutoMemory, trackGutoEvent, validateGutoName, type DietFood, type DietMeal, type GutoMemory, type GutoNameValidation, type GutoTelemetryEvent, type GutoWorkoutPlan } from "@/lib/api/guto"
 import { useAuth } from "@/components/auth-provider"
+import { getInvite, claimInvite } from "@/lib/api/auth"
 import type { EvolutionStage, SupportedLanguage } from "@/types/contract"
 import { translations } from "./translations"
 
-type AppStage = "intro" | "language" | "naming" | "calibration" | "pact" | "system" | "settings"
+type AppStage = "intro" | "language" | "invite_claim" | "naming" | "calibration" | "pact" | "system" | "settings"
 type SettingsMode = "menu" | "language" | "name" | "profile" | "goal" | "location" | "pathology" | "physicaldata" | "residence" | "food_restrictions"
 
 interface StoredProfile {
@@ -192,6 +193,36 @@ const stageCopy: Record<
   },
 }
 
+const inviteClaimCopy: Record<SupportedLanguage, {
+  greetingPrefix: string; invited: string; createPass: string; confirmPass: string
+  mismatch: string; tooShort: string; cta: string; activated: string; starting: string; back: string
+}> = {
+  "pt-BR": {
+    greetingPrefix: "Ol\u00e1,", invited: "Voc\u00ea foi convidado para entrar no GUTO.",
+    createPass: "Criar Senha", confirmPass: "Confirmar Senha",
+    mismatch: "As senhas n\u00e3o coincidem.", tooShort: "A senha deve ter pelo menos 6 caracteres.",
+    cta: "ATIVAR MEU GUTO", activated: "CONTA ATIVADA COM SUCESSO.", starting: "Iniciando sistema...", back: "Voltar para o In\u00edcio",
+  },
+  "en-US": {
+    greetingPrefix: "Hi,", invited: "You've been invited to join GUTO.",
+    createPass: "Create Password", confirmPass: "Confirm Password",
+    mismatch: "Passwords don't match.", tooShort: "Password must be at least 6 characters.",
+    cta: "ACTIVATE MY GUTO", activated: "ACCOUNT ACTIVATED SUCCESSFULLY.", starting: "Starting system...", back: "Back to Start",
+  },
+  "es-ES": {
+    greetingPrefix: "Hola,", invited: "Has sido invitado a unirte a GUTO.",
+    createPass: "Crear Contrase\u00f1a", confirmPass: "Confirmar Contrase\u00f1a",
+    mismatch: "Las contrase\u00f1as no coinciden.", tooShort: "La contrase\u00f1a debe tener al menos 6 caracteres.",
+    cta: "ACTIVAR MI GUTO", activated: "CUENTA ACTIVADA CON \u00c9XITO.", starting: "Iniciando sistema...", back: "Volver al Inicio",
+  },
+  "it-IT": {
+    greetingPrefix: "Ciao,", invited: "Sei stato invitato a entrare in GUTO.",
+    createPass: "Crea Password", confirmPass: "Conferma Password",
+    mismatch: "Le password non corrispondono.", tooShort: "La password deve avere almeno 6 caratteri.",
+    cta: "ATTIVA IL MIO GUTO", activated: "ACCOUNT ATTIVATO CON SUCCESSO.", starting: "Avvio sistema...", back: "Torna all'Inizio",
+  },
+}
+
 function isSupportedLanguage(value: string): value is SupportedLanguage {
   return ["pt-BR", "en-US", "es-ES", "it-IT"].includes(value)
 }
@@ -281,7 +312,7 @@ export function GutoApp({
   language: string
   skipIntro?: boolean
 }) {
-  const { user } = useAuth()
+  const { user, login } = useAuth()
   const router = useRouter()
   const [isHydrated, setIsHydrated] = useState(false)
   const [stage, setStage] = useState<AppStage>(skipIntro ? "language" : "intro")
@@ -313,6 +344,14 @@ export function GutoApp({
   const [isValidatingName, setIsValidatingName] = useState(false)
   const [showValidationFlow, setShowValidationFlow] = useState(false)
   const [arenaRefreshKey, setArenaRefreshKey] = useState(0)
+  const [pendingInviteToken, setPendingInviteToken] = useState<string | null>(null)
+  const [inviteClaimData, setInviteClaimData] = useState<{ name: string; userId: string; coachId: string } | null>(null)
+  const [invitePassword, setInvitePassword] = useState("")
+  const [inviteConfirmPassword, setInviteConfirmPassword] = useState("")
+  const [inviteError, setInviteError] = useState<string | null>(null)
+  const [inviteSubmitting, setInviteSubmitting] = useState(false)
+  const [inviteSuccess, setInviteSuccess] = useState(false)
+  const [inviteLoading, setInviteLoading] = useState(false)
 
   const timersRef = useRef<number[]>([])
   const pactIntervalRef = useRef<number | null>(null)
@@ -619,6 +658,18 @@ export function GutoApp({
       if (!user) {
         if (typeof window !== "undefined") {
           localStorage.setItem("guto-selected-language", lang)
+          const pendingToken = localStorage.getItem("guto-pending-invite-token")
+          if (pendingToken) {
+            setPendingInviteToken(pendingToken)
+            setActiveLanguageGlow(lang)
+            setRotatingLanguage(true)
+            schedule(() => {
+              setStage("invite_claim")
+              setRotatingLanguage(false)
+              setActiveLanguageGlow(null)
+            }, 560)
+            return
+          }
         }
         router.push(`/login?lang=${lang}`)
         return
@@ -894,6 +945,47 @@ export function GutoApp({
     setPactProgress(0)
   }, [clearPactInterval, pactProgress, stage])
 
+  // ── Invite claim flow ──────────────────────────────────────────────────────
+  useEffect(() => {
+    if (stage !== "invite_claim" || !pendingInviteToken) return
+    let cancelled = false
+    setInviteLoading(true)
+    setInviteClaimData(null)
+    setInviteError(null)
+    getInvite(pendingInviteToken)
+      .then((data) => {
+        if (cancelled) return
+        setInviteClaimData(data)
+        setInviteLoading(false)
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return
+        const msg = err instanceof Error ? err.message : "Convite inv\u00e1lido ou expirado."
+        setInviteError(msg)
+        setInviteLoading(false)
+      })
+    return () => { cancelled = true }
+  }, [stage, pendingInviteToken])
+
+  const handleInviteClaim = useCallback(async () => {
+    if (!pendingInviteToken || inviteSubmitting) return
+    const ic = inviteClaimCopy[selectedLanguage]
+    if (invitePassword !== inviteConfirmPassword) { setInviteError(ic.mismatch); return }
+    if (invitePassword.length < 6) { setInviteError(ic.tooShort); return }
+    setInviteSubmitting(true)
+    setInviteError(null)
+    try {
+      const res = await claimInvite(pendingInviteToken, invitePassword)
+      setInviteSuccess(true)
+      try { localStorage.removeItem("guto-pending-invite-token") } catch { /* ignore */ }
+      schedule(() => { login(res); router.push("/") }, 2000)
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Erro ao ativar convite."
+      setInviteError(msg)
+      setInviteSubmitting(false)
+    }
+  }, [pendingInviteToken, inviteSubmitting, selectedLanguage, invitePassword, inviteConfirmPassword, login, router, schedule])
+
   const handleExerciseQuestion = useCallback((exercise: MissionExercise) => {
     setPendingExerciseQuestion({
       id: `${exercise.id}-${Date.now()}`,
@@ -1142,6 +1234,112 @@ export function GutoApp({
                   />
                 </motion.button>
               ))}
+            </div>
+          </motion.section>
+        )}
+
+        {stage === "invite_claim" && (
+          <motion.section
+            key="invite_claim"
+            className="guto-main-screen absolute inset-0 z-30 flex flex-col items-center justify-center px-8"
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.42 }}
+          >
+            <div className="flex w-full max-w-sm flex-col items-center">
+              <div className="mb-8 flex flex-col items-center text-center">
+                <div className="guto-deboss mb-5 flex h-16 w-16 items-center justify-center rounded-full">
+                  <Image src="/icon-guto.svg" alt="GUTO" width={32} height={32} className="opacity-80" />
+                </div>
+                {inviteLoading && (
+                  <Loader2 className="h-6 w-6 animate-spin text-[var(--guto-cyan)]" />
+                )}
+                {!inviteLoading && inviteClaimData && !inviteSuccess && (
+                  <>
+                    <h1 className="font-mono text-sm font-black uppercase tracking-[0.1em] text-[var(--guto-navy)]">
+                      {inviteClaimCopy[selectedLanguage].greetingPrefix}{" "}
+                      <span className="text-[var(--guto-cyan)]">{inviteClaimData.name}</span>
+                    </h1>
+                    <p className="mt-2 font-mono text-[10px] font-black uppercase tracking-wider text-[rgba(13,35,65,0.4)]">
+                      {inviteClaimCopy[selectedLanguage].invited}
+                    </p>
+                  </>
+                )}
+                {!inviteLoading && !inviteClaimData && inviteError && (
+                  <p className="font-mono text-xs font-black uppercase text-red-500">{inviteError}</p>
+                )}
+              </div>
+
+              {!inviteLoading && inviteSuccess && (
+                <div className="flex flex-col items-center space-y-4 text-center">
+                  <CheckCircle2 className="h-12 w-12 text-green-500" />
+                  <p className="font-mono text-[11px] font-black uppercase tracking-widest text-[var(--guto-navy)]">
+                    {inviteClaimCopy[selectedLanguage].activated}
+                  </p>
+                  <p className="font-mono text-[9px] font-black uppercase tracking-widest text-[rgba(13,35,65,0.4)]">
+                    {inviteClaimCopy[selectedLanguage].starting}
+                  </p>
+                </div>
+              )}
+
+              {!inviteLoading && !inviteSuccess && inviteClaimData && (
+                <form
+                  onSubmit={(e) => { e.preventDefault(); void handleInviteClaim() }}
+                  className="w-full space-y-4"
+                >
+                  <div className="guto-deboss rounded-2xl p-4">
+                    <label className="mb-1.5 block font-mono text-[10px] font-black uppercase tracking-wider text-[rgba(13,35,65,0.55)]">
+                      {inviteClaimCopy[selectedLanguage].createPass}
+                    </label>
+                    <input
+                      type="password"
+                      value={invitePassword}
+                      onChange={(e) => { setInvitePassword(e.target.value); setInviteError(null) }}
+                      className="w-full border-none bg-transparent font-mono text-sm font-black text-[var(--guto-navy)] outline-none placeholder:text-[rgba(13,35,65,0.2)]"
+                      placeholder="••••••••"
+                      required
+                      autoComplete="new-password"
+                    />
+                  </div>
+                  <div className="guto-deboss rounded-2xl p-4">
+                    <label className="mb-1.5 block font-mono text-[10px] font-black uppercase tracking-wider text-[rgba(13,35,65,0.55)]">
+                      {inviteClaimCopy[selectedLanguage].confirmPass}
+                    </label>
+                    <input
+                      type="password"
+                      value={inviteConfirmPassword}
+                      onChange={(e) => { setInviteConfirmPassword(e.target.value); setInviteError(null) }}
+                      className="w-full border-none bg-transparent font-mono text-sm font-black text-[var(--guto-navy)] outline-none placeholder:text-[rgba(13,35,65,0.2)]"
+                      placeholder="••••••••"
+                      required
+                      autoComplete="new-password"
+                    />
+                  </div>
+                  {inviteError && (
+                    <p className="text-center font-mono text-[10px] font-black uppercase text-red-500">{inviteError}</p>
+                  )}
+                  <button
+                    type="submit"
+                    disabled={inviteSubmitting}
+                    className="mt-2 flex h-14 w-full items-center justify-center rounded-full bg-[var(--guto-cyan)] font-mono text-xs font-black uppercase tracking-[0.2em] text-[var(--guto-navy)] shadow-[0_4px_20px_rgba(82,231,255,0.3)] transition-all active:scale-95 disabled:opacity-50"
+                  >
+                    {inviteSubmitting
+                      ? <Loader2 className="h-5 w-5 animate-spin" />
+                      : inviteClaimCopy[selectedLanguage].cta}
+                  </button>
+                </form>
+              )}
+
+              {!inviteLoading && !inviteClaimData && !inviteSuccess && (
+                <button
+                  type="button"
+                  onClick={() => router.push("/login")}
+                  className="mt-8 font-mono text-[10px] font-black uppercase tracking-widest text-[var(--guto-cyan)] underline"
+                >
+                  {inviteClaimCopy[selectedLanguage].back}
+                </button>
+              )}
             </div>
           </motion.section>
         )}
