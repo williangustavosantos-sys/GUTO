@@ -432,6 +432,32 @@ function calibrationFromMemory(memory: GutoMemory | null): CalibrationDraft {
   };
 }
 
+function formatHuman(val: string | null | undefined): string {
+  if (!val) return "-";
+  const m: Record<string, string> = {
+    active: "Ativo",
+    paused: "Pausado",
+    archived: "Arquivado",
+    paid: "Pago",
+    unpaid: "Pendente",
+    pending_payment: "Pendente",
+    trial: "Teste",
+    expired: "Expirado",
+    cancelled: "Cancelado",
+    muscle_gain: "Ganho de massa",
+    fat_loss: "Perda de gordura",
+    maintenance: "Manutenção",
+    gym: "Academia",
+    home: "Casa",
+    park: "Parque",
+    start: "GUTO Time Start",
+    pro: "GUTO Time Pro",
+    elite: "GUTO Time Elite",
+    custom: "Custom",
+  };
+  return m[val] || val.replace("_", " ");
+}
+
 function CoachInner() {
   const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
@@ -625,7 +651,7 @@ function CoachInner() {
       <Toaster theme="dark" position="bottom-center" />
 
       <header className="sticky top-0 z-30 border-b border-white/10 bg-[#0a0f1e]/88 px-5 py-4 backdrop-blur-md">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
               <span className="text-sm font-black tracking-[0.24em] text-[#00e5ff]">GUTO</span>
@@ -635,16 +661,18 @@ function CoachInner() {
             </div>
             <p className="mt-1 font-mono text-[10px] text-white/35">{user.userId}</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {isAdmin && (
-              <Button size="sm" variant="outline" className="border-white/10 bg-white/5 text-white hover:bg-white/10" disabled={coachLimitReached} onClick={() => setShowCreateCoach(true)}>
-                <UserPlus className="mr-2 h-4 w-4" />
-                Criar coach
+              <Button size="sm" variant="outline" className="h-9 border-white/10 bg-white/5 px-3 text-xs text-white hover:bg-white/10" disabled={coachLimitReached} onClick={() => setShowCreateCoach(true)}>
+                <UserPlus className="mr-2 h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Criar coach</span>
+                <span className="sm:hidden">Coach</span>
               </Button>
             )}
-            <Button size="sm" className="bg-[#00e5ff] text-[#0a0f1e] hover:bg-white" disabled={studentLimitReached} onClick={() => setShowCreateStudent(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Criar aluno
+            <Button size="sm" className="h-9 bg-[#00e5ff] px-3 text-xs text-[#0a0f1e] hover:bg-white" disabled={studentLimitReached} onClick={() => setShowCreateStudent(true)}>
+              <Plus className="mr-2 h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Criar aluno</span>
+              <span className="sm:hidden">Aluno</span>
             </Button>
           </div>
         </div>
@@ -667,11 +695,11 @@ function CoachInner() {
 
         <div className="mb-5 rounded-xl border border-white/7 bg-white/[0.035] p-4">
           {teamSummary ? (
-            <div className="grid gap-3 md:grid-cols-4">
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
               <Metric label="Time" value={teamSummary.team.name} cyan />
-              <Metric label="Plano" value={teamSummary.team.planLabel} />
-              <Metric label="Alunos" value={`${teamSummary.usage.students}/${teamSummary.limits.maxStudents ?? "Custom"}`} />
-              <Metric label="Coaches" value={`${teamSummary.usage.coaches}/${teamSummary.limits.maxCoaches ?? "Custom"}`} />
+              <Metric label="Plano" value={formatHuman(teamSummary.team.planLabel)} />
+              <Metric label="Alunos" value={`${teamSummary.usage.students} / ${teamSummary.limits.maxStudents ?? "Ilimitado"}`} />
+              <Metric label="Coaches" value={`${teamSummary.usage.coaches} / ${teamSummary.limits.maxCoaches ?? "Ilimitado"}`} />
             </div>
           ) : (
             <p className="text-xs text-white/35">{teamSummaryError || "Resumo do Time indisponível."}</p>
@@ -713,16 +741,14 @@ function CoachInner() {
                 ))}
               </div>
             </div>
-            <div className="mb-4 grid gap-2 md:grid-cols-5">
+            <div className="mb-4 grid grid-cols-2 gap-2 md:grid-cols-5">
               {isAdmin && (
-                <select value={coachFilter} onChange={(event) => setCoachFilter(event.target.value)} className="h-10 rounded-md border border-white/10 bg-white/5 px-3 text-sm text-white">
+                <select value={coachFilter} onChange={(event) => setCoachFilter(event.target.value)} className="col-span-2 h-10 rounded-md border border-white/10 bg-white/5 px-3 text-sm text-white md:col-span-1">
                   <option value="" className="bg-[#0d1426]">Todos os coaches</option>
                   {coaches.map((coach) => <option key={coach.userId} value={coach.userId} className="bg-[#0d1426]">{coach.name || coach.email || coach.userId}</option>)}
                 </select>
               )}
               <Input placeholder="Sexo/gênero" value={genderFilter} onChange={(event) => setGenderFilter(event.target.value)} className="h-10 border-white/10 bg-white/5 text-white placeholder:text-white/25" />
-              <Input placeholder="Idade mín." value={minAgeFilter} onChange={(event) => setMinAgeFilter(event.target.value)} className="h-10 border-white/10 bg-white/5 text-white placeholder:text-white/25" />
-              <Input placeholder="Idade máx." value={maxAgeFilter} onChange={(event) => setMaxAgeFilter(event.target.value)} className="h-10 border-white/10 bg-white/5 text-white placeholder:text-white/25" />
               <select value={subscriptionStatusFilter} onChange={(event) => setSubscriptionStatusFilter(event.target.value)} className="h-10 rounded-md border border-white/10 bg-white/5 px-3 text-sm text-white">
                 <option value="" className="bg-[#0d1426]">Pagamento</option>
                 <option value="pending_payment" className="bg-[#0d1426]">Pendente</option>
@@ -730,6 +756,8 @@ function CoachInner() {
                 <option value="expired" className="bg-[#0d1426]">Expirado</option>
                 <option value="cancelled" className="bg-[#0d1426]">Cancelado</option>
               </select>
+              <Input placeholder="Idade mín." value={minAgeFilter} onChange={(event) => setMinAgeFilter(event.target.value)} className="h-10 border-white/10 bg-white/5 text-white placeholder:text-white/25" />
+              <Input placeholder="Idade máx." value={maxAgeFilter} onChange={(event) => setMaxAgeFilter(event.target.value)} className="h-10 border-white/10 bg-white/5 text-white placeholder:text-white/25" />
             </div>
 
             <div className="grid gap-3">
@@ -740,22 +768,27 @@ function CoachInner() {
                     key={student.userId}
                     type="button"
                     onClick={() => void openStudent(student)}
-                    className="grid gap-4 rounded-xl border border-white/7 bg-white/[0.035] p-4 text-left transition hover:border-[#00e5ff]/40 hover:bg-white/[0.06] md:grid-cols-[minmax(0,1.4fr)_repeat(6,minmax(0,.65fr))_auto] md:items-center"
+                    className="flex flex-col gap-4 rounded-xl border border-white/7 bg-white/[0.035] p-4 text-left transition hover:border-[#00e5ff]/40 hover:bg-white/[0.06] lg:grid lg:grid-cols-[minmax(0,1.4fr)_repeat(6,minmax(0,.85fr))_auto] lg:items-center"
                   >
-                    <div className="min-w-0">
-                      <div className="mb-1 flex items-center gap-2">
-                        <span className="truncate text-base font-black text-white">{student.name}</span>
-                        <Badge variant={status.variant} className="text-[9px] font-black uppercase">{status.text}</Badge>
+                    <div className="flex min-w-0 items-center justify-between lg:block">
+                      <div className="min-w-0">
+                        <div className="mb-1 flex items-center gap-2">
+                          <span className="truncate text-base font-black text-white">{student.name}</span>
+                          <Badge variant={status.variant} className="shrink-0 text-[9px] font-black uppercase">{status.text}</Badge>
+                        </div>
+                        <p className="truncate font-mono text-[10px] text-white/30">{student.email || student.userId}</p>
                       </div>
-                      <p className="truncate font-mono text-[10px] text-white/30">{student.email || student.userId}</p>
+                      <span className="text-2xl text-white/20 lg:hidden">›</span>
                     </div>
-                    <Metric label="Telefone" value={student.phone || "-"} />
-                    <Metric label="Coach" value={coachLabel(student, coaches)} />
-                    <Metric label="Semana" value={`${student.weeklyXp} XP`} cyan />
-                    <Metric label="Mês" value={`${student.monthlyXp} XP`} />
-                    <Metric label="Visto" value={relativeTime(student.lastActiveAt)} />
-                    <Metric label="Plano" value={student.subscriptionStatus?.replace("_", " ") || "-"} />
-                    <span className="text-right text-2xl text-white/20">›</span>
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:contents">
+                      <Metric label="Telefone" value={student.phone || "-"} />
+                      <Metric label="Coach" value={coachLabel(student, coaches)} />
+                      <Metric label="Semana" value={`${student.weeklyXp} XP`} cyan />
+                      <Metric label="Mês" value={`${student.monthlyXp} XP`} />
+                      <Metric label="Visto" value={relativeTime(student.lastActiveAt)} />
+                      <Metric label="Plano" value={formatHuman(student.subscriptionStatus)} />
+                    </div>
+                    <span className="hidden text-right text-2xl text-white/20 lg:block">›</span>
                   </button>
                 );
               })}
