@@ -66,6 +66,7 @@ export interface GutoWorkoutPlan {
   weekDay?: string
   goal?: string
   location?: string
+  locationMode?: WorkoutLocationMode
   dateLabel: string
   scheduledFor: string
   summary: string

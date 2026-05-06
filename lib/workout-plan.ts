@@ -1,5 +1,6 @@
 import type { GutoMemory, GutoWorkoutExercise, GutoWorkoutPlan, WorkoutFocus } from "@/lib/api/guto"
 import { getMissingCalibrationFields, hasCompleteGutoCalibration, isSupportedGutoLanguage, type GutoLanguage } from "@/lib/guto-profile"
+import { normalizeWorkoutLocationMode } from "@/lib/workout-location"
 
 const todayKey = () => new Date().toISOString().slice(0, 10)
 
@@ -257,7 +258,9 @@ export function createLocalWorkoutPlan(memory: GutoMemory, language: string): Gu
   if (!hasCompleteGutoCalibration(memory)) return null
 
   const validLang = normalizeLanguage(language)
-  const isGym = memory.preferredTrainingLocation === "gym"
+  const locationMode = normalizeWorkoutLocationMode(memory.preferredTrainingLocation)
+  if (!locationMode) return null
+  const isGym = locationMode === "gym"
   const focusKey: WorkoutFocus = memory.trainingGoal === "muscle_gain" && isGym ? "full_body" : "full_body"
   const pathology = `${memory.trainingPathology || ""} ${memory.trainingLimitations || ""}`.toLocaleLowerCase("pt-BR")
   const avoidLegLoad = /joelho|knee|rodilla|ginocchio|quadril|anca/.test(pathology)
@@ -275,6 +278,8 @@ export function createLocalWorkoutPlan(memory: GutoMemory, language: string): Gu
   return {
     focus: getLocalizedWorkoutTitle(focusKey, validLang),
     focusKey,
+    locationMode,
+    location: locationMode,
     dateLabel: new Date().toLocaleDateString(validLang, { weekday: "long", day: "2-digit", month: "2-digit" }),
     scheduledFor: todayKey(),
     summary: validLang === "en-US" ? "Local plan based on your calibration." :

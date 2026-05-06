@@ -36,6 +36,7 @@ import {
   type StoredGutoProfile,
 } from "@/lib/guto-profile"
 import { createLocalWorkoutPlan, getWorkoutMissingFields, localizeGutoWorkoutPlan } from "@/lib/workout-plan"
+import { resolveWorkoutValidationLocationMode } from "@/lib/workout-location"
 
 type AppStage = "intro" | "language" | "invite_claim" | "naming" | "calibration" | "pact" | "system" | "settings"
 type SettingsMode = "menu" | "language" | "name" | "profile" | "goal" | "location" | "pathology" | "physicaldata" | "residence" | "food_restrictions"
@@ -1447,6 +1448,16 @@ export function GutoApp({
     />
   ), [evolution, gutoUserId, isGutoDepleted, memory, pendingExerciseQuestion, pendingFoodQuestion, persistMemory, selectedLanguage, userLabel])
 
+  const validationLocationMode = useMemo(
+    () =>
+      resolveWorkoutValidationLocationMode({
+        workoutPlan: localizedWorkoutPlan,
+        memory,
+        selectedLocation: settingsLocationDraft,
+      }),
+    [localizedWorkoutPlan, memory, settingsLocationDraft]
+  )
+
   const tabContent = useMemo(() => {
     switch (activeTab) {
       case "guto":
@@ -2438,6 +2449,7 @@ export function GutoApp({
             userId={gutoUserId}
             workoutFocus={localizedWorkoutPlan?.focusKey || "full_body"}
             workoutLabel={localizedWorkoutPlan?.focus || ""}
+            locationMode={validationLocationMode}
             onComplete={(validationHistory) => {
               // Optimistic: update validation history immediately
               setMemory((prev) => prev ? { ...prev, validationHistory } : prev)

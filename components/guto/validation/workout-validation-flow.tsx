@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { X, Zap } from "lucide-react"
 
-import type { ArenaAwardResult, SupportedLanguage, WorkoutValidationRecord } from "@/lib/api/guto"
+import type { ArenaAwardResult, SupportedLanguage, WorkoutLocationMode, WorkoutValidationRecord } from "@/lib/api/guto"
 import { validateWorkout } from "@/lib/api/guto"
 
 interface WorkoutValidationFlowProps {
@@ -12,6 +12,7 @@ interface WorkoutValidationFlowProps {
   userId: string
   workoutFocus: string
   workoutLabel: string
+  locationMode: WorkoutLocationMode | null
   onComplete: (validationHistory: WorkoutValidationRecord[]) => void
   onClose: () => void
 }
@@ -43,6 +44,7 @@ const copy = {
     retry: "TENTAR NOVAMENTE",
     cameraError: "Não foi possível acessar a câmera.",
     errorTitle: "Algo deu errado",
+    missingLocation: "Local do treino não está fechado. Volte e ajuste o local antes de validar.",
   },
   "en-US": {
     title: "Validate workout",
@@ -68,6 +70,7 @@ const copy = {
     retry: "TRY AGAIN",
     cameraError: "Could not access the camera.",
     errorTitle: "Something went wrong",
+    missingLocation: "Workout location is not locked. Go back and set the location before validating.",
   },
   "it-IT": {
     title: "Valida allenamento",
@@ -93,6 +96,7 @@ const copy = {
     retry: "RIPROVA",
     cameraError: "Impossibile accedere alla fotocamera.",
     errorTitle: "Qualcosa è andato storto",
+    missingLocation: "Il luogo dell'allenamento non è definito. Torna indietro e impostalo prima di validare.",
   },
   "es-ES": {
     title: "Validar entrenamiento",
@@ -118,6 +122,7 @@ const copy = {
     retry: "INTENTAR DE NUEVO",
     cameraError: "No se pudo acceder a la cámara.",
     errorTitle: "Algo salió mal",
+    missingLocation: "El lugar del entrenamiento no está cerrado. Vuelve y ajusta el lugar antes de validar.",
   },
 } as const
 
@@ -129,6 +134,7 @@ export function WorkoutValidationFlow({
   userId,
   workoutFocus,
   workoutLabel,
+  locationMode,
   onComplete,
   onClose,
 }: WorkoutValidationFlowProps) {
@@ -369,13 +375,17 @@ export function WorkoutValidationFlow({
   // Call API when uploading
   useEffect(() => {
     if (step !== "uploading") return
+    if (!locationMode) {
+      setUploadError(locale.missingLocation)
+      return
+    }
     let cancelled = false
     void validateWorkout({
       userId,
       imageBase64: imageBase64Ref.current,
       workoutFocus,
       workoutLabel,
-      locationMode: "gym",
+      locationMode,
       language,
     })
       .then((result) => {
@@ -389,7 +399,7 @@ export function WorkoutValidationFlow({
         setUploadError(err instanceof Error ? err.message : "Erro ao validar missão.")
       })
     return () => { cancelled = true }
-  }, [step, userId, workoutFocus, workoutLabel, language])
+  }, [step, userId, workoutFocus, workoutLabel, locationMode, language, locale.missingLocation])
 
   return (
     <div
