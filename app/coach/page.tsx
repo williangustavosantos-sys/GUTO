@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   Activity,
   Dumbbell,
+  FileVideo,
   KeyRound,
   Lock,
   Plus,
@@ -36,6 +37,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
   assignStudentToCoach,
+  createAdminCustomExercise,
   createAdminCoach,
   createAdminStudent,
   deleteAdminCoach,
@@ -120,6 +122,21 @@ type CoachDraft = {
   password: string;
 };
 
+type CustomExerciseDraft = {
+  id: string;
+  canonicalNamePt: string;
+  muscleGroup: string;
+  equipment: string;
+  sourceFileName: string;
+  videoUrl: string;
+  fileSizeBytes: string;
+  durationSeconds: string;
+  width: string;
+  height: string;
+  fps: string;
+  hasAudio: boolean;
+};
+
 type CalibrationDraft = {
   userAge: string;
   biologicalSex: string;
@@ -149,6 +166,26 @@ const DETAIL_TABS: Array<{ id: DetailTab; label: string }> = [
   { id: "historico", label: "Histórico" },
   { id: "seguranca", label: "Senha" },
 ];
+
+const EXERCISE_VIDEO_LIMIT_COPY = "Vídeo obrigatório: MP4, até 30s, até 12MB, máximo 720p, sem áudio, caminho interno /exercise/visuals/custom/.";
+const EXERCISE_VIDEO_ERROR_COPY = "Esse vídeo está pesado demais para o app. Use MP4 até 30 segundos, máximo 12MB e 720p.";
+
+function blankCustomExerciseDraft(): CustomExerciseDraft {
+  return {
+    id: "",
+    canonicalNamePt: "",
+    muscleGroup: "peito",
+    equipment: "",
+    sourceFileName: "",
+    videoUrl: "/exercise/visuals/custom/",
+    fileSizeBytes: "",
+    durationSeconds: "",
+    width: "",
+    height: "",
+    fps: "30",
+    hasAudio: false,
+  };
+}
 
 function getStatusInfo(s: AdminStudent): { text: string; variant: "default" | "secondary" | "destructive" | "outline" } {
   if (s.archived) return { text: "ARQUIVADO", variant: "destructive" };
@@ -246,6 +283,32 @@ function normalizeCatalogSearch(value: string): string {
     .replace(/\s+/g, " ")
     .trim()
     .toLocaleLowerCase("pt-BR");
+}
+
+function isSafeExerciseVideoFileName(value: string): boolean {
+  return /^[a-z0-9]+(?:-[a-z0-9]+)*\.mp4$/.test(value);
+}
+
+function validateCustomExerciseDraft(draft: CustomExerciseDraft): string | null {
+  const fileSizeBytes = Number(draft.fileSizeBytes);
+  const durationSeconds = Number(draft.durationSeconds);
+  const width = Number(draft.width);
+  const height = Number(draft.height);
+  const fps = Number(draft.fps);
+  const sourceFileName = draft.sourceFileName.trim();
+  const videoUrl = draft.videoUrl.trim();
+  const longSide = Math.max(width, height);
+  const shortSide = Math.min(width, height);
+
+  if (!draft.canonicalNamePt.trim()) return "Informe o nome do exercício.";
+  if (!sourceFileName || !videoUrl) return "Vídeo obrigatório: informe sourceFileName e videoUrl.";
+  if (!videoUrl.startsWith("/exercise/visuals/custom/") || videoUrl.includes("..") || /\s/.test(videoUrl)) return "Use caminho interno /exercise/visuals/custom/.";
+  if (!isSafeExerciseVideoFileName(sourceFileName) || !videoUrl.endsWith(`/${sourceFileName}`)) return "Use nome seguro: lowercase, sem acento, sem espaço e com hífen.";
+  if (!Number.isFinite(fileSizeBytes) || !Number.isFinite(durationSeconds) || !Number.isFinite(width) || !Number.isFinite(height) || !Number.isFinite(fps)) return "Preencha todos os metadados técnicos do vídeo.";
+  if (fileSizeBytes <= 0 || durationSeconds <= 0 || width <= 0 || height <= 0 || fps <= 0) return "Metadados técnicos precisam ser positivos.";
+  if (fileSizeBytes > 12 * 1024 * 1024 || durationSeconds > 30 || longSide > 1280 || shortSide > 720 || fps > 30 || draft.hasAudio) return EXERCISE_VIDEO_ERROR_COPY;
+  if (durationSeconds < 3) return "Use vídeo com pelo menos 3 segundos.";
+  return null;
 }
 
 function catalogSearchText(exercise: AdminCatalogExercise): string {
@@ -1079,6 +1142,8 @@ function WorkoutEditor({
   onReset: () => void;
 }) {
   const [exerciseSearch, setExerciseSearch] = useState<Record<number, string>>({});
+  const [customExerciseDraft, setCustomExerciseDraft] = useState<CustomExerciseDraft>(blankCustomExerciseDraft());
+  const [creatingCustomExercise, setCreatingCustomExercise] = useState(false);
 
   const updateExercise = (index: number, patch: Partial<GutoWorkoutExercise>) => {
     onChange({ ...value, exercises: value.exercises.map((exercise, i) => i === index ? { ...exercise, ...patch } : exercise) });
@@ -1106,6 +1171,42 @@ function WorkoutEditor({
     onChange({ ...value, exercises: next.map((exercise, i) => ({ ...exercise, order: i + 1 })) });
   };
 
+  const updateCustomExerciseDraft = (patch: Partial<CustomExerciseDraft>) => {
+    setCustomExerciseDraft((draft) => ({ ...draft, ...patch }));
+  };
+
+  const submitCustomExercise = async () => {
+    const validationError = validateCustomExerciseDraft(customExerciseDraft);
+    if (validationError) {
+      toast.error(validationError);
+      return;
+    }
+    setCreatingCustomExercise(true);
+    try {
+      await createAdminCustomExercise({
+        id: customExerciseDraft.id.trim() || undefined,
+        canonicalNamePt: customExerciseDraft.canonicalNamePt.trim(),
+        muscleGroup: customExerciseDraft.muscleGroup,
+        equipment: customExerciseDraft.equipment.trim() || undefined,
+        sourceFileName: customExerciseDraft.sourceFileName.trim(),
+        videoUrl: customExerciseDraft.videoUrl.trim(),
+        fileSizeBytes: Number(customExerciseDraft.fileSizeBytes),
+        durationSeconds: Number(customExerciseDraft.durationSeconds),
+        width: Number(customExerciseDraft.width),
+        height: Number(customExerciseDraft.height),
+        fps: Number(customExerciseDraft.fps),
+        mimeType: "video/mp4",
+        hasAudio: customExerciseDraft.hasAudio,
+      });
+      toast.success("Exercício enviado para aprovação técnica.");
+      setCustomExerciseDraft(blankCustomExerciseDraft());
+    } catch (error) {
+      toast.error(error instanceof ApiError ? error.message || EXERCISE_VIDEO_ERROR_COPY : adminErrorMessage(error));
+    } finally {
+      setCreatingCustomExercise(false);
+    }
+  };
+
   return (
     <div className="grid gap-4">
       <Panel title="Treino oficial">
@@ -1128,6 +1229,45 @@ function WorkoutEditor({
           <Button variant="outline" className="border-white/10 bg-white/5 text-white" disabled={acting} onClick={onLock}>{value.lockedByCoach ? <Unlock className="mr-2 h-4 w-4" /> : <Lock className="mr-2 h-4 w-4" />}{value.lockedByCoach ? "Permitir GUTO atualizar" : "Bloquear alterações automáticas"}</Button>
           <Button variant="outline" className="border-red-500/30 bg-transparent text-red-300" disabled={acting} onClick={onReset}><Trash2 className="mr-2 h-4 w-4" />Resetar treino</Button>
         </div>
+      </Panel>
+
+      <Panel title="Adicionar novo exercício">
+        <div className="mb-4 rounded-md border border-[#00e5ff]/25 bg-[#00e5ff]/10 px-3 py-2">
+          <p className="text-xs font-bold text-[#baf7ff]">{EXERCISE_VIDEO_LIMIT_COPY}</p>
+          <p className="mt-1 text-[11px] text-white/40">Não há upload real aqui: o vídeo precisa estar previamente otimizado e disponível no caminho interno controlado.</p>
+        </div>
+        <div className="grid gap-3 md:grid-cols-4">
+          <Field label="Nome oficial" value={customExerciseDraft.canonicalNamePt} onChange={(canonicalNamePt) => updateCustomExerciseDraft({ canonicalNamePt })} className="md:col-span-2" />
+          <Field label="ID opcional" value={customExerciseDraft.id} onChange={(id) => updateCustomExerciseDraft({ id })} />
+          <label className="block">
+            <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-white/30">Grupo</span>
+            <select
+              value={customExerciseDraft.muscleGroup}
+              onChange={(event) => updateCustomExerciseDraft({ muscleGroup: event.target.value })}
+              className="h-10 w-full rounded-md border border-white/10 bg-white/5 px-3 text-sm text-white"
+            >
+              {["aquecimento", "peito", "costas", "ombro", "bracos", "pernas", "abdomen"].map((group) => (
+                <option key={group} value={group} className="bg-[#0d1426]">{group}</option>
+              ))}
+            </select>
+          </label>
+          <Field label="Equipamento" value={customExerciseDraft.equipment} onChange={(equipment) => updateCustomExerciseDraft({ equipment })} />
+          <Field label="Arquivo MP4 seguro" value={customExerciseDraft.sourceFileName} onChange={(sourceFileName) => updateCustomExerciseDraft({ sourceFileName })} />
+          <Field label="Caminho interno" value={customExerciseDraft.videoUrl} onChange={(videoUrl) => updateCustomExerciseDraft({ videoUrl })} className="md:col-span-2" />
+          <Field label="Bytes" value={customExerciseDraft.fileSizeBytes} onChange={(fileSizeBytes) => updateCustomExerciseDraft({ fileSizeBytes })} />
+          <Field label="Duração s" value={customExerciseDraft.durationSeconds} onChange={(durationSeconds) => updateCustomExerciseDraft({ durationSeconds })} />
+          <Field label="Width" value={customExerciseDraft.width} onChange={(width) => updateCustomExerciseDraft({ width })} />
+          <Field label="Height" value={customExerciseDraft.height} onChange={(height) => updateCustomExerciseDraft({ height })} />
+          <Field label="FPS" value={customExerciseDraft.fps} onChange={(fps) => updateCustomExerciseDraft({ fps })} />
+        </div>
+        <label className="mt-3 flex items-center gap-2 text-sm text-white/55">
+          <input type="checkbox" checked={customExerciseDraft.hasAudio} onChange={(event) => updateCustomExerciseDraft({ hasAudio: event.target.checked })} />
+          Vídeo tem áudio
+        </label>
+        <Button className="mt-4 bg-[#00e5ff] text-[#0a0f1e] hover:bg-white" disabled={acting || creatingCustomExercise} onClick={() => void submitCustomExercise()}>
+          <FileVideo className="mr-2 h-4 w-4" />
+          Enviar para aprovação
+        </Button>
       </Panel>
 
       <Panel title={`Exercícios de ${student.name}`}>

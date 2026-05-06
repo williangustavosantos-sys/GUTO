@@ -19,6 +19,30 @@ export interface AdminCatalogExercise {
   tags?: string[]
 }
 
+export interface AdminExerciseVideoMetadata {
+  sourceFileName: string
+  videoUrl: string
+  fileSizeBytes: number
+  durationSeconds: number
+  width: number
+  height: number
+  fps: number
+  mimeType?: string
+  hasAudio?: boolean
+}
+
+export interface AdminCustomExerciseRequest extends AdminCatalogExercise {
+  status: "pending" | "approved" | "rejected"
+  requestedBy: string
+  requestedByRole: string
+  requestedAt: string
+  videoValidated: boolean
+  videoMetadata: Omit<AdminExerciseVideoMetadata, "sourceFileName" | "videoUrl">
+  custom: true
+  suggestedFileName?: string
+  rejectionReason?: string
+}
+
 export interface AdminUser extends AuthUser {
   name?: string
   email?: string
@@ -81,6 +105,20 @@ export function getAdminStudents(): Promise<{ students: AdminStudent[]; users: A
 
 export function getAdminExerciseCatalog(): Promise<{ exercises: AdminCatalogExercise[] }> {
   return apiRequest<{ exercises: AdminCatalogExercise[] }>("/admin/exercises/catalog")
+}
+
+export function createAdminCustomExercise(data: {
+  id?: string
+  canonicalNamePt: string
+  muscleGroup: string
+  equipment?: string
+  movementPattern?: string
+  tags?: string[]
+} & AdminExerciseVideoMetadata): Promise<{ exercise: AdminCustomExerciseRequest }> {
+  return apiRequest<{ exercise: AdminCustomExerciseRequest }>("/admin/exercises/custom", {
+    method: "POST",
+    body: JSON.stringify(data),
+  })
 }
 
 export function createAdminUser(data: Partial<AdminUser> & { password?: string }): Promise<{ user: AdminUser; student?: AdminStudent; inviteLink: string }> {
