@@ -228,6 +228,15 @@ function blankWorkout(student: AdminStudent): GutoWorkoutPlan {
   };
 }
 
+function hasInvalidWorkoutExerciseContract(workout: GutoWorkoutPlan): boolean {
+  return !workout.exercises.length || workout.exercises.some((exercise) =>
+    !exercise.id ||
+    exercise.id.startsWith("manual-") ||
+    exercise.videoProvider !== "local" ||
+    !exercise.videoUrl?.startsWith("/exercise/visuals/")
+  );
+}
+
 function normalizeWorkoutForEditor(plan: GutoWorkoutPlan | null, student: AdminStudent): GutoWorkoutPlan {
   if (!plan) return blankWorkout(student);
   const exercises = (plan.exercises?.length ? plan.exercises : []).map((exercise, index) => ({
@@ -758,6 +767,10 @@ function CoachInner() {
                     acting={acting}
                     onChange={setWorkoutEditor}
                     onSave={() => void act(async () => {
+                      if (hasInvalidWorkoutExerciseContract(workoutEditor)) {
+                        toast.error("Este treino está incompleto. GUTO precisa corrigir os exercícios antes de salvar.");
+                        return;
+                      }
                       const source = selectedDetail.workout?.source === "guto_generated" ? "mixed" : workoutEditor.source || "coach_manual";
                       const result = await updateAdminStudentWorkout(selected.userId, { ...workoutEditor, source, blocks: [{ name: "Principal", exercises: workoutEditor.exercises }] }, "Coach/admin manual edit");
                       setWorkoutEditor(normalizeWorkoutForEditor(result.workout, selected));

@@ -2450,6 +2450,7 @@ export function GutoApp({
             workoutFocus={localizedWorkoutPlan?.focusKey || "full_body"}
             workoutLabel={localizedWorkoutPlan?.focus || ""}
             locationMode={validationLocationMode}
+            workoutPlan={localizedWorkoutPlan}
             onComplete={(validationHistory) => {
               // Optimistic: update validation history immediately
               setMemory((prev) => prev ? { ...prev, validationHistory } : prev)

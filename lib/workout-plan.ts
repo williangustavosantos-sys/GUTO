@@ -6,7 +6,7 @@ const todayKey = () => new Date().toISOString().slice(0, 10)
 
 const exerciseCatalog: Record<string, GutoWorkoutExercise> = {
   esteira: {
-    id: "aquecimento-esteira",
+    id: "caminhada_esteira_inclinada",
     name: "Caminhada na esteira inclinada",
     canonicalNamePt: "Caminhada na esteira inclinada",
     muscleGroup: "aquecimento",
@@ -20,7 +20,7 @@ const exerciseCatalog: Record<string, GutoWorkoutExercise> = {
     sourceFileName: "caminhada_esteira_inclinada.mp4",
   },
   supino: {
-    id: "peito-supino-reto",
+    id: "supino_reto",
     name: "Supino reto",
     canonicalNamePt: "Supino reto",
     muscleGroup: "peito",
@@ -34,7 +34,7 @@ const exerciseCatalog: Record<string, GutoWorkoutExercise> = {
     sourceFileName: "supino_reto.mp4",
   },
   remada: {
-    id: "costas-remada-baixa",
+    id: "remada_baixa_polia",
     name: "Remada baixa na polia",
     canonicalNamePt: "Remada baixa na polia",
     muscleGroup: "costas",
@@ -48,7 +48,7 @@ const exerciseCatalog: Record<string, GutoWorkoutExercise> = {
     sourceFileName: "remada_baixa_polia.mp4",
   },
   legpress: {
-    id: "pernas-legpress-45",
+    id: "legpress_45",
     name: "Leg press 45",
     canonicalNamePt: "Leg press 45",
     muscleGroup: "pernas",
@@ -62,7 +62,7 @@ const exerciseCatalog: Record<string, GutoWorkoutExercise> = {
     sourceFileName: "legpress_45.mp4",
   },
   ombro: {
-    id: "ombro-desenvolvimento",
+    id: "desenvolvimento_sentado",
     name: "Desenvolvimento sentado",
     canonicalNamePt: "Desenvolvimento sentado",
     muscleGroup: "ombro",
@@ -76,7 +76,7 @@ const exerciseCatalog: Record<string, GutoWorkoutExercise> = {
     sourceFileName: "desenvolvimento_sentado.mp4",
   },
   prancha: {
-    id: "abdomen-prancha",
+    id: "prancha_isometrica",
     name: "Prancha isométrica",
     canonicalNamePt: "Prancha isométrica",
     muscleGroup: "abdomen",
@@ -90,7 +90,7 @@ const exerciseCatalog: Record<string, GutoWorkoutExercise> = {
     sourceFileName: "prancha_isomentrica.mp4",
   },
   flexao: {
-    id: "peito-flexao",
+    id: "flexao",
     name: "Flexão",
     canonicalNamePt: "Flexão",
     muscleGroup: "peito",
@@ -271,7 +271,8 @@ export function createLocalWorkoutPlan(memory: GutoMemory, language: string): Gu
 
   const exercises = base.map((key) => {
     const exercise = { ...exerciseCatalog[key] }
-    const copy = EXERCISE_COPY_BY_ID[exercise.id]?.[validLang]
+    const copyKey = EXERCISE_COPY_BY_ID[exercise.id] ? exercise.id : EXERCISE_COPY_ALIASES[exercise.id]
+    const copy = copyKey ? EXERCISE_COPY_BY_ID[copyKey]?.[validLang] : undefined
     return copy ? { ...exercise, ...copy } : exercise
   })
 

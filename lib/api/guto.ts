@@ -314,6 +314,7 @@ export async function validateWorkout(payload: {
   workoutLabel: string
   locationMode: WorkoutLocationMode
   language: SupportedLanguage
+  workoutPlan?: GutoWorkoutPlan | null
 }) {
   return apiRequest<{ success: true; validation: WorkoutValidationRecord; validationHistory: WorkoutValidationRecord[]; arena?: ArenaAwardResult }>(
     "/guto/validate-workout",

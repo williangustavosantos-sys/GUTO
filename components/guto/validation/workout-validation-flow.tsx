@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { X, Zap } from "lucide-react"
 
-import type { ArenaAwardResult, SupportedLanguage, WorkoutLocationMode, WorkoutValidationRecord } from "@/lib/api/guto"
+import type { ArenaAwardResult, GutoWorkoutPlan, SupportedLanguage, WorkoutLocationMode, WorkoutValidationRecord } from "@/lib/api/guto"
 import { validateWorkout } from "@/lib/api/guto"
 
 interface WorkoutValidationFlowProps {
@@ -13,6 +13,7 @@ interface WorkoutValidationFlowProps {
   workoutFocus: string
   workoutLabel: string
   locationMode: WorkoutLocationMode | null
+  workoutPlan?: GutoWorkoutPlan | null
   onComplete: (validationHistory: WorkoutValidationRecord[]) => void
   onClose: () => void
 }
@@ -45,6 +46,7 @@ const copy = {
     cameraError: "Não foi possível acessar a câmera.",
     errorTitle: "Algo deu errado",
     missingLocation: "Local do treino não está fechado. Volte e ajuste o local antes de validar.",
+    incompleteWorkout: "Este treino está incompleto. GUTO precisa corrigir os exercícios antes de validar.",
   },
   "en-US": {
     title: "Validate workout",
@@ -71,6 +73,7 @@ const copy = {
     cameraError: "Could not access the camera.",
     errorTitle: "Something went wrong",
     missingLocation: "Workout location is not locked. Go back and set the location before validating.",
+    incompleteWorkout: "This workout is incomplete. GUTO must fix the exercises before validation.",
   },
   "it-IT": {
     title: "Valida allenamento",
@@ -97,6 +100,7 @@ const copy = {
     cameraError: "Impossibile accedere alla fotocamera.",
     errorTitle: "Qualcosa è andato storto",
     missingLocation: "Il luogo dell'allenamento non è definito. Torna indietro e impostalo prima di validare.",
+    incompleteWorkout: "Questo allenamento è incompleto. GUTO deve correggere gli esercizi prima di validare.",
   },
   "es-ES": {
     title: "Validar entrenamiento",
@@ -123,8 +127,22 @@ const copy = {
     cameraError: "No se pudo acceder a la cámara.",
     errorTitle: "Algo salió mal",
     missingLocation: "El lugar del entrenamiento no está cerrado. Vuelve y ajusta el lugar antes de validar.",
+    incompleteWorkout: "Este entrenamiento está incompleto. GUTO debe corregir los ejercicios antes de validar.",
   },
 } as const
+
+function hasLocalWorkoutVideos(plan?: GutoWorkoutPlan | null): boolean {
+  return Boolean(
+    plan?.exercises?.length &&
+      plan.exercises.every((exercise) =>
+        Boolean(
+          exercise.id &&
+          exercise.videoProvider === "local" &&
+          exercise.videoUrl?.startsWith("/exercise/visuals/")
+        )
+      )
+  )
+}
 
 // Light app background — matches .sala-guto gradient
 const APP_BG = "linear-gradient(180deg, #edf2f7 0%, #dfe7f0 100%)"
@@ -135,6 +153,7 @@ export function WorkoutValidationFlow({
   workoutFocus,
   workoutLabel,
   locationMode,
+  workoutPlan,
   onComplete,
   onClose,
 }: WorkoutValidationFlowProps) {
@@ -379,6 +398,10 @@ export function WorkoutValidationFlow({
       setUploadError(locale.missingLocation)
       return
     }
+    if (!hasLocalWorkoutVideos(workoutPlan)) {
+      setUploadError(locale.incompleteWorkout)
+      return
+    }
     let cancelled = false
     void validateWorkout({
       userId,
@@ -387,6 +410,7 @@ export function WorkoutValidationFlow({
       workoutLabel,
       locationMode,
       language,
+      workoutPlan,
     })
       .then((result) => {
         if (cancelled) return
@@ -399,7 +423,7 @@ export function WorkoutValidationFlow({
         setUploadError(err instanceof Error ? err.message : "Erro ao validar missão.")
       })
     return () => { cancelled = true }
-  }, [step, userId, workoutFocus, workoutLabel, locationMode, language, locale.missingLocation])
+  }, [step, userId, workoutFocus, workoutLabel, locationMode, language, locale.missingLocation, locale.incompleteWorkout, workoutPlan])
 
   return (
     <div
