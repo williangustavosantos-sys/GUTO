@@ -43,6 +43,7 @@ import {
   generateAdminStudentDiet,
   generateAdminStudentWorkout,
   getAdminCoaches,
+  getAdminExerciseCatalog,
   getAdminLogs,
   getAdminStudentDetail,
   getAdminStudentDiet,
@@ -65,6 +66,7 @@ import {
   updateAdminStudent,
   updateAdminStudentDiet,
   updateAdminStudentWorkout,
+  type AdminCatalogExercise,
   type AdminCoach,
   type AdminLog,
   type AdminStudent,
@@ -237,6 +239,44 @@ function hasInvalidWorkoutExerciseContract(workout: GutoWorkoutPlan): boolean {
   );
 }
 
+function normalizeCatalogSearch(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLocaleLowerCase("pt-BR");
+}
+
+function catalogSearchText(exercise: AdminCatalogExercise): string {
+  return normalizeCatalogSearch([
+    exercise.id,
+    exercise.canonicalNamePt,
+    ...Object.values(exercise.namesByLanguage || {}),
+    ...Object.values(exercise.aliasesByLanguage || {}).flat(),
+    exercise.muscleGroup,
+    exercise.equipment || "",
+  ].join(" "));
+}
+
+function workoutExerciseFromCatalog(
+  catalogExercise: AdminCatalogExercise,
+  current: GutoWorkoutExercise,
+  index: number
+): GutoWorkoutExercise {
+  return {
+    ...current,
+    id: catalogExercise.id,
+    name: catalogExercise.canonicalNamePt,
+    canonicalNamePt: catalogExercise.canonicalNamePt,
+    muscleGroup: catalogExercise.muscleGroup,
+    order: current.order ?? index + 1,
+    videoUrl: catalogExercise.videoUrl,
+    videoProvider: "local",
+    sourceFileName: catalogExercise.sourceFileName,
+  };
+}
+
 function normalizeWorkoutForEditor(plan: GutoWorkoutPlan | null, student: AdminStudent): GutoWorkoutPlan {
   if (!plan) return blankWorkout(student);
   const exercises = (plan.exercises?.length ? plan.exercises : []).map((exercise, index) => ({
@@ -324,6 +364,7 @@ function CoachInner() {
   const [activeDashboardTab, setActiveDashboardTab] = useState<DashboardTab>("students");
   const [students, setStudents] = useState<AdminStudent[]>([]);
   const [coaches, setCoaches] = useState<AdminCoach[]>([]);
+  const [exerciseCatalog, setExerciseCatalog] = useState<AdminCatalogExercise[]>([]);
   const [rankings, setRankings] = useState<RankingsData | null>(null);
   const [globalLogs, setGlobalLogs] = useState<AdminLog[]>([]);
   const [loading, setLoading] = useState(true);
@@ -360,6 +401,11 @@ function CoachInner() {
     setCoaches(data.coaches);
   }, [isAdmin]);
 
+  const fetchExerciseCatalog = useCallback(async () => {
+    const data = await getAdminExerciseCatalog();
+    setExerciseCatalog(data.exercises);
+  }, []);
+
   const fetchRankings = useCallback(async () => {
     const data = await apiRequest<RankingsData>("/guto/coach/rankings");
     setRankings(data);
@@ -375,13 +421,13 @@ function CoachInner() {
     if (!user) return;
     setLoading(true);
     try {
-      await Promise.all([fetchStudents(), fetchCoaches()]);
+      await Promise.all([fetchStudents(), fetchCoaches(), fetchExerciseCatalog()]);
     } catch (error) {
       toast.error(adminErrorMessage(error));
     } finally {
       setLoading(false);
     }
-  }, [fetchCoaches, fetchStudents, user]);
+  }, [fetchCoaches, fetchExerciseCatalog, fetchStudents, user]);
 
   useEffect(() => {
     void loadBase();
@@ -763,12 +809,13 @@ function CoachInner() {
                   <WorkoutEditor
                     student={selected}
                     value={workoutEditor}
+                    exerciseCatalog={exerciseCatalog}
                     history={selectedDetail.workoutHistory}
                     acting={acting}
                     onChange={setWorkoutEditor}
                     onSave={() => void act(async () => {
                       if (hasInvalidWorkoutExerciseContract(workoutEditor)) {
-                        toast.error("Este treino está incompleto. GUTO precisa corrigir os exercícios antes de salvar.");
+                        toast.error("Escolha um exercício do catálogo oficial antes de salvar.");
                         return;
                       }
                       const source = selectedDetail.workout?.source === "guto_generated" ? "mixed" : workoutEditor.source || "coach_manual";
@@ -1009,6 +1056,7 @@ function Field({ label, value, onChange, className = "" }: { label: string; valu
 function WorkoutEditor({
   student,
   value,
+  exerciseCatalog,
   history,
   acting,
   onChange,
@@ -1020,6 +1068,7 @@ function WorkoutEditor({
 }: {
   student: AdminStudent;
   value: GutoWorkoutPlan;
+  exerciseCatalog: AdminCatalogExercise[];
   history: AdminLog[];
   acting: boolean;
   onChange: (value: GutoWorkoutPlan) => void;
@@ -1029,8 +1078,20 @@ function WorkoutEditor({
   onLock: () => void;
   onReset: () => void;
 }) {
+  const [exerciseSearch, setExerciseSearch] = useState<Record<number, string>>({});
+
   const updateExercise = (index: number, patch: Partial<GutoWorkoutExercise>) => {
     onChange({ ...value, exercises: value.exercises.map((exercise, i) => i === index ? { ...exercise, ...patch } : exercise) });
+  };
+
+  const selectCatalogExercise = (index: number, catalogExercise: AdminCatalogExercise) => {
+    onChange({
+      ...value,
+      exercises: value.exercises.map((exercise, i) =>
+        i === index ? workoutExerciseFromCatalog(catalogExercise, exercise, index) : exercise
+      ),
+    });
+    setExerciseSearch((current) => ({ ...current, [index]: "" }));
   };
 
   const removeExercise = (index: number) => {
@@ -1073,6 +1134,19 @@ function WorkoutEditor({
         <div className="grid gap-3">
           {value.exercises.map((exercise, index) => (
             <div key={`${exercise.id}-${index}`} className="rounded-lg border border-white/8 bg-black/15 p-3">
+              {(() => {
+                const selectedCatalogExercise = exerciseCatalog.find((item) => item.id === exercise.id);
+                const searchTerm = exerciseSearch[index] ?? "";
+                const normalizedSearch = normalizeCatalogSearch(searchTerm);
+                const matches = normalizedSearch
+                  ? exerciseCatalog
+                      .filter((item) => catalogSearchText(item).includes(normalizedSearch))
+                      .slice(0, 8)
+                  : [];
+                const needsCatalogSelection = !selectedCatalogExercise;
+
+                return (
+                  <>
               <div className="mb-3 flex items-center justify-between gap-2">
                 <span className="font-mono text-[10px] font-black uppercase tracking-widest text-white/35">#{index + 1}</span>
                 <div className="flex gap-1">
@@ -1081,9 +1155,63 @@ function WorkoutEditor({
                   <Button size="sm" variant="outline" className="h-8 border-red-500/30 bg-transparent text-red-300" onClick={() => removeExercise(index)}><Trash2 className="h-3.5 w-3.5" /></Button>
                 </div>
               </div>
+              <div className="mb-3 grid gap-2 md:grid-cols-[1fr_7rem]">
+                <label className="block">
+                  <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-white/30">Exercício oficial</span>
+                  <Input
+                    value={searchTerm}
+                    onChange={(event) => setExerciseSearch((current) => ({ ...current, [index]: event.target.value }))}
+                    placeholder={selectedCatalogExercise ? selectedCatalogExercise.canonicalNamePt : "Pesquisar no catálogo oficial"}
+                    className="h-10 border-white/10 bg-white/5 text-white placeholder:text-white/30"
+                  />
+                </label>
+                <div className="rounded-md border border-white/10 bg-white/5 px-3 py-2">
+                  <span className="block text-[10px] font-black uppercase tracking-widest text-white/30">Catálogo</span>
+                  <span className={selectedCatalogExercise ? "text-xs font-black text-[#00e5ff]" : "text-xs font-black text-red-300"}>
+                    {selectedCatalogExercise ? selectedCatalogExercise.id : "Não escolhido"}
+                  </span>
+                </div>
+              </div>
+              {matches.length > 0 && (
+                <div className="mb-3 grid gap-1.5">
+                  {matches.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => selectCatalogExercise(index, item)}
+                      className="rounded-md border border-white/10 bg-white/[0.04] px-3 py-2 text-left hover:border-[#00e5ff]/45"
+                    >
+                      <span className="block text-xs font-black text-white">{item.canonicalNamePt}</span>
+                      <span className="font-mono text-[9px] uppercase tracking-widest text-white/35">{item.muscleGroup} · {item.id}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {normalizedSearch && matches.length === 0 && (
+                <p className="mb-3 rounded-md border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-red-200">
+                  Exercício não encontrado no catálogo. Para usar este exercício, ele precisa ser adicionado ao catálogo oficial com vídeo local validado.
+                </p>
+              )}
+              {needsCatalogSelection && !normalizedSearch && (
+                <p className="mb-3 rounded-md border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-red-200">
+                  Escolha um exercício do catálogo oficial antes de salvar.
+                </p>
+              )}
+              {selectedCatalogExercise && (
+                <div className="mb-3 grid gap-2 md:grid-cols-[7rem_1fr]">
+                  <div className="h-[76px] overflow-hidden rounded-md border border-[#00e5ff]/30 bg-black/20">
+                    <video src={selectedCatalogExercise.videoUrl} muted loop playsInline preload="metadata" className="h-full w-full object-contain" />
+                  </div>
+                  <div className="rounded-md border border-white/10 bg-white/[0.035] px-3 py-2">
+                    <p className="text-sm font-black text-white">{selectedCatalogExercise.canonicalNamePt}</p>
+                    <p className="mt-1 font-mono text-[9px] uppercase tracking-widest text-white/35">
+                      {selectedCatalogExercise.muscleGroup} · {selectedCatalogExercise.equipment || "sem equipamento"}
+                    </p>
+                    <p className="mt-1 break-all font-mono text-[9px] text-white/25">{selectedCatalogExercise.videoUrl}</p>
+                  </div>
+                </div>
+              )}
               <div className="grid gap-3 md:grid-cols-4">
-                <Field label="Exercício" value={exercise.name} onChange={(name) => updateExercise(index, { name, canonicalNamePt: name })} className="md:col-span-2" />
-                <Field label="Grupo" value={exercise.muscleGroup} onChange={(muscleGroup) => updateExercise(index, { muscleGroup })} />
                 <Field label="Séries" value={String(exercise.sets)} onChange={(sets) => updateExercise(index, { sets: Number(sets) || 0 })} />
                 <Field label="Reps" value={String(exercise.reps)} onChange={(reps) => updateExercise(index, { reps })} />
                 <Field label="Carga" value={String(exercise.load || "")} onChange={(load) => updateExercise(index, { load })} />
@@ -1092,6 +1220,9 @@ function WorkoutEditor({
                 <Field label="Observação" value={exercise.note || ""} onChange={(note) => updateExercise(index, { note })} className="md:col-span-2" />
                 <Field label="Substituições" value={(exercise.alternatives || []).join(", ")} onChange={(alternatives) => updateExercise(index, { alternatives: alternatives.split(",").map((item) => item.trim()).filter(Boolean) })} className="md:col-span-4" />
               </div>
+                  </>
+                );
+              })()}
             </div>
           ))}
         </div>

@@ -3,6 +3,21 @@ import { AuthUser } from "./auth"
 import type { DietPlan, GutoMemory, GutoWorkoutPlan } from "./guto"
 
 export type AdminPlanSource = "guto_generated" | "coach_manual" | "mixed"
+export type CatalogLanguage = "pt-BR" | "it-IT" | "en-US" | "es-ES"
+
+export interface AdminCatalogExercise {
+  id: string
+  canonicalNamePt: string
+  namesByLanguage: Record<CatalogLanguage, string>
+  aliasesByLanguage: Record<CatalogLanguage, string[]>
+  muscleGroup: string
+  videoUrl: string
+  videoProvider: "local"
+  sourceFileName: string
+  equipment?: string
+  movementPattern?: string
+  tags?: string[]
+}
 
 export interface AdminUser extends AuthUser {
   name?: string
@@ -62,6 +77,10 @@ export function getAdminUsers(): Promise<AdminUserListResponse> {
 
 export function getAdminStudents(): Promise<{ students: AdminStudent[]; users: AdminUser[] }> {
   return apiRequest<{ students: AdminStudent[]; users: AdminUser[] }>("/admin/students")
+}
+
+export function getAdminExerciseCatalog(): Promise<{ exercises: AdminCatalogExercise[] }> {
+  return apiRequest<{ exercises: AdminCatalogExercise[] }>("/admin/exercises/catalog")
 }
 
 export function createAdminUser(data: Partial<AdminUser> & { password?: string }): Promise<{ user: AdminUser; student?: AdminStudent; inviteLink: string }> {
