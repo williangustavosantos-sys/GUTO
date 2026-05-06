@@ -6,6 +6,7 @@ export interface AuthUser {
   email?: string
   role: "admin" | "coach" | "student" | "super_admin"
   coachId?: string
+  teamId?: string
   active?: boolean
   subscriptionStatus?: string
   subscriptionEndsAt?: string | null
@@ -16,6 +17,7 @@ export interface LoginResponse {
   role: AuthUser["role"]
   userId: string
   coachId?: string
+  teamId?: string
   name?: string
   email?: string
   subscriptionStatus?: string

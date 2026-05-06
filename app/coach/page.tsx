@@ -51,6 +51,7 @@ import {
   getAdminStudentDiet,
   getAdminStudentDietHistory,
   getAdminStudents,
+  getAdminTeamSummary,
   getAdminStudentWorkout,
   getAdminStudentWorkoutHistory,
   lockAdminStudentDiet,
@@ -72,6 +73,7 @@ import {
   type AdminCoach,
   type AdminLog,
   type AdminStudent,
+  type AdminTeamSummary,
 } from "@/lib/api/admin";
 import type { DietPlan, GutoMemory, GutoWorkoutExercise, GutoWorkoutPlan } from "@/lib/api/guto";
 
@@ -111,6 +113,7 @@ interface StudentDetail {
 type StudentDraft = {
   name: string;
   email: string;
+  phone: string;
   password: string;
   active: boolean;
   coachId: string;
@@ -209,6 +212,9 @@ function avatarStageLabel(stage: AvatarStage): string {
 
 function adminErrorMessage(error: unknown): string {
   if (error instanceof ApiError) {
+    const code = error.details && typeof error.details === "object" && "code" in error.details ? String(error.details.code) : "";
+    if (code === "GUTO_TEAM_PLAN_LIMIT_REACHED") return "Limite do plano GUTO Time atingido.";
+    if (error.status === 403) return "Você não tem acesso a este aluno.";
     const suffix = error.status ? ` (${error.status})` : "";
     return `${error.message || "Backend recusou a ação"}${suffix}`;
   }
@@ -222,6 +228,12 @@ function sourceLabel(source?: string): string {
 
 function formatDate(value?: string | null): string {
   return value ? new Date(value).toLocaleDateString() : "-";
+}
+
+function coachLabel(student: AdminStudent, coaches: AdminCoach[]): string {
+  if (student.coachName) return student.coachName;
+  const coach = coaches.find((item) => item.userId === student.coachId);
+  return coach?.name || coach?.email || student.coachId || "-";
 }
 
 function blankExercise(index = 0): GutoWorkoutExercise {
@@ -427,6 +439,8 @@ function CoachInner() {
   const [activeDashboardTab, setActiveDashboardTab] = useState<DashboardTab>("students");
   const [students, setStudents] = useState<AdminStudent[]>([]);
   const [coaches, setCoaches] = useState<AdminCoach[]>([]);
+  const [teamSummary, setTeamSummary] = useState<AdminTeamSummary | null>(null);
+  const [teamSummaryError, setTeamSummaryError] = useState<string | null>(null);
   const [exerciseCatalog, setExerciseCatalog] = useState<AdminCatalogExercise[]>([]);
   const [rankings, setRankings] = useState<RankingsData | null>(null);
   const [globalLogs, setGlobalLogs] = useState<AdminLog[]>([]);
@@ -434,6 +448,11 @@ function CoachInner() {
   const [acting, setActing] = useState(false);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<FilterTab>("ativos");
+  const [coachFilter, setCoachFilter] = useState("");
+  const [genderFilter, setGenderFilter] = useState("");
+  const [minAgeFilter, setMinAgeFilter] = useState("");
+  const [maxAgeFilter, setMaxAgeFilter] = useState("");
+  const [subscriptionStatusFilter, setSubscriptionStatusFilter] = useState("");
   const [selectedDetail, setSelectedDetail] = useState<StudentDetail | null>(null);
   const [detailTab, setDetailTab] = useState<DetailTab>("resumo");
   const [workoutEditor, setWorkoutEditor] = useState<GutoWorkoutPlan | null>(null);
@@ -441,11 +460,13 @@ function CoachInner() {
   const [calibrationDraft, setCalibrationDraft] = useState<CalibrationDraft>(calibrationFromMemory(null));
   const [showCreateStudent, setShowCreateStudent] = useState(false);
   const [showCreateCoach, setShowCreateCoach] = useState(false);
-  const [studentDraft, setStudentDraft] = useState<StudentDraft>({ name: "", email: "", password: "", active: false, coachId: "" });
+  const [studentDraft, setStudentDraft] = useState<StudentDraft>({ name: "", email: "", phone: "", password: "", active: false, coachId: "" });
   const [coachDraft, setCoachDraft] = useState<CoachDraft>({ name: "", email: "", password: "" });
   const [lastSecret, setLastSecret] = useState<string | null>(null);
 
   const isAdmin = user?.role === "admin" || user?.role === "super_admin";
+  const studentLimitReached = Boolean(teamSummary && teamSummary.limits.maxStudents !== null && teamSummary.usage.students >= teamSummary.limits.maxStudents);
+  const coachLimitReached = Boolean(teamSummary && teamSummary.limits.maxCoaches !== null && teamSummary.usage.coaches >= teamSummary.limits.maxCoaches);
 
   useEffect(() => {
     if (!authLoading && (!user || (user.role !== "coach" && user.role !== "admin" && user.role !== "super_admin"))) {
@@ -454,8 +475,30 @@ function CoachInner() {
   }, [authLoading, router, user]);
 
   const fetchStudents = useCallback(async () => {
-    const data = await getAdminStudents();
+    const data = await getAdminStudents({
+      search,
+      coachId: isAdmin ? coachFilter : "",
+      gender: genderFilter,
+      minAge: minAgeFilter,
+      maxAge: maxAgeFilter,
+      status:
+        filter === "ativos" ? "active" :
+        filter === "pausados" ? "paused" :
+        filter === "arquivados" ? "archived" :
+        "",
+      subscriptionStatus: subscriptionStatusFilter,
+    });
     setStudents(data.students);
+  }, [coachFilter, filter, genderFilter, isAdmin, maxAgeFilter, minAgeFilter, search, subscriptionStatusFilter]);
+
+  const fetchTeamSummary = useCallback(async () => {
+    try {
+      const data = await getAdminTeamSummary();
+      setTeamSummary(data);
+      setTeamSummaryError(null);
+    } catch (error) {
+      setTeamSummaryError(adminErrorMessage(error));
+    }
   }, []);
 
   const fetchCoaches = useCallback(async () => {
@@ -484,17 +527,22 @@ function CoachInner() {
     if (!user) return;
     setLoading(true);
     try {
-      await Promise.all([fetchStudents(), fetchCoaches(), fetchExerciseCatalog()]);
+      await Promise.all([fetchCoaches(), fetchExerciseCatalog(), fetchTeamSummary()]);
     } catch (error) {
       toast.error(adminErrorMessage(error));
     } finally {
       setLoading(false);
     }
-  }, [fetchCoaches, fetchExerciseCatalog, fetchStudents, user]);
+  }, [fetchCoaches, fetchExerciseCatalog, fetchTeamSummary, user]);
 
   useEffect(() => {
     void loadBase();
   }, [loadBase]);
+
+  useEffect(() => {
+    if (!user) return;
+    void fetchStudents().catch((error) => toast.error(adminErrorMessage(error)));
+  }, [fetchStudents, user]);
 
   useEffect(() => {
     if (activeDashboardTab === "arena") void fetchRankings().catch((error) => toast.error(adminErrorMessage(error)));
@@ -549,25 +597,16 @@ function CoachInner() {
     try {
       await fn();
       toast.success(successMsg);
-      await fetchStudents();
+      await Promise.all([fetchStudents(), fetchTeamSummary()]);
       if (selectedDetail) await refreshSelected(selectedDetail.student.userId);
     } catch (error) {
       toast.error(adminErrorMessage(error));
     } finally {
       setActing(false);
     }
-  }, [fetchStudents, refreshSelected, selectedDetail]);
+  }, [fetchStudents, fetchTeamSummary, refreshSelected, selectedDetail]);
 
-  const filtered = useMemo(() => students.filter((student) => {
-    const term = search.trim().toLowerCase();
-    const matchesSearch = !term || student.name.toLowerCase().includes(term) || student.userId.toLowerCase().includes(term) || student.email?.toLowerCase().includes(term);
-    const matchesFilter =
-      filter === "todos" ? true :
-      filter === "ativos" ? student.active && !student.archived :
-      filter === "pausados" ? !student.active && !student.archived :
-      Boolean(student.archived);
-    return matchesSearch && matchesFilter;
-  }), [filter, search, students]);
+  const filtered = useMemo(() => students, [students]);
 
   if (authLoading || loading) {
     return (
@@ -598,12 +637,12 @@ function CoachInner() {
           </div>
           <div className="flex gap-2">
             {isAdmin && (
-              <Button size="sm" variant="outline" className="border-white/10 bg-white/5 text-white hover:bg-white/10" onClick={() => setShowCreateCoach(true)}>
+              <Button size="sm" variant="outline" className="border-white/10 bg-white/5 text-white hover:bg-white/10" disabled={coachLimitReached} onClick={() => setShowCreateCoach(true)}>
                 <UserPlus className="mr-2 h-4 w-4" />
                 Criar coach
               </Button>
             )}
-            <Button size="sm" className="bg-[#00e5ff] text-[#0a0f1e] hover:bg-white" onClick={() => setShowCreateStudent(true)}>
+            <Button size="sm" className="bg-[#00e5ff] text-[#0a0f1e] hover:bg-white" disabled={studentLimitReached} onClick={() => setShowCreateStudent(true)}>
               <Plus className="mr-2 h-4 w-4" />
               Criar aluno
             </Button>
@@ -626,6 +665,24 @@ function CoachInner() {
           </div>
         )}
 
+        <div className="mb-5 rounded-xl border border-white/7 bg-white/[0.035] p-4">
+          {teamSummary ? (
+            <div className="grid gap-3 md:grid-cols-4">
+              <Metric label="Time" value={teamSummary.team.name} cyan />
+              <Metric label="Plano" value={teamSummary.team.planLabel} />
+              <Metric label="Alunos" value={`${teamSummary.usage.students}/${teamSummary.limits.maxStudents ?? "Custom"}`} />
+              <Metric label="Coaches" value={`${teamSummary.usage.coaches}/${teamSummary.limits.maxCoaches ?? "Custom"}`} />
+            </div>
+          ) : (
+            <p className="text-xs text-white/35">{teamSummaryError || "Resumo do Time indisponível."}</p>
+          )}
+          {(studentLimitReached || coachLimitReached) && (
+            <p className="mt-3 text-xs font-bold text-[#00e5ff]">
+              Limite do plano atingido. Atualize o plano GUTO Time para cadastrar mais {studentLimitReached ? "alunos" : "coaches"}.
+            </p>
+          )}
+        </div>
+
         <div className="mb-6 grid grid-cols-2 gap-2 rounded-lg bg-white/5 p-1 md:grid-cols-4">
           <DashboardButton active={activeDashboardTab === "students"} onClick={() => setActiveDashboardTab("students")} icon={<Users className="h-4 w-4" />} label="Alunos" />
           <DashboardButton active={activeDashboardTab === "coaches"} onClick={() => setActiveDashboardTab("coaches")} icon={<Shield className="h-4 w-4" />} label="Coaches" disabled={!isAdmin} />
@@ -637,7 +694,7 @@ function CoachInner() {
           <>
             <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <Input
-                placeholder="Buscar por nome, email ou ID"
+                placeholder="Buscar por nome, email, telefone ou ID"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 className="h-11 border-white/10 bg-white/5 text-white placeholder:text-white/25 md:max-w-md"
@@ -656,6 +713,24 @@ function CoachInner() {
                 ))}
               </div>
             </div>
+            <div className="mb-4 grid gap-2 md:grid-cols-5">
+              {isAdmin && (
+                <select value={coachFilter} onChange={(event) => setCoachFilter(event.target.value)} className="h-10 rounded-md border border-white/10 bg-white/5 px-3 text-sm text-white">
+                  <option value="" className="bg-[#0d1426]">Todos os coaches</option>
+                  {coaches.map((coach) => <option key={coach.userId} value={coach.userId} className="bg-[#0d1426]">{coach.name || coach.email || coach.userId}</option>)}
+                </select>
+              )}
+              <Input placeholder="Sexo/gênero" value={genderFilter} onChange={(event) => setGenderFilter(event.target.value)} className="h-10 border-white/10 bg-white/5 text-white placeholder:text-white/25" />
+              <Input placeholder="Idade mín." value={minAgeFilter} onChange={(event) => setMinAgeFilter(event.target.value)} className="h-10 border-white/10 bg-white/5 text-white placeholder:text-white/25" />
+              <Input placeholder="Idade máx." value={maxAgeFilter} onChange={(event) => setMaxAgeFilter(event.target.value)} className="h-10 border-white/10 bg-white/5 text-white placeholder:text-white/25" />
+              <select value={subscriptionStatusFilter} onChange={(event) => setSubscriptionStatusFilter(event.target.value)} className="h-10 rounded-md border border-white/10 bg-white/5 px-3 text-sm text-white">
+                <option value="" className="bg-[#0d1426]">Pagamento</option>
+                <option value="pending_payment" className="bg-[#0d1426]">Pendente</option>
+                <option value="active" className="bg-[#0d1426]">Ativo</option>
+                <option value="expired" className="bg-[#0d1426]">Expirado</option>
+                <option value="cancelled" className="bg-[#0d1426]">Cancelado</option>
+              </select>
+            </div>
 
             <div className="grid gap-3">
               {filtered.map((student) => {
@@ -665,7 +740,7 @@ function CoachInner() {
                     key={student.userId}
                     type="button"
                     onClick={() => void openStudent(student)}
-                    className="grid gap-4 rounded-xl border border-white/7 bg-white/[0.035] p-4 text-left transition hover:border-[#00e5ff]/40 hover:bg-white/[0.06] md:grid-cols-[minmax(0,1.4fr)_repeat(4,minmax(0,.7fr))_auto] md:items-center"
+                    className="grid gap-4 rounded-xl border border-white/7 bg-white/[0.035] p-4 text-left transition hover:border-[#00e5ff]/40 hover:bg-white/[0.06] md:grid-cols-[minmax(0,1.4fr)_repeat(6,minmax(0,.65fr))_auto] md:items-center"
                   >
                     <div className="min-w-0">
                       <div className="mb-1 flex items-center gap-2">
@@ -674,7 +749,8 @@ function CoachInner() {
                       </div>
                       <p className="truncate font-mono text-[10px] text-white/30">{student.email || student.userId}</p>
                     </div>
-                    <Metric label="Coach" value={student.coachId || "-"} />
+                    <Metric label="Telefone" value={student.phone || "-"} />
+                    <Metric label="Coach" value={coachLabel(student, coaches)} />
                     <Metric label="Semana" value={`${student.weeklyXp} XP`} cyan />
                     <Metric label="Mês" value={`${student.monthlyXp} XP`} />
                     <Metric label="Visto" value={relativeTime(student.lastActiveAt)} />
@@ -775,9 +851,11 @@ function CoachInner() {
                   <div className="grid gap-4 md:grid-cols-2">
                     <Panel title="Sistema">
                       <DataRow label="Status" value={<Badge variant={getStatusInfo(selected).variant}>{getStatusInfo(selected).text}</Badge>} />
+                      <DataRow label="Telefone" value={selected.phone || "-"} />
                       <DataRow label="Assinatura" value={selected.subscriptionStatus?.replace("_", " ") || "-"} />
                       <DataRow label="Expira em" value={formatDate(selected.subscriptionEndsAt)} />
-                      <DataRow label="Coach" value={selected.coachId || "-"} />
+                      <DataRow label="Coach" value={coachLabel(selected, coaches)} />
+                      {user.role === "super_admin" && <DataRow label="Time" value={selected.teamId || "-"} />}
                       <DataRow label="Arena" value={selected.visibleInArena ? "Visível" : "Oculto"} />
                     </Panel>
                     <Panel title="Evolução">
@@ -1017,17 +1095,19 @@ function CoachInner() {
         coaches={coaches}
         isAdmin={isAdmin}
         acting={acting}
+        limitReached={studentLimitReached}
         onDraftChange={setStudentDraft}
         onCreate={() => void act(async () => {
           const result = await createAdminStudent({
             name: studentDraft.name,
             email: studentDraft.email || undefined,
+            phone: studentDraft.phone || undefined,
             password: studentDraft.password || undefined,
             active: studentDraft.active,
             coachId: studentDraft.coachId || undefined,
           });
           if (result.inviteLink) setLastSecret(result.inviteLink);
-          setStudentDraft({ name: "", email: "", password: "", active: false, coachId: "" });
+          setStudentDraft({ name: "", email: "", phone: "", password: "", active: false, coachId: "" });
           setShowCreateStudent(false);
         }, "Aluno criado.")}
       />
@@ -1037,6 +1117,7 @@ function CoachInner() {
         onOpenChange={setShowCreateCoach}
         draft={coachDraft}
         acting={acting}
+        limitReached={coachLimitReached}
         onDraftChange={setCoachDraft}
         onCreate={() => void act(async () => {
           const result = await createAdminCoach({ name: coachDraft.name, email: coachDraft.email, password: coachDraft.password || undefined });
@@ -1529,6 +1610,7 @@ function CreateStudentDialog({
   coaches,
   isAdmin,
   acting,
+  limitReached,
   onDraftChange,
   onCreate,
 }: {
@@ -1538,6 +1620,7 @@ function CreateStudentDialog({
   coaches: AdminCoach[];
   isAdmin: boolean;
   acting: boolean;
+  limitReached: boolean;
   onDraftChange: (draft: StudentDraft) => void;
   onCreate: () => void;
 }) {
@@ -1551,6 +1634,7 @@ function CreateStudentDialog({
         <div className="grid gap-3">
           <Field label="Nome" value={draft.name} onChange={(name) => onDraftChange({ ...draft, name })} />
           <Field label="Email" value={draft.email} onChange={(email) => onDraftChange({ ...draft, email })} />
+          <Field label="Telefone" value={draft.phone} onChange={(phone) => onDraftChange({ ...draft, phone })} />
           <Field label="Senha inicial opcional" value={draft.password} onChange={(password) => onDraftChange({ ...draft, password })} />
           {isAdmin && (
             <select value={draft.coachId} onChange={(event) => onDraftChange({ ...draft, coachId: event.target.value })} className="h-10 rounded-md border border-white/10 bg-white/5 px-3 text-sm text-white">
@@ -1562,10 +1646,11 @@ function CreateStudentDialog({
             <input type="checkbox" checked={draft.active} onChange={(event) => onDraftChange({ ...draft, active: event.target.checked })} />
             Ativar acesso agora
           </label>
+          {limitReached && <p className="text-xs font-bold text-[#00e5ff]">Limite do plano atingido. Atualize o plano GUTO Time para cadastrar mais alunos.</p>}
         </div>
         <AlertDialogFooter>
           <AlertDialogCancel className="border-white/10 bg-white/5 text-white">Cancelar</AlertDialogCancel>
-          <Button disabled={acting || !draft.name.trim()} onClick={onCreate} className="bg-[#00e5ff] text-[#0a0f1e] hover:bg-white">Criar</Button>
+          <Button disabled={acting || limitReached || !draft.name.trim()} onClick={onCreate} className="bg-[#00e5ff] text-[#0a0f1e] hover:bg-white">Criar</Button>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
@@ -1577,6 +1662,7 @@ function CreateCoachDialog({
   onOpenChange,
   draft,
   acting,
+  limitReached,
   onDraftChange,
   onCreate,
 }: {
@@ -1584,6 +1670,7 @@ function CreateCoachDialog({
   onOpenChange: (open: boolean) => void;
   draft: CoachDraft;
   acting: boolean;
+  limitReached: boolean;
   onDraftChange: (draft: CoachDraft) => void;
   onCreate: () => void;
 }) {
@@ -1598,10 +1685,11 @@ function CreateCoachDialog({
           <Field label="Nome" value={draft.name} onChange={(name) => onDraftChange({ ...draft, name })} />
           <Field label="Email" value={draft.email} onChange={(email) => onDraftChange({ ...draft, email })} />
           <Field label="Senha opcional" value={draft.password} onChange={(password) => onDraftChange({ ...draft, password })} />
+          {limitReached && <p className="text-xs font-bold text-[#00e5ff]">Limite do plano atingido. Atualize o plano GUTO Time para cadastrar mais coaches.</p>}
         </div>
         <AlertDialogFooter>
           <AlertDialogCancel className="border-white/10 bg-white/5 text-white">Cancelar</AlertDialogCancel>
-          <Button disabled={acting || !draft.name.trim() || !draft.email.trim()} onClick={onCreate} className="bg-[#00e5ff] text-[#0a0f1e] hover:bg-white">Criar coach</Button>
+          <Button disabled={acting || limitReached || !draft.name.trim() || !draft.email.trim()} onClick={onCreate} className="bg-[#00e5ff] text-[#0a0f1e] hover:bg-white">Criar coach</Button>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

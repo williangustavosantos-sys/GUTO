@@ -40,6 +40,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       email: data.email,
       role: data.role,
       coachId: data.coachId,
+      teamId: data.teamId,
       subscriptionStatus: data.subscriptionStatus,
       subscriptionEndsAt: data.subscriptionEndsAt,
     })

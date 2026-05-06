@@ -46,6 +46,7 @@ export interface AdminCustomExerciseRequest extends AdminCatalogExercise {
 export interface AdminUser extends AuthUser {
   name?: string
   email?: string
+  phone?: string
   whatsapp?: string
   instagram?: string
   country?: string
@@ -76,9 +77,41 @@ export interface AdminStudent extends AdminUser {
   validationsTotal: number
   lastValidationAt: string | null
   lastActiveAt: string | null
+  coachName?: string | null
+  age?: number | null
+  gender?: string | null
+  biologicalSex?: string | null
 }
 
 export type AdminCoach = AdminUser & { role: "coach" }
+
+export interface AdminStudentFilters {
+  search?: string
+  coachId?: string
+  gender?: string
+  minAge?: string
+  maxAge?: string
+  status?: "active" | "paused" | "inactive" | "archived" | ""
+  subscriptionStatus?: string
+}
+
+export interface AdminTeamSummary {
+  team: {
+    id: string
+    name: string
+    plan: "start" | "pro" | "elite" | "custom"
+    planLabel: string
+    status: string
+  }
+  limits: {
+    maxStudents: number | null
+    maxCoaches: number | null
+  }
+  usage: {
+    students: number
+    coaches: number
+  }
+}
 
 export type AdminLog = {
   id?: string
@@ -99,8 +132,29 @@ export function getAdminUsers(): Promise<AdminUserListResponse> {
   return apiRequest<AdminUserListResponse>("/admin/users")
 }
 
-export function getAdminStudents(): Promise<{ students: AdminStudent[]; users: AdminUser[] }> {
-  return apiRequest<{ students: AdminStudent[]; users: AdminUser[] }>("/admin/students")
+function toQuery(params: { [key: string]: string | undefined }): string {
+  const query = new URLSearchParams()
+  Object.entries(params).forEach(([key, value]) => {
+    if (value?.trim()) query.set(key, value.trim())
+  })
+  const serialized = query.toString()
+  return serialized ? `?${serialized}` : ""
+}
+
+export function getAdminTeamSummary(teamId?: string): Promise<AdminTeamSummary> {
+  return apiRequest<AdminTeamSummary>(`/admin/team/summary${toQuery({ teamId })}`)
+}
+
+export function getAdminStudents(filters: AdminStudentFilters = {}): Promise<{ students: AdminStudent[]; users: AdminUser[] }> {
+  return apiRequest<{ students: AdminStudent[]; users: AdminUser[] }>(`/admin/students${toQuery({
+    search: filters.search,
+    coachId: filters.coachId,
+    gender: filters.gender,
+    minAge: filters.minAge,
+    maxAge: filters.maxAge,
+    status: filters.status,
+    subscriptionStatus: filters.subscriptionStatus,
+  })}`)
 }
 
 export function getAdminExerciseCatalog(): Promise<{ exercises: AdminCatalogExercise[] }> {
