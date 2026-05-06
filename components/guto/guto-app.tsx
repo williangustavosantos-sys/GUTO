@@ -750,12 +750,19 @@ export function GutoApp({
         }
         setDraftName(resolvedName)
         setCommittedName(resolvedName)
-        if (resolvedName) {
-          persistProfile({ userName: resolvedName, language: persistedLanguage, onboardingComplete: Boolean(stored?.onboardingComplete) })
-          if (!loadedMemory || isGenericGutoName(loadedMemory.name)) {
-            void persistMemory({ name: resolvedName, language: persistedLanguage })
-          }
+
+        const hasConfirmedName = hasStoredName(stored) || hasMemoryName(loadedMemory)
+
+        persistProfile({
+          language: persistedLanguage,
+          onboardingComplete: Boolean(stored?.onboardingComplete),
+          ...(hasConfirmedName && resolvedName ? { userName: resolvedName } : {})
+        })
+
+        if (hasConfirmedName && resolvedName && (!loadedMemory || isGenericGutoName(loadedMemory.name))) {
+          void persistMemory({ name: resolvedName, language: persistedLanguage })
         }
+
         setStage(resolveAuthenticatedStage(user, stored, loadedMemory))
       } catch {
         if (cancelled) return
