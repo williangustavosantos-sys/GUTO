@@ -36,7 +36,7 @@ const avatarStageLabel: Record<string, Record<string, string>> = {
   baby: { "pt-BR": "BABY", "en-US": "BABY", "it-IT": "BABY", "es-ES": "BEBÉ" },
   teen: { "pt-BR": "GUTIM", "en-US": "GUTIM", "it-IT": "GUTIM", "es-ES": "GUTIM" },
   adult: { "pt-BR": "ADULTO", "en-US": "ADULT", "it-IT": "ADULTO", "es-ES": "ADULTO" },
-  elite: { "pt-BR": "ELITE", "en-US": "ELITE", "it-IT": "ELITE", "es-ES": "ELITE" },
+  elite: { "pt-BR": "Elite", "en-US": "Elite", "it-IT": "Elite", "es-ES": "Elite" },
 }
 
 const positionIcons = [Trophy, Star, TrendingUp]

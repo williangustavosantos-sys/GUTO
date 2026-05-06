@@ -146,7 +146,7 @@ export const translations: Record<ValidLanguage, TranslationDictionary> = {
       baby: "BABY",
       teen: "TEEN",
       adult: "ADULTO",
-      elite: "ELITE"
+      elite: "Elite"
     },
     
     // Mission Tab
@@ -278,7 +278,7 @@ export const translations: Record<ValidLanguage, TranslationDictionary> = {
       baby: "BABY",
       teen: "TEEN",
       adult: "ADULTO",
-      elite: "ELITE"
+      elite: "Elite"
     },
     missionTitle: "MISSIONE",
     objectivesTitle: "Obiettivi",
@@ -406,7 +406,7 @@ export const translations: Record<ValidLanguage, TranslationDictionary> = {
       baby: "BABY",
       teen: "TEEN",
       adult: "ADULTO",
-      elite: "ÉLITE"
+      elite: "Élite"
     },
     missionTitle: "MISIÓN",
     objectivesTitle: "Objetivos",
@@ -534,7 +534,7 @@ export const translations: Record<ValidLanguage, TranslationDictionary> = {
       baby: "BABY",
       teen: "TEEN",
       adult: "ADULT",
-      elite: "ELITE"
+      elite: "Elite"
     },
     missionTitle: "MISSION",
     objectivesTitle: "Objectives",

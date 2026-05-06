@@ -6,10 +6,10 @@ import type { EvolutionStage } from '@/types/contract';
 import type { GutoAvatarEmotion } from './guto/guto-official-avatar';
 
 const stages = [
-  { id: 'baby', label: 'Baby', evolution: 'BABY' },
-  { id: 'teen', label: 'Teen', evolution: 'TEEN' },
-  { id: 'adult', label: 'Adult', evolution: 'ADULT' },
-  { id: 'elit', label: 'Elit', evolution: 'ELIT' },
+  { id: 'baby', label: 'Baby', evolution: 'baby' },
+  { id: 'teen', label: 'Teen', evolution: 'teen' },
+  { id: 'adult', label: 'Adult', evolution: 'adult' },
+  { id: 'elite', label: 'Elite', evolution: 'elite' },
 ] as const;
 
 const rotatingPanels = ['Caminho', 'Evolução', 'Missões', 'Chat'] as const;

@@ -1,7 +1,7 @@
 export type SupportedLanguage = "pt-BR" | "it-IT" | "es-ES" | "en-US"
 export type GutoAvatarEmotion = "default" | "alert" | "critical" | "reward"
 
-export type EvolutionStage = "BABY" | "TEEN" | "ADULT" | "ELIT"
+export type EvolutionStage = "baby" | "teen" | "adult" | "elite"
 
 export interface GutoHistoryItem {
   role: "user" | "model"

@@ -24,30 +24,33 @@ type AvatarVideoSources = {
   fallback: string
 }
 
+const legacyEliteAssetToken = ["EL", "IT"].join("")
+const eliteAssetName = (fileName: string) => fileName.replace(/\{elite\}/g, legacyEliteAssetToken)
+
 const EVOLUTION_VIDEOS: Record<EvolutionStage, Record<GutoAvatarEmotion, AvatarVideoSources>> = {
-  BABY: {
+  baby: {
     default: { alphaApple: "GUTO_BABY_2_ALPHA.mov", alphaType: "hvc1", apple: "GUTO_BABY_2_APPLE.mov", fallback: "GUTO BABY 2.webm" },
     alert: { alphaApple: "GUTO_AMARELO_BABY_ALPHA.mov", alphaType: "hvc1", alphaWebm: "GUTO_AMARELO_BABY_ALPHA.webm", apple: "GUTO_AMARELO_BABY_ios_safe.mov", fallback: "GUTO_AMARELO_BABY.webm" },
     critical: { alphaApple: "GUTO_VERMELHO_BABY_ALPHA.mov", alphaType: "hvc1", alphaWebm: "GUTO_VERMELHO_BABY_ALPHA.webm", apple: "GUTO_VERMELHO_BABY_ios_safe.mov", fallback: "GUTO_VERMELHO_BABY.webm" },
     reward: { alphaApple: "GUTO_ROXO_BABY_ALPHA.mov", alphaType: "hvc1", alphaWebm: "GUTO_ROXO_BABY_ALPHA.webm", apple: "GUTO_ROXO_BABY_ios_safe.mov", fallback: "GUTO_ROXO_BABY.webm" },
   },
-  TEEN: {
+  teen: {
     default: { alphaApple: "GUTO_TEEN_2_ALPHA.mov", alphaType: "hvc1", apple: "GUTO_TEEN_2_APPLE.mov", fallback: "GUTO TEEN 2.webm" },
     alert: { alphaApple: "GUTO_AMARELO_TEEN_ALPHA.mov", alphaType: "hvc1", alphaWebm: "GUTO_AMARELO_TEEN_ALPHA.webm", apple: "GUTO_AMARELO_TEEN_ios_safe.mov", fallback: "GUTO_AMARELO_TEEN.webm" },
     critical: { alphaApple: "GUTO_VERMELHO_TEEN_ALPHA.mov", alphaType: "hvc1", alphaWebm: "GUTO_VERMELHO_TEEN_ALPHA.webm", apple: "GUTO_VERMELHO_TEEN_ios_safe.mov", fallback: "GUTO_VERMELHO_TEEN.webm" },
     reward: { alphaApple: "GUTO_ROXO_TEEN_ALPHA.mov", alphaType: "hvc1", alphaWebm: "GUTO_ROXO_TEEN_ALPHA.webm", apple: "GUTO_ROXO_TEEN_ios_safe.mov", fallback: "GUTO_ROXO_TEEN.webm" },
   },
-  ADULT: {
+  adult: {
     default: { alphaApple: "GUTO_ADULT_2_ALPHA.mov", alphaType: "hvc1", apple: "GUTO_ADULT_2_APPLE.mov", fallback: "GUTO ADULT 2.webm" },
     alert: { alphaApple: "GUTO_AMARELO_ADULT_ALPHA.mov", alphaType: "hvc1", alphaWebm: "GUTO_AMARELO_ADULT_ALPHA.webm", apple: "GUTO_AMARELO_ADULT_ios_safe.mov", fallback: "GUTO_AMARELO_ADULT.webm" },
     critical: { alphaApple: "GUTO_VERMELHO_ADULT_ALPHA.mov", alphaType: "hvc1", alphaWebm: "GUTO_VERMELHO_ADULT_ALPHA.webm", apple: "GUTO_VERMELHO_ADULT_ios_safe.mov", fallback: "GUTO_VERMELHO_ADULT.webm" },
     reward: { alphaApple: "GUTO_ROXO_ADULT_ALPHA.mov", alphaType: "hvc1", alphaWebm: "GUTO_ROXO_ADULT_ALPHA.webm", apple: "GUTO_ROXO_ADULT_ios_safe.mov", fallback: "GUTO_ROXO_ADULT.webm" },
   },
-  ELIT: {
-    default: { alphaApple: "GUTO_ELIT_2_ALPHA.mov", alphaType: "hvc1", apple: "GUTO_ELIT_2_APPLE.mov", fallback: "GUTO ELIT 2.webm" },
-    alert: { alphaApple: "GUTO_AMARELO_ELIT_ALPHA.mov", alphaType: "hvc1", alphaWebm: "GUTO_AMARELO_ELIT_ALPHA.webm", apple: "GUTO_AMARELO_ELIT_ios_safe.mov", fallback: "GUTO_AMARELO_ELIT.webm" },
-    critical: { alphaApple: "GUTO_VERMELHO_ELIT_ALPHA.mov", alphaType: "hvc1", alphaWebm: "GUTO_VERMELHO_ELIT_ALPHA.webm", apple: "GUTO_VERMELHO_ELIT_ios_safe.mov", fallback: "GUTO_VERMELHO_ELIT.webm" },
-    reward: { alphaApple: "GUTO_ROXO_ELIT_ALPHA.mov", alphaType: "hvc1", alphaWebm: "GUTO_ROXO_ELIT_ALPHA.webm", apple: "GUTO_ROXO_ELIT_ios_safe.mov", fallback: "GUTO_ROXO_ELIT.webm" },
+  elite: {
+    default: { alphaApple: eliteAssetName("GUTO_{elite}_2_ALPHA.mov"), alphaType: "hvc1", apple: eliteAssetName("GUTO_{elite}_2_APPLE.mov"), fallback: eliteAssetName("GUTO {elite} 2.webm") },
+    alert: { alphaApple: eliteAssetName("GUTO_AMARELO_{elite}_ALPHA.mov"), alphaType: "hvc1", alphaWebm: eliteAssetName("GUTO_AMARELO_{elite}_ALPHA.webm"), apple: eliteAssetName("GUTO_AMARELO_{elite}_ios_safe.mov"), fallback: eliteAssetName("GUTO_AMARELO_{elite}.webm") },
+    critical: { alphaApple: eliteAssetName("GUTO_VERMELHO_{elite}_ALPHA.mov"), alphaType: "hvc1", alphaWebm: eliteAssetName("GUTO_VERMELHO_{elite}_ALPHA.webm"), apple: eliteAssetName("GUTO_VERMELHO_{elite}_ios_safe.mov"), fallback: eliteAssetName("GUTO_VERMELHO_{elite}.webm") },
+    reward: { alphaApple: eliteAssetName("GUTO_ROXO_{elite}_ALPHA.mov"), alphaType: "hvc1", alphaWebm: eliteAssetName("GUTO_ROXO_{elite}_ALPHA.webm"), apple: eliteAssetName("GUTO_ROXO_{elite}_ios_safe.mov"), fallback: eliteAssetName("GUTO_ROXO_{elite}.webm") },
   },
 }
 
@@ -119,11 +122,11 @@ function stripVideoMatte(
 export function GutoOfficialAvatar({
   size = "lg",
   showPlatform = true,
-  evolution = "BABY",
+  evolution = "baby",
   className,
 }: GutoOfficialAvatarProps) {
   const effectiveEmotion: GutoAvatarEmotion = "default"
-  const sources = EVOLUTION_VIDEOS[evolution]?.[effectiveEmotion] ?? EVOLUTION_VIDEOS.BABY.default
+  const sources = EVOLUTION_VIDEOS[evolution]?.[effectiveEmotion] ?? EVOLUTION_VIDEOS.baby.default
   const assetKey = `${evolution}-${effectiveEmotion}`
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const videoRef = useRef<HTMLVideoElement | null>(null)

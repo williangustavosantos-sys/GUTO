@@ -6,6 +6,7 @@ import { Lock } from "lucide-react"
 import { GutoOfficialAvatar } from "../guto-official-avatar"
 import { getLanguage, translations } from "../translations"
 import { evolutionCardsFixture } from "../view-models"
+import { getNextGutoEvolutionXp } from "@/lib/guto-evolution"
 import type { EvolutionStage } from "@/types/contract"
 import type { GutoMemory } from "@/lib/api/guto"
 
@@ -14,13 +15,6 @@ interface EvolutionsTabProps {
   language: string
   currentEvolution: EvolutionStage
   memory?: GutoMemory | null
-}
-
-function getNextTargetXp(currentXp: number) {
-  if (currentXp < 1500) return 1500
-  if (currentXp < 3000) return 3000
-  if (currentXp < 5000) return 5000
-  return currentXp
 }
 
 const evolutionCopy = {
@@ -35,7 +29,7 @@ export function EvolutionsTab({ language, currentEvolution, memory }: Evolutions
   const locale = translations[validLang]
   const copy = evolutionCopy[validLang]
   const currentXp = memory?.totalXp ?? 0
-  const nextTargetXp = getNextTargetXp(currentXp)
+  const nextTargetXp = getNextGutoEvolutionXp(currentXp) ?? currentXp
   const progress = nextTargetXp > 0 ? Math.min(100, (currentXp / nextTargetXp) * 100) : 100
 
   return (

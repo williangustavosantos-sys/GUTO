@@ -283,7 +283,7 @@ export function ChatTab({
   userId,
   userName,
   language,
-  evolution = "BABY",
+  evolution = "baby",
   pendingExerciseQuestion,
   onExerciseQuestionHandled,
   pendingFoodQuestion,

@@ -23,6 +23,7 @@ import { getGutoMemory, saveGutoMemory, trackGutoEvent, validateGutoName, type D
 import { useAuth } from "@/components/auth-provider"
 import { getInvite, claimInvite } from "@/lib/api/auth"
 import type { EvolutionStage, SupportedLanguage } from "@/types/contract"
+import { resolveGutoEvolutionStage } from "@/lib/guto-evolution"
 import { translations } from "./translations"
 import { gutoAudio } from "@/lib/audio-haptics"
 import {
@@ -293,12 +294,7 @@ function validateGutoNameLocally(value: string): GutoNameValidation {
   return { status: "valid", normalized, message: "Nome aceito." }
 }
 
-function resolveEvolutionStage(totalXp = 0): EvolutionStage {
-  if (totalXp >= 5000) return "ELIT"
-  if (totalXp >= 3000) return "ADULT"
-  if (totalXp >= 1500) return "TEEN"
-  return "BABY"
-}
+const resolveEvolutionStage = resolveGutoEvolutionStage
 
 async function resolveGutoNameValidation(value: string, userId?: string) {
   try {
@@ -448,7 +444,7 @@ export function GutoApp({
   const [draftName, setDraftName] = useState("")
   const [committedName, setCommittedName] = useState("")
   const [activeTab, setActiveTab] = useState<TabType>("guto")
-  const [evolution, setEvolution] = useState<EvolutionStage>("BABY")
+  const [evolution, setEvolution] = useState<EvolutionStage>("baby")
   const [activeLanguageGlow, setActiveLanguageGlow] = useState<SupportedLanguage | null>(null)
   const [rotatingLanguage, setRotatingLanguage] = useState(false)
   const [isHoldingPact, setIsHoldingPact] = useState(false)

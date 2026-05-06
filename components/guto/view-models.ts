@@ -47,10 +47,10 @@ export const pathDaysFixture: PathDay[] = [
 ]
 
 export const evolutionCardsFixture: EvolutionCard[] = [
-  { stage: "BABY", label: "BABY", requiredXp: 0, unlocked: true, silhouette: "soft" },
-  { stage: "TEEN", label: "TEEN", requiredXp: 1500, unlocked: false, silhouette: "blocked" },
-  { stage: "ADULT", label: "ADULT", requiredXp: 3000, unlocked: false, silhouette: "blocked" },
-  { stage: "ELIT", label: "ELIT", requiredXp: 5000, unlocked: false, silhouette: "blocked" },
+  { stage: "baby", label: "Baby", requiredXp: 0, unlocked: true, silhouette: "soft" },
+  { stage: "teen", label: "Teen", requiredXp: 1500, unlocked: false, silhouette: "blocked" },
+  { stage: "adult", label: "Adult", requiredXp: 5000, unlocked: false, silhouette: "blocked" },
+  { stage: "elite", label: "Elite", requiredXp: 12000, unlocked: false, silhouette: "blocked" },
 ]
 
 const FIXTURE_BASE = { canonicalNamePt: "", muscleGroup: "peito", videoUrl: "", videoProvider: "local" as const, sourceFileName: "" }
