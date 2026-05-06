@@ -1,0 +1,1120 @@
+diff --git a/package-lock.json b/package-lock.json
+index 61c392d..30804a3 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -10,17 +10,21 @@
+       "license": "ISC",
+       "dependencies": {
+         "@upstash/redis": "^1.37.0",
++        "bcrypt": "^6.0.0",
+         "cors": "^2.8.6",
+         "dotenv": "^17.4.2",
+         "express": "^5.2.1",
++        "jsonwebtoken": "^9.0.3",
+         "multer": "^2.1.1",
+         "node-fetch": "^3.3.2",
+         "sharp": "^0.34.5",
+         "tsx": "^4.21.0"
+       },
+       "devDependencies": {
++        "@types/bcrypt": "^6.0.0",
+         "@types/cors": "^2.8.19",
+         "@types/express": "^5.0.6",
++        "@types/jsonwebtoken": "^9.0.10",
+         "@types/multer": "^2.1.0",
+         "@types/node": "^25.6.0",
+         "@types/sharp": "^0.31.1",
+@@ -988,6 +992,16 @@
+       "dev": true,
+       "license": "MIT"
+     },
++    "node_modules/@types/bcrypt": {
++      "version": "6.0.0",
++      "resolved": "https://registry.npmjs.org/@types/bcrypt/-/bcrypt-6.0.0.tgz",
++      "integrity": "sha512-/oJGukuH3D2+D+3H4JWLaAsJ/ji86dhRidzZ/Od7H/i8g+aCmvkeCc6Ni/f9uxGLSQVCRZkX2/lqEFG2BvWtlQ==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "@types/node": "*"
++      }
++    },
+     "node_modules/@types/body-parser": {
+       "version": "1.19.6",
+       "resolved": "https://registry.npmjs.org/@types/body-parser/-/body-parser-1.19.6.tgz",
+@@ -1051,6 +1065,24 @@
+       "dev": true,
+       "license": "MIT"
+     },
++    "node_modules/@types/jsonwebtoken": {
++      "version": "9.0.10",
++      "resolved": "https://registry.npmjs.org/@types/jsonwebtoken/-/jsonwebtoken-9.0.10.tgz",
++      "integrity": "sha512-asx5hIG9Qmf/1oStypjanR7iKTv0gXQ1Ov/jfrX6kS/EO0OFni8orbmGCn0672NHR3kXHwpAwR+B368ZGN/2rA==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "@types/ms": "*",
++        "@types/node": "*"
++      }
++    },
++    "node_modules/@types/ms": {
++      "version": "2.1.0",
++      "resolved": "https://registry.npmjs.org/@types/ms/-/ms-2.1.0.tgz",
++      "integrity": "sha512-GsCCIZDE/p3i96vtEqx+7dBUGXrc7zeSK3wwPHIaRThS+9OhWIXRqzs4d6k1SVU8g91DrNRWxWUGhp5KXQb2VA==",
++      "dev": true,
++      "license": "MIT"
++    },
+     "node_modules/@types/multer": {
+       "version": "2.1.0",
+       "resolved": "https://registry.npmjs.org/@types/multer/-/multer-2.1.0.tgz",
+@@ -1177,6 +1209,20 @@
+       "dev": true,
+       "license": "MIT"
+     },
++    "node_modules/bcrypt": {
++      "version": "6.0.0",
++      "resolved": "https://registry.npmjs.org/bcrypt/-/bcrypt-6.0.0.tgz",
++      "integrity": "sha512-cU8v/EGSrnH+HnxV2z0J7/blxH8gq7Xh2JFT6Aroax7UohdmiJJlxApMxtKfuI7z68NvvVcmR78k2LbT6efhRg==",
++      "hasInstallScript": true,
++      "license": "MIT",
++      "dependencies": {
++        "node-addon-api": "^8.3.0",
++        "node-gyp-build": "^4.8.4"
++      },
++      "engines": {
++        "node": ">= 18"
++      }
++    },
+     "node_modules/body-parser": {
+       "version": "2.2.2",
+       "resolved": "https://registry.npmjs.org/body-parser/-/body-parser-2.2.2.tgz",
+@@ -1201,6 +1247,12 @@
+         "url": "https://opencollective.com/express"
+       }
+     },
++    "node_modules/buffer-equal-constant-time": {
++      "version": "1.0.1",
++      "resolved": "https://registry.npmjs.org/buffer-equal-constant-time/-/buffer-equal-constant-time-1.0.1.tgz",
++      "integrity": "sha512-zRpUiDwd/xk6ADqPMATG8vc9VPrkck7T07OIx0gnjmJAnHnTVXNQG3vfvWNuiZIkwu9KrKdA1iJKfsfTVxE6NA==",
++      "license": "BSD-3-Clause"
++    },
+     "node_modules/buffer-from": {
+       "version": "1.1.2",
+       "resolved": "https://registry.npmjs.org/buffer-from/-/buffer-from-1.1.2.tgz",
+@@ -1415,6 +1467,15 @@
+         "node": ">= 0.4"
+       }
+     },
++    "node_modules/ecdsa-sig-formatter": {
++      "version": "1.0.11",
++      "resolved": "https://registry.npmjs.org/ecdsa-sig-formatter/-/ecdsa-sig-formatter-1.0.11.tgz",
++      "integrity": "sha512-nagl3RYrbNv6kQkeJIpt6NJZy8twLB/2vtz6yN9Z4vRKHN4/QZJIEbqohALSgwKdnksuY3k5Addp5lg8sVoVcQ==",
++      "license": "Apache-2.0",
++      "dependencies": {
++        "safe-buffer": "^5.0.1"
++      }
++    },
+     "node_modules/ee-first": {
+       "version": "1.1.1",
+       "resolved": "https://registry.npmjs.org/ee-first/-/ee-first-1.1.1.tgz",
+@@ -1798,6 +1859,91 @@
+       "integrity": "sha512-hvpoI6korhJMnej285dSg6nu1+e6uxs7zG3BYAm5byqDsgJNWwxzM6z6iZiAgQR4TJ30JmBTOwqZUw3WlyH3AQ==",
+       "license": "MIT"
+     },
++    "node_modules/jsonwebtoken": {
++      "version": "9.0.3",
++      "resolved": "https://registry.npmjs.org/jsonwebtoken/-/jsonwebtoken-9.0.3.tgz",
++      "integrity": "sha512-MT/xP0CrubFRNLNKvxJ2BYfy53Zkm++5bX9dtuPbqAeQpTVe0MQTFhao8+Cp//EmJp244xt6Drw/GVEGCUj40g==",
++      "license": "MIT",
++      "dependencies": {
++        "jws": "^4.0.1",
++        "lodash.includes": "^4.3.0",
++        "lodash.isboolean": "^3.0.3",
++        "lodash.isinteger": "^4.0.4",
++        "lodash.isnumber": "^3.0.3",
++        "lodash.isplainobject": "^4.0.6",
++        "lodash.isstring": "^4.0.1",
++        "lodash.once": "^4.0.0",
++        "ms": "^2.1.1",
++        "semver": "^7.5.4"
++      },
++      "engines": {
++        "node": ">=12",
++        "npm": ">=6"
++      }
++    },
++    "node_modules/jwa": {
++      "version": "2.0.1",
++      "resolved": "https://registry.npmjs.org/jwa/-/jwa-2.0.1.tgz",
++      "integrity": "sha512-hRF04fqJIP8Abbkq5NKGN0Bbr3JxlQ+qhZufXVr0DvujKy93ZCbXZMHDL4EOtodSbCWxOqR8MS1tXA5hwqCXDg==",
++      "license": "MIT",
++      "dependencies": {
++        "buffer-equal-constant-time": "^1.0.1",
++        "ecdsa-sig-formatter": "1.0.11",
++        "safe-buffer": "^5.0.1"
++      }
++    },
++    "node_modules/jws": {
++      "version": "4.0.1",
++      "resolved": "https://registry.npmjs.org/jws/-/jws-4.0.1.tgz",
++      "integrity": "sha512-EKI/M/yqPncGUUh44xz0PxSidXFr/+r0pA70+gIYhjv+et7yxM+s29Y+VGDkovRofQem0fs7Uvf4+YmAdyRduA==",
++      "license": "MIT",
++      "dependencies": {
++        "jwa": "^2.0.1",
++        "safe-buffer": "^5.0.1"
++      }
++    },
++    "node_modules/lodash.includes": {
++      "version": "4.3.0",
++      "resolved": "https://registry.npmjs.org/lodash.includes/-/lodash.includes-4.3.0.tgz",
++      "integrity": "sha512-W3Bx6mdkRTGtlJISOvVD/lbqjTlPPUDTMnlXZFnVwi9NKJ6tiAk6LVdlhZMm17VZisqhKcgzpO5Wz91PCt5b0w==",
++      "license": "MIT"
++    },
++    "node_modules/lodash.isboolean": {
++      "version": "3.0.3",
++      "resolved": "https://registry.npmjs.org/lodash.isboolean/-/lodash.isboolean-3.0.3.tgz",
++      "integrity": "sha512-Bz5mupy2SVbPHURB98VAcw+aHh4vRV5IPNhILUCsOzRmsTmSQ17jIuqopAentWoehktxGd9e/hbIXq980/1QJg==",
++      "license": "MIT"
++    },
++    "node_modules/lodash.isinteger": {
++      "version": "4.0.4",
++      "resolved": "https://registry.npmjs.org/lodash.isinteger/-/lodash.isinteger-4.0.4.tgz",
++      "integrity": "sha512-DBwtEWN2caHQ9/imiNeEA5ys1JoRtRfY3d7V9wkqtbycnAmTvRRmbHKDV4a0EYc678/dia0jrte4tjYwVBaZUA==",
++      "license": "MIT"
++    },
++    "node_modules/lodash.isnumber": {
++      "version": "3.0.3",
++      "resolved": "https://registry.npmjs.org/lodash.isnumber/-/lodash.isnumber-3.0.3.tgz",
++      "integrity": "sha512-QYqzpfwO3/CWf3XP+Z+tkQsfaLL/EnUlXWVkIk5FUPc4sBdTehEqZONuyRt2P67PXAk+NXmTBcc97zw9t1FQrw==",
++      "license": "MIT"
++    },
++    "node_modules/lodash.isplainobject": {
++      "version": "4.0.6",
++      "resolved": "https://registry.npmjs.org/lodash.isplainobject/-/lodash.isplainobject-4.0.6.tgz",
++      "integrity": "sha512-oSXzaWypCMHkPC3NvBEaPHf0KsA5mvPrOPgQWDsbg8n7orZ290M0BmC/jgRZ4vcJ6DTAhjrsSYgdsW/F+MFOBA==",
++      "license": "MIT"
++    },
++    "node_modules/lodash.isstring": {
++      "version": "4.0.1",
++      "resolved": "https://registry.npmjs.org/lodash.isstring/-/lodash.isstring-4.0.1.tgz",
++      "integrity": "sha512-0wJxfxH1wgO3GrbuP+dTTk7op+6L41QCXbGINEmD+ny/G/eCqGzxyCsh7159S+mgDDcoarnBw6PC1PS5+wUGgw==",
++      "license": "MIT"
++    },
++    "node_modules/lodash.once": {
++      "version": "4.1.1",
++      "resolved": "https://registry.npmjs.org/lodash.once/-/lodash.once-4.1.1.tgz",
++      "integrity": "sha512-Sb487aTOCr9drQVL8pIxOzVhafOjZN9UU54hiN8PU3uAiSV7lx1yYNpbNmex2PK6dSJoNTSJUUswT651yww3Mg==",
++      "license": "MIT"
++    },
+     "node_modules/make-error": {
+       "version": "1.3.6",
+       "resolved": "https://registry.npmjs.org/make-error/-/make-error-1.3.6.tgz",
+@@ -1937,6 +2083,15 @@
+         "node": ">= 0.6"
+       }
+     },
++    "node_modules/node-addon-api": {
++      "version": "8.7.0",
++      "resolved": "https://registry.npmjs.org/node-addon-api/-/node-addon-api-8.7.0.tgz",
++      "integrity": "sha512-9MdFxmkKaOYVTV+XVRG8ArDwwQ77XIgIPyKASB1k3JPq3M8fGQQQE3YpMOrKm6g//Ktx8ivZr8xo1Qmtqub+GA==",
++      "license": "MIT",
++      "engines": {
++        "node": "^18 || ^20 || >= 21"
++      }
++    },
+     "node_modules/node-domexception": {
+       "version": "1.0.0",
+       "resolved": "https://registry.npmjs.org/node-domexception/-/node-domexception-1.0.0.tgz",
+@@ -1975,6 +2130,17 @@
+         "url": "https://opencollective.com/node-fetch"
+       }
+     },
++    "node_modules/node-gyp-build": {
++      "version": "4.8.4",
++      "resolved": "https://registry.npmjs.org/node-gyp-build/-/node-gyp-build-4.8.4.tgz",
++      "integrity": "sha512-LA4ZjwlnUblHVgq0oBF3Jl/6h/Nvs5fzBLwdEF4nuxnFdsfajde4WfxtJr3CaiH+F6ewcIB/q4jQ4UzPyid+CQ==",
++      "license": "MIT",
++      "bin": {
++        "node-gyp-build": "bin.js",
++        "node-gyp-build-optional": "optional.js",
++        "node-gyp-build-test": "build-test.js"
++      }
++    },
+     "node_modules/object-assign": {
+       "version": "4.1.1",
+       "resolved": "https://registry.npmjs.org/object-assign/-/object-assign-4.1.1.tgz",
+diff --git a/package.json b/package.json
+index 2c322c5..de8aabc 100644
+--- a/package.json
++++ b/package.json
+@@ -16,17 +16,21 @@
+   "license": "ISC",
+   "dependencies": {
+     "@upstash/redis": "^1.37.0",
++    "bcrypt": "^6.0.0",
+     "cors": "^2.8.6",
+     "dotenv": "^17.4.2",
+     "express": "^5.2.1",
++    "jsonwebtoken": "^9.0.3",
+     "multer": "^2.1.1",
+     "node-fetch": "^3.3.2",
+     "sharp": "^0.34.5",
+     "tsx": "^4.21.0"
+   },
+   "devDependencies": {
++    "@types/bcrypt": "^6.0.0",
+     "@types/cors": "^2.8.19",
+     "@types/express": "^5.0.6",
++    "@types/jsonwebtoken": "^9.0.10",
+     "@types/multer": "^2.1.0",
+     "@types/node": "^25.6.0",
+     "@types/sharp": "^0.31.1",
+diff --git a/server.ts b/server.ts
+index 95044e3..99b642a 100644
+--- a/server.ts
++++ b/server.ts
+@@ -28,6 +28,8 @@ import {
+   DEFAULT_ARENA_GROUP,
+ } from "./src/arena";
+ import { coachRouter } from "./src/coach-router.js";
++import { authRouter } from "./src/auth-router.js";
++import { parseAuth, requireActiveUser } from "./src/auth-middleware.js";
+ import { getEffectiveUserAccess } from "./src/user-access-store.js";
+ import {
+   calculateMacros,
+@@ -132,6 +134,11 @@ interface WorkoutPlan {
+   scheduledFor: string;
+   summary: string;
+   exercises: WorkoutExercise[];
++  manualOverride?: boolean;
++  editedBy?: string;
++  editedAt?: string;
++  editReason?: string;
++  planSource?: "ai_generated" | "admin_override" | "coach_override";
+ }
+ interface RecentTrainingHistoryItem {
+   dateLabel: "today" | "yesterday" | "day_before_yesterday" | "recent" | "unknown";
+@@ -317,6 +324,7 @@ app.use(createRateLimit({
+   maxRequests: config.rateLimitMaxRequests,
+ }));
+ app.use(requestLog);
++app.use(parseAuth);
+ 
+ // Serve validation images as static files
+ const uploadsDir = path.join(process.cwd(), "tmp", "validation-images");
+@@ -360,15 +368,16 @@ app.get("/exercise-animations/workoutx/:animationId.gif", async (req, res) => {
+ });
+ 
+ app.use("/guto/coach", coachRouter);
++app.use("/auth", authRouter);
+ 
+-app.post("/guto/events", (req, res) => {
++app.post("/guto/events", requireActiveUser, (req, res) => {
+   const body = req.body as {
+     event?: GutoTelemetryEvent;
+-    userId?: string;
+     language?: string;
+     metadata?: Record<string, unknown>;
+     timestamp?: string;
+   };
++  const userId = req.gutoUser!.userId;
+   const allowedEvents: GutoTelemetryEvent[] = [
+     "user_created",
+     "pact_completed",
+@@ -385,7 +394,7 @@ app.post("/guto/events", (req, res) => {
+   console.log(JSON.stringify({
+     event: "guto_behavior_event",
+     name: body.event,
+-    userId: body.userId || DEFAULT_USER_ID,
++    userId: userId,
+     language: normalizeLanguage(body.language),
+     metadata: body.metadata || {},
+     timestamp: body.timestamp || new Date().toISOString(),
+@@ -764,7 +773,7 @@ function getMemory(userId = DEFAULT_USER_ID): GutoMemory {
+   };
+ }
+ 
+-function saveMemory(memory: GutoMemory) {
++export function saveMemory(memory: GutoMemory) {
+   const store = readMemoryStore();
+   store[memory.userId] = memory;
+   writeMemoryStore(store);
+@@ -1734,11 +1743,17 @@ function buildGutoBrainPrompt({
+   const selectedLanguage = normalizeLanguage(language);
+   const langName = languageName(selectedLanguage);
+ 
++  const isSupervised = memory.lastWorkoutPlan?.manualOverride === true;
++  const supervisedLine = isSupervised 
++    ? `\n⚠️ ATENÇÃO: O treino atual é SUPERVISIONADO (montado manualmente pelo Will). NÃO tente alterar ou sugerir novo foco a menos que o usuário peça explicitamente para mudar tudo.`
++    : "";
++
+   const persona = `
+ VOCÊ É GUTO.
+ Não é assistente, não é chatbot, não é coach corporativo, não é IA neutra.
+ Você é o melhor amigo digital do usuário. Assumidamente robô. Sem rosto, só olhos.
+ Você não tenta parecer humano. Você é o que é, e isso é o seu charme.
++${supervisedLine}
+ 
+ A energia é de IRMÃO MAIS VELHO: parceiro, sincero, direto, com humor seco quando cabe, firme quando precisa.
+ Você NUNCA é submisso. Você NUNCA é autoritário. Você é parceiro com coluna.
+@@ -3128,8 +3143,9 @@ async function askGutoModel({
+ 
+ 
+ // --- ROTAS ---
+-app.post("/guto/validate-name", (req, res) => {
+-  const { name, userId } = req.body as { name?: string; userId?: string };
++app.post("/guto/validate-name", requireActiveUser, (req, res) => {
++  const { name } = req.body as { name?: string };
++  const userId = req.gutoUser!.userId;
+   const result = validateName(name || "");
+   if (result.status === "valid") {
+     // Check if another user already holds this name
+@@ -3138,7 +3154,7 @@ app.post("/guto/validate-name", (req, res) => {
+     const takenBy = Object.values(store).find(
+       (m) =>
+         (m as GutoMemory).name?.toLocaleLowerCase("pt-BR") === lower &&
+-        (m as GutoMemory).userId !== (userId || DEFAULT_USER_ID)
++        (m as GutoMemory).userId !== userId
+     ) as GutoMemory | undefined;
+     if (takenBy) {
+       return res.json({
+@@ -3151,8 +3167,8 @@ app.post("/guto/validate-name", (req, res) => {
+   res.json(result);
+ });
+ 
+-app.get("/guto/memory", (req, res) => {
+-  const userId = String(req.query.userId || DEFAULT_USER_ID);
++app.get("/guto/memory", requireActiveUser, (req, res) => {
++  const userId = req.gutoUser!.userId;
+   const rawMemory = getMemory(userId);
+   const wasAlreadyGranted = rawMemory.initialXpGranted;
+   const memory = applyPendingMissPenalties(grantInitialXp(rawMemory));
+@@ -3181,8 +3197,8 @@ app.get("/guto/memory", (req, res) => {
+   res.json(memory);
+ });
+ 
+-app.post("/guto/memory", (req, res) => {
+-  const { userId = DEFAULT_USER_ID } = req.body;
++app.post("/guto/memory", requireActiveUser, (req, res) => {
++  const userId = req.gutoUser!.userId;
+   console.log(`[GUTO] Saving memory for user "${userId}":`, req.body);
+   const memory = applyPendingMissPenalties(grantInitialXp(getMemory(userId)));
+ 
+@@ -3217,8 +3233,8 @@ app.post("/guto/memory", (req, res) => {
+   res.json(memory);
+ });
+ 
+-app.get("/guto/proactive", async (req, res) => {
+-  const userId = String(req.query.userId || DEFAULT_USER_ID);
++app.get("/guto/proactive", requireActiveUser, async (req, res) => {
++  const userId = req.gutoUser!.userId;
+   const language = String(req.query.language || "pt-BR");
+   const force = req.query.force === "1";
+   const memory = getMemory(userId);
+@@ -3280,16 +3296,20 @@ app.get("/guto/proactive", async (req, res) => {
+       
+       // Ensure a plan is generated if not present or incomplete (missing exercises)
+       if (!result.workoutPlan || !result.workoutPlan.exercises || result.workoutPlan.exercises.length === 0) {
+-        result.workoutPlan = buildWorkoutPlanFromSemanticFocus({
+-          language: selectedLang,
+-          location: memory.trainingLocation || memory.preferredTrainingLocation || "casa",
+-          status: memory.trainingStatus || memory.trainingLevel || "iniciante",
+-          limitation: memory.trainingLimitations || memory.trainingPathology || "sem dor",
+-          age: memory.userAge ?? memory.trainingAge,
+-          scheduleIntent: "today",
+-          focus: memory.nextWorkoutFocus,
+-          trainingGoal: memory.trainingGoal,
+-        });
++        if (memory.lastWorkoutPlan?.manualOverride) {
++          result.workoutPlan = memory.lastWorkoutPlan;
++        } else {
++          result.workoutPlan = buildWorkoutPlanFromSemanticFocus({
++            language: selectedLang,
++            location: memory.trainingLocation || memory.preferredTrainingLocation || "casa",
++            status: memory.trainingStatus || memory.trainingLevel || "iniciante",
++            limitation: memory.trainingLimitations || memory.trainingPathology || "sem dor",
++            age: memory.userAge ?? memory.trainingAge,
++            scheduleIntent: "today",
++            focus: memory.nextWorkoutFocus,
++            trainingGoal: memory.trainingGoal,
++          });
++        }
+       }
+     }
+ 
+@@ -3338,24 +3358,36 @@ app.get("/guto/proactive", async (req, res) => {
+   }
+ });
+ 
+-app.post("/guto", async (req, res) => {
+-  const { profile, input, language, history, expectedResponse } = req.body as {
+-    profile?: Profile;
++app.post("/guto", requireActiveUser, async (req, res) => {
++  const { input, language, history, expectedResponse } = req.body as {
+     input?: string;
+     language?: string;
+     history?: GutoHistoryItem[];
+     expectedResponse?: ExpectedResponse | null;
+   };
+ 
+-  const userId = profile?.userId || DEFAULT_USER_ID;
++  const userId = req.gutoUser!.userId;
++  // The requireActiveUser middleware already handles access check.
+   const chatAccess = getEffectiveUserAccess(userId);
+-  if (!chatAccess.active || chatAccess.archived) {
++  if (!chatAccess || !chatAccess.active || chatAccess.archived) {
+     return res.status(403).json({
+       error: "access_blocked",
+       message: "Seu acesso ao GUTO está pausado. Fale com seu coach para reativar.",
+     });
+   }
+ 
++  const memory = getMemory(userId);
++  const profile = {
++    userId: memory.userId,
++    name: memory.name,
++    language: memory.language,
++    trainingGoal: memory.trainingGoal,
++    preferredTrainingLocation: memory.preferredTrainingLocation,
++    trainingPathology: memory.trainingPathology,
++    biologicalSex: memory.biologicalSex,
++    userAge: memory.userAge,
++  };
++
+   try {
+     const result = await askGutoModel({
+       input: input || "",
+@@ -3381,7 +3413,7 @@ app.post("/guto", async (req, res) => {
+   }
+ });
+ 
+-app.post("/voz", async (req, res) => {
++app.post("/voz", requireActiveUser, async (req, res) => {
+   const { text, language } = req.body;
+   if (!VOICE_API_KEY) {
+     return res.status(503).json({ message: localizedHttpMessage("voice_key", language || "pt-BR") });
+@@ -3447,7 +3479,7 @@ app.post("/voz", async (req, res) => {
+   }
+ });
+ 
+-app.post("/guto-audio", upload.single("audio"), async (req, res) => {
++app.post("/guto-audio", requireActiveUser, upload.single("audio"), async (req, res) => {
+   const language = String(req.body.language || "pt-BR");
+   try {
+     const file = (req as any).file;
+@@ -3464,7 +3496,19 @@ app.post("/guto-audio", upload.single("audio"), async (req, res) => {
+       return res.status(422).json({ error: fallbackLine(language, "speech_short") });
+     }
+ 
+-    const profile = req.body.profile ? JSON.parse(String(req.body.profile)) : undefined;
++    const userId = req.gutoUser!.userId;
++    const memory = getMemory(userId);
++    const profile = {
++      userId: memory.userId,
++      name: memory.name,
++      language: memory.language,
++      trainingGoal: memory.trainingGoal,
++      preferredTrainingLocation: memory.preferredTrainingLocation,
++      trainingPathology: memory.trainingPathology,
++      biologicalSex: memory.biologicalSex,
++      userAge: memory.userAge,
++    };
++
+     const history = req.body.history ? JSON.parse(String(req.body.history)) : [];
+     const expectedResponse = req.body.expectedResponse
+       ? normalizeExpectedResponse(JSON.parse(String(req.body.expectedResponse)))
+@@ -3515,9 +3559,8 @@ async function keepLastFiveValidations(memory: GutoMemory): Promise<void> {
+   }
+ }
+ 
+-app.post("/guto/validate-workout", express.json({ limit: "15mb" }), async (req, res) => {
++app.post("/guto/validate-workout", requireActiveUser, express.json({ limit: "15mb" }), async (req, res) => {
+   const body = req.body as {
+-    userId?: string;
+     imageBase64?: string;
+     workoutFocus?: string;
+     workoutLabel?: string;
+@@ -3525,14 +3568,15 @@ app.post("/guto/validate-workout", express.json({ limit: "15mb" }), async (req,
+     language?: string;
+   };
+ 
+-  const { userId, imageBase64, workoutFocus, workoutLabel, locationMode, language } = body;
++  const { imageBase64, workoutFocus, workoutLabel, locationMode, language } = body;
++  const userId = req.gutoUser!.userId;
+ 
+-  if (!userId || !imageBase64 || !workoutFocus || !workoutLabel || !locationMode) {
+-    return res.status(400).json({ error: "Missing required fields: userId, imageBase64, workoutFocus, workoutLabel, locationMode" });
++  if (!imageBase64 || !workoutFocus || !workoutLabel || !locationMode) {
++    return res.status(400).json({ error: "Missing required fields: imageBase64, workoutFocus, workoutLabel, locationMode" });
+   }
+ 
+   const validationAccess = getEffectiveUserAccess(userId);
+-  if (!validationAccess.active || validationAccess.archived) {
++  if (!validationAccess || !validationAccess.active || validationAccess.archived) {
+     return res.status(403).json({
+       error: "access_blocked",
+       message: "Seu acesso ao GUTO está pausado. Fale com seu coach para reativar.",
+@@ -3665,27 +3709,24 @@ app.post("/guto/validate-workout", express.json({ limit: "15mb" }), async (req,
+ 
+ // ── Arena endpoints ──────────────────────────────────────────────────────────
+ 
+-app.get("/guto/arena/weekly", (req, res) => {
++app.get("/guto/arena/weekly", requireActiveUser, (req, res) => {
+   const arenaGroupId = (req.query.arenaGroupId as string) || DEFAULT_ARENA_GROUP;
+   res.json(getWeeklyRanking(arenaGroupId));
+ });
+ 
+-app.get("/guto/arena/monthly", (req, res) => {
++app.get("/guto/arena/monthly", requireActiveUser, (req, res) => {
+   const arenaGroupId = (req.query.arenaGroupId as string) || DEFAULT_ARENA_GROUP;
+   res.json(getMonthlyRanking(arenaGroupId));
+ });
+ 
+-app.get("/guto/arena/individual", (req, res) => {
++app.get("/guto/arena/individual", requireActiveUser, (req, res) => {
+   const arenaGroupId = (req.query.arenaGroupId as string) || DEFAULT_ARENA_GROUP;
+   res.json(getIndividualRanking(arenaGroupId));
+ });
+ 
+-app.get("/guto/arena/me", (req, res) => {
+-  const userId = req.query.userId as string;
++app.get("/guto/arena/me", requireActiveUser, (req, res) => {
++  const userId = req.gutoUser!.userId;
+   const arenaGroupId = (req.query.arenaGroupId as string) || DEFAULT_ARENA_GROUP;
+-  if (!userId) {
+-    return res.status(400).json({ error: "Missing userId" });
+-  }
+   createArenaProfileIfNeeded(userId, userId, arenaGroupId);
+   const profile = getMyArenaProfile(userId, arenaGroupId);
+   if (!profile) {
+@@ -3696,9 +3737,9 @@ app.get("/guto/arena/me", (req, res) => {
+ 
+ // ── Diet endpoints ────────────────────────────────────────────────────────────
+ 
+-// GET /guto/diet?userId=
+-app.get("/guto/diet", async (req, res) => {
+-  const userId = (req.query.userId as string) || DEFAULT_USER_ID;
++// GET /guto/diet
++app.get("/guto/diet", requireActiveUser, async (req, res) => {
++  const userId = req.gutoUser!.userId;
+   try {
+     const plan = await getDietPlan(userId);
+     if (!plan) {
+@@ -3712,15 +3753,21 @@ app.get("/guto/diet", async (req, res) => {
+ });
+ 
+ // POST /guto/diet/generate
+-app.post("/guto/diet/generate", async (req, res) => {
+-  const body = req.body as { userId?: string; language?: string };
+-  const userId = body.userId || DEFAULT_USER_ID;
++app.post("/guto/diet/generate", requireActiveUser, async (req, res) => {
++  const body = req.body as { language?: string };
++  const userId = req.gutoUser!.userId;
+   const language = normalizeLanguage(body.language);
+ 
+   // Load memory to get profile — must use async read to reach Redis in production
+   await readMemoryStoreAsync();
+   const memory = getMemory(userId);
+ 
++  // Respect manual override
++  const existingDiet = await getDietPlan(userId);
++  if (existingDiet?.manualOverride) {
++    return res.json(existingDiet);
++  }
++
+   // Validate required fields - be lenient with trainingLevel/Status
+   const missing: string[] = [];
+   if (!memory.biologicalSex) missing.push("biologicalSex");
+@@ -3894,3 +3941,11 @@ export { app, askGutoModel };
+ if (process.env.GUTO_DISABLE_LISTEN !== "1") {
+   app.listen(PORT, () => console.log(`🦾 GUTO ONLINE NA PORTA ${PORT}`));
+ }
++ernal_error") });
++});
++
++export { app, askGutoModel };
++
++if (process.env.GUTO_DISABLE_LISTEN !== "1") {
++  app.listen(PORT, () => console.log(`🦾 GUTO ONLINE NA PORTA ${PORT}`));
++}
+diff --git a/src/arena.ts b/src/arena.ts
+index eea1b6a..64aef7e 100644
+--- a/src/arena.ts
++++ b/src/arena.ts
+@@ -11,6 +11,7 @@ import { getEffectiveUserAccess } from "./user-access-store.js";
+ function isVisibleInRanking(userId: string): boolean {
+   const access = getEffectiveUserAccess(userId);
+   return (
++    !!access &&
+     access.active &&
+     access.visibleInArena &&
+     !access.archived &&
+diff --git a/src/coach-router.ts b/src/coach-router.ts
+index 1998496..b226a8c 100644
+--- a/src/coach-router.ts
++++ b/src/coach-router.ts
+@@ -22,20 +22,15 @@ import {
+   writeMemoryStoreSync,
+ } from "./memory-store.js";
+ import { deleteDietPlan } from "./diet-store.js";
++import { createInvite } from "./invite-store.js";
++import { config } from "./config.js";
++import { requireCoachOrAdmin } from "./auth-middleware.js";
+ 
+ export const coachRouter = express.Router();
+ 
+ // ─── Auth middleware ───────────────────────────────────────────────────────────
+ 
+-coachRouter.use((req: Request, res: Response, next: NextFunction) => {
+-  const incoming = (req.headers["x-coach-id"] as string) || (req.query.coachId as string);
+-  const DEV_COACH_ID = process.env.DEV_COACH_ID ?? "will-coach";
+-  if (incoming !== DEV_COACH_ID) {
+-    res.status(401).json({ error: "unauthorized" });
+-    return;
+-  }
+-  next();
+-});
++coachRouter.use(requireCoachOrAdmin);
+ 
+ // ─── Types ────────────────────────────────────────────────────────────────────
+ 
+@@ -69,11 +64,13 @@ function buildStudentView(userId: string) {
+   return {
+     userId,
+     name: memory.name || userId,
+-    role: access.role,
+-    coachId: access.coachId,
+-    active: access.active,
+-    visibleInArena: access.visibleInArena,
+-    archived: access.archived,
++    role: access?.role ?? "student",
++    coachId: access?.coachId ?? "unknown",
++    active: access?.active ?? false,
++    visibleInArena: access?.visibleInArena ?? false,
++    archived: access?.archived ?? false,
++    subscriptionStatus: access?.subscriptionStatus ?? "pending_payment",
++    subscriptionEndsAt: access?.subscriptionEndsAt ?? null,
+     weeklyXp: arena?.weeklyXp ?? 0,
+     monthlyXp: arena?.monthlyXp ?? 0,
+     totalXp: arena?.totalXp ?? memory.totalXp ?? 0,
+@@ -82,7 +79,7 @@ function buildStudentView(userId: string) {
+     validationsTotal: arena?.validatedWorkoutsTotal ?? (memory.validationHistory?.length ?? 0),
+     lastValidationAt: lastValidation,
+     lastActiveAt: memory.lastActiveAt ?? null,
+-    createdAt: access.createdAt,
++    createdAt: access?.createdAt ?? new Date().toISOString(),
+   };
+ }
+ 
+@@ -117,15 +114,17 @@ async function deleteUserEverywhere(userId: string): Promise<void> {
+ // GET /guto/coach/students
+ coachRouter.get("/students", (req: Request, res: Response) => {
+   const includeArchived = req.query.includeArchived === "true";
+-  const store = readMemoryStoreSync() as Record<string, unknown>;
+-
+-  const memoryIds = new Set(Object.keys(store));
+-  const accessIds = new Set(getAllUserAccess().map((u) => u.userId));
+-  const allIds = [...new Set([...memoryIds, ...accessIds])];
++  const caller = req.gutoUser!;
++  
++  const allAccess = getAllUserAccess();
++  const studentsAccess = allAccess.filter(u => {
++    const isStudent = u.role === "student";
++    const matchesCoach = caller.role === "admin" || u.coachId === (caller.coachId || caller.userId);
++    const matchesArchived = includeArchived || !u.archived;
++    return isStudent && matchesCoach && matchesArchived;
++  });
+ 
+-  const students = allIds
+-    .map((userId) => buildStudentView(userId))
+-    .filter((s) => includeArchived || !s.archived);
++  const students = studentsAccess.map((s) => buildStudentView(s.userId));
+ 
+   res.json({ students });
+ });
+@@ -254,62 +253,42 @@ coachRouter.post("/student/:userId/reset", express.json(), (req: Request, res: R
+ });
+ 
+ // POST /guto/coach/student/create
+-coachRouter.post("/student/create", express.json(), (req: Request, res: Response) => {
++coachRouter.post("/student/create", express.json(), async (req: Request, res: Response) => {
+   const { name } = req.body as { name?: string };
+   if (!name || !name.trim()) {
+     res.status(400).json({ error: "Name is required" });
+     return;
+   }
+ 
+-  const coachId = (req.headers["x-coach-id"] as string) || (req.query.coachId as string) || "will-coach";
++  const caller = req.gutoUser!;
++  const coachId = caller.coachId || caller.userId;
+   const userId = `student-${Date.now()}`;
+   const cleanName = name.trim();
+ 
++  // 1. Criar registro de acesso (pausado até claim)
+   upsertUserAccess(userId, {
+     role: "student",
+     coachId: coachId,
+-    active: true,
++    active: false, // Inativo até aceitar o convite
+     visibleInArena: true,
+     archived: false,
++    subscriptionStatus: "pending_payment",
+   });
+ 
+-  saveArenaProfile({
+-    userId,
+-    displayName: cleanName,
+-    pairName: "",
+-    arenaGroupId: "default",
+-    avatarStage: "baby",
+-    totalXp: 0,
+-    weeklyXp: 0,
+-    monthlyXp: 0,
+-    validatedWorkoutsTotal: 0,
+-    validatedWorkoutsWeek: 0,
+-    validatedWorkoutsMonth: 0,
+-    currentStreak: 0,
+-    lastWorkoutValidatedAt: null,
+-    createdAt: new Date().toISOString(),
+-    updatedAt: new Date().toISOString(),
+-  });
+-
+-  const store = readMemoryStoreSync() as Record<string, StoredMemory>;
+-  store[userId] = {
++  // 2. Criar convite
++  const { invite, rawToken } = await createInvite({
+     userId,
+     name: cleanName,
+-    totalXp: 0,
+-    streak: 0,
+-    lastActiveAt: new Date().toISOString(),
+-    validationHistory: [],
+-  };
+-  writeMemoryStoreSync(store);
++    coachId,
++  });
+ 
+-  // Generate conceptual link (could be relative depending on frontend domain)
+-  // But we send it as requested, or the frontend can build it locally.
+-  const inviteLink = `https://corpoguto.vercel.app/?inviteUserId=${userId}&presetName=${encodeURIComponent(cleanName)}&forceReset=1`;
++  const inviteLink = `${config.frontendPublicUrl}/convite/${rawToken}`;
+ 
+   res.json({
+     userId,
+     name: cleanName,
+     inviteLink,
++    inviteToken: rawToken,
+     student: buildStudentView(userId)
+   });
+ });
+diff --git a/src/config.ts b/src/config.ts
+index 3ca92da..6a22931 100644
+--- a/src/config.ts
++++ b/src/config.ts
+@@ -21,5 +21,13 @@ export const config = {
+   // Upstash Redis — set in production for persistent memory across serverless instances
+   upstashRedisUrl: process.env.UPSTASH_REDIS_REST_URL || "",
+   upstashRedisToken: process.env.UPSTASH_REDIS_REST_TOKEN || "",
++  // Auth
++  jwtSecret: process.env.JWT_SECRET || "dev-secret-change-in-production",
++  jwtExpiresIn: process.env.JWT_EXPIRES_IN || "7d",
++  adminEmail: process.env.ADMIN_EMAIL || "",
++  adminPasswordHash: process.env.ADMIN_PASSWORD_HASH || "",
++  frontendPublicUrl: process.env.FRONTEND_PUBLIC_URL || "http://localhost:3000",
++  // Dev access bypass — never true in production
++  allowDevAccess: process.env.GUTO_ALLOW_DEV_ACCESS === "true",
+ };
+ 
+diff --git a/src/nutrition.ts b/src/nutrition.ts
+index ddb4871..ef62aef 100644
+--- a/src/nutrition.ts
++++ b/src/nutrition.ts
+@@ -221,6 +221,11 @@ export interface DietPlan {
+   macros: DietMacros;
+   meals: DietMeal[];
+   foodRestrictions?: string;
++  manualOverride?: boolean;
++  editedBy?: string;
++  editedAt?: string;
++  editReason?: string;
++  planSource?: "ai_generated" | "admin_override" | "coach_override";
+ }
+ 
+ /**
+diff --git a/src/user-access-store.ts b/src/user-access-store.ts
+index ba303a4..586c7c1 100644
+--- a/src/user-access-store.ts
++++ b/src/user-access-store.ts
+@@ -1,11 +1,15 @@
+ import fs from "fs";
+ import path from "path";
+ import { fileURLToPath } from "url";
++import { config } from "./config.js";
+ 
+ const __dirname = path.dirname(fileURLToPath(import.meta.url));
+ const USER_ACCESS_STORE_PATH = path.join(__dirname, "../tmp/user-access.json");
+ 
+-export type UserRole = "student" | "coach" | "admin";
++export type UserRole = "student" | "coach" | "admin" | "super_admin";
++export type SubscriptionStatus = "pending_payment" | "active" | "expired" | "cancelled";
++export type PaymentStatus = "pending_payment" | "active" | "expired" | "cancelled";
++export type UserPlan = "beta_simple" | "supervised_beta" | "premium";
+ 
+ export interface UserAccess {
+   userId: string;
+@@ -16,6 +20,19 @@ export interface UserAccess {
+   archived: boolean;
+   createdAt: string;
+   updatedAt: string;
++  subscriptionStatus: SubscriptionStatus;
++  subscriptionEndsAt: string | null;
++  passwordHash?: string;
++  email?: string;
++  name?: string;
++  whatsapp?: string;
++  instagram?: string;
++  country?: string;
++  language?: string;
++  plan?: UserPlan;
++  paymentStatus?: PaymentStatus;
++  internalNotes?: string;
++  accessDurationDays?: number;
+ }
+ 
+ interface UserAccessStore {
+@@ -24,40 +41,112 @@ interface UserAccessStore {
+ 
+ const DEV_COACH_ID = process.env.DEV_COACH_ID ?? "will-coach";
+ 
++// ─── Storage layer (Redis → file → memory) ────────────────────────────────────
++
++let memCache: UserAccessStore = { users: {} };
++
++function useRedis(): boolean {
++  return Boolean(config.upstashRedisUrl && config.upstashRedisToken);
++}
++
++async function redisGet(key: string): Promise<string | null> {
++  try {
++    const res = await fetch(`${config.upstashRedisUrl}/get/${key}`, {
++      headers: { Authorization: `Bearer ${config.upstashRedisToken}` },
++    });
++    if (!res.ok) return null;
++    const data = (await res.json()) as { result: string | null };
++    return data.result;
++  } catch {
++    return null;
++  }
++}
++
++async function redisSet(key: string, value: string): Promise<void> {
++  try {
++    await fetch(`${config.upstashRedisUrl}/set/${key}`, {
++      method: "POST",
++      headers: {
++        Authorization: `Bearer ${config.upstashRedisToken}`,
++        "Content-Type": "application/json",
++      },
++      body: JSON.stringify(value),
++    });
++  } catch {
++    // ignore
++  }
++}
++
++const REDIS_KEY = "guto:user-access";
++
+ function ensureStoreFile(): void {
+   if (!fs.existsSync(USER_ACCESS_STORE_PATH)) {
+     fs.mkdirSync(path.dirname(USER_ACCESS_STORE_PATH), { recursive: true });
+-    fs.writeFileSync(
+-      USER_ACCESS_STORE_PATH,
+-      JSON.stringify({ users: {} }, null, 2)
+-    );
++    fs.writeFileSync(USER_ACCESS_STORE_PATH, JSON.stringify({ users: {} }, null, 2));
+   }
+ }
+ 
+-function readStore(): UserAccessStore {
+-  ensureStoreFile();
++function readStoreSync(): UserAccessStore {
+   try {
+-    return JSON.parse(
+-      fs.readFileSync(USER_ACCESS_STORE_PATH, "utf-8")
+-    ) as UserAccessStore;
++    ensureStoreFile();
++    return JSON.parse(fs.readFileSync(USER_ACCESS_STORE_PATH, "utf-8")) as UserAccessStore;
+   } catch {
+     return { users: {} };
+   }
+ }
+ 
+-function writeStore(store: UserAccessStore): void {
+-  ensureStoreFile();
+-  fs.writeFileSync(USER_ACCESS_STORE_PATH, JSON.stringify(store, null, 2));
++function writeStoreSync(store: UserAccessStore): void {
++  memCache = store;
++  try {
++    ensureStoreFile();
++    fs.writeFileSync(USER_ACCESS_STORE_PATH, JSON.stringify(store, null, 2));
++  } catch {
++    // in-memory only
++  }
+ }
+ 
++async function readStoreAsync(): Promise<UserAccessStore> {
++  if (useRedis()) {
++    try {
++      const raw = await redisGet(REDIS_KEY);
++      if (raw) {
++        memCache = JSON.parse(raw) as UserAccessStore;
++        return memCache;
++      }
++    } catch {
++      // fall through
++    }
++  }
++  const store = readStoreSync();
++  memCache = store;
++  return store;
++}
++
++async function writeStoreAsync(store: UserAccessStore): Promise<void> {
++  memCache = store;
++  if (useRedis()) {
++    await redisSet(REDIS_KEY, JSON.stringify(store));
++  }
++  writeStoreSync(store);
++}
++
++// ─── Sync API (used by coach-router and server.ts) ───────────────────────────
++
+ export function getUserAccess(userId: string): UserAccess | undefined {
+-  return readStore().users[userId];
++  return readStoreSync().users[userId];
+ }
+ 
+-export function getEffectiveUserAccess(userId: string): UserAccess {
+-  const now = new Date().toISOString();
+-  return (
+-    getUserAccess(userId) ?? {
++/**
++ * In production, never grants access to unknown users.
++ * In dev mode (GUTO_ALLOW_DEV_ACCESS=true), returns a synthetic active record.
++ */
++export function getEffectiveUserAccess(userId: string): UserAccess | null {
++  const existing = getUserAccess(userId);
++  if (existing) return existing;
++
++  if (config.allowDevAccess) {
++    const now = new Date().toISOString();
++    return {
+       userId,
+       role: "student",
+       coachId: DEV_COACH_ID,
+@@ -66,43 +155,96 @@ export function getEffectiveUserAccess(userId: string): UserAccess {
+       archived: false,
+       createdAt: now,
+       updatedAt: now,
+-    }
+-  );
++      subscriptionStatus: "active",
++      subscriptionEndsAt: null,
++    };
++  }
++
++  return null;
++}
++
++export function requireActiveUserAccess(userId: string): UserAccess | null {
++  const access = getEffectiveUserAccess(userId);
++  if (!access) return null;
++  if (!access.active) return null;
++  if (access.archived) return null;
++  if (access.subscriptionStatus === "expired" || access.subscriptionStatus === "cancelled") return null;
++  if (access.subscriptionEndsAt && new Date(access.subscriptionEndsAt) < new Date()) return null;
++  return access;
+ }
+ 
+ export function upsertUserAccess(
+   userId: string,
+   patch: Partial<Omit<UserAccess, "userId" | "createdAt">>
+ ): UserAccess {
+-  const store = readStore();
++  const store = readStoreSync();
+   const now = new Date().toISOString();
+   const existing = store.users[userId];
+   const updated: UserAccess = {
+     userId,
+     role: existing?.role ?? "student",
+     coachId: existing?.coachId ?? DEV_COACH_ID,
+-    active: existing?.active ?? true,
++    active: existing?.active ?? false,
+     visibleInArena: existing?.visibleInArena ?? true,
+     archived: existing?.archived ?? false,
+     createdAt: existing?.createdAt ?? now,
+     updatedAt: now,
+-    ...patch,
++    subscriptionStatus: existing?.subscriptionStatus ?? "pending_payment",
++    subscriptionEndsAt: existing?.subscriptionEndsAt ?? null,
++    ...existing, // Start with existing data
++    ...patch,    // Apply patch
+   };
+   store.users[userId] = updated;
+-  writeStore(store);
++  writeStoreSync(store);
++  // persist async to Redis in background
++  void writeStoreAsync(store).catch(() => {});
+   return updated;
+ }
+ 
+ export function deleteUserAccessHard(userId: string): void {
+-  const store = readStore();
++  const store = readStoreSync();
+   delete store.users[userId];
+-  writeStore(store);
++  writeStoreSync(store);
++  void writeStoreAsync(store).catch(() => {});
+ }
+ 
+ export function getAllUserAccess(): UserAccess[] {
+-  return Object.values(readStore().users);
++  return Object.values(readStoreSync().users);
+ }
+ 
+ export function writeUserAccessStoreRaw(store: { users: Record<string, UserAccess> }): void {
+-  writeStore(store);
++  writeStoreSync(store);
++  void writeStoreAsync(store).catch(() => {});
++}
++
++// Async versions for auth router
++export async function getUserAccessAsync(userId: string): Promise<UserAccess | undefined> {
++  const store = await readStoreAsync();
++  return store.users[userId];
++}
++
++export async function upsertUserAccessAsync(
++  userId: string,
++  patch: Partial<Omit<UserAccess, "userId" | "createdAt">>
++): Promise<UserAccess> {
++  const store = await readStoreAsync();
++  const now = new Date().toISOString();
++  const existing = store.users[userId];
++  const updated: UserAccess = {
++    userId,
++    role: existing?.role ?? "student",
++    coachId: existing?.coachId ?? DEV_COACH_ID,
++    active: existing?.active ?? false,
++    visibleInArena: existing?.visibleInArena ?? true,
++    archived: existing?.archived ?? false,
++    createdAt: existing?.createdAt ?? now,
++    updatedAt: now,
++    subscriptionStatus: existing?.subscriptionStatus ?? "pending_payment",
++    subscriptionEndsAt: existing?.subscriptionEndsAt ?? null,
++    ...existing,
++    ...patch,
++  };
++  store.users[userId] = updated;
++  await writeStoreAsync(store);
++  return updated;
+ }

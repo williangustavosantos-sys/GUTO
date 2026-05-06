@@ -1,0 +1,14 @@
+diff --git a/guto-app-v0 b/guto-app-v0
+index d018d74..ff03f6c 160000
+--- a/guto-app-v0
++++ b/guto-app-v0
+@@ -1 +1 @@
+-Subproject commit d018d74774a59df978c77f4f367cf3677c1bceae
++Subproject commit ff03f6c8e3b06fb02b55992d53c56bb9805c0dc1-dirty
+diff --git a/guto-backend b/guto-backend
+index 758cf6e..98cc79a 160000
+--- a/guto-backend
++++ b/guto-backend
+@@ -1 +1 @@
+-Subproject commit 758cf6e954b4480ebfad1749216b4f2866489c8a
++Subproject commit 98cc79aec5323b33f98dca44fa6c8900bbea9122-dirty

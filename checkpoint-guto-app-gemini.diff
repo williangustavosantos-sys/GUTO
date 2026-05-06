@@ -1,0 +1,781 @@
+diff --git a/app/coach/page.tsx b/app/coach/page.tsx
+index a69718f..0c8f297 100644
+--- a/app/coach/page.tsx
++++ b/app/coach/page.tsx
+@@ -1,8 +1,9 @@
+ "use client";
+ 
+-import { Suspense, useState, useEffect, useCallback } from "react";
+-import { useSearchParams } from "next/navigation";
+-import { API_URL, ApiError } from "@/lib/api/client";
++import { Suspense, useState, useEffect, useCallback, useMemo } from "react";
++import { useRouter } from "next/navigation";
++import { apiRequest, ApiError } from "@/lib/api/client";
++import { useAuth } from "@/components/auth-provider";
+ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+ import {
+   AlertDialog,
+@@ -17,21 +18,56 @@ import {
+ import { Button } from "@/components/ui/button";
+ import { Input } from "@/components/ui/input";
+ import { Badge } from "@/components/ui/badge";
+-import { Toaster } from "@/components/ui/sonner";
++import { Toaster } from "@/components/sonner";
+ import { toast } from "sonner";
++import { 
++  Users, 
++  Trophy, 
++  Activity, 
++  LogOut, 
++  Plus, 
++  Search, 
++  Filter, 
++  ChevronRight, 
++  X,
++  CreditCard,
++  ClipboardList,
++  Dumbbell,
++  Apple,
++  Settings,
++  ShieldCheck,
++  User as UserIcon,
++  MessageSquare,
++  Globe,
++  Smartphone,
++  Calendar,
++  Zap,
++  Clock,
++  ExternalLink,
++  Copy,
++  Trash2,
++  RefreshCw,
++  Save,
++  RotateCcw,
++  Sparkles
++} from "lucide-react";
++import {
++  getAdminUsers,
++  getAdminUserDetail,
++  createAdminUser,
++  updateAdminUser,
++  deleteAdminUser,
++  updateAdminUserWorkout,
++  updateAdminUserDiet,
++  getAdminLogs,
++  AdminUser
++} from "@/lib/api/admin";
+ 
+ // ─── Types ────────────────────────────────────────────────────────────────
+ 
+ type AvatarStage = "baby" | "teen" | "adult" | "elite";
+ 
+-interface Student {
+-  userId: string;
+-  name: string;
+-  role: "student" | "coach" | "admin";
+-  coachId: string;
+-  active: boolean;
+-  visibleInArena: boolean;
+-  archived: boolean;
++interface Student extends AdminUser {
+   weeklyXp: number;
+   monthlyXp: number;
+   totalXp: number;
+@@ -40,7 +76,6 @@ interface Student {
+   validationsTotal: number;
+   lastValidationAt: string | null;
+   lastActiveAt: string | null;
+-  createdAt: string;
+ }
+ 
+ interface RankingItem {
+@@ -61,8 +96,9 @@ interface RankingsData {
+   individual: { items: RankingItem[] };
+ }
+ 
++type DashboardTab = "alunos" | "rankings" | "logs";
++type ProfileTab = "resumo" | "calibragem" | "treino" | "dieta" | "pagamento" | "logs";
+ type FilterTab = "ativos" | "pausados" | "arquivados" | "todos";
+-type DashboardTab = "alunos" | "rankings";
+ type ResetScope = "weekly" | "monthly" | "individual" | "validationHistory" | "all";
+ 
+ // ─── Helpers ──────────────────────────────────────────────────────────────
+@@ -88,43 +124,17 @@ function avatarStageLabel(stage: AvatarStage): string {
+   return map[stage] ?? stage;
+ }
+ 
+-// ─── API helper ───────────────────────────────────────────────────────────
+-
+-async function coachFetch<T>(path: string, coachId: string, init: RequestInit = {}): Promise<T> {
+-  const res = await fetch(`${API_URL}${path}`, {
+-    ...init,
+-    headers: {
+-      "Content-Type": "application/json",
+-      "x-coach-id": coachId,
+-      ...(init.headers ?? {}),
+-    },
+-  });
+-  if (!res.ok) {
+-    let message = `Erro (${res.status})`;
+-    try {
+-      const body = (await res.json()) as { message?: string };
+-      message = body?.message || message;
+-    } catch {
+-      // ignore parse error
+-    }
+-    throw new ApiError(message, res.status);
+-  }
+-  if (res.status === 204) return undefined as T;
+-  return res.json() as Promise<T>;
+-}
+-
+-// ─── Inner component (useSearchParams must be inside Suspense) ─────────
++// ─── Inner component (Suspense required for useSearchParams if used) ─────────
+ 
+ function CoachInner() {
+-  const searchParams = useSearchParams();
+-  const coachId = searchParams.get("coachId") ?? "";
++  const { user, isLoading: authLoading } = useAuth();
++  const router = useRouter();
+ 
+   const [activeDashboardTab, setActiveDashboardTab] = useState<DashboardTab>("alunos");
+   const [students, setStudents] = useState<Student[]>([]);
+   const [rankings, setRankings] = useState<RankingsData | null>(null);
+   const [loading, setLoading] = useState(true);
+   const [loadingRankings, setLoadingRankings] = useState(false);
+-  const [accessDenied, setAccessDenied] = useState(false);
+   const [search, setSearch] = useState("");
+   const [filter, setFilter] = useState<FilterTab>("ativos");
+   const [selected, setSelected] = useState<Student | null>(null);
+@@ -136,51 +146,49 @@ function CoachInner() {
+ 
+   const [createModalOpen, setCreateModalOpen] = useState(false);
+   const [newStudentName, setNewStudentName] = useState("");
+-  const [newStudentCoachId] = useState(coachId || "will-coach");
+   const [createdStudent, setCreatedStudent] = useState<{ name: string; userId: string; inviteLink: string } | null>(null);
+ 
+-  const fetchStudents = useCallback(async () => {
+-    if (!coachId) {
+-      setAccessDenied(true);
+-      setLoading(false);
+-      return;
++  useEffect(() => {
++    if (!authLoading && (!user || (user.role !== "coach" && user.role !== "admin"))) {
++      router.push("/admin/login");
+     }
++  }, [user, authLoading, router]);
++
++  const fetchStudents = useCallback(async () => {
++    if (!user) return;
+     try {
+-      const data = await coachFetch<{ students: Student[] }>(
+-        "/guto/coach/students?includeArchived=true",
+-        coachId
++      const data = await apiRequest<{ students: Student[] }>(
++        "/guto/coach/students?includeArchived=true"
+       );
+       setStudents(data.students);
+     } catch (err) {
+-      if (err instanceof ApiError && err.status === 401) {
+-        setAccessDenied(true);
+-      }
++      console.error("Failed to fetch students", err);
+     } finally {
+       setLoading(false);
+     }
+-  }, [coachId]);
++  }, [user]);
+ 
+   const fetchRankings = useCallback(async () => {
+     setLoadingRankings(true);
+     try {
+-      const data = await coachFetch<RankingsData>("/guto/coach/rankings", coachId);
++      const data = await apiRequest<RankingsData>("/guto/coach/rankings");
+       setRankings(data);
+     } catch (err) {
+       toast.error("Erro ao carregar rankings.");
+     } finally {
+       setLoadingRankings(false);
+     }
+-  }, [coachId]);
++  }, []);
+ 
+   useEffect(() => {
+-    void fetchStudents();
+-  }, [fetchStudents]);
++    if (user) void fetchStudents();
++  }, [fetchStudents, user]);
+ 
+   useEffect(() => {
+-    if (activeDashboardTab === "rankings") {
++    if (activeDashboardTab === "rankings" && user) {
+       void fetchRankings();
+     }
+-  }, [activeDashboardTab, fetchRankings]);
++  }, [activeDashboardTab, fetchRankings, user]);
+ 
+   const refreshSelected = useCallback((updated: Student) => {
+     setStudents((prev) => prev.map((s) => (s.userId === updated.userId ? updated : s)));
+@@ -223,23 +231,16 @@ function CoachInner() {
+     return matchSearch && matchFilter;
+   });
+ 
+-  if (loading) {
++  if (authLoading || loading) {
+     return (
+       <div className="min-h-screen bg-[#0a0f1e] flex items-center justify-center">
+-        <p className="text-[#00e5ff] text-sm tracking-widest uppercase animate-pulse">Carregando…</p>
++        <p className="text-[#00e5ff] text-sm tracking-widest uppercase animate-pulse">Sincronizando…</p>
+       </div>
+     );
+   }
+ 
+-  if (accessDenied) {
+-    return (
+-      <div className="min-h-screen bg-[#0a0f1e] flex flex-col items-center justify-center gap-3 px-6">
+-        <p className="text-white text-xl font-bold tracking-tight">Acesso negado</p>
+-        <p className="text-slate-400 text-sm text-center">
+-          Você não tem permissão para acessar o painel Coach. Certifique-se de usar o link correto.
+-        </p>
+-      </div>
+-    );
++  if (!user || (user.role !== "coach" && user.role !== "admin")) {
++    return null;
+   }
+ 
+   return (
+@@ -251,9 +252,11 @@ function CoachInner() {
+         <div className="flex flex-col">
+           <div className="flex items-center gap-2">
+             <span className="text-[#00e5ff] font-black tracking-[0.2em] text-sm">GUTO</span>
+-            <Badge variant="outline" className="text-[10px] h-4 border-white/20 text-white/40 font-mono">COACH</Badge>
++            <Badge variant="outline" className="text-[10px] h-4 border-white/20 text-white/40 font-mono">
++              {user.role.toUpperCase()}
++            </Badge>
+           </div>
+-          <span className="text-white/40 text-[10px] font-mono mt-1">{coachId}</span>
++          <span className="text-white/40 text-[10px] font-mono mt-1">{user.userId}</span>
+         </div>
+ 
+         <Button
+@@ -401,7 +404,7 @@ function CoachInner() {
+                 const confirmed = window.confirm("!!! AÇÃO IRREVERSÍVEL !!!\n\nIsso apagará TODOS os registros de todos os alunos, rankings e memórias do sistema.\n\nTem certeza absoluta?");
+                 if (confirmed) {
+                   act(async () => {
+-                    await coachFetch("/guto/coach/nuke-all", coachId, { method: "POST" });
++                    await apiRequest("/guto/coach/nuke-all", { method: "POST" });
+                     window.location.reload();
+                   }, "SISTEMA ZERADO TOTALMENTE.");
+                 }
+@@ -461,7 +464,7 @@ function CoachInner() {
+               <div className="flex flex-col gap-2 opacity-40">
+                 <label className="text-[10px] font-black uppercase tracking-widest">Vinculado ao Coach</label>
+                 <Input
+-                  value={newStudentCoachId}
++                  value={user?.userId || "..."}
+                   className="bg-white/5 border-white/10 text-white/50 text-xs h-10 rounded-xl px-4"
+                   disabled
+                 />
+@@ -514,9 +517,8 @@ function CoachInner() {
+                   onClick={async () => {
+                     setActing(true);
+                     try {
+-                      const res = await coachFetch<{ userId: string; name: string; inviteLink: string; student: Student }>(
++                      const res = await apiRequest<{ userId: string; name: string; inviteLink: string; student: Student }>(
+                         "/guto/coach/student/create",
+-                        coachId,
+                         { method: "POST", body: JSON.stringify({ name: newStudentName }) }
+                       );
+                       setCreatedStudent({
+@@ -571,6 +573,12 @@ function CoachInner() {
+                       {getStatusInfo(selected).text}
+                     </Badge>
+                   } />
++                  <DataRow label="Assinatura" value={
++                    <Badge variant={selected.subscriptionStatus === "active" ? "default" : "secondary"} className="text-[9px] font-black uppercase">
++                      {selected.subscriptionStatus.replace("_", " ")}
++                    </Badge>
++                  } />
++                  <DataRow label="Expira em" value={selected.subscriptionEndsAt ? new Date(selected.subscriptionEndsAt).toLocaleDateString() : "—"} />
+                   <DataRow label="Arena" value={selected.visibleInArena ? "Visível" : "Oculto"} />
+                   <DataRow label="Criado em" value={new Date(selected.createdAt).toLocaleDateString()} />
+                 </CoachSection>
+@@ -601,9 +609,8 @@ function CoachInner() {
+                         className="bg-[#00e5ff] text-[#0a0f1e] hover:bg-white font-bold"
+                         onClick={() =>
+                           act(async () => {
+-                            const updated = await coachFetch<Student>(
++                            const updated = await apiRequest<Student>(
+                               `/guto/coach/student/${selected.userId}`,
+-                              coachId,
+                               { method: "PATCH", body: JSON.stringify({ name: editName }) }
+                             );
+                             refreshSelected(updated);
+@@ -624,6 +631,25 @@ function CoachInner() {
+                     </Button>
+                   )}
+ 
++                  <Button
++                    variant="outline" size="sm"
++                    className="w-full text-emerald-500 border-white/5 hover:border-emerald-500/50 bg-transparent py-5"
++                    disabled={acting}
++                    onClick={() =>
++                      act(async () => {
++                        const updated = await apiRequest<Student>(
++                          `/auth/admin/users/${selected.userId}/subscription`,
++                          { method: "PATCH", body: JSON.stringify({ extendDays: 30 }) }
++                        );
++                        // Refresh student view since subscription changed
++                        const fullStudent = await apiRequest<Student>(`/guto/coach/student/${selected.userId}`);
++                        refreshSelected(fullStudent);
++                      }, "Acesso renovado por 30 dias.")
++                    }
++                  >
++                    🔋 Renovar 30 Dias
++                  </Button>
++
+                   <Button
+                     variant="outline" size="sm"
+                     className={`w-full py-5 bg-transparent border-white/5 ${
+@@ -632,9 +658,8 @@ function CoachInner() {
+                     disabled={acting}
+                     onClick={() =>
+                       act(async () => {
+-                        const updated = await coachFetch<Student>(
++                        const updated = await apiRequest<Student>(
+                           `/guto/coach/student/${selected.userId}/access`,
+-                          coachId,
+                           { method: "PATCH", body: JSON.stringify({ active: !selected.active }) }
+                         );
+                         refreshSelected(updated);
+@@ -650,9 +675,8 @@ function CoachInner() {
+                     disabled={acting}
+                     onClick={() =>
+                       act(async () => {
+-                        const updated = await coachFetch<Student>(
++                        const updated = await apiRequest<Student>(
+                           `/guto/coach/student/${selected.userId}`,
+-                          coachId,
+                           { method: "PATCH", body: JSON.stringify({ visibleInArena: !selected.visibleInArena }) }
+                         );
+                         refreshSelected(updated);
+@@ -680,14 +704,12 @@ function CoachInner() {
+                       onClick={() =>
+                         doConfirm(`Deseja ${label.toLowerCase()}?`, () =>
+                           act(async () => {
+-                            await coachFetch(
++                            await apiRequest(
+                               `/guto/coach/student/${selected.userId}/reset`,
+-                              coachId,
+                               { method: "POST", body: JSON.stringify({ scope }) }
+                             );
+-                            const updated = await coachFetch<Student>(
+-                              `/guto/coach/student/${selected.userId}`,
+-                              coachId
++                            const updated = await apiRequest<Student>(
++                              `/guto/coach/student/${selected.userId}`
+                             );
+                             refreshSelected(updated);
+                           }, "Reset realizado.")
+@@ -762,9 +784,8 @@ function CoachInner() {
+                 if (!selected) return;
+                 setActing(true);
+                 try {
+-                  await coachFetch(
++                  await apiRequest(
+                     `/guto/coach/student/${selected.userId}/hard-delete`,
+-                    coachId,
+                     { method: "POST" }
+                   );
+                   setStudents((prev) => prev.filter((s) => s.userId !== selected.userId));
+diff --git a/app/layout.tsx b/app/layout.tsx
+index 38a8cf0..9efde3e 100644
+--- a/app/layout.tsx
++++ b/app/layout.tsx
+@@ -1,5 +1,6 @@
+ import type { Metadata, Viewport } from "next"
+ import { Analytics } from "@vercel/analytics/next"
++import { AuthProvider } from "@/components/auth-provider"
+ import "./globals.css"
+ 
+ export const metadata: Metadata = {
+@@ -70,9 +71,11 @@ export default function RootLayout({
+   return (
+     <html lang="pt-BR" className="bg-background">
+       <body className="font-sans text-foreground">
+-        <main className="mx-auto flex h-dvh w-full max-w-[430px] flex-col overflow-hidden bg-white">
+-          {children}
+-        </main>
++        <AuthProvider>
++          <main className="mx-auto flex h-dvh w-full max-w-[430px] flex-col overflow-hidden bg-white">
++            {children}
++          </main>
++        </AuthProvider>
+         {process.env.NODE_ENV === 'production' && <Analytics />}
+       </body>
+     </html>
+diff --git a/app/page.tsx b/app/page.tsx
+index 28bf7c4..32a7b7b 100644
+--- a/app/page.tsx
++++ b/app/page.tsx
+@@ -1,12 +1,46 @@
++"use client"
++
++import { Suspense, useEffect } from "react"
++import { useRouter, useSearchParams } from "next/navigation"
++import { useAuth } from "@/components/auth-provider"
+ import { GutoApp } from "@/components/guto/guto-app"
++import { Loader2 } from "lucide-react"
+ 
+-interface PageProps {
+-  searchParams?: Promise<Record<string, string | string[] | undefined>>
+-}
++function GutoPageContent() {
++  const { user, isLoading } = useAuth()
++  const router = useRouter()
++  const searchParams = useSearchParams()
++  const skipIntro = searchParams.get("skip-intro") === "1"
++
++  useEffect(() => {
++    if (!isLoading && !user) {
++      router.push("/login")
++    }
++  }, [user, isLoading, router])
+ 
+-export default async function Page({ searchParams }: PageProps) {
+-  const params = (await searchParams) ?? {}
+-  const skipIntro = params["skip-intro"] === "1"
++  if (isLoading) {
++    return (
++      <div className="sala-guto flex min-h-dvh items-center justify-center">
++        <Loader2 className="h-8 w-8 animate-spin text-[var(--guto-cyan)]" />
++      </div>
++    )
++  }
++
++  if (!user) {
++    return null
++  }
+ 
+   return <GutoApp userName="" language="pt-BR" skipIntro={skipIntro} />
+ }
++
++export default function Page() {
++  return (
++    <Suspense fallback={
++      <div className="sala-guto flex min-h-dvh items-center justify-center">
++        <Loader2 className="h-8 w-8 animate-spin text-[var(--guto-cyan)]" />
++      </div>
++    }>
++      <GutoPageContent />
++    </Suspense>
++  )
++}
+diff --git a/components/guto/guto-app.tsx b/components/guto/guto-app.tsx
+index ab516ff..160ca61 100644
+--- a/components/guto/guto-app.tsx
++++ b/components/guto/guto-app.tsx
+@@ -19,7 +19,7 @@ import type { MissionExercise } from "./view-models"
+ import { WorkoutValidationFlow } from "./validation/workout-validation-flow"
+ import { getApiErrorMessage } from "@/lib/api/client"
+ import { getGutoMemory, saveGutoMemory, trackGutoEvent, validateGutoName, type DietFood, type DietMeal, type GutoMemory, type GutoNameValidation, type GutoTelemetryEvent, type GutoWorkoutPlan } from "@/lib/api/guto"
+-import { clearGutoBrowserIdentity, forceGutoUserId, getOrCreateGutoVisitTelemetry } from "@/lib/guto/user-id"
++import { useAuth } from "@/components/auth-provider"
+ import type { EvolutionStage, SupportedLanguage } from "@/types/contract"
+ import { translations } from "./translations"
+ 
+@@ -280,7 +280,8 @@ export function GutoApp({
+   language: string
+   skipIntro?: boolean
+ }) {
+-  const [isHydrated, setIsHydrated] = useState(true)
++  const { user } = useAuth()
++  const [isHydrated, setIsHydrated] = useState(false)
+   const [stage, setStage] = useState<AppStage>(skipIntro ? "language" : "intro")
+   const [selectedLanguage, setSelectedLanguage] = useState<SupportedLanguage>("pt-BR")
+   const [draftName, setDraftName] = useState("")
+@@ -305,7 +306,7 @@ export function GutoApp({
+   const [pendingFoodQuestion, setPendingFoodQuestion] = useState<{ food: DietFood; meal: DietMeal } | null>(null)
+   const [workoutPlan, setWorkoutPlan] = useState<GutoWorkoutPlan | null>(null)
+   const [memory, setMemory] = useState<GutoMemory | null>(null)
+-  const [gutoUserId, setGutoUserId] = useState("local-user")
++  const [gutoUserId, setGutoUserId] = useState(user?.userId || "guest")
+   const [nameGate, setNameGate] = useState<NameGate | null>(null)
+   const [isValidatingName, setIsValidatingName] = useState(false)
+   const [showValidationFlow, setShowValidationFlow] = useState(false)
+@@ -340,9 +341,10 @@ export function GutoApp({
+ 
+   const persistProfile = useCallback(
+     (next: Partial<StoredProfile>) => {
+-      if (typeof window === "undefined") return
++      if (typeof window === "undefined" || !user?.userId) return
+ 
+-      const existingRaw = readStorageItem(STORAGE_KEY)
++      const storageKey = `${STORAGE_KEY}-${user.userId}`
++      const existingRaw = readStorageItem(storageKey)
+       let existing: StoredProfile = {
+         language: selectedLanguage,
+         userName: committedName,
+@@ -353,7 +355,7 @@ export function GutoApp({
+         try {
+           existing = JSON.parse(existingRaw) as StoredProfile
+         } catch {
+-          removeStorageItem(STORAGE_KEY)
++          removeStorageItem(storageKey)
+         }
+       }
+ 
+@@ -364,9 +366,9 @@ export function GutoApp({
+         ...next,
+       }
+ 
+-      writeStorageItem(STORAGE_KEY, JSON.stringify(payload))
++      writeStorageItem(storageKey, JSON.stringify(payload))
+     },
+-    [committedName, selectedLanguage]
++    [committedName, selectedLanguage, user?.userId]
+   )
+ 
+   const persistMemory = useCallback(
+@@ -446,15 +448,20 @@ export function GutoApp({
+   }, [])
+ 
+   useEffect(() => {
+-    if (typeof window === "undefined") return
++    if (typeof window === "undefined" || !user?.userId) return
+ 
+     try {
++      const currentUserId = user.userId
++      setGutoUserId(currentUserId)
++
+       const search = new URLSearchParams(window.location.search)
+       const forceResetParam = search.get("forceReset") === "1"
+-      const inviteUserId = search.get("inviteUserId")
+       const presetName = search.get("presetName")
+ 
+-      const storedVersion = parseInt(readStorageItem(STORAGE_VERSION_KEY) ?? "0", 10)
++      const userStorageKey = `${STORAGE_KEY}-${currentUserId}`
++      const userVersionKey = `${STORAGE_VERSION_KEY}-${currentUserId}`
++
++      const storedVersion = parseInt(readStorageItem(userVersionKey) ?? "0", 10)
+       const versionOutdated = storedVersion < STORAGE_VERSION
+ 
+       const shouldReset =
+@@ -462,40 +469,15 @@ export function GutoApp({
+       const shouldSkipIntro = skipIntro || search.get("skip-intro") === "1"
+ 
+       if (shouldReset) {
+-        removeStorageItem(STORAGE_KEY)
++        removeStorageItem(userStorageKey)
+         removeStorageItem(DEBUG_RESET_KEY)
+-        clearGutoBrowserIdentity()
+-        writeStorageItem(STORAGE_VERSION_KEY, String(STORAGE_VERSION))
++        writeStorageItem(userVersionKey, String(STORAGE_VERSION))
+       } else {
+-        writeStorageItem(STORAGE_VERSION_KEY, String(STORAGE_VERSION))
+-      }
+-
+-      if (inviteUserId) {
+-        forceGutoUserId(inviteUserId)
++        writeStorageItem(userVersionKey, String(STORAGE_VERSION))
+       }
+ 
+       const safeLanguage = isSupportedLanguage(language) ? language : "pt-BR"
+-      const visit = getOrCreateGutoVisitTelemetry()
+-      setGutoUserId(visit.userId)
+-      if (visit.isNewUser) {
+-        void trackGutoEvent({
+-          event: "user_created",
+-          userId: visit.userId,
+-          language: safeLanguage,
+-        }).catch((error) => {
+-          console.warn(`Evento do GUTO não registrado: ${getApiErrorMessage(error)}`)
+-        })
+-      }
+-      if (visit.returnedNextDay) {
+-        void trackGutoEvent({
+-          event: "user_returned_next_day",
+-          userId: visit.userId,
+-          language: safeLanguage,
+-        }).catch((error) => {
+-          console.warn(`Evento do GUTO não registrado: ${getApiErrorMessage(error)}`)
+-        })
+-      }
+-      const storedRaw = readStorageItem(STORAGE_KEY)
++      const storedRaw = readStorageItem(userStorageKey)
+ 
+       if (storedRaw) {
+         const stored = JSON.parse(storedRaw) as StoredProfile
+@@ -527,7 +509,7 @@ export function GutoApp({
+       clearScheduled()
+       clearPactInterval()
+     }
+-  }, [clearPactInterval, clearScheduled, language, skipIntro, userName])
++  }, [clearPactInterval, clearScheduled, language, skipIntro, user?.userId, userName])
+ 
+   const startSystem = useCallback(
+     (finalName: string, finalLanguage: SupportedLanguage) => {
+diff --git a/lib/api/client.ts b/lib/api/client.ts
+index 0cc4a7c..cdc2592 100644
+--- a/lib/api/client.ts
++++ b/lib/api/client.ts
+@@ -23,11 +23,12 @@ export function getApiErrorMessage(error: unknown) {
+ 
+ interface RequestOptions extends RequestInit {
+   timeoutMs?: number
++  token?: string
+ }
+ 
+ export async function apiRequest<T>(
+   path: string,
+-  { timeoutMs = 15000, ...init }: RequestOptions = {}
++  { timeoutMs = 15000, token, ...init }: RequestOptions = {}
+ ): Promise<T> {
+   if (!API_URL) {
+     throw new ApiError("NEXT_PUBLIC_API_URL ausente. Configure a URL pública do Cérebro do GUTO.")
+@@ -36,16 +37,40 @@ export async function apiRequest<T>(
+   const controller = new AbortController()
+   const timeout = setTimeout(() => controller.abort(), timeoutMs)
+ 
++  // Tenta pegar token do localStorage se não foi passado explicitamente
++  const activeToken = token || (typeof window !== "undefined" ? window.localStorage.getItem("guto-auth-token") : undefined)
++
+   try {
+     const res = await fetch(`${API_URL}${path}`, {
+       ...init,
+       headers: {
+         "Content-Type": "application/json",
++        ...(activeToken ? { "Authorization": `Bearer ${activeToken}` } : {}),
+         ...(init.headers || {}),
+       },
+       signal: controller.signal,
+     })
+ 
++    if (res.status === 401) {
++      if (typeof window !== "undefined") {
++        window.localStorage.removeItem("guto-auth-token")
++        if (!window.location.pathname.includes("/login") && !window.location.pathname.includes("/convite")) {
++          window.location.href = "/login"
++        }
++      }
++      throw new ApiError("Sessão expirada. Faça login novamente.", 401)
++    }
++
++    if (res.status === 403) {
++      const body = await res.json().catch(() => ({}))
++      if (body.code === "ACCESS_PAUSED") {
++        if (typeof window !== "undefined" && !window.location.pathname.includes("/acesso-pausado")) {
++          window.location.href = "/acesso-pausado"
++        }
++      }
++      throw new ApiError(body.message || "Acesso negado.", 403, body)
++    }
++
+     if (!res.ok) {
+       let message = `Erro de API (${res.status})`
+       let details: any = undefined
+diff --git a/lib/guto/user-id.ts b/lib/guto/user-id.ts
+deleted file mode 100644
+index 4685834..0000000
+--- a/lib/guto/user-id.ts
++++ /dev/null
+@@ -1,87 +0,0 @@
+-const GUTO_USER_ID_KEY = "guto-anonymous-user-id"
+-const GUTO_LAST_SEEN_DATE_KEY = "guto-last-seen-date"
+-const GUTO_RETURN_RECORDED_DATE_KEY = "guto-return-recorded-date"
+-const GUTO_RESET_PREFIXES = [
+-  "guto-chat-state:",
+-  "guto-first-message-sent:",
+-]
+-
+-function createAnonymousUserId() {
+-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+-    return `anon-${crypto.randomUUID()}`
+-  }
+-
+-  return `anon-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`
+-}
+-
+-export function getOrCreateGutoUserId() {
+-  return getOrCreateGutoVisitTelemetry().userId
+-}
+-
+-export function forceGutoUserId(userId: string) {
+-  if (typeof window === "undefined") return
+-  try {
+-    window.localStorage.setItem(GUTO_USER_ID_KEY, userId)
+-  } catch {}
+-}
+-
+-export function clearGutoBrowserIdentity() {
+-  if (typeof window === "undefined") return
+-
+-  try {
+-    window.localStorage.removeItem(GUTO_USER_ID_KEY)
+-    window.localStorage.removeItem(GUTO_LAST_SEEN_DATE_KEY)
+-    window.localStorage.removeItem(GUTO_RETURN_RECORDED_DATE_KEY)
+-
+-    for (let index = window.localStorage.length - 1; index >= 0; index -= 1) {
+-      const key = window.localStorage.key(index)
+-      if (key && GUTO_RESET_PREFIXES.some((prefix) => key.startsWith(prefix))) {
+-        window.localStorage.removeItem(key)
+-      }
+-    }
+-  } catch {}
+-}
+-
+-export function getOrCreateGutoVisitTelemetry() {
+-  if (typeof window === "undefined") {
+-    return {
+-      userId: "local-user",
+-      isNewUser: false,
+-      returnedNextDay: false,
+-    }
+-  }
+-
+-  try {
+-    const existing = window.localStorage.getItem(GUTO_USER_ID_KEY)
+-    const userId = existing || createAnonymousUserId()
+-    const today = new Date().toISOString().slice(0, 10)
+-    const lastSeenDate = window.localStorage.getItem(GUTO_LAST_SEEN_DATE_KEY)
+-    const returnRecordedDate = window.localStorage.getItem(GUTO_RETURN_RECORDED_DATE_KEY)
+-    const returnedNextDay = Boolean(
+-      existing &&
+-        lastSeenDate &&
+-        lastSeenDate < today &&
+-        returnRecordedDate !== today
+-    )
+-
+-    if (!existing) {
+-      window.localStorage.setItem(GUTO_USER_ID_KEY, userId)
+-    }
+-    if (returnedNextDay) {
+-      window.localStorage.setItem(GUTO_RETURN_RECORDED_DATE_KEY, today)
+-    }
+-    window.localStorage.setItem(GUTO_LAST_SEEN_DATE_KEY, today)
+-
+-    return {
+-      userId,
+-      isNewUser: !existing,
+-      returnedNextDay,
+-    }
+-  } catch {
+-    return {
+-      userId: "local-user",
+-      isNewUser: false,
+-      returnedNextDay: false,
+-    }
+-  }
+-}
+diff --git a/next-env.d.ts b/next-env.d.ts
+index c4b7818..9edff1c 100644
+--- a/next-env.d.ts
++++ b/next-env.d.ts
+@@ -1,6 +1,6 @@
+ /// <reference types="next" />
+ /// <reference types="next/image-types/global" />
+-import "./.next/dev/types/routes.d.ts";
++import "./.next/types/routes.d.ts";
+ 
+ // NOTE: This file should not be edited
+ // see https://nextjs.org/docs/app/api-reference/config/typescript for more information.

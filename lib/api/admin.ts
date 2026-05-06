@@ -14,6 +14,7 @@ export interface AdminUser extends AuthUser {
   active?: boolean
   archived?: boolean
   visibleInArena?: boolean
+  coachId?: string
   createdAt?: string
   updatedAt?: string
 }
@@ -41,6 +42,13 @@ export async function updateAdminUser(userId: string, data: Partial<AdminUser>):
   return apiRequest<AdminUser>(`/admin/users/${userId}`, {
     method: "PATCH",
     body: JSON.stringify(data),
+  })
+}
+
+export async function assignStudentToCoach(studentId: string, coachId: string): Promise<AdminUser> {
+  return apiRequest<AdminUser>(`/admin/users/${studentId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ coachId }),
   })
 }
 
