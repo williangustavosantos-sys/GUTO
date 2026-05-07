@@ -16,6 +16,7 @@ import { EvolutionsTab } from "./tabs/evolutions-tab"
 import { MissionTab } from "./tabs/mission-tab"
 import { PathTab } from "./tabs/path-tab"
 import { CalibrationScreen } from "./screens/calibration-screen"
+import { ConsentScreen } from "./screens/consent-screen"
 import type { MissionExercise } from "./view-models"
 import { WorkoutValidationFlow } from "./validation/workout-validation-flow"
 import { getApiErrorMessage } from "@/lib/api/client"
@@ -38,7 +39,7 @@ import {
 import { createLocalWorkoutPlan, getWorkoutMissingFields, localizeGutoWorkoutPlan } from "@/lib/workout-plan"
 import { resolveWorkoutValidationLocationMode } from "@/lib/workout-location"
 
-type AppStage = "intro" | "language" | "invite_claim" | "naming" | "calibration" | "pact" | "system" | "settings"
+type AppStage = "intro" | "language" | "invite_claim" | "consent" | "naming" | "calibration" | "pact" | "system" | "settings"
 type SettingsMode = "menu" | "language" | "name" | "profile" | "goal" | "location" | "pathology" | "physicaldata" | "residence" | "food_restrictions" | "food_intolerances"
 type IntroPlaybackState = "idle" | "starting" | "playing" | "finishing" | "finished"
 
@@ -46,7 +47,7 @@ const PENDING_INVITE_TOKEN_KEY = "guto-pending-invite-token"
 const ENTRY_MODE_KEY = "guto-entry-mode"
 const SELECTED_LANGUAGE_KEY = "guto-selected-language"
 const ONBOARDING_LANGUAGE_KEY = "guto-onboarding-language"
-const PRIVATE_STAGES = new Set<AppStage>(["naming", "calibration", "pact", "system", "settings"])
+const PRIVATE_STAGES = new Set<AppStage>(["consent", "naming", "calibration", "pact", "system", "settings"])
 
 interface StoredProfile extends StoredGutoProfile {
   language: SupportedLanguage
@@ -56,6 +57,9 @@ interface StoredProfile extends StoredGutoProfile {
   pactAccepted?: boolean
   phone?: string
   foodIntolerances?: string
+  consentHealthFitness?: boolean
+  acceptedTerms?: boolean
+  consentAcceptedAt?: string
 }
 
 interface PendingExerciseQuestion {
@@ -421,6 +425,11 @@ function resolveAuthenticatedStage(
 
   console.log("[GUTO_ONBOARDING] authenticated user detected", user.userId)
   console.log("[GUTO_ONBOARDING] profile loaded", Boolean(profile))
+
+  if (!profile?.consentHealthFitness || !profile?.acceptedTerms) {
+    console.log("[GUTO_ONBOARDING] missing consent -> consent")
+    return "consent"
+  }
 
   if (profile?.onboardingComplete || profile?.pactAccepted) {
     console.log("[GUTO_ONBOARDING] complete -> system")
@@ -835,7 +844,10 @@ export function GutoApp({
     if (!PRIVATE_STAGES.has(stage)) {
       clearPendingInviteStorage()
       setPendingInviteToken(null)
-      setStage(resolveAuthenticatedStage(user, null, memory))
+      const guardStoredRaw = readStorageItem(`${STORAGE_KEY}-${user.userId}`)
+      let guardProfile: StoredProfile | null = null
+      try { guardProfile = guardStoredRaw ? JSON.parse(guardStoredRaw) as StoredProfile : null } catch { guardProfile = null }
+      setStage(resolveAuthenticatedStage(user, guardProfile, memory))
       return
     }
   }, [authLoading, isHydrated, memory, router, stage, user])
@@ -885,6 +897,18 @@ export function GutoApp({
     },
     [effectRegistry, persistMemory, persistProfile, schedule, trackBehaviorEvent]
   )
+
+  const handleConsentAccepted = useCallback(() => {
+    persistProfile({
+      consentHealthFitness: true,
+      acceptedTerms: true,
+      consentAcceptedAt: new Date().toISOString(),
+    })
+    const storedRaw = readStorageItem(`${STORAGE_KEY}-${user?.userId}`)
+    let stored: StoredProfile | null = null
+    try { stored = storedRaw ? JSON.parse(storedRaw) as StoredProfile : null } catch { stored = null }
+    setStage(resolveAuthenticatedStage(user, stored, memory))
+  }, [memory, persistProfile, user])
 
   // ── Unique completer: ONLY sets stage to language, never decides login/invite ─
   const completeIntroToLanguage = useCallback(() => {
@@ -1921,6 +1945,14 @@ export function GutoApp({
               )}
             </div>
           </motion.section>
+        )}
+
+        {stage === "consent" && (
+          <ConsentScreen
+            key="consent"
+            language={selectedLanguage}
+            onComplete={handleConsentAccepted}
+          />
         )}
 
         {stage === "naming" && (
