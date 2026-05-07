@@ -9,6 +9,13 @@ import { API_URL, getApiErrorMessage } from "@/lib/api/client"
 import { getGutoProactive, sendGutoMessage, trackGutoEvent } from "@/lib/api/guto"
 import type { DietMeal, GutoAvatarEmotion, GutoExpectedResponse, GutoWorkoutPlan } from "@/lib/api/guto"
 import type { EvolutionStage, SupportedLanguage } from "@/types/contract"
+import {
+  detectProfileUpdateIntent,
+  isConfirmationText,
+  isCancellationText,
+  profileUpdateCopy,
+  type ProfileUpdateIntent,
+} from "@/lib/profile-update-detector"
 
 import { GutoOfficialAvatar } from "../guto-official-avatar"
 import { getLanguage, translations } from "../translations"
@@ -36,6 +43,7 @@ interface ChatTabProps {
   initialXpRewardSeen?: boolean
   onXpRewardSeen?: () => void
   memory?: import("@/lib/api/guto").GutoMemory | null
+  onProfileUpdate?: (field: string, value: string | number) => Promise<void>
 }
 
 interface Message {
@@ -294,6 +302,7 @@ export function ChatTab({
   initialXpRewardSeen = false,
   onXpRewardSeen,
   memory,
+  onProfileUpdate,
 }: ChatTabProps) {
   const validLang = getLanguage(language)
   const locale = translations[validLang]
@@ -348,6 +357,7 @@ export function ChatTab({
   })())
   const pendingExpectedResponseRef = useRef<GutoExpectedResponse | null>(initialChatState.expectedResponse)
   const pendingExpectedResponseMessageIdRef = useRef<string | null>(initialChatState.expectedResponseMessageId)
+  const pendingProfileUpdateRef = useRef<ProfileUpdateIntent | null>(null)
 
   const previousMessagesLengthRef = useRef(messages.length)
 
@@ -833,13 +843,90 @@ export function ChatTab({
     })
   }, [isSending, onFoodQuestionHandled, pendingFoodQuestion, sendTextToGuto, memory])
 
+  const addGutoMessage = (text: string, emotion: GutoAvatarEmotion = "default") => {
+    const msg: Message = { id: `g-pu-${Date.now()}`, text, isGuto: true, timestamp: new Date(), avatarEmotion: emotion }
+    setMessages((prev) => appendMessagesWithoutDuplicateGuto(prev, [msg]))
+    return msg
+  }
+
   const handleSend = async () => {
     if (!input.trim() || isSending) return
     const text = input.trim()
-    // If there's an active diet context, include it so GUTO doesn't deflect to training
+    const copy = profileUpdateCopy[validLang]
+
+    // ── Phase 4: profile update confirmation flow ────────────────────────────
+    const pending = pendingProfileUpdateRef.current
+    if (pending) {
+      const lower = text.toLowerCase()
+
+      if (isConfirmationText(lower)) {
+        // Show user's confirmation in chat
+        setMessages((prev) => [
+          ...prev,
+          { id: `u-confirm-${Date.now()}`, text, isGuto: false, timestamp: new Date() },
+        ])
+        setInput("")
+        pendingProfileUpdateRef.current = null
+
+        // Apply the profile change
+        try {
+          await onProfileUpdate?.(pending.field, pending.value)
+        } catch {
+          // persistência falhou silenciosamente; o toast de erro será exibido pelo parent
+        }
+        const successText = copy.success(pending.humanLabel, pending.humanValue)
+        addGutoMessage(successText, "reward")
+        if (!isMuted) void synthesizeAndPlay(successText, validLang)
+        return
+      }
+
+      if (isCancellationText(lower)) {
+        setMessages((prev) => [
+          ...prev,
+          { id: `u-cancel-${Date.now()}`, text, isGuto: false, timestamp: new Date() },
+        ])
+        setInput("")
+        pendingProfileUpdateRef.current = null
+        addGutoMessage(copy.cancelled)
+        if (!isMuted) void synthesizeAndPlay(copy.cancelled, validLang)
+        return
+      }
+
+      // Neither confirm nor cancel → clear pending and fall through to normal chat
+      pendingProfileUpdateRef.current = null
+    }
+
+    // ── Phase 4: detect new profile update intent ────────────────────────────
+    if (onProfileUpdate) {
+      const intent = detectProfileUpdateIntent(text, validLang)
+      if (intent) {
+        setMessages((prev) => [
+          ...prev,
+          { id: `u-intent-${Date.now()}`, text, isGuto: false, timestamp: new Date() },
+        ])
+        setInput("")
+
+        if (intent.blocked) {
+          addGutoMessage(copy.blocked, "alert")
+          if (!isMuted) void synthesizeAndPlay(copy.blocked, validLang)
+          return
+        }
+
+        const confirmText =
+          intent.confirmationLevel === "required"
+            ? copy.requiredConfirm(intent.humanLabel, intent.humanValue)
+            : copy.lightConfirm(intent.humanLabel, intent.humanValue)
+
+        pendingProfileUpdateRef.current = intent
+        addGutoMessage(confirmText)
+        if (!isMuted) void synthesizeAndPlay(confirmText, validLang)
+        return
+      }
+    }
+
+    // ── Normal chat flow ─────────────────────────────────────────────────────
     const dietCtx = activeDietContextRef.current
     if (dietCtx) {
-      // Clear after user sends their question (one follow-up cycle is enough)
       activeDietContextRef.current = null
       await sendTextToGuto(text, `${dietCtx} Pergunta do usuário: ${text}`)
     } else {

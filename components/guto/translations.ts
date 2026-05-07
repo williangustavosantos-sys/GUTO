@@ -74,6 +74,8 @@ export interface TranslationDictionary {
     weightLabel: string;
     restrictionsLabel: string;
     restrictionsPlaceholder: string;
+    intolerancesLabel: string;
+    intolerancesPlaceholder: string;
     physicalDataSection: string;
   };
   diet: {
@@ -213,6 +215,8 @@ export const translations: Record<ValidLanguage, TranslationDictionary> = {
       weightLabel: "PESO (kg)",
       restrictionsLabel: "RESTRIÇÕES ALIMENTARES",
       restrictionsPlaceholder: "Ex: sem glúten, vegetariano, lactose...",
+      intolerancesLabel: "INTOLERÂNCIAS ALIMENTARES",
+      intolerancesPlaceholder: "Ex: lactose, glúten, frutos do mar...",
       physicalDataSection: "DADOS FÍSICOS",
     },
     diet: {
@@ -341,6 +345,8 @@ export const translations: Record<ValidLanguage, TranslationDictionary> = {
       weightLabel: "PESO (kg)",
       restrictionsLabel: "RESTRIZIONI ALIMENTARI",
       restrictionsPlaceholder: "Es: senza glutine, vegetariano, lattosio...",
+      intolerancesLabel: "INTOLLERANZE ALIMENTARI",
+      intolerancesPlaceholder: "Es: lattosio, glutine, frutti di mare...",
       physicalDataSection: "DATI FISICI",
     },
     diet: {
@@ -469,6 +475,8 @@ export const translations: Record<ValidLanguage, TranslationDictionary> = {
       weightLabel: "PESO (kg)",
       restrictionsLabel: "RESTRICCIONES ALIMENTARIAS",
       restrictionsPlaceholder: "Ej: sin gluten, vegetariano, lactosa...",
+      intolerancesLabel: "INTOLERANCIAS ALIMENTARIAS",
+      intolerancesPlaceholder: "Ej: lactosa, gluten, mariscos...",
       physicalDataSection: "DATOS FÍSICOS",
     },
     diet: {
@@ -597,6 +605,8 @@ export const translations: Record<ValidLanguage, TranslationDictionary> = {
       weightLabel: "WEIGHT (kg)",
       restrictionsLabel: "FOOD RESTRICTIONS",
       restrictionsPlaceholder: "E.g.: gluten-free, vegetarian, dairy-free...",
+      intolerancesLabel: "FOOD INTOLERANCES",
+      intolerancesPlaceholder: "E.g.: lactose, gluten, shellfish...",
       physicalDataSection: "PHYSICAL DATA",
     },
     diet: {
