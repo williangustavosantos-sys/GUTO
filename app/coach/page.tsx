@@ -43,6 +43,7 @@ import {
   createAdminCustomExercise,
   createAdminStudent,
   createAdminTeam,
+  updateAdminTeam,
   deleteAdminCoach,
   deleteAdminStudent,
   generateAdminStudentDiet,
@@ -508,11 +509,16 @@ function CoachInner() {
   const [coachDraft, setCoachDraft] = useState<CoachDraft>({ name: "", email: "", password: "", teamId: "" });
   const [teamDraft, setTeamDraft] = useState<TeamDraft>({ name: "", plan: "pro", maxStudents: "", maxCoaches: "" });
   const [lastSecret, setLastSecret] = useState<string | null>(null);
+  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
+  const [editingTeamId, setEditingTeamId] = useState<string | null>(null);
+  const [editTeamDraft, setEditTeamDraft] = useState<TeamDraft>({ name: "", plan: "pro", maxStudents: "", maxCoaches: "" });
 
   const isAdmin = user?.role === "admin" || user?.role === "super_admin";
   const isSuperAdmin = user?.role === "super_admin";
   const studentLimitReached = Boolean(teamSummary && teamSummary.limits.maxStudents !== null && teamSummary.usage.students >= teamSummary.limits.maxStudents);
   const coachLimitReached = Boolean(teamSummary && teamSummary.limits.maxCoaches !== null && teamSummary.usage.coaches >= teamSummary.limits.maxCoaches);
+  const superAdminNeedsTeam = isSuperAdmin && !selectedTeamId;
+  const selectedTeam = teams.find((t) => t.id === selectedTeamId) ?? null;
 
   useEffect(() => {
     if (!authLoading && (!user || (user.role !== "coach" && user.role !== "admin" && user.role !== "super_admin"))) {
@@ -688,6 +694,16 @@ function CoachInner() {
             <p className="mt-1 font-mono text-[10px] text-white/35">{user.userId}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            {isSuperAdmin && selectedTeam && (
+              <div className="flex items-center gap-1.5 rounded-md border border-[#00e5ff]/30 bg-[#00e5ff]/10 px-3 py-1.5">
+                <Building2 className="h-3 w-3 text-[#00e5ff]" />
+                <span className="text-[10px] font-black text-[#00e5ff]">{selectedTeam.name}</span>
+                <button onClick={() => { setSelectedTeamId(null); }} className="ml-1 text-[10px] text-[#00e5ff]/60 hover:text-[#00e5ff]">✕</button>
+              </div>
+            )}
+            {isSuperAdmin && !selectedTeam && (
+              <span className="text-[10px] font-bold text-white/35">Selecione um Time</span>
+            )}
             {isSuperAdmin && (
               <Button size="sm" variant="outline" className="h-9 border-white/10 bg-white/5 px-3 text-xs text-white hover:bg-white/10" onClick={() => setShowCreateTeam(true)}>
                 <Building2 className="mr-2 h-3.5 w-3.5" />
@@ -696,13 +712,26 @@ function CoachInner() {
               </Button>
             )}
             {isAdmin && (
-              <Button size="sm" variant="outline" className="h-9 border-white/10 bg-white/5 px-3 text-xs text-white hover:bg-white/10" disabled={coachLimitReached} onClick={() => setShowCreateCoach(true)}>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-9 border-white/10 bg-white/5 px-3 text-xs text-white hover:bg-white/10"
+                disabled={coachLimitReached || superAdminNeedsTeam}
+                title={superAdminNeedsTeam ? "Selecione um Time antes de criar coach." : undefined}
+                onClick={() => { setCoachDraft({ name: "", email: "", password: "", teamId: selectedTeamId || "" }); setShowCreateCoach(true); }}
+              >
                 <UserPlus className="mr-2 h-3.5 w-3.5" />
                 <span className="hidden sm:inline">Criar coach</span>
                 <span className="sm:hidden">Coach</span>
               </Button>
             )}
-            <Button size="sm" className="h-9 bg-[#00e5ff] px-3 text-xs text-[#0a0f1e] hover:bg-white" disabled={studentLimitReached} onClick={() => setShowCreateStudent(true)}>
+            <Button
+              size="sm"
+              className="h-9 bg-[#00e5ff] px-3 text-xs text-[#0a0f1e] hover:bg-white"
+              disabled={studentLimitReached || superAdminNeedsTeam}
+              title={superAdminNeedsTeam ? "Selecione um Time antes de criar aluno." : undefined}
+              onClick={() => { setStudentDraft({ name: "", email: "", phone: "", password: "", active: false, coachId: "", teamId: selectedTeamId || "" }); setShowCreateStudent(true); }}
+            >
               <Plus className="mr-2 h-3.5 w-3.5" />
               <span className="hidden sm:inline">Criar aluno</span>
               <span className="sm:hidden">Aluno</span>
@@ -800,13 +829,15 @@ function CoachInner() {
               {filtered.map((student) => {
                 const status = getStatusInfo(student);
                 return (
-                  <button
+                  <div
                     key={student.userId}
-                    type="button"
-                    onClick={() => void openStudent(student)}
-                    className="flex flex-col gap-4 rounded-xl border border-white/7 bg-white/[0.035] p-4 text-left transition hover:border-[#00e5ff]/40 hover:bg-white/[0.06] lg:grid lg:grid-cols-[minmax(0,1.4fr)_repeat(6,minmax(0,.85fr))_auto] lg:items-center"
+                    className="flex flex-col gap-4 rounded-xl border border-white/7 bg-white/[0.035] p-4 transition hover:border-[#00e5ff]/40 hover:bg-white/[0.06] lg:grid lg:grid-cols-[minmax(0,1.4fr)_repeat(6,minmax(0,.85fr))_auto_auto] lg:items-center"
                   >
-                    <div className="flex min-w-0 items-center justify-between lg:block">
+                    <button
+                      type="button"
+                      onClick={() => void openStudent(student)}
+                      className="flex min-w-0 items-center justify-between text-left lg:block"
+                    >
                       <div className="min-w-0">
                         <div className="mb-1 flex items-center gap-2">
                           <span className="truncate text-base font-black text-white">{student.name}</span>
@@ -815,7 +846,7 @@ function CoachInner() {
                         <p className="truncate font-mono text-[10px] text-white/30">{student.email || student.userId}</p>
                       </div>
                       <span className="text-2xl text-white/20 lg:hidden">›</span>
-                    </div>
+                    </button>
                     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:contents">
                       <Metric label="Telefone" value={student.phone || "-"} />
                       <Metric label="Coach" value={coachLabel(student, coaches)} />
@@ -824,8 +855,31 @@ function CoachInner() {
                       <Metric label="Visto" value={relativeTime(student.lastActiveAt)} />
                       <Metric label="Plano" value={formatHuman(student.subscriptionStatus)} />
                     </div>
-                    <span className="hidden text-right text-2xl text-white/20 lg:block">›</span>
-                  </button>
+                    <button
+                      type="button"
+                      title="Copiar link de convite"
+                      className="flex items-center gap-1 rounded-md border border-white/10 bg-white/5 px-2 py-1.5 text-[10px] font-black uppercase text-white/50 transition hover:border-[#00e5ff]/40 hover:text-[#00e5ff]"
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        try {
+                          const result = await getAdminStudentInvite(student.userId);
+                          const link = result.inviteLink ?? (await regenerateAdminStudentInvite(student.userId)).inviteLink;
+                          await navigator.clipboard.writeText(link);
+                          toast.success("Link copiado");
+                        } catch {
+                          toast.error("Não foi possível copiar o convite.");
+                        }
+                      }}
+                    >
+                      <Copy className="h-3 w-3" />
+                      <span className="hidden lg:inline">Convite</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void openStudent(student)}
+                      className="hidden text-right text-2xl text-white/20 lg:block"
+                    >›</button>
+                  </div>
                 );
               })}
               {!filtered.length && (
@@ -883,27 +937,108 @@ function CoachInner() {
 
         {activeDashboardTab === "teams" && isSuperAdmin && (
           <div className="grid gap-3">
-            {teams.map((team) => (
-              <div key={team.id} className="rounded-xl border border-white/7 bg-white/[0.035] p-4">
-                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                  <div>
-                    <p className="font-black text-white">{team.name}</p>
-                    <p className="font-mono text-[10px] text-white/35">{team.id} · {formatHuman(team.plan)}</p>
-                    {team.customLimits && (
-                      <p className="mt-1 font-mono text-[10px] text-white/25">
-                        Alunos: {team.customLimits.maxStudents ?? "Ilimitado"} · Coaches: {team.customLimits.maxCoaches ?? "Ilimitado"}
-                      </p>
-                    )}
-                  </div>
-                  <Badge variant={team.status === "active" ? "default" : "secondary"} className="text-[10px] font-black uppercase">
-                    {team.status === "active" ? "Ativo" : team.status}
-                  </Badge>
-                </div>
+            {!selectedTeamId && (
+              <div className="rounded-xl border border-[#00e5ff]/20 bg-[#00e5ff]/5 p-3 text-center text-[10px] font-bold text-[#00e5ff]/70">
+                Selecione um Time abaixo para criar coaches e alunos nele.
               </div>
-            ))}
+            )}
+            {teams.map((team) => {
+              const isSelected = selectedTeamId === team.id;
+              const isEditing = editingTeamId === team.id;
+              return (
+                <div
+                  key={team.id}
+                  className={`rounded-xl border p-4 transition ${isSelected ? "border-[#00e5ff]/50 bg-[#00e5ff]/[0.06]" : "border-white/7 bg-white/[0.035]"}`}
+                >
+                  {isEditing ? (
+                    <div className="grid gap-3">
+                      <Field label="Nome" value={editTeamDraft.name} onChange={(name) => setEditTeamDraft((d) => ({ ...d, name }))} />
+                      <label className="block">
+                        <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-white/30">Plano</span>
+                        <select
+                          value={editTeamDraft.plan}
+                          onChange={(e) => setEditTeamDraft((d) => ({ ...d, plan: e.target.value as TeamDraft["plan"] }))}
+                          className="h-10 w-full rounded-md border border-white/10 bg-white/5 px-3 text-sm text-white"
+                        >
+                          <option value="start" className="bg-[#0d1426]">GUTO Time Start</option>
+                          <option value="pro" className="bg-[#0d1426]">GUTO Time Pro</option>
+                          <option value="elite" className="bg-[#0d1426]">GUTO Time Elite</option>
+                          <option value="custom" className="bg-[#0d1426]">Custom</option>
+                        </select>
+                      </label>
+                      {editTeamDraft.plan === "custom" && (
+                        <>
+                          <Field label="Máx. alunos (vazio = ilimitado)" value={editTeamDraft.maxStudents} onChange={(v) => setEditTeamDraft((d) => ({ ...d, maxStudents: v }))} />
+                          <Field label="Máx. coaches (vazio = ilimitado)" value={editTeamDraft.maxCoaches} onChange={(v) => setEditTeamDraft((d) => ({ ...d, maxCoaches: v }))} />
+                        </>
+                      )}
+                      <div className="flex gap-2">
+                        <Button size="sm" disabled={acting} onClick={() => void act(async () => {
+                          const customLimits = editTeamDraft.plan === "custom" ? {
+                            maxStudents: editTeamDraft.maxStudents ? Number(editTeamDraft.maxStudents) || null : null,
+                            maxCoaches: editTeamDraft.maxCoaches ? Number(editTeamDraft.maxCoaches) || null : null,
+                          } : undefined;
+                          const result = await updateAdminTeam(team.id, { name: editTeamDraft.name, plan: editTeamDraft.plan, customLimits });
+                          setTeams((current) => current.map((t) => t.id === team.id ? result.team : t));
+                          setEditingTeamId(null);
+                        }, "Time atualizado.")} className="bg-[#00e5ff] text-[#0a0f1e] hover:bg-white">
+                          <Save className="mr-1 h-3 w-3" /> Salvar
+                        </Button>
+                        <Button size="sm" variant="outline" className="border-white/10 bg-white/5 text-white" onClick={() => setEditingTeamId(null)}>
+                          Cancelar
+                        </Button>
+                        <Button size="sm" variant="outline" className="border-white/10 bg-white/5 text-white/50 hover:text-white" disabled={acting} onClick={() => void act(async () => {
+                          const next = team.status === "archived" ? "active" : "archived";
+                          const result = await updateAdminTeam(team.id, { status: next });
+                          setTeams((current) => current.map((t) => t.id === team.id ? result.team : t));
+                          setEditingTeamId(null);
+                        }, team.status === "archived" ? "Time reativado." : "Time arquivado.")}>
+                          {team.status === "archived" ? "Reativar" : "Arquivar"}
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                      <div>
+                        <div className="mb-1 flex items-center gap-2">
+                          <p className={`font-black ${isSelected ? "text-[#00e5ff]" : "text-white"}`}>{team.name}</p>
+                          {isSelected && <Badge className="bg-[#00e5ff] text-[#0a0f1e] text-[9px] font-black">SELECIONADO</Badge>}
+                        </div>
+                        <p className="font-mono text-[10px] text-white/35">{team.id} · {formatHuman(team.plan)}</p>
+                        {team.customLimits && (
+                          <p className="mt-1 font-mono text-[10px] text-white/25">
+                            Alunos: {team.customLimits.maxStudents ?? "Ilimitado"} · Coaches: {team.customLimits.maxCoaches ?? "Ilimitado"}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={team.status === "active" ? "default" : "secondary"} className="text-[10px] font-black uppercase">
+                          {team.status === "active" ? "Ativo" : team.status}
+                        </Badge>
+                        <Button size="sm" variant="outline" className="border-white/10 bg-white/5 text-white" onClick={() => {
+                          setEditingTeamId(team.id);
+                          setEditTeamDraft({ name: team.name, plan: team.plan, maxStudents: String(team.customLimits?.maxStudents ?? ""), maxCoaches: String(team.customLimits?.maxCoaches ?? "") });
+                        }}>
+                          Editar
+                        </Button>
+                        <Button size="sm" className={isSelected ? "bg-white/10 text-white" : "bg-[#00e5ff] text-[#0a0f1e] hover:bg-white"} onClick={() => {
+                          setSelectedTeamId(isSelected ? null : team.id);
+                          if (!isSelected) {
+                            setStudentDraft((d) => ({ ...d, teamId: team.id }));
+                            setCoachDraft((d) => ({ ...d, teamId: team.id }));
+                          }
+                        }}>
+                          {isSelected ? "Desselecionar" : "Selecionar"}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
             {!teams.length && (
               <div className="rounded-xl border border-dashed border-white/10 p-12 text-center text-sm text-white/35">
-                Nenhum Time cadastrado.
+                Nenhum Time cadastrado. Clique em "Criar Time" para começar.
               </div>
             )}
           </div>
@@ -1282,6 +1417,9 @@ function CoachInner() {
           } : undefined;
           const result = await createAdminTeam({ name: teamDraft.name, plan: teamDraft.plan, customLimits });
           setTeams((current) => [...current, result.team]);
+          setSelectedTeamId(result.team.id);
+          setStudentDraft((d) => ({ ...d, teamId: result.team.id }));
+          setCoachDraft((d) => ({ ...d, teamId: result.team.id }));
           setTeamDraft({ name: "", plan: "pro", maxStudents: "", maxCoaches: "" });
           setShowCreateTeam(false);
         }, "Time criado.")}
@@ -1800,10 +1938,17 @@ function CreateStudentDialog({
           <Field label="Telefone" value={draft.phone} onChange={(phone) => onDraftChange({ ...draft, phone })} />
           <Field label="Senha inicial opcional" value={draft.password} onChange={(password) => onDraftChange({ ...draft, password })} />
           {isSuperAdmin && (
-            <select value={draft.teamId} onChange={(event) => onDraftChange({ ...draft, teamId: event.target.value })} className="h-10 rounded-md border border-white/10 bg-white/5 px-3 text-sm text-white">
-              <option value="" className="bg-[#0d1426]">Time (padrão: GUTO Core)</option>
-              {teams.map((team) => <option key={team.id} value={team.id} className="bg-[#0d1426]">{team.name}</option>)}
-            </select>
+            draft.teamId && teams.find((t) => t.id === draft.teamId) ? (
+              <div className="flex items-center gap-2 rounded-md border border-[#00e5ff]/30 bg-[#00e5ff]/10 px-3 py-2">
+                <Building2 className="h-3.5 w-3.5 text-[#00e5ff]" />
+                <span className="text-sm font-bold text-[#00e5ff]">{teams.find((t) => t.id === draft.teamId)?.name}</span>
+              </div>
+            ) : (
+              <select value={draft.teamId} onChange={(event) => onDraftChange({ ...draft, teamId: event.target.value })} className="h-10 rounded-md border border-white/10 bg-white/5 px-3 text-sm text-white">
+                <option value="" className="bg-[#0d1426]">Selecione um Time *</option>
+                {teams.map((team) => <option key={team.id} value={team.id} className="bg-[#0d1426]">{team.name}</option>)}
+              </select>
+            )
           )}
           {isAdmin && (
             <select value={draft.coachId} onChange={(event) => onDraftChange({ ...draft, coachId: event.target.value })} className="h-10 rounded-md border border-white/10 bg-white/5 px-3 text-sm text-white">
@@ -1819,7 +1964,7 @@ function CreateStudentDialog({
         </div>
         <AlertDialogFooter>
           <AlertDialogCancel className="border-white/10 bg-white/5 text-white">Cancelar</AlertDialogCancel>
-          <Button disabled={acting || limitReached || !draft.name.trim()} onClick={onCreate} className="bg-[#00e5ff] text-[#0a0f1e] hover:bg-white">Criar</Button>
+          <Button disabled={acting || limitReached || !draft.name.trim() || (isSuperAdmin && !draft.teamId)} onClick={onCreate} className="bg-[#00e5ff] text-[#0a0f1e] hover:bg-white">Criar</Button>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
@@ -1859,16 +2004,23 @@ function CreateCoachDialog({
           <Field label="Email" value={draft.email} onChange={(email) => onDraftChange({ ...draft, email })} />
           <Field label="Senha opcional" value={draft.password} onChange={(password) => onDraftChange({ ...draft, password })} />
           {isSuperAdmin && (
-            <select value={draft.teamId} onChange={(event) => onDraftChange({ ...draft, teamId: event.target.value })} className="h-10 rounded-md border border-white/10 bg-white/5 px-3 text-sm text-white">
-              <option value="" className="bg-[#0d1426]">Time (padrão: GUTO Core)</option>
-              {teams.map((team) => <option key={team.id} value={team.id} className="bg-[#0d1426]">{team.name}</option>)}
-            </select>
+            draft.teamId && teams.find((t) => t.id === draft.teamId) ? (
+              <div className="flex items-center gap-2 rounded-md border border-[#00e5ff]/30 bg-[#00e5ff]/10 px-3 py-2">
+                <Building2 className="h-3.5 w-3.5 text-[#00e5ff]" />
+                <span className="text-sm font-bold text-[#00e5ff]">{teams.find((t) => t.id === draft.teamId)?.name}</span>
+              </div>
+            ) : (
+              <select value={draft.teamId} onChange={(event) => onDraftChange({ ...draft, teamId: event.target.value })} className="h-10 rounded-md border border-white/10 bg-white/5 px-3 text-sm text-white">
+                <option value="" className="bg-[#0d1426]">Selecione um Time *</option>
+                {teams.map((team) => <option key={team.id} value={team.id} className="bg-[#0d1426]">{team.name}</option>)}
+              </select>
+            )
           )}
           {limitReached && <p className="text-xs font-bold text-[#00e5ff]">Limite do plano atingido. Atualize o plano GUTO Time para cadastrar mais coaches.</p>}
         </div>
         <AlertDialogFooter>
           <AlertDialogCancel className="border-white/10 bg-white/5 text-white">Cancelar</AlertDialogCancel>
-          <Button disabled={acting || limitReached || !draft.name.trim() || !draft.email.trim()} onClick={onCreate} className="bg-[#00e5ff] text-[#0a0f1e] hover:bg-white">Criar coach</Button>
+          <Button disabled={acting || limitReached || !draft.name.trim() || !draft.email.trim() || (isSuperAdmin && !draft.teamId)} onClick={onCreate} className="bg-[#00e5ff] text-[#0a0f1e] hover:bg-white">Criar coach</Button>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

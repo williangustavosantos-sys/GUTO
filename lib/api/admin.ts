@@ -78,6 +78,7 @@ export interface AdminStudent extends AdminUser {
   lastValidationAt: string | null
   lastActiveAt: string | null
   coachName?: string | null
+  teamName?: string | null
   age?: number | null
   gender?: string | null
   biologicalSex?: string | null
@@ -395,6 +396,18 @@ export function createAdminTeam(data: {
 }): Promise<{ team: AdminTeam }> {
   return apiRequest<{ team: AdminTeam }>("/admin/teams", {
     method: "POST",
+    body: JSON.stringify(data),
+  })
+}
+
+export function updateAdminTeam(teamId: string, data: {
+  name?: string
+  plan?: "start" | "pro" | "elite" | "custom"
+  status?: "active" | "paused" | "archived"
+  customLimits?: { maxStudents?: number | null; maxCoaches?: number | null }
+}): Promise<{ team: AdminTeam }> {
+  return apiRequest<{ team: AdminTeam }>(`/admin/teams/${teamId}`, {
+    method: "PATCH",
     body: JSON.stringify(data),
   })
 }
