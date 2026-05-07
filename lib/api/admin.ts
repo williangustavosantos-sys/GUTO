@@ -95,6 +95,19 @@ export interface AdminStudentFilters {
   subscriptionStatus?: string
 }
 
+export interface AdminTeam {
+  id: string
+  name: string
+  plan: "start" | "pro" | "elite" | "custom"
+  status: "active" | "paused" | "archived"
+  createdAt: string
+  updatedAt: string
+  customLimits?: {
+    maxStudents?: number | null
+    maxCoaches?: number | null
+  }
+}
+
 export interface AdminTeamSummary {
   team: {
     id: string
@@ -369,4 +382,27 @@ export function getAdminStudentDietHistory(userId: string): Promise<{ history: A
 export function getAdminLogs(targetUserId?: string): Promise<{ logs: AdminLog[] }> {
   const query = targetUserId ? `?targetUserId=${encodeURIComponent(targetUserId)}` : ""
   return apiRequest<{ logs: AdminLog[] }>(`/admin/logs${query}`)
+}
+
+export function getAdminTeams(): Promise<{ teams: AdminTeam[] }> {
+  return apiRequest<{ teams: AdminTeam[] }>("/admin/teams")
+}
+
+export function createAdminTeam(data: {
+  name: string
+  plan: "start" | "pro" | "elite" | "custom"
+  customLimits?: { maxStudents?: number | null; maxCoaches?: number | null }
+}): Promise<{ team: AdminTeam }> {
+  return apiRequest<{ team: AdminTeam }>("/admin/teams", {
+    method: "POST",
+    body: JSON.stringify(data),
+  })
+}
+
+export function getAdminStudentInvite(userId: string): Promise<{ invite: unknown; inviteLink: string | null; message?: string }> {
+  return apiRequest<{ invite: unknown; inviteLink: string | null; message?: string }>(`/admin/students/${userId}/invite`)
+}
+
+export function regenerateAdminStudentInvite(userId: string): Promise<{ inviteLink: string }> {
+  return apiRequest<{ inviteLink: string }>(`/admin/students/${userId}/invite/regenerate`, { method: "POST" })
 }

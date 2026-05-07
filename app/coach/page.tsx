@@ -4,6 +4,8 @@ import { Suspense, useCallback, useEffect, useMemo, useState, type ReactNode } f
 import { useRouter } from "next/navigation";
 import {
   Activity,
+  Building2,
+  Copy,
   Dumbbell,
   FileVideo,
   KeyRound,
@@ -37,9 +39,10 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
   assignStudentToCoach,
-  createAdminCustomExercise,
   createAdminCoach,
+  createAdminCustomExercise,
   createAdminStudent,
+  createAdminTeam,
   deleteAdminCoach,
   deleteAdminStudent,
   generateAdminStudentDiet,
@@ -50,14 +53,17 @@ import {
   getAdminStudentDetail,
   getAdminStudentDiet,
   getAdminStudentDietHistory,
-  getAdminStudents,
-  getAdminTeamSummary,
+  getAdminStudentInvite,
   getAdminStudentWorkout,
   getAdminStudentWorkoutHistory,
+  getAdminStudents,
+  getAdminTeamSummary,
+  getAdminTeams,
   lockAdminStudentDiet,
   lockAdminStudentWorkout,
   pauseAdminStudent,
   reactivateAdminStudent,
+  regenerateAdminStudentInvite,
   renewAdminStudent,
   resetAdminStudent,
   resetAdminStudentDiet,
@@ -73,12 +79,13 @@ import {
   type AdminCoach,
   type AdminLog,
   type AdminStudent,
+  type AdminTeam,
   type AdminTeamSummary,
 } from "@/lib/api/admin";
 import type { DietPlan, GutoMemory, GutoWorkoutExercise, GutoWorkoutPlan } from "@/lib/api/guto";
 
 type AvatarStage = "baby" | "teen" | "adult" | "elite";
-type DashboardTab = "students" | "coaches" | "arena" | "logs";
+type DashboardTab = "students" | "coaches" | "arena" | "logs" | "teams";
 type FilterTab = "ativos" | "pausados" | "arquivados" | "todos";
 type DetailTab = "resumo" | "acesso" | "calibragem" | "treino" | "dieta" | "arena" | "historico" | "seguranca";
 type ResetScope = "weekly" | "monthly" | "individual" | "validationHistory" | "all";
@@ -117,12 +124,21 @@ type StudentDraft = {
   password: string;
   active: boolean;
   coachId: string;
+  teamId: string;
 };
 
 type CoachDraft = {
   name: string;
   email: string;
   password: string;
+  teamId: string;
+};
+
+type TeamDraft = {
+  name: string;
+  plan: "start" | "pro" | "elite" | "custom";
+  maxStudents: string;
+  maxCoaches: string;
 };
 
 type CustomExerciseDraft = {
@@ -465,6 +481,7 @@ function CoachInner() {
   const [activeDashboardTab, setActiveDashboardTab] = useState<DashboardTab>("students");
   const [students, setStudents] = useState<AdminStudent[]>([]);
   const [coaches, setCoaches] = useState<AdminCoach[]>([]);
+  const [teams, setTeams] = useState<AdminTeam[]>([]);
   const [teamSummary, setTeamSummary] = useState<AdminTeamSummary | null>(null);
   const [teamSummaryError, setTeamSummaryError] = useState<string | null>(null);
   const [exerciseCatalog, setExerciseCatalog] = useState<AdminCatalogExercise[]>([]);
@@ -486,11 +503,14 @@ function CoachInner() {
   const [calibrationDraft, setCalibrationDraft] = useState<CalibrationDraft>(calibrationFromMemory(null));
   const [showCreateStudent, setShowCreateStudent] = useState(false);
   const [showCreateCoach, setShowCreateCoach] = useState(false);
-  const [studentDraft, setStudentDraft] = useState<StudentDraft>({ name: "", email: "", phone: "", password: "", active: false, coachId: "" });
-  const [coachDraft, setCoachDraft] = useState<CoachDraft>({ name: "", email: "", password: "" });
+  const [showCreateTeam, setShowCreateTeam] = useState(false);
+  const [studentDraft, setStudentDraft] = useState<StudentDraft>({ name: "", email: "", phone: "", password: "", active: false, coachId: "", teamId: "" });
+  const [coachDraft, setCoachDraft] = useState<CoachDraft>({ name: "", email: "", password: "", teamId: "" });
+  const [teamDraft, setTeamDraft] = useState<TeamDraft>({ name: "", plan: "pro", maxStudents: "", maxCoaches: "" });
   const [lastSecret, setLastSecret] = useState<string | null>(null);
 
   const isAdmin = user?.role === "admin" || user?.role === "super_admin";
+  const isSuperAdmin = user?.role === "super_admin";
   const studentLimitReached = Boolean(teamSummary && teamSummary.limits.maxStudents !== null && teamSummary.usage.students >= teamSummary.limits.maxStudents);
   const coachLimitReached = Boolean(teamSummary && teamSummary.limits.maxCoaches !== null && teamSummary.usage.coaches >= teamSummary.limits.maxCoaches);
 
@@ -533,6 +553,12 @@ function CoachInner() {
     setCoaches(data.coaches);
   }, [isAdmin]);
 
+  const fetchTeams = useCallback(async () => {
+    if (!isSuperAdmin) return;
+    const data = await getAdminTeams();
+    setTeams(data.teams);
+  }, [isSuperAdmin]);
+
   const fetchExerciseCatalog = useCallback(async () => {
     const data = await getAdminExerciseCatalog();
     setExerciseCatalog(data.exercises);
@@ -553,13 +579,13 @@ function CoachInner() {
     if (!user) return;
     setLoading(true);
     try {
-      await Promise.all([fetchCoaches(), fetchExerciseCatalog(), fetchTeamSummary()]);
+      await Promise.all([fetchCoaches(), fetchExerciseCatalog(), fetchTeamSummary(), fetchTeams()]);
     } catch (error) {
       toast.error(adminErrorMessage(error));
     } finally {
       setLoading(false);
     }
-  }, [fetchCoaches, fetchExerciseCatalog, fetchTeamSummary, user]);
+  }, [fetchCoaches, fetchExerciseCatalog, fetchTeamSummary, fetchTeams, user]);
 
   useEffect(() => {
     void loadBase();
@@ -662,6 +688,13 @@ function CoachInner() {
             <p className="mt-1 font-mono text-[10px] text-white/35">{user.userId}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            {isSuperAdmin && (
+              <Button size="sm" variant="outline" className="h-9 border-white/10 bg-white/5 px-3 text-xs text-white hover:bg-white/10" onClick={() => setShowCreateTeam(true)}>
+                <Building2 className="mr-2 h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Criar Time</span>
+                <span className="sm:hidden">Time</span>
+              </Button>
+            )}
             {isAdmin && (
               <Button size="sm" variant="outline" className="h-9 border-white/10 bg-white/5 px-3 text-xs text-white hover:bg-white/10" disabled={coachLimitReached} onClick={() => setShowCreateCoach(true)}>
                 <UserPlus className="mr-2 h-3.5 w-3.5" />
@@ -711,11 +744,14 @@ function CoachInner() {
           )}
         </div>
 
-        <div className="mb-6 grid grid-cols-2 gap-2 rounded-lg bg-white/5 p-1 md:grid-cols-4">
+        <div className={`mb-6 grid grid-cols-2 gap-2 rounded-lg bg-white/5 p-1 ${isSuperAdmin ? "md:grid-cols-5" : "md:grid-cols-4"}`}>
           <DashboardButton active={activeDashboardTab === "students"} onClick={() => setActiveDashboardTab("students")} icon={<Users className="h-4 w-4" />} label="Alunos" />
           <DashboardButton active={activeDashboardTab === "coaches"} onClick={() => setActiveDashboardTab("coaches")} icon={<Shield className="h-4 w-4" />} label="Coaches" disabled={!isAdmin} />
           <DashboardButton active={activeDashboardTab === "arena"} onClick={() => setActiveDashboardTab("arena")} icon={<Activity className="h-4 w-4" />} label="Arena" />
           <DashboardButton active={activeDashboardTab === "logs"} onClick={() => setActiveDashboardTab("logs")} icon={<RefreshCw className="h-4 w-4" />} label="Histórico" disabled={!isAdmin} />
+          {isSuperAdmin && (
+            <DashboardButton active={activeDashboardTab === "teams"} onClick={() => setActiveDashboardTab("teams")} icon={<Building2 className="h-4 w-4" />} label="Times" />
+          )}
         </div>
 
         {activeDashboardTab === "students" && (
@@ -844,6 +880,34 @@ function CoachInner() {
         {activeDashboardTab === "logs" && (
           <LogList logs={globalLogs} empty="Sem logs globais." />
         )}
+
+        {activeDashboardTab === "teams" && isSuperAdmin && (
+          <div className="grid gap-3">
+            {teams.map((team) => (
+              <div key={team.id} className="rounded-xl border border-white/7 bg-white/[0.035] p-4">
+                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <p className="font-black text-white">{team.name}</p>
+                    <p className="font-mono text-[10px] text-white/35">{team.id} · {formatHuman(team.plan)}</p>
+                    {team.customLimits && (
+                      <p className="mt-1 font-mono text-[10px] text-white/25">
+                        Alunos: {team.customLimits.maxStudents ?? "Ilimitado"} · Coaches: {team.customLimits.maxCoaches ?? "Ilimitado"}
+                      </p>
+                    )}
+                  </div>
+                  <Badge variant={team.status === "active" ? "default" : "secondary"} className="text-[10px] font-black uppercase">
+                    {team.status === "active" ? "Ativo" : team.status}
+                  </Badge>
+                </div>
+              </div>
+            ))}
+            {!teams.length && (
+              <div className="rounded-xl border border-dashed border-white/10 p-12 text-center text-sm text-white/35">
+                Nenhum Time cadastrado.
+              </div>
+            )}
+          </div>
+        )}
       </main>
 
       <Sheet open={!!selectedDetail} onOpenChange={(open) => { if (!open) setSelectedDetail(null); }}>
@@ -944,6 +1008,40 @@ function CoachInner() {
                             <option key={coach.userId} value={coach.userId} className="bg-[#0d1426]">{coach.name || coach.userId}</option>
                           ))}
                         </select>
+                      )}
+                    </div>
+
+                    <div className="mt-4 border-t border-white/8 pt-4">
+                      <p className="mb-3 text-[10px] font-black uppercase tracking-widest text-white/30">Convite de acesso</p>
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        <ActionButton disabled={acting} onClick={() => void act(async () => {
+                          const result = await getAdminStudentInvite(selected.userId);
+                          if (result.inviteLink) {
+                            setLastSecret(result.inviteLink);
+                          } else {
+                            toast.info(result.message || "Link não disponível. Use regenerar para criar um novo convite.");
+                          }
+                        }, "Convite carregado.")}>
+                          Ver convite atual
+                        </ActionButton>
+                        <ActionButton disabled={acting} onClick={() => {
+                          if (!window.confirm("Regenerar convite? O link anterior deixa de funcionar.")) return;
+                          void act(async () => {
+                            const result = await regenerateAdminStudentInvite(selected.userId);
+                            setLastSecret(result.inviteLink);
+                          }, "Novo convite gerado.");
+                        }}>
+                          <RefreshCw className="mr-2 h-4 w-4" />
+                          Regenerar convite
+                        </ActionButton>
+                      </div>
+                      {lastSecret?.startsWith("http") && (
+                        <div className="mt-3 flex items-center gap-2 rounded-lg border border-[#00e5ff]/30 bg-[#00e5ff]/10 p-3">
+                          <p className="min-w-0 flex-1 break-all font-mono text-xs text-white">{lastSecret}</p>
+                          <Button size="sm" variant="outline" className="shrink-0 border-white/10 bg-white/5 text-white" onClick={() => { void navigator.clipboard.writeText(lastSecret); toast.success("Link copiado!"); }}>
+                            <Copy className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                       )}
                     </div>
                   </Panel>
@@ -1126,7 +1224,9 @@ function CoachInner() {
         onOpenChange={setShowCreateStudent}
         draft={studentDraft}
         coaches={coaches}
+        teams={teams}
         isAdmin={isAdmin}
+        isSuperAdmin={isSuperAdmin}
         acting={acting}
         limitReached={studentLimitReached}
         onDraftChange={setStudentDraft}
@@ -1138,9 +1238,10 @@ function CoachInner() {
             password: studentDraft.password || undefined,
             active: studentDraft.active,
             coachId: studentDraft.coachId || undefined,
+            teamId: studentDraft.teamId || undefined,
           });
           if (result.inviteLink) setLastSecret(result.inviteLink);
-          setStudentDraft({ name: "", email: "", phone: "", password: "", active: false, coachId: "" });
+          setStudentDraft({ name: "", email: "", phone: "", password: "", active: false, coachId: "", teamId: "" });
           setShowCreateStudent(false);
         }, "Aluno criado.")}
       />
@@ -1149,16 +1250,41 @@ function CoachInner() {
         open={showCreateCoach}
         onOpenChange={setShowCreateCoach}
         draft={coachDraft}
+        teams={teams}
+        isSuperAdmin={isSuperAdmin}
         acting={acting}
         limitReached={coachLimitReached}
         onDraftChange={setCoachDraft}
         onCreate={() => void act(async () => {
-          const result = await createAdminCoach({ name: coachDraft.name, email: coachDraft.email, password: coachDraft.password || undefined });
+          const result = await createAdminCoach({
+            name: coachDraft.name,
+            email: coachDraft.email,
+            password: coachDraft.password || undefined,
+            teamId: coachDraft.teamId || undefined,
+          });
           setCoaches((current) => [result.coach, ...current]);
           if (result.temporaryPassword) setLastSecret(result.temporaryPassword);
-          setCoachDraft({ name: "", email: "", password: "" });
+          setCoachDraft({ name: "", email: "", password: "", teamId: "" });
           setShowCreateCoach(false);
         }, "Coach criado.")}
+      />
+
+      <CreateTeamDialog
+        open={showCreateTeam}
+        onOpenChange={setShowCreateTeam}
+        draft={teamDraft}
+        acting={acting}
+        onDraftChange={setTeamDraft}
+        onCreate={() => void act(async () => {
+          const customLimits = teamDraft.plan === "custom" ? {
+            maxStudents: teamDraft.maxStudents ? Number(teamDraft.maxStudents) || null : null,
+            maxCoaches: teamDraft.maxCoaches ? Number(teamDraft.maxCoaches) || null : null,
+          } : undefined;
+          const result = await createAdminTeam({ name: teamDraft.name, plan: teamDraft.plan, customLimits });
+          setTeams((current) => [...current, result.team]);
+          setTeamDraft({ name: "", plan: "pro", maxStudents: "", maxCoaches: "" });
+          setShowCreateTeam(false);
+        }, "Time criado.")}
       />
     </div>
   );
@@ -1641,7 +1767,9 @@ function CreateStudentDialog({
   onOpenChange,
   draft,
   coaches,
+  teams,
   isAdmin,
+  isSuperAdmin,
   acting,
   limitReached,
   onDraftChange,
@@ -1651,7 +1779,9 @@ function CreateStudentDialog({
   onOpenChange: (open: boolean) => void;
   draft: StudentDraft;
   coaches: AdminCoach[];
+  teams: AdminTeam[];
   isAdmin: boolean;
+  isSuperAdmin: boolean;
   acting: boolean;
   limitReached: boolean;
   onDraftChange: (draft: StudentDraft) => void;
@@ -1669,6 +1799,12 @@ function CreateStudentDialog({
           <Field label="Email" value={draft.email} onChange={(email) => onDraftChange({ ...draft, email })} />
           <Field label="Telefone" value={draft.phone} onChange={(phone) => onDraftChange({ ...draft, phone })} />
           <Field label="Senha inicial opcional" value={draft.password} onChange={(password) => onDraftChange({ ...draft, password })} />
+          {isSuperAdmin && (
+            <select value={draft.teamId} onChange={(event) => onDraftChange({ ...draft, teamId: event.target.value })} className="h-10 rounded-md border border-white/10 bg-white/5 px-3 text-sm text-white">
+              <option value="" className="bg-[#0d1426]">Time (padrão: GUTO Core)</option>
+              {teams.map((team) => <option key={team.id} value={team.id} className="bg-[#0d1426]">{team.name}</option>)}
+            </select>
+          )}
           {isAdmin && (
             <select value={draft.coachId} onChange={(event) => onDraftChange({ ...draft, coachId: event.target.value })} className="h-10 rounded-md border border-white/10 bg-white/5 px-3 text-sm text-white">
               <option value="" className="bg-[#0d1426]">Coach responsável</option>
@@ -1694,6 +1830,8 @@ function CreateCoachDialog({
   open,
   onOpenChange,
   draft,
+  teams,
+  isSuperAdmin,
   acting,
   limitReached,
   onDraftChange,
@@ -1702,6 +1840,8 @@ function CreateCoachDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   draft: CoachDraft;
+  teams: AdminTeam[];
+  isSuperAdmin: boolean;
   acting: boolean;
   limitReached: boolean;
   onDraftChange: (draft: CoachDraft) => void;
@@ -1718,11 +1858,73 @@ function CreateCoachDialog({
           <Field label="Nome" value={draft.name} onChange={(name) => onDraftChange({ ...draft, name })} />
           <Field label="Email" value={draft.email} onChange={(email) => onDraftChange({ ...draft, email })} />
           <Field label="Senha opcional" value={draft.password} onChange={(password) => onDraftChange({ ...draft, password })} />
+          {isSuperAdmin && (
+            <select value={draft.teamId} onChange={(event) => onDraftChange({ ...draft, teamId: event.target.value })} className="h-10 rounded-md border border-white/10 bg-white/5 px-3 text-sm text-white">
+              <option value="" className="bg-[#0d1426]">Time (padrão: GUTO Core)</option>
+              {teams.map((team) => <option key={team.id} value={team.id} className="bg-[#0d1426]">{team.name}</option>)}
+            </select>
+          )}
           {limitReached && <p className="text-xs font-bold text-[#00e5ff]">Limite do plano atingido. Atualize o plano GUTO Time para cadastrar mais coaches.</p>}
         </div>
         <AlertDialogFooter>
           <AlertDialogCancel className="border-white/10 bg-white/5 text-white">Cancelar</AlertDialogCancel>
           <Button disabled={acting || limitReached || !draft.name.trim() || !draft.email.trim()} onClick={onCreate} className="bg-[#00e5ff] text-[#0a0f1e] hover:bg-white">Criar coach</Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
+function CreateTeamDialog({
+  open,
+  onOpenChange,
+  draft,
+  acting,
+  onDraftChange,
+  onCreate,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  draft: TeamDraft;
+  acting: boolean;
+  onDraftChange: (draft: TeamDraft) => void;
+  onCreate: () => void;
+}) {
+  return (
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent className="border-white/10 bg-[#0d1426] text-white">
+        <AlertDialogHeader>
+          <AlertDialogTitle>Criar Time</AlertDialogTitle>
+          <AlertDialogDescription className="text-white/45">Cria um novo GUTO Time. Somente super admin.</AlertDialogDescription>
+        </AlertDialogHeader>
+        <div className="grid gap-3">
+          <Field label="Nome do Time" value={draft.name} onChange={(name) => onDraftChange({ ...draft, name })} />
+          <label className="block">
+            <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-white/30">Plano</span>
+            <select
+              value={draft.plan}
+              onChange={(event) => onDraftChange({ ...draft, plan: event.target.value as TeamDraft["plan"] })}
+              className="h-10 w-full rounded-md border border-white/10 bg-white/5 px-3 text-sm text-white"
+            >
+              <option value="start" className="bg-[#0d1426]">GUTO Time Start</option>
+              <option value="pro" className="bg-[#0d1426]">GUTO Time Pro</option>
+              <option value="elite" className="bg-[#0d1426]">GUTO Time Elite</option>
+              <option value="custom" className="bg-[#0d1426]">Custom</option>
+            </select>
+          </label>
+          {draft.plan === "custom" && (
+            <>
+              <Field label="Máx. alunos (vazio = ilimitado)" value={draft.maxStudents} onChange={(maxStudents) => onDraftChange({ ...draft, maxStudents })} />
+              <Field label="Máx. coaches (vazio = ilimitado)" value={draft.maxCoaches} onChange={(maxCoaches) => onDraftChange({ ...draft, maxCoaches })} />
+            </>
+          )}
+        </div>
+        <AlertDialogFooter>
+          <AlertDialogCancel className="border-white/10 bg-white/5 text-white">Cancelar</AlertDialogCancel>
+          <Button disabled={acting || !draft.name.trim()} onClick={onCreate} className="bg-[#00e5ff] text-[#0a0f1e] hover:bg-white">
+            <Building2 className="mr-2 h-4 w-4" />
+            Criar Time
+          </Button>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
