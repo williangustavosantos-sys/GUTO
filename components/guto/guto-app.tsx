@@ -5,7 +5,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { AnimatePresence, motion } from "framer-motion"
-import { Activity, AlertCircle, ArrowLeft, Check, CheckCircle2, Dumbbell, Fingerprint, Globe, Languages, Loader2, MapPin, Phone, Scale, Send, Settings, UserRound, Utensils, Volume2, Zap } from "lucide-react"
+import { Activity, AlertCircle, ArrowLeft, Check, CheckCircle2, Download, Dumbbell, Fingerprint, Globe, Languages, Loader2, MapPin, Phone, Scale, Send, Settings, Shield, Trash2, UserRound, Utensils, Volume2, Zap } from "lucide-react"
 
 import { BottomNavigation, type TabType } from "./bottom-navigation"
 import { createGutoEffectRegistry } from "./effects"
@@ -22,7 +22,7 @@ import { WorkoutValidationFlow } from "./validation/workout-validation-flow"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { getGutoMemory, saveGutoMemory, trackGutoEvent, validateGutoName, type DietFood, type DietMeal, type GutoMemory, type GutoNameValidation, type GutoTelemetryEvent, type GutoWorkoutPlan } from "@/lib/api/guto"
 import { useAuth } from "@/components/auth-provider"
-import { getInvite, claimInvite } from "@/lib/api/auth"
+import { getInvite, claimInvite, logout } from "@/lib/api/auth"
 import type { EvolutionStage, SupportedLanguage } from "@/types/contract"
 import { resolveGutoEvolutionStage } from "@/lib/guto-evolution"
 import { translations } from "./translations"
@@ -40,7 +40,7 @@ import { createLocalWorkoutPlan, getWorkoutMissingFields, localizeGutoWorkoutPla
 import { resolveWorkoutValidationLocationMode } from "@/lib/workout-location"
 
 type AppStage = "intro" | "language" | "invite_claim" | "consent" | "naming" | "calibration" | "pact" | "system" | "settings"
-type SettingsMode = "menu" | "language" | "name" | "profile" | "goal" | "location" | "pathology" | "physicaldata" | "residence" | "food_restrictions" | "food_intolerances"
+type SettingsMode = "menu" | "language" | "name" | "profile" | "goal" | "location" | "pathology" | "physicaldata" | "residence" | "food_restrictions" | "food_intolerances" | "privacy"
 type IntroPlaybackState = "idle" | "starting" | "playing" | "finishing" | "finished"
 
 const PENDING_INVITE_TOKEN_KEY = "guto-pending-invite-token"
@@ -125,6 +125,28 @@ const stageCopy: Record<
     settingsSave: string
     settingsSavedMsg: string
     settingsFoodIntolerances: string
+    settingsPrivacy: string
+    settingsPrivacySubtext: string
+    privacyHealthConsentLabel: string
+    privacyTermsConsentLabel: string
+    privacyAccepted: string
+    privacyNotAccepted: string
+    privacyAcceptedAt: string
+    privacyDownload: string
+    privacyCorrect: string
+    privacyRevoke: string
+    privacyDelete: string
+    privacyCancel: string
+    privacyRevokeWarning: string
+    privacyRevokeConfirm: string
+    privacyRevokedMsg: string
+    privacyCorrectToast: string
+    privacyDeleteStep1: string
+    privacyDeleteStep2Label: string
+    privacyDeleteConfirmWord: string
+    privacyDeleteBtn: string
+    privacyDeleteBetaTitle: string
+    privacyDeleteBetaMsg: string
   }
 > = {
   "pt-BR": {
@@ -153,6 +175,28 @@ const stageCopy: Record<
     settingsSave: "Salvar",
     settingsSavedMsg: "Configurações salvas.",
     settingsFoodIntolerances: "Intolerâncias",
+    settingsPrivacy: "Privacidade e dados",
+    settingsPrivacySubtext: "Baixe, corrija ou exclua seus dados.",
+    privacyHealthConsentLabel: "Dados de saúde/fitness",
+    privacyTermsConsentLabel: "Termos e privacidade",
+    privacyAccepted: "Aceito",
+    privacyNotAccepted: "Não aceito",
+    privacyAcceptedAt: "Data do aceite",
+    privacyDownload: "Baixar meus dados",
+    privacyCorrect: "Corrigir meus dados pessoais",
+    privacyRevoke: "Revogar consentimentos",
+    privacyDelete: "Excluir minha conta e meus dados",
+    privacyCancel: "Cancelar",
+    privacyRevokeWarning: "Se você revogar, o GUTO não poderá usar seus dados de saúde/fitness para gerar treino, dieta e acompanhamento.",
+    privacyRevokeConfirm: "Revogar consentimentos",
+    privacyRevokedMsg: "Consentimentos revogados.",
+    privacyCorrectToast: "Você pode corrigir seus dados nas seções abaixo.",
+    privacyDeleteStep1: "Esta ação remove seus dados pessoais, histórico, treino, dieta e progresso do GUTO, exceto dados que precisem ser mantidos por obrigação legal.",
+    privacyDeleteStep2Label: "Digite EXCLUIR para confirmar",
+    privacyDeleteConfirmWord: "EXCLUIR",
+    privacyDeleteBtn: "Excluir definitivamente",
+    privacyDeleteBetaTitle: "Solicitação registrada",
+    privacyDeleteBetaMsg: "No beta, sua solicitação de exclusão foi registrada. Para exclusão imediata no servidor, entre em contato com o suporte do GUTO.",
   },
   "en-US": {
     namingTitle: "GUTO & ________",
@@ -180,6 +224,28 @@ const stageCopy: Record<
     settingsSave: "Save",
     settingsSavedMsg: "Settings saved.",
     settingsFoodIntolerances: "Intolerances",
+    settingsPrivacy: "Privacy & Data",
+    settingsPrivacySubtext: "Download, correct or delete your data.",
+    privacyHealthConsentLabel: "Health/fitness data",
+    privacyTermsConsentLabel: "Terms & privacy",
+    privacyAccepted: "Accepted",
+    privacyNotAccepted: "Not accepted",
+    privacyAcceptedAt: "Accepted on",
+    privacyDownload: "Download my data",
+    privacyCorrect: "Correct my personal data",
+    privacyRevoke: "Revoke consents",
+    privacyDelete: "Delete my account and data",
+    privacyCancel: "Cancel",
+    privacyRevokeWarning: "If you revoke, GUTO will not be able to use your health/fitness data to generate workouts, diet plans and tracking.",
+    privacyRevokeConfirm: "Revoke consents",
+    privacyRevokedMsg: "Consents revoked.",
+    privacyCorrectToast: "You can correct your data in the sections below.",
+    privacyDeleteStep1: "This action removes your personal data, history, workouts, diet and progress from GUTO, except data that must be kept by legal obligation.",
+    privacyDeleteStep2Label: "Type DELETE to confirm",
+    privacyDeleteConfirmWord: "DELETE",
+    privacyDeleteBtn: "Delete permanently",
+    privacyDeleteBetaTitle: "Request registered",
+    privacyDeleteBetaMsg: "In beta, your deletion request has been registered. For immediate server deletion, contact GUTO support.",
   },
   "es-ES": {
     namingTitle: "GUTO & ________",
@@ -207,6 +273,28 @@ const stageCopy: Record<
     settingsSave: "Guardar",
     settingsSavedMsg: "Configuración guardada.",
     settingsFoodIntolerances: "Intolerancias",
+    settingsPrivacy: "Privacidad y datos",
+    settingsPrivacySubtext: "Descarga, corrige o elimina tus datos.",
+    privacyHealthConsentLabel: "Datos de salud/fitness",
+    privacyTermsConsentLabel: "Términos y privacidad",
+    privacyAccepted: "Aceptado",
+    privacyNotAccepted: "No aceptado",
+    privacyAcceptedAt: "Fecha de aceptación",
+    privacyDownload: "Descargar mis datos",
+    privacyCorrect: "Corregir mis datos personales",
+    privacyRevoke: "Revocar consentimientos",
+    privacyDelete: "Eliminar mi cuenta y mis datos",
+    privacyCancel: "Cancelar",
+    privacyRevokeWarning: "Si revocas, GUTO no podrá usar tus datos de salud/fitness para generar entrenamientos, dieta y seguimiento.",
+    privacyRevokeConfirm: "Revocar consentimientos",
+    privacyRevokedMsg: "Consentimientos revocados.",
+    privacyCorrectToast: "Puedes corregir tus datos en las secciones de abajo.",
+    privacyDeleteStep1: "Esta acción elimina tus datos personales, historial, entrenamientos, dieta y progreso de GUTO, excepto los datos que deban conservarse por obligación legal.",
+    privacyDeleteStep2Label: "Escribe ELIMINAR para confirmar",
+    privacyDeleteConfirmWord: "ELIMINAR",
+    privacyDeleteBtn: "Eliminar definitivamente",
+    privacyDeleteBetaTitle: "Solicitud registrada",
+    privacyDeleteBetaMsg: "En beta, tu solicitud de eliminación ha sido registrada. Para eliminación inmediata del servidor, contacta con el soporte de GUTO.",
   },
   "it-IT": {
     namingTitle: "GUTO & ________",
@@ -234,6 +322,28 @@ const stageCopy: Record<
     settingsSave: "Salva",
     settingsSavedMsg: "Impostazioni salvate.",
     settingsFoodIntolerances: "Intolleranze",
+    settingsPrivacy: "Privacy e dati",
+    settingsPrivacySubtext: "Scarica, correggi o elimina i tuoi dati.",
+    privacyHealthConsentLabel: "Dati salute/fitness",
+    privacyTermsConsentLabel: "Termini e privacy",
+    privacyAccepted: "Accettato",
+    privacyNotAccepted: "Non accettato",
+    privacyAcceptedAt: "Data di accettazione",
+    privacyDownload: "Scarica i miei dati",
+    privacyCorrect: "Correggi i miei dati personali",
+    privacyRevoke: "Revoca i consensi",
+    privacyDelete: "Elimina il mio account e i miei dati",
+    privacyCancel: "Annulla",
+    privacyRevokeWarning: "Se revochi, GUTO non potrà usare i tuoi dati salute/fitness per generare allenamenti, dieta e monitoraggio.",
+    privacyRevokeConfirm: "Revoca i consensi",
+    privacyRevokedMsg: "Consensi revocati.",
+    privacyCorrectToast: "Puoi correggere i tuoi dati nelle sezioni qui sotto.",
+    privacyDeleteStep1: "Questa azione rimuove i tuoi dati personali, la cronologia, gli allenamenti, la dieta e i progressi da GUTO, tranne i dati che devono essere conservati per obbligo legale.",
+    privacyDeleteStep2Label: "Scrivi ELIMINA per confermare",
+    privacyDeleteConfirmWord: "ELIMINA",
+    privacyDeleteBtn: "Elimina definitivamente",
+    privacyDeleteBetaTitle: "Richiesta registrata",
+    privacyDeleteBetaMsg: "In beta, la tua richiesta di eliminazione è stata registrata. Per l'eliminazione immediata dal server, contatta il supporto GUTO.",
   },
 }
 
@@ -493,6 +603,9 @@ export function GutoApp({
   const [settingsFoodIntolerancesDraft, setSettingsFoodIntolerancesDraft] = useState("")
   const [settingsPhoneDraft, setSettingsPhoneDraft] = useState("")
   const [settingsSavedToast, setSettingsSavedToast] = useState(false)
+  const [privacyConfirm, setPrivacyConfirm] = useState<"revoke" | "delete-step1" | "delete-step2" | "delete-done" | null>(null)
+  const [deleteConfirmText, setDeleteConfirmText] = useState("")
+  const [privacyMsg, setPrivacyMsg] = useState<string | null>(null)
   const [pendingExerciseQuestion, setPendingExerciseQuestion] =
     useState<PendingExerciseQuestion | null>(null)
   const [pendingFoodQuestion, setPendingFoodQuestion] = useState<{ food: DietFood; meal: DietMeal } | null>(null)
@@ -1171,13 +1284,22 @@ export function GutoApp({
     gutoAudio.playGutoFeedback("tap")
     setActiveLanguageGlow(null)
 
+    if (settingsMode === "privacy" && privacyConfirm !== null) {
+      setPrivacyConfirm(null)
+      setDeleteConfirmText("")
+      return
+    }
+
     if (settingsMode !== "menu") {
+      setPrivacyConfirm(null)
+      setDeleteConfirmText("")
+      setPrivacyMsg(null)
       setSettingsMode("menu")
       return
     }
 
     setStage("system")
-  }, [settingsMode])
+  }, [settingsMode, privacyConfirm])
 
   const handleSettingsLanguageSelect = useCallback(
     (lang: SupportedLanguage) => {
@@ -1343,6 +1465,90 @@ export function GutoApp({
     setSettingsMode("menu")
     setStage("system")
   }, [persistProfile, settingsPhoneDraft, showSavedToast])
+
+  const handleDownloadData = useCallback(() => {
+    if (typeof window === "undefined" || !user?.userId) return
+    const stored = (() => {
+      try { return JSON.parse(window.localStorage.getItem(`${STORAGE_KEY}-${user.userId}`) ?? "null") as StoredProfile | null } catch { return null }
+    })()
+    const exportData = {
+      exportedAt: new Date().toISOString(),
+      userId: user.userId,
+      language: stored?.language ?? selectedLanguage,
+      userName: stored?.userName ?? committedName,
+      phone: stored?.phone ?? null,
+      foodIntolerances: stored?.foodIntolerances ?? null,
+      consents: {
+        consentHealthFitness: stored?.consentHealthFitness ?? false,
+        acceptedTerms: stored?.acceptedTerms ?? false,
+        consentAcceptedAt: stored?.consentAcceptedAt ?? null,
+      },
+      profile: {
+        biologicalSex: memory?.biologicalSex ?? null,
+        userAge: memory?.userAge ?? null,
+        weightKg: memory?.weightKg ?? null,
+        heightCm: memory?.heightCm ?? null,
+        trainingGoal: memory?.trainingGoal ?? null,
+        preferredTrainingLocation: memory?.preferredTrainingLocation ?? null,
+        trainingPathology: memory?.trainingPathology ?? null,
+        country: memory?.country ?? null,
+        foodRestrictions: memory?.foodRestrictions ?? null,
+      },
+      progress: {
+        totalXp: memory?.totalXp ?? null,
+        streak: memory?.streak ?? null,
+      },
+    }
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `guto-meus-dados-${user.userId.slice(0, 8)}-${new Date().toISOString().split("T")[0]}.json`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }, [committedName, memory, selectedLanguage, user])
+
+  const handleCorrectData = useCallback(() => {
+    gutoAudio.playGutoFeedback("tap")
+    setPrivacyMsg(stageCopy[selectedLanguage].privacyCorrectToast)
+    setSettingsMode("menu")
+  }, [selectedLanguage])
+
+  const handleRevokeConsent = useCallback(() => {
+    gutoAudio.playGutoFeedback("tap")
+    persistProfile({ consentHealthFitness: false, acceptedTerms: false, consentAcceptedAt: undefined })
+    setPrivacyConfirm(null)
+    setPrivacyMsg(null)
+    setSettingsMode("menu")
+    setStage("consent")
+  }, [persistProfile])
+
+  const handleDeleteAccountConfirm = useCallback(() => {
+    if (typeof window === "undefined") return
+    const requestData = {
+      requestedAt: new Date().toISOString(),
+      userId: user?.userId ?? "unknown",
+      email: user?.email ?? null,
+      request: "account_deletion",
+      note: "Beta: server-side deletion requires manual processing by GUTO support.",
+    }
+    const blob = new Blob([JSON.stringify(requestData, null, 2)], { type: "application/json" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `guto-deletion-request-${new Date().toISOString().split("T")[0]}.json`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+    if (user?.userId) {
+      try { window.localStorage.removeItem(`${STORAGE_KEY}-${user.userId}`) } catch { /* noop */ }
+    }
+    setDeleteConfirmText("")
+    setPrivacyConfirm("delete-done")
+  }, [user])
 
   const updateUserProfileField = useCallback(
     async (field: string, value: string | number) => {
@@ -2298,7 +2504,9 @@ export function GutoApp({
                                   ? locale.settingsFoodRestrictions
                                   : settingsMode === "food_intolerances"
                                     ? locale.settingsFoodIntolerances
-                                    : locale.settingsTitle}
+                                    : settingsMode === "privacy"
+                                      ? locale.settingsPrivacy
+                                      : locale.settingsTitle}
               </p>
               <div className="h-10 w-10" aria-hidden="true" />
             </div>
@@ -2382,6 +2590,12 @@ export function GutoApp({
                     <AlertCircle className="guto-settings-choice-icon" strokeWidth={2.2} />
                     <span className="guto-settings-choice-label">{locale.settingsFoodIntolerances}</span>
                     {storedFoodIntolerances && <span className={valueClass}>{storedFoodIntolerances}</span>}
+                  </motion.button>
+
+                  <motion.button type="button" whileTap={{ scale: 0.96 }} onClick={() => { gutoAudio.playGutoFeedback("tap"); setPrivacyMsg(null); setPrivacyConfirm(null); setDeleteConfirmText(""); setSettingsMode("privacy"); }} aria-label={locale.settingsPrivacy} className={`${cardClass} col-span-2`}>
+                    <Shield className="guto-settings-choice-icon" strokeWidth={2.2} />
+                    <span className="guto-settings-choice-label">{locale.settingsPrivacy}</span>
+                    <span className={valueClass}>{locale.settingsPrivacySubtext}</span>
                   </motion.button>
                 </div>
               )
@@ -2810,6 +3024,143 @@ export function GutoApp({
                   >
                     {locale.settingsSave}
                   </button>
+                </div>
+              )
+            })()}
+
+            {settingsMode === "privacy" && (() => {
+              const stored = (() => {
+                if (typeof window === "undefined" || !user?.userId) return null
+                try { return JSON.parse(window.localStorage.getItem(`${STORAGE_KEY}-${user.userId}`) ?? "null") as StoredProfile | null } catch { return null }
+              })()
+              const consentHealth = stored?.consentHealthFitness === true
+              const consentTerms = stored?.acceptedTerms === true
+              const consentDate = stored?.consentAcceptedAt
+              const confirmWord = locale.privacyDeleteConfirmWord
+              const canConfirmDelete = deleteConfirmText.trim() === confirmWord
+
+              const rowClass = "flex items-center justify-between gap-2 py-1"
+              const labelClass = "font-mono text-[10px] font-black uppercase tracking-[0.12em] text-[rgba(13,35,65,0.6)]"
+              const statusClass = (ok: boolean) => `font-mono text-[10px] font-black uppercase tracking-[0.1em] ${ok ? "text-[var(--guto-cyan)]" : "text-[rgba(13,35,65,0.38)]"}`
+              const btnPrimary = "h-11 w-full rounded-full bg-[var(--guto-cyan)] font-mono text-[11px] font-black uppercase tracking-[0.2em] text-[var(--guto-navy)] shadow-[0_4px_16px_rgba(82,231,255,0.3)] flex items-center justify-center gap-2"
+              const btnGhost = "h-11 w-full rounded-full border border-[rgba(13,35,65,0.14)] bg-white/55 font-mono text-[10px] font-black uppercase tracking-[0.18em] text-[rgba(13,35,65,0.65)]"
+              const btnDanger = "h-11 w-full rounded-full border border-[rgba(255,60,60,0.4)] bg-[rgba(255,60,60,0.07)] font-mono text-[11px] font-black uppercase tracking-[0.18em] text-[rgba(200,30,30,0.85)] flex items-center justify-center gap-2 disabled:opacity-40"
+
+              return (
+                <div className="flex flex-1 flex-col gap-3 pt-2 overflow-y-auto pb-8">
+                  {/* Consent status */}
+                  <div className="guto-slot rounded-[1.5rem] px-5 py-4 flex flex-col gap-1">
+                    <p className="mb-2 font-mono text-[8px] font-black uppercase tracking-[0.2em] text-[rgba(13,35,65,0.42)]">Consentimento</p>
+                    <div className={rowClass}>
+                      <span className={labelClass}>{locale.privacyHealthConsentLabel}</span>
+                      <span className={statusClass(consentHealth)}>{consentHealth ? locale.privacyAccepted : locale.privacyNotAccepted}</span>
+                    </div>
+                    <div className={rowClass}>
+                      <span className={labelClass}>{locale.privacyTermsConsentLabel}</span>
+                      <span className={statusClass(consentTerms)}>{consentTerms ? locale.privacyAccepted : locale.privacyNotAccepted}</span>
+                    </div>
+                    {consentDate && (
+                      <p className="mt-1 font-mono text-[8px] text-[rgba(13,35,65,0.38)] uppercase tracking-[0.1em]">
+                        {locale.privacyAcceptedAt}: {new Date(consentDate).toLocaleDateString()}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Inline message (after correct data) */}
+                  {privacyMsg && !privacyConfirm && (
+                    <div className="rounded-[1.25rem] border border-[rgba(82,231,255,0.4)] bg-[rgba(82,231,255,0.08)] px-4 py-3">
+                      <p className="font-mono text-[10px] font-black uppercase tracking-[0.1em] text-[var(--guto-navy)]">{privacyMsg}</p>
+                    </div>
+                  )}
+
+                  {/* Revoke confirm dialog */}
+                  {privacyConfirm === "revoke" && (
+                    <div className="guto-slot rounded-[1.5rem] px-5 py-4 flex flex-col gap-3">
+                      <p className="font-mono text-[10px] font-black uppercase tracking-[0.1em] text-[var(--guto-navy)] leading-relaxed">{locale.privacyRevokeWarning}</p>
+                      <button type="button" onClick={handleRevokeConsent} className={btnDanger}>
+                        {locale.privacyRevokeConfirm}
+                      </button>
+                      <button type="button" onClick={() => setPrivacyConfirm(null)} className={btnGhost}>
+                        {locale.privacyCancel}
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Delete step 1 */}
+                  {privacyConfirm === "delete-step1" && (
+                    <div className="guto-slot rounded-[1.5rem] px-5 py-4 flex flex-col gap-3">
+                      <p className="font-mono text-[10px] font-black uppercase tracking-[0.1em] text-[var(--guto-navy)] leading-relaxed">{locale.privacyDeleteStep1}</p>
+                      <button type="button" onClick={() => setPrivacyConfirm("delete-step2")} className={btnDanger}>
+                        <Trash2 className="h-3.5 w-3.5" strokeWidth={2.2} />
+                        {locale.privacyDeleteBtn}
+                      </button>
+                      <button type="button" onClick={() => setPrivacyConfirm(null)} className={btnGhost}>
+                        {locale.privacyCancel}
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Delete step 2 — type confirmation */}
+                  {privacyConfirm === "delete-step2" && (
+                    <div className="guto-slot rounded-[1.5rem] px-5 py-4 flex flex-col gap-3">
+                      <p className="font-mono text-[9px] font-black uppercase tracking-[0.15em] text-[rgba(13,35,65,0.5)]">{locale.privacyDeleteStep2Label}</p>
+                      <input
+                        type="text"
+                        value={deleteConfirmText}
+                        onChange={(e) => setDeleteConfirmText(e.target.value)}
+                        placeholder={confirmWord}
+                        autoComplete="off"
+                        autoCorrect="off"
+                        spellCheck={false}
+                        className="w-full rounded-full border border-[rgba(255,60,60,0.4)] bg-white px-4 py-2.5 text-center font-mono text-[14px] font-black uppercase text-[rgba(200,30,30,0.9)] outline-none placeholder:text-[rgba(13,35,65,0.18)]"
+                      />
+                      <button type="button" disabled={!canConfirmDelete} onClick={handleDeleteAccountConfirm} className={btnDanger}>
+                        <Trash2 className="h-3.5 w-3.5" strokeWidth={2.2} />
+                        {locale.privacyDeleteBtn}
+                      </button>
+                      <button type="button" onClick={() => { setPrivacyConfirm(null); setDeleteConfirmText("") }} className={btnGhost}>
+                        {locale.privacyCancel}
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Delete done — beta message */}
+                  {privacyConfirm === "delete-done" && (
+                    <div className="guto-slot rounded-[1.5rem] px-5 py-4 flex flex-col gap-3">
+                      <p className="font-mono text-[11px] font-black uppercase tracking-[0.12em] text-[var(--guto-navy)]">{locale.privacyDeleteBetaTitle}</p>
+                      <p className="font-mono text-[9px] uppercase tracking-[0.08em] text-[rgba(13,35,65,0.6)] leading-relaxed">{locale.privacyDeleteBetaMsg}</p>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          try { await logout() } catch { /* noop */ }
+                          window.location.href = "/"
+                        }}
+                        className={btnDanger}
+                      >
+                        {locale.settingsClose}
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Action buttons */}
+                  {!privacyConfirm && (
+                    <div className="flex flex-col gap-2">
+                      <button type="button" onClick={handleDownloadData} className={btnPrimary}>
+                        <Download className="h-3.5 w-3.5" strokeWidth={2.2} />
+                        {locale.privacyDownload}
+                      </button>
+                      <button type="button" onClick={handleCorrectData} className={btnGhost}>
+                        {locale.privacyCorrect}
+                      </button>
+                      <button type="button" onClick={() => { gutoAudio.playGutoFeedback("tap"); setPrivacyConfirm("revoke") }} className={btnGhost}>
+                        {locale.privacyRevoke}
+                      </button>
+                      <button type="button" onClick={() => { gutoAudio.playGutoFeedback("tap"); setPrivacyConfirm("delete-step1") }} className={btnDanger}>
+                        <Trash2 className="h-3.5 w-3.5" strokeWidth={2.2} />
+                        {locale.privacyDelete}
+                      </button>
+                    </div>
+                  )}
                 </div>
               )
             })()}
