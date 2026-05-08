@@ -9,6 +9,7 @@ import { API_URL, getApiErrorMessage } from "@/lib/api/client"
 import { getGutoProactive, sendGutoMessage, trackGutoEvent } from "@/lib/api/guto"
 import type { DietMeal, GutoAvatarEmotion, GutoExpectedResponse, GutoMemory, GutoWorkoutPlan } from "@/lib/api/guto"
 import type { EvolutionStage, SupportedLanguage } from "@/types/contract"
+import type { GutoVitalStateResult } from "@/lib/guto-vital-state"
 import {
   detectProfileUpdateIntent,
   isConfirmationText,
@@ -38,7 +39,7 @@ interface ChatTabProps {
   pendingFoodQuestion?: { food: DietMeal["foods"][0]; meal: DietMeal } | null
   onFoodQuestionHandled?: () => void
   onWorkoutPlanUpdated?: (plan: GutoWorkoutPlan | null) => void
-  isDepleted?: boolean
+  vitalState?: GutoVitalStateResult
   initialXpGranted?: boolean
   initialXpRewardSeen?: boolean
   onXpRewardSeen?: () => void
@@ -298,7 +299,7 @@ export function ChatTab({
   pendingFoodQuestion,
   onFoodQuestionHandled,
   onWorkoutPlanUpdated,
-  isDepleted = false,
+  vitalState,
   initialXpGranted = false,
   initialXpRewardSeen = false,
   onXpRewardSeen,
@@ -1000,14 +1001,17 @@ export function ChatTab({
         {isMuted ? <VolumeX className="h-[18px] w-[18px]" /> : <Volume2 className="h-[18px] w-[18px]" />}
       </button>
 
-      {/* Avatar — ancorado na base */}
+      {/* Avatar — ancorado na base. Opacidade reduz conforme dias de ausência (Tamagotchi). */}
       <div className="guto-chat-avatar-stage pointer-events-none absolute z-10 flex flex-col items-center justify-end pb-[clamp(16px,4vh,32px)]">
-        <div className="relative flex w-[clamp(320px,96vw,440px)] flex-col items-center justify-end">
+        <div
+          className="relative flex w-[clamp(320px,96vw,440px)] flex-col items-center justify-end transition-opacity duration-1000"
+          style={{ opacity: vitalState?.opacity ?? 1 }}
+        >
           <GutoOfficialAvatar
             size="xl"
             showPlatform={false}
             evolution={evolution}
-            emotion={isDepleted ? "critical" : latestGuto.avatarEmotion || "default"}
+            emotion={vitalState?.isCritical ? "critical" : latestGuto.avatarEmotion || vitalState?.emotion || "default"}
           />
         </div>
       </div>

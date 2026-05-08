@@ -25,6 +25,7 @@ import { useAuth } from "@/components/auth-provider"
 import { getInvite, claimInvite, logout } from "@/lib/api/auth"
 import type { EvolutionStage, SupportedLanguage } from "@/types/contract"
 import { resolveGutoEvolutionStage } from "@/lib/guto-evolution"
+import { getGutoVitalState } from "@/lib/guto-vital-state"
 import { translations } from "./translations"
 import { gutoAudio } from "@/lib/audio-haptics"
 import {
@@ -1836,7 +1837,7 @@ export function GutoApp({
     [selectedLanguage, workoutPlan]
   )
   const locale = stageCopy[selectedLanguage]
-  const isGutoDepleted = (memory?.totalXp ?? 100) === 0
+  const vitalState = useMemo(() => getGutoVitalState(memory), [memory])
   const canSaveSettingsName =
     Boolean(formatGutoName(settingsNameDraft)) &&
     formatGutoName(settingsNameDraft) !== userLabel &&
@@ -1855,7 +1856,7 @@ export function GutoApp({
       pendingFoodQuestion={pendingFoodQuestion}
       onFoodQuestionHandled={() => setPendingFoodQuestion(null)}
       onWorkoutPlanUpdated={setWorkoutPlan}
-      isDepleted={isGutoDepleted}
+      vitalState={vitalState}
       initialXpGranted={memory?.initialXpGranted}
       initialXpRewardSeen={memory?.initialXpRewardSeen}
       onXpRewardSeen={() => {
@@ -1868,7 +1869,7 @@ export function GutoApp({
       onProfileUpdate={updateUserProfileField}
       onMemoryPatch={(patch) => setMemory((prev) => prev ? { ...prev, ...patch } : prev)}
     />
-  ), [evolution, gutoUserId, isGutoDepleted, memory, pendingExerciseQuestion, pendingFoodQuestion, persistMemory, selectedLanguage, updateUserProfileField, userLabel])
+  ), [evolution, gutoUserId, vitalState, memory, pendingExerciseQuestion, pendingFoodQuestion, persistMemory, selectedLanguage, updateUserProfileField, userLabel])
 
   const validationLocationMode = useMemo(
     () =>

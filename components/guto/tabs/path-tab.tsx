@@ -10,6 +10,7 @@ import { GutoOfficialAvatar } from "../guto-official-avatar"
 import { getLanguage, translations } from "../translations"
 import type { EvolutionStage } from "@/types/contract"
 import type { PathDay, PathDayStatus } from "../view-models"
+import { getGutoVitalState } from "@/lib/guto-vital-state"
 
 interface PathTabProps {
   userName: string
@@ -115,7 +116,8 @@ export function PathTab({ language, memory, workoutPlan, currentEvolution, valid
   const streak = memory?.streak ?? 0
   const isAdaptedToday = Boolean(memory?.adaptedMissionToday)
   const xpReward = memory?.trainedToday ? "+100 XP" : isAdaptedToday ? "+50 XP" : "0 XP"
-  const avatarEmotion = (memory?.totalXp ?? 0) === 0 ? "critical" : memory?.trainedToday ? "reward" : isAdaptedToday ? "alert" : "default"
+  const vitalState = useMemo(() => getGutoVitalState(memory), [memory])
+  const avatarEmotion = vitalState.isCritical ? "critical" : memory?.trainedToday ? "reward" : isAdaptedToday ? "alert" : vitalState.emotion
   const [selectedPoster, setSelectedPoster] = useState<string | null>(null)
 
   const validationSectionLabel = {
@@ -195,7 +197,10 @@ export function PathTab({ language, memory, workoutPlan, currentEvolution, valid
           })}
         </div>
 
-        <div className="relative mt-3 flex flex-1 flex-col items-center justify-center">
+        <div
+          className="relative mt-3 flex flex-1 flex-col items-center justify-center transition-opacity duration-1000"
+          style={{ opacity: vitalState.opacity }}
+        >
           <div className="absolute h-44 w-44 rounded-full border border-[rgba(82,231,255,0.18)] bg-[radial-gradient(circle,rgba(82,231,255,0.12)_0%,transparent_64%)]" />
           <GutoOfficialAvatar
             size="lg"
