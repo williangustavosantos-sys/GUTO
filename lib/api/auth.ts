@@ -63,3 +63,11 @@ export async function claimInvite(token: string, password: string): Promise<Logi
 export async function logout(): Promise<void> {
   await apiRequest("/auth/logout", { method: "POST" })
 }
+
+export async function deleteOwnAccount(): Promise<void> {
+  await apiRequest("/guto/account", {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ confirmation: "EXCLUIR" }),
+  })
+}

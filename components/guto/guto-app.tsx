@@ -22,7 +22,7 @@ import { WorkoutValidationFlow } from "./validation/workout-validation-flow"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { getGutoMemory, saveGutoMemory, trackGutoEvent, validateGutoName, type DietFood, type DietMeal, type GutoMemory, type GutoNameValidation, type GutoTelemetryEvent, type GutoWorkoutPlan } from "@/lib/api/guto"
 import { useAuth } from "@/components/auth-provider"
-import { getInvite, claimInvite, logout } from "@/lib/api/auth"
+import { getInvite, claimInvite, logout, deleteOwnAccount } from "@/lib/api/auth"
 import type { EvolutionStage, SupportedLanguage } from "@/types/contract"
 import { resolveGutoEvolutionStage } from "@/lib/guto-evolution"
 import { getGutoVitalState } from "@/lib/guto-vital-state"
@@ -1537,30 +1537,21 @@ export function GutoApp({
     setStage("consent")
   }, [persistProfile])
 
-  const handleDeleteAccountConfirm = useCallback(() => {
-    if (typeof window === "undefined") return
-    const requestData = {
-      requestedAt: new Date().toISOString(),
-      userId: user?.userId ?? "unknown",
-      email: user?.email ?? null,
-      request: "account_deletion",
-      note: "Beta: server-side deletion requires manual processing by GUTO support.",
+  const handleDeleteAccountConfirm = useCallback(async () => {
+    if (typeof window === "undefined" || !user?.userId) return
+    try {
+      await deleteOwnAccount()
+    } catch (error) {
+      console.error("[GUTO] account self-delete failed", error)
+      setPrivacyMsg(getApiErrorMessage(error) || "Não foi possível excluir agora. Tente novamente.")
+      return
     }
-    const blob = new Blob([JSON.stringify(requestData, null, 2)], { type: "application/json" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = `guto-deletion-request-${new Date().toISOString().split("T")[0]}.json`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
-    if (user?.userId) {
-      try { window.localStorage.removeItem(`${STORAGE_KEY}-${user.userId}`) } catch { /* noop */ }
-    }
+    try { window.localStorage.removeItem(`${STORAGE_KEY}-${user.userId}`) } catch { /* noop */ }
     setDeleteConfirmText("")
     setPrivacyConfirm("delete-done")
-  }, [user])
+    try { await logout() } catch { /* sessão já invalidada */ }
+    router.push("/login")
+  }, [router, user])
 
   const updateUserProfileField = useCallback(
     async (field: string, value: string | number) => {
