@@ -125,6 +125,7 @@ export interface SendGutoMessageResponse {
   expectedResponse?: GutoExpectedResponse | null
   avatarEmotion?: GutoAvatarEmotion
   workoutPlan?: GutoWorkoutPlan | null
+  memoryPatch?: Partial<GutoMemory>
 }
 
 export interface GutoNameValidation {
@@ -176,6 +177,21 @@ export interface GutoMemory {
     updatedAt: string
     updatedBy: string
     days: Partial<Record<"monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday", GutoWorkoutPlan>>
+  } | null
+  weeklyDietPlan?: {
+    studentId: string
+    updatedAt: string
+    updatedBy: string
+    days: Partial<Record<"monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday", {
+      breakfast?: string
+      lunch?: string
+      dinner?: string
+      snacks?: string
+      notes?: string
+      hydration?: string
+      caloriesEstimate?: number
+      proteinEstimate?: number
+    }>>
   } | null
   proactiveSent: Record<string, string[]>
   initialXpRewardSeen: boolean

@@ -7,7 +7,7 @@ import { Loader2, Mic, Send, TrendingUp, Volume2, VolumeX } from "lucide-react"
 
 import { API_URL, getApiErrorMessage } from "@/lib/api/client"
 import { getGutoProactive, sendGutoMessage, trackGutoEvent } from "@/lib/api/guto"
-import type { DietMeal, GutoAvatarEmotion, GutoExpectedResponse, GutoWorkoutPlan } from "@/lib/api/guto"
+import type { DietMeal, GutoAvatarEmotion, GutoExpectedResponse, GutoMemory, GutoWorkoutPlan } from "@/lib/api/guto"
 import type { EvolutionStage, SupportedLanguage } from "@/types/contract"
 import {
   detectProfileUpdateIntent,
@@ -42,8 +42,9 @@ interface ChatTabProps {
   initialXpGranted?: boolean
   initialXpRewardSeen?: boolean
   onXpRewardSeen?: () => void
-  memory?: import("@/lib/api/guto").GutoMemory | null
+  memory?: GutoMemory | null
   onProfileUpdate?: (field: string, value: string | number) => Promise<void>
+  onMemoryPatch?: (patch: Partial<GutoMemory>) => void
 }
 
 interface Message {
@@ -303,6 +304,7 @@ export function ChatTab({
   onXpRewardSeen,
   memory,
   onProfileUpdate,
+  onMemoryPatch,
 }: ChatTabProps) {
   const validLang = getLanguage(language)
   const locale = translations[validLang]
@@ -760,6 +762,9 @@ export function ChatTab({
       setMessages((prev) => appendMessagesWithoutDuplicateGuto(prev, [gutoMessage]))
       if (data.acao === "updateWorkout" && data.workoutPlan) {
         onWorkoutPlanUpdated?.(data.workoutPlan)
+      }
+      if (data.memoryPatch && Object.keys(data.memoryPatch).length > 0) {
+        onMemoryPatch?.(data.memoryPatch)
       }
 
       if (!isMuted) {
