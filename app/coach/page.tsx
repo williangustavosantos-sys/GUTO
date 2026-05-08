@@ -94,6 +94,7 @@ import {
   type WeekDayKey,
 } from "@/lib/api/admin";
 import type { DietPlan, GutoMemory, GutoWorkoutExercise, GutoWorkoutPlan } from "@/lib/api/guto";
+import { formatCode, TRAINING_LOCATION_LABELS, BIOLOGICAL_SEX_LABELS, SUBSCRIPTION_STATUS_LABELS } from "@/lib/format-codes";
 
 type AvatarStage = "baby" | "teen" | "adult" | "elite";
 type DashboardTab = "students" | "coaches" | "arena" | "logs" | "teams";
@@ -784,8 +785,8 @@ function CoachInner() {
             <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
               <Metric label="Time" value={teamSummary.team.name} cyan />
               <Metric label="Plano" value={formatHuman(teamSummary.team.planLabel)} />
-              <Metric label="Alunos" value={`${teamSummary.usage.students} / ${teamSummary.limits.maxStudents ?? "Ilimitado"}`} />
-              <Metric label="Coaches" value={`${teamSummary.usage.coaches} / ${teamSummary.limits.maxCoaches ?? "Ilimitado"}`} />
+              <Metric label="Alunos" value={`${teamSummary.usage.students} / ${teamSummary.limits.maxStudents ?? "∞"}`} />
+              <Metric label="Coaches" value={`${teamSummary.usage.coaches} / ${teamSummary.limits.maxCoaches ?? "∞"}`} />
             </div>
           ) : (
             <p className="text-xs text-white/35">{teamSummaryError || "Resumo do Time indisponível."}</p>
@@ -816,12 +817,12 @@ function CoachInner() {
                 onChange={(event) => setSearch(event.target.value)}
                 className="h-11 border-white/10 bg-white/5 text-white placeholder:text-white/25 md:max-w-md"
               />
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-row flex-wrap gap-2">
                 {(["ativos", "pausados", "arquivados", "todos"] as FilterTab[]).map((tab) => (
                   <button
                     key={tab}
                     onClick={() => setFilter(tab)}
-                    className={`rounded-full border px-4 py-2 text-[10px] font-black uppercase tracking-widest transition ${
+                    className={`flex-none rounded-full border px-4 py-2 text-[10px] font-black uppercase tracking-widest transition ${
                       filter === tab ? "border-[#00e5ff] bg-[#00e5ff] text-[#0a0f1e]" : "border-white/10 bg-white/5 text-white/45 hover:text-white"
                     }`}
                   >
@@ -830,23 +831,27 @@ function CoachInner() {
                 ))}
               </div>
             </div>
-            <div className="mb-4 flex flex-wrap gap-2">
+            <div className={`mb-4 grid gap-2 sm:grid-cols-2 ${isAdmin ? "lg:grid-cols-5" : "lg:grid-cols-4"}`}>
               {isAdmin && (
-                <select value={coachFilter} onChange={(event) => setCoachFilter(event.target.value)} className="h-10 min-w-[160px] flex-1 rounded-md border border-white/10 bg-white/5 px-3 text-sm text-white">
+                <select value={coachFilter} onChange={(event) => setCoachFilter(event.target.value)} className="h-10 rounded-md border border-white/10 bg-white/5 px-3 text-sm text-white">
                   <option value="" className="bg-[#0d1426]">Todos os coaches</option>
                   {coaches.map((coach) => <option key={coach.userId} value={coach.userId} className="bg-[#0d1426]">{coach.name || coach.email || coach.userId}</option>)}
                 </select>
               )}
-              <Input placeholder="Sexo/gênero" value={genderFilter} onChange={(event) => setGenderFilter(event.target.value)} className="h-10 min-w-[120px] flex-1 border-white/10 bg-white/5 text-white placeholder:text-white/25" />
-              <select value={subscriptionStatusFilter} onChange={(event) => setSubscriptionStatusFilter(event.target.value)} className="h-10 min-w-[140px] flex-1 rounded-md border border-white/10 bg-white/5 px-3 text-sm text-white">
-                <option value="" className="bg-[#0d1426]">Pagamento</option>
-                <option value="pending_payment" className="bg-[#0d1426]">Pendente</option>
-                <option value="active" className="bg-[#0d1426]">Ativo</option>
-                <option value="expired" className="bg-[#0d1426]">Expirado</option>
-                <option value="cancelled" className="bg-[#0d1426]">Cancelado</option>
+              <select value={genderFilter} onChange={(event) => setGenderFilter(event.target.value)} className="h-10 rounded-md border border-white/10 bg-white/5 px-3 text-sm text-white">
+                <option value="" className="bg-[#0d1426]">Sexo: todos</option>
+                {Object.entries(BIOLOGICAL_SEX_LABELS).map(([code, label]) => (
+                  <option key={code} value={code} className="bg-[#0d1426]">{label}</option>
+                ))}
               </select>
-              <Input placeholder="Idade mín." value={minAgeFilter} onChange={(event) => setMinAgeFilter(event.target.value)} className="h-10 min-w-[100px] flex-1 border-white/10 bg-white/5 text-white placeholder:text-white/25" />
-              <Input placeholder="Idade máx." value={maxAgeFilter} onChange={(event) => setMaxAgeFilter(event.target.value)} className="h-10 min-w-[100px] flex-1 border-white/10 bg-white/5 text-white placeholder:text-white/25" />
+              <select value={subscriptionStatusFilter} onChange={(event) => setSubscriptionStatusFilter(event.target.value)} className="h-10 rounded-md border border-white/10 bg-white/5 px-3 text-sm text-white">
+                <option value="" className="bg-[#0d1426]">Pagamento: todos</option>
+                {Object.entries(SUBSCRIPTION_STATUS_LABELS).map(([code, label]) => (
+                  <option key={code} value={code} className="bg-[#0d1426]">{label}</option>
+                ))}
+              </select>
+              <Input type="number" inputMode="numeric" placeholder="Idade mín." value={minAgeFilter} onChange={(event) => setMinAgeFilter(event.target.value)} className="h-10 border-white/10 bg-white/5 text-white placeholder:text-white/25" />
+              <Input type="number" inputMode="numeric" placeholder="Idade máx." value={maxAgeFilter} onChange={(event) => setMaxAgeFilter(event.target.value)} className="h-10 border-white/10 bg-white/5 text-white placeholder:text-white/25" />
             </div>
 
             <div className="grid gap-3">
@@ -1111,7 +1116,7 @@ function CoachInner() {
                       <DataRow label="Assinatura" value={formatHuman(selected.subscriptionStatus)} />
                       <DataRow label="Expira em" value={formatDate(selected.subscriptionEndsAt)} />
                       <DataRow label="Coach" value={coachLabel(selected, coaches)} />
-                      {user.role === "super_admin" && <DataRow label="Time" value={selected.teamId || "-"} />}
+                      {user.role === "super_admin" && <DataRow label="Time" value={teams.find((t) => t.id === selected.teamId)?.name || selected.teamId || "-"} />}
                       <DataRow label="Arena" value={selected.visibleInArena ? "Visível" : "Oculto"} />
                     </Panel>
                     <Panel title="Evolução">
@@ -1909,8 +1914,20 @@ function WorkoutEditor({
         <div className="mt-4 grid gap-3 md:grid-cols-2">
           <Field label="Título" value={value.title || ""} onChange={(title) => onChange({ ...value, title, focus: title || value.focus })} />
           <Field label="Grupo muscular / foco" value={value.focus || ""} onChange={(focus) => onChange({ ...value, focus })} />
-          <Field label="Dia" value={value.weekDay || ""} onChange={(weekDay) => onChange({ ...value, weekDay })} />
-          <Field label="Local" value={value.location || ""} onChange={(location) => onChange({ ...value, location })} />
+          <label className="block">
+            <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-white/30">Dia</span>
+            <select value={value.weekDay || "today"} onChange={(e) => onChange({ ...value, weekDay: e.target.value })} className="h-10 w-full rounded-md border border-white/10 bg-white/5 px-3 text-sm text-white">
+              {[["Domingo","Domingo"],["Segunda-feira","Segunda-feira"],["Terça-feira","Terça-feira"],["Quarta-feira","Quarta-feira"],["Quinta-feira","Quinta-feira"],["Sexta-feira","Sexta-feira"],["Sábado","Sábado"]].map(([val, label]) => <option key={val} value={val} className="bg-[#0d1426]">{label}</option>)}
+              <option value="today" className="bg-[#0d1426]">Hoje ({["Domingo","Segunda","Terça","Quarta","Quinta","Sexta","Sábado"][new Date().getDay()]})</option>
+            </select>
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-white/30">Local</span>
+            <select value={value.location || ""} onChange={(e) => onChange({ ...value, location: e.target.value })} className="h-10 w-full rounded-md border border-white/10 bg-white/5 px-3 text-sm text-white">
+              <option value="" className="bg-[#0d1426]">Selecionar</option>
+              {Object.entries(TRAINING_LOCATION_LABELS).map(([code, label]) => <option key={code} value={code} className="bg-[#0d1426]">{label}</option>)}
+            </select>
+          </label>
           <Field label="Duração estimada" value={String(value.estimatedDurationMinutes || "")} onChange={(estimatedDurationMinutes) => onChange({ ...value, estimatedDurationMinutes: Number(estimatedDurationMinutes) || undefined })} />
           <Field label="Dificuldade" value={value.difficulty || ""} onChange={(difficulty) => onChange({ ...value, difficulty })} />
           <Field label="Observações do coach" value={value.coachNotes || ""} onChange={(coachNotes) => onChange({ ...value, coachNotes, summary: coachNotes || value.summary })} className="md:col-span-2" />
