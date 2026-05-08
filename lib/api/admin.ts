@@ -349,6 +349,27 @@ export interface AdminWeeklyWorkoutPlan {
   days: AdminWeeklyWorkoutDays
 }
 
+export interface AdminWeeklyDietDay {
+  breakfast?: string
+  lunch?: string
+  dinner?: string
+  snacks?: string
+  notes?: string
+  hydration?: string
+  caloriesEstimate?: number
+  proteinEstimate?: number
+  status?: string
+}
+
+export type AdminWeeklyDietDays = Partial<Record<WeekDayKey, AdminWeeklyDietDay>>
+
+export interface AdminWeeklyDietPlan {
+  studentId: string
+  updatedAt: string
+  updatedBy: string
+  days: AdminWeeklyDietDays
+}
+
 export function getAdminStudentWeeklyWorkout(userId: string): Promise<{ weeklyWorkout: AdminWeeklyWorkoutPlan | null }> {
   return apiRequest<{ weeklyWorkout: AdminWeeklyWorkoutPlan | null }>(`/admin/students/${userId}/workout/week`)
 }
@@ -444,4 +465,26 @@ export function getAdminStudentInvite(userId: string): Promise<{ invite: unknown
 
 export function regenerateAdminStudentInvite(userId: string): Promise<{ inviteLink: string }> {
   return apiRequest<{ inviteLink: string }>(`/admin/students/${userId}/invite/regenerate`, { method: "POST" })
+}
+
+// ─── Weekly Diet Plan ─────────────────────────────────────────────────────────
+
+export function getStudentWeeklyDiet(userId: string): Promise<{ weeklyDiet: AdminWeeklyDietPlan | null }> {
+  return apiRequest<{ weeklyDiet: AdminWeeklyDietPlan | null }>(`/admin/students/${userId}/diet/week`)
+}
+
+export function saveStudentWeeklyDiet(userId: string, days: AdminWeeklyDietDays): Promise<{ weeklyDiet: AdminWeeklyDietPlan }> {
+  return apiRequest<{ weeklyDiet: AdminWeeklyDietPlan }>(`/admin/students/${userId}/diet/week`, {
+    method: "PUT",
+    body: JSON.stringify({ days }),
+  })
+}
+
+/**
+ * Returns today's diet for the student.
+ * Priority: weeklyDietPlan[today] → official DietPlan → null
+ * NOTE: This endpoint is ready for future student-side integration.
+ */
+export function getStudentDietToday(userId: string): Promise<{ diet: unknown; dayKey: WeekDayKey; fromWeeklyPlan: boolean; fallback?: string }> {
+  return apiRequest<{ diet: unknown; dayKey: WeekDayKey; fromWeeklyPlan: boolean; fallback?: string }>(`/admin/students/${userId}/diet/today`)
 }
