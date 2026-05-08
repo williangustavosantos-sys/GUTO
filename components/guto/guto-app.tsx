@@ -53,6 +53,7 @@ interface StoredProfile extends StoredGutoProfile {
   language: SupportedLanguage
   userName: string
   onboardingComplete: boolean
+  namingConfirmed?: boolean
   calibrationComplete?: boolean
   pactAccepted?: boolean
   phone?: string
@@ -541,18 +542,18 @@ function resolveAuthenticatedStage(
     return "consent"
   }
 
+  // namingConfirmed must be set on THIS device by the student clicking confirm.
+  // Admin-set names do not count. Backwards-compat: onboardingComplete=true implies confirmed.
+  if (!profile?.namingConfirmed && !profile?.onboardingComplete) {
+    console.log("[GUTO_ONBOARDING] missing namingConfirmed")
+    console.log("[GUTO_ONBOARDING] resolved stage naming")
+    return "naming"
+  }
+
   if (profile?.onboardingComplete || profile?.pactAccepted) {
     console.log("[GUTO_ONBOARDING] complete -> system")
     console.log("[GUTO_ONBOARDING] resolved stage system")
     return "system"
-  }
-
-  // Only skip naming if the user explicitly confirmed their duo name in this client.
-  // A name set by the admin in GutoMemory does NOT count as confirmed by the student.
-  if (!hasStoredName(profile)) {
-    console.log("[GUTO_ONBOARDING] missing confirmed name")
-    console.log("[GUTO_ONBOARDING] resolved stage naming")
-    return "naming"
   }
 
   if (!profile?.calibrationComplete && !hasMemoryCalibration(memory)) {
@@ -1200,7 +1201,7 @@ export function GutoApp({
       effectRegistry.emit("seal_complete", {
         meta: { nameLength: normalizedName.length, language: selectedLanguage },
       })
-      persistProfile({ userName: normalizedName, language: selectedLanguage, onboardingComplete: false })
+      persistProfile({ userName: normalizedName, language: selectedLanguage, onboardingComplete: false, namingConfirmed: true })
       persistMemory({ name: normalizedName, confirmedName })
     },
     [effectRegistry, persistMemory, persistProfile, selectedLanguage]
@@ -1865,6 +1866,7 @@ export function GutoApp({
         }
       }}
       onProfileUpdate={updateUserProfileField}
+      onMemoryPatch={(patch) => setMemory((prev) => prev ? { ...prev, ...patch } : prev)}
     />
   ), [evolution, gutoUserId, isGutoDepleted, memory, pendingExerciseQuestion, pendingFoodQuestion, persistMemory, selectedLanguage, updateUserProfileField, userLabel])
 
