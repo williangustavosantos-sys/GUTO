@@ -426,9 +426,14 @@ export async function getArenaMonthly(arenaGroupId = "will-personal-alpha") {
   )
 }
 
-export async function getArenaIndividual(arenaGroupId = "will-personal-alpha") {
+/**
+ * Individual ranking é GLOBAL no backend — todos os alunos do GUTO,
+ * independente de Time. arenaGroupId é ignorado pelo servidor; aceito
+ * só para compat com chamadas antigas.
+ */
+export async function getArenaIndividual(_arenaGroupId?: string) {
   return apiRequest<ArenaRankingResponse>(
-    `/guto/arena/individual?arenaGroupId=${encodeURIComponent(arenaGroupId)}`,
+    `/guto/arena/individual`,
     { method: "GET" }
   )
 }
