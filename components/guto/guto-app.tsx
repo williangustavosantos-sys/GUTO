@@ -26,6 +26,7 @@ import { getInvite, claimInvite, logout, deleteOwnAccount } from "@/lib/api/auth
 import type { EvolutionStage, SupportedLanguage } from "@/types/contract"
 import { resolveGutoEvolutionStage } from "@/lib/guto-evolution"
 import { getGutoVitalState } from "@/lib/guto-vital-state"
+import { isPushSupported, getPushPermission, getCurrentSubscription, subscribePush, unsubscribePush } from "@/lib/push-client"
 import { translations } from "./translations"
 import { gutoAudio } from "@/lib/audio-haptics"
 import {
@@ -149,6 +150,12 @@ const stageCopy: Record<
     privacyDeleteBtn: string
     privacyDeleteBetaTitle: string
     privacyDeleteBetaMsg: string
+    pushTitle: string
+    pushSubtitle: string
+    pushEnable: string
+    pushDisable: string
+    pushDenied: string
+    pushUnsupported: string
   }
 > = {
   "pt-BR": {
@@ -199,6 +206,12 @@ const stageCopy: Record<
     privacyDeleteBtn: "Excluir definitivamente",
     privacyDeleteBetaTitle: "Solicitação registrada",
     privacyDeleteBetaMsg: "No beta, sua solicitação de exclusão foi registrada. Para exclusão imediata no servidor, entre em contato com o suporte do GUTO.",
+    pushTitle: "Notificações do GUTO",
+    pushSubtitle: "GUTO te lembra no horário e cobra ausência. Sem spam.",
+    pushEnable: "Ativar notificações",
+    pushDisable: "Desativar notificações",
+    pushDenied: "Permissão bloqueada. Libere nas configurações do navegador.",
+    pushUnsupported: "Este dispositivo não suporta notificações push.",
   },
   "en-US": {
     namingTitle: "GUTO & ________",
@@ -248,6 +261,12 @@ const stageCopy: Record<
     privacyDeleteBtn: "Delete permanently",
     privacyDeleteBetaTitle: "Request registered",
     privacyDeleteBetaMsg: "In beta, your deletion request has been registered. For immediate server deletion, contact GUTO support.",
+    pushTitle: "GUTO notifications",
+    pushSubtitle: "GUTO reminds you on time and calls you out when you ghost. No spam.",
+    pushEnable: "Enable notifications",
+    pushDisable: "Disable notifications",
+    pushDenied: "Permission blocked. Allow it in your browser settings.",
+    pushUnsupported: "This device does not support push notifications.",
   },
   "es-ES": {
     namingTitle: "GUTO & ________",
@@ -297,6 +316,12 @@ const stageCopy: Record<
     privacyDeleteBtn: "Eliminar definitivamente",
     privacyDeleteBetaTitle: "Solicitud registrada",
     privacyDeleteBetaMsg: "En beta, tu solicitud de eliminación ha sido registrada. Para eliminación inmediata del servidor, contacta con el soporte de GUTO.",
+    pushTitle: "Notificaciones de GUTO",
+    pushSubtitle: "GUTO te recuerda a tiempo y te llama la atención cuando desapareces. Sin spam.",
+    pushEnable: "Activar notificaciones",
+    pushDisable: "Desactivar notificaciones",
+    pushDenied: "Permiso bloqueado. Habilítalo en la configuración del navegador.",
+    pushUnsupported: "Este dispositivo no admite notificaciones push.",
   },
   "it-IT": {
     namingTitle: "GUTO & ________",
@@ -346,6 +371,12 @@ const stageCopy: Record<
     privacyDeleteBtn: "Elimina definitivamente",
     privacyDeleteBetaTitle: "Richiesta registrata",
     privacyDeleteBetaMsg: "In beta, la tua richiesta di eliminazione è stata registrata. Per l'eliminazione immediata dal server, contatta il supporto GUTO.",
+    pushTitle: "Notifiche GUTO",
+    pushSubtitle: "GUTO ti ricorda in orario e ti richiama quando sparisci. Niente spam.",
+    pushEnable: "Attiva notifiche",
+    pushDisable: "Disattiva notifiche",
+    pushDenied: "Permesso bloccato. Abilitalo nelle impostazioni del browser.",
+    pushUnsupported: "Questo dispositivo non supporta le notifiche push.",
   },
 }
 
@@ -610,6 +641,9 @@ export function GutoApp({
   const [privacyConfirm, setPrivacyConfirm] = useState<"revoke" | "delete-step1" | "delete-step2" | "delete-done" | null>(null)
   const [deleteConfirmText, setDeleteConfirmText] = useState("")
   const [privacyMsg, setPrivacyMsg] = useState<string | null>(null)
+  const [pushSubscribed, setPushSubscribed] = useState(false)
+  const [pushBusy, setPushBusy] = useState(false)
+  const [pushMsg, setPushMsg] = useState<string | null>(null)
   const [pendingExerciseQuestion, setPendingExerciseQuestion] =
     useState<PendingExerciseQuestion | null>(null)
   const [pendingFoodQuestion, setPendingFoodQuestion] = useState<{ food: DietFood; meal: DietMeal } | null>(null)
@@ -1312,6 +1346,54 @@ export function GutoApp({
 
     setStage("system")
   }, [settingsMode, privacyConfirm])
+
+  useEffect(() => {
+    if (settingsMode !== "privacy") return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const sub = await getCurrentSubscription()
+        if (!cancelled) setPushSubscribed(!!sub)
+      } catch {
+        if (!cancelled) setPushSubscribed(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [settingsMode])
+
+  const handleTogglePush = useCallback(async () => {
+    if (pushBusy) return
+    const copy = stageCopy[selectedLanguage]
+    setPushBusy(true)
+    setPushMsg(null)
+    try {
+      if (!isPushSupported()) {
+        setPushMsg(copy.pushUnsupported)
+        return
+      }
+      if (pushSubscribed) {
+        await unsubscribePush()
+        setPushSubscribed(false)
+      } else {
+        const result = await subscribePush()
+        if (result.ok) {
+          setPushSubscribed(true)
+        } else if (result.reason === "denied") {
+          setPushMsg(copy.pushDenied)
+        } else if (result.reason === "unsupported") {
+          setPushMsg(copy.pushUnsupported)
+        } else {
+          setPushMsg(getApiErrorMessage(new Error(result.reason || "")))
+        }
+      }
+    } catch (err) {
+      setPushMsg(getApiErrorMessage(err))
+    } finally {
+      setPushBusy(false)
+    }
+  }, [pushBusy, pushSubscribed, selectedLanguage])
 
   const handleSettingsLanguageSelect = useCallback(
     (lang: SupportedLanguage) => {
@@ -3084,6 +3166,25 @@ export function GutoApp({
                       </p>
                     )}
                   </div>
+
+                  {/* Notifications toggle */}
+                  {!privacyConfirm && (
+                    <div className="guto-slot rounded-[1.5rem] px-5 py-4 flex flex-col gap-2">
+                      <p className="font-mono text-[8px] font-black uppercase tracking-[0.2em] text-[rgba(13,35,65,0.42)]">{locale.pushTitle}</p>
+                      <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-[rgba(13,35,65,0.6)] leading-relaxed">{locale.pushSubtitle}</p>
+                      <button
+                        type="button"
+                        onClick={handleTogglePush}
+                        disabled={pushBusy}
+                        className={`${pushSubscribed ? btnGhost : btnPrimary} mt-1 disabled:opacity-50`}
+                      >
+                        {pushSubscribed ? locale.pushDisable : locale.pushEnable}
+                      </button>
+                      {pushMsg && (
+                        <p className="font-mono text-[9px] uppercase tracking-[0.1em] text-[rgba(200,30,30,0.85)]">{pushMsg}</p>
+                      )}
+                    </div>
+                  )}
 
                   {/* Inline message (after correct data) */}
                   {privacyMsg && !privacyConfirm && (
