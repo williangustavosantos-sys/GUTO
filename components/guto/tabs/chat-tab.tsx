@@ -46,6 +46,8 @@ interface ChatTabProps {
   memory?: GutoMemory | null
   onProfileUpdate?: (field: string, value: string | number) => Promise<void>
   onMemoryPatch?: (patch: Partial<GutoMemory>) => void
+  onChangeLanguage?: (language: SupportedLanguage) => void
+  onOpenPrivacySettings?: () => void
 }
 
 interface Message {
@@ -306,6 +308,8 @@ export function ChatTab({
   memory,
   onProfileUpdate,
   onMemoryPatch,
+  onChangeLanguage,
+  onOpenPrivacySettings,
 }: ChatTabProps) {
   const validLang = getLanguage(language)
   const locale = translations[validLang]
@@ -766,6 +770,15 @@ export function ChatTab({
       }
       if (data.memoryPatch && Object.keys(data.memoryPatch).length > 0) {
         onMemoryPatch?.(data.memoryPatch)
+      }
+      if (data.acao === "changeLanguage" && data.memoryPatch?.language) {
+        const nextLang = data.memoryPatch.language as SupportedLanguage
+        if (["pt-BR", "en-US", "it-IT", "es-ES"].includes(nextLang)) {
+          onChangeLanguage?.(nextLang)
+        }
+      }
+      if (data.acao === "requestDeleteAccount") {
+        onOpenPrivacySettings?.()
       }
 
       if (!isMuted) {

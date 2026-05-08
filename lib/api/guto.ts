@@ -121,7 +121,7 @@ export interface SendGutoMessageRequest {
 
 export interface SendGutoMessageResponse {
   fala?: string
-  acao?: "none" | "updateWorkout" | "lock"
+  acao?: "none" | "updateWorkout" | "lock" | "changeLanguage" | "requestDeleteAccount" | "showProfile"
   expectedResponse?: GutoExpectedResponse | null
   avatarEmotion?: GutoAvatarEmotion
   workoutPlan?: GutoWorkoutPlan | null
@@ -202,7 +202,7 @@ export interface GutoProactiveResponse {
   due: boolean
   slot?: string
   fala?: string
-  acao?: "none" | "updateWorkout" | "lock"
+  acao?: "none" | "updateWorkout" | "lock" | "changeLanguage" | "requestDeleteAccount" | "showProfile"
   expectedResponse?: GutoExpectedResponse | null
   avatarEmotion?: GutoAvatarEmotion
   workoutPlan?: GutoWorkoutPlan | null

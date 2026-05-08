@@ -1868,8 +1868,17 @@ export function GutoApp({
       }}
       onProfileUpdate={updateUserProfileField}
       onMemoryPatch={(patch) => setMemory((prev) => prev ? { ...prev, ...patch } : prev)}
+      onChangeLanguage={(nextLang) => {
+        setSelectedLanguage(nextLang)
+        writeConfirmedLanguageStorage(nextLang)
+        persistProfile({ language: nextLang })
+      }}
+      onOpenPrivacySettings={() => {
+        setSettingsMode("privacy")
+        setStage("settings")
+      }}
     />
-  ), [evolution, gutoUserId, vitalState, memory, pendingExerciseQuestion, pendingFoodQuestion, persistMemory, selectedLanguage, updateUserProfileField, userLabel])
+  ), [evolution, gutoUserId, vitalState, memory, pendingExerciseQuestion, pendingFoodQuestion, persistMemory, persistProfile, selectedLanguage, updateUserProfileField, userLabel])
 
   const validationLocationMode = useMemo(
     () =>
