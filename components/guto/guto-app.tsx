@@ -27,6 +27,7 @@ import type { EvolutionStage, SupportedLanguage } from "@/types/contract"
 import { resolveGutoEvolutionStage } from "@/lib/guto-evolution"
 import { getGutoVitalState } from "@/lib/guto-vital-state"
 import { isPushSupported, getPushPermission, getCurrentSubscription, subscribePush, unsubscribePush } from "@/lib/push-client"
+import { createPortalSession, getBillingStatus, type BillingStatus } from "@/lib/api/billing"
 import { translations } from "./translations"
 import { gutoAudio } from "@/lib/audio-haptics"
 import {
@@ -156,6 +157,9 @@ const stageCopy: Record<
     pushDisable: string
     pushDenied: string
     pushUnsupported: string
+    billingTitle: string
+    billingManage: string
+    billingNoSubscription: string
   }
 > = {
   "pt-BR": {
@@ -212,6 +216,9 @@ const stageCopy: Record<
     pushDisable: "Desativar notificações",
     pushDenied: "Permissão bloqueada. Libere nas configurações do navegador.",
     pushUnsupported: "Este dispositivo não suporta notificações push.",
+    billingTitle: "Assinatura",
+    billingManage: "Gerenciar assinatura",
+    billingNoSubscription: "Você ainda não tem uma assinatura ativa.",
   },
   "en-US": {
     namingTitle: "GUTO & ________",
@@ -267,6 +274,9 @@ const stageCopy: Record<
     pushDisable: "Disable notifications",
     pushDenied: "Permission blocked. Allow it in your browser settings.",
     pushUnsupported: "This device does not support push notifications.",
+    billingTitle: "Subscription",
+    billingManage: "Manage subscription",
+    billingNoSubscription: "You don't have an active subscription yet.",
   },
   "es-ES": {
     namingTitle: "GUTO & ________",
@@ -322,6 +332,9 @@ const stageCopy: Record<
     pushDisable: "Desactivar notificaciones",
     pushDenied: "Permiso bloqueado. Habilítalo en la configuración del navegador.",
     pushUnsupported: "Este dispositivo no admite notificaciones push.",
+    billingTitle: "Suscripción",
+    billingManage: "Gestionar suscripción",
+    billingNoSubscription: "Aún no tienes una suscripción activa.",
   },
   "it-IT": {
     namingTitle: "GUTO & ________",
@@ -377,6 +390,9 @@ const stageCopy: Record<
     pushDisable: "Disattiva notifiche",
     pushDenied: "Permesso bloccato. Abilitalo nelle impostazioni del browser.",
     pushUnsupported: "Questo dispositivo non supporta le notifiche push.",
+    billingTitle: "Abbonamento",
+    billingManage: "Gestisci abbonamento",
+    billingNoSubscription: "Non hai ancora un abbonamento attivo.",
   },
 }
 
@@ -644,6 +660,9 @@ export function GutoApp({
   const [pushSubscribed, setPushSubscribed] = useState(false)
   const [pushBusy, setPushBusy] = useState(false)
   const [pushMsg, setPushMsg] = useState<string | null>(null)
+  const [billingStatus, setBillingStatus] = useState<BillingStatus | null>(null)
+  const [billingBusy, setBillingBusy] = useState(false)
+  const [billingMsg, setBillingMsg] = useState<string | null>(null)
   const [pendingExerciseQuestion, setPendingExerciseQuestion] =
     useState<PendingExerciseQuestion | null>(null)
   const [pendingFoodQuestion, setPendingFoodQuestion] = useState<{ food: DietFood; meal: DietMeal } | null>(null)
@@ -1357,11 +1376,31 @@ export function GutoApp({
       } catch {
         if (!cancelled) setPushSubscribed(false)
       }
+      try {
+        const status = await getBillingStatus()
+        if (!cancelled) setBillingStatus(status)
+      } catch {
+        if (!cancelled) setBillingStatus(null)
+      }
     })()
     return () => {
       cancelled = true
     }
   }, [settingsMode])
+
+  const handleManageSubscription = useCallback(async () => {
+    if (billingBusy) return
+    setBillingBusy(true)
+    setBillingMsg(null)
+    try {
+      const { url } = await createPortalSession()
+      if (url) window.location.href = url
+      else setBillingMsg(getApiErrorMessage(new Error("portal_url_missing")))
+    } catch (err) {
+      setBillingMsg(getApiErrorMessage(err))
+      setBillingBusy(false)
+    }
+  }, [billingBusy])
 
   const handleTogglePush = useCallback(async () => {
     if (pushBusy) return
@@ -3182,6 +3221,24 @@ export function GutoApp({
                       </button>
                       {pushMsg && (
                         <p className="font-mono text-[9px] uppercase tracking-[0.1em] text-[rgba(200,30,30,0.85)]">{pushMsg}</p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Billing — manage subscription */}
+                  {!privacyConfirm && billingStatus?.hasStripeCustomer && (
+                    <div className="guto-slot rounded-[1.5rem] px-5 py-4 flex flex-col gap-2">
+                      <p className="font-mono text-[8px] font-black uppercase tracking-[0.2em] text-[rgba(13,35,65,0.42)]">{locale.billingTitle}</p>
+                      <button
+                        type="button"
+                        onClick={handleManageSubscription}
+                        disabled={billingBusy}
+                        className={`${btnGhost} mt-1 disabled:opacity-50`}
+                      >
+                        {locale.billingManage}
+                      </button>
+                      {billingMsg && (
+                        <p className="font-mono text-[9px] uppercase tracking-[0.1em] text-[rgba(200,30,30,0.85)]">{billingMsg}</p>
                       )}
                     </div>
                   )}
