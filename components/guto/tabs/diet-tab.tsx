@@ -30,6 +30,16 @@ const dietCopy = {
     lockedPlan: "BLOQUEADA",
     emptyTitle: "Dieta ainda não gerada",
     emptyBody: "Complete seu perfil com altura, peso e país para o GUTO montar seu plano.",
+    coachDietTitle: "DIETA DO COACH",
+    coachDietBadge: "DEFINIDA PELO COACH",
+    coachBreakfast: "Café da manhã",
+    coachLunch: "Almoço",
+    coachDinner: "Jantar",
+    coachSnacks: "Lanches",
+    coachHydration: "Hidratação",
+    coachNotes: "Observações",
+    coachCalories: "kcal estimadas",
+    coachProtein: "proteína estimada",
     goalNames: {
       fat_loss: "Emagrecer",
       muscle_gain: "Hipertrofia",
@@ -56,6 +66,16 @@ const dietCopy = {
     lockedPlan: "LOCKED",
     emptyTitle: "Diet not generated yet",
     emptyBody: "Complete your profile with height, weight and country so GUTO can build your plan.",
+    coachDietTitle: "COACH DIET",
+    coachDietBadge: "SET BY COACH",
+    coachBreakfast: "Breakfast",
+    coachLunch: "Lunch",
+    coachDinner: "Dinner",
+    coachSnacks: "Snacks",
+    coachHydration: "Hydration",
+    coachNotes: "Notes",
+    coachCalories: "estimated kcal",
+    coachProtein: "estimated protein",
     goalNames: {
       fat_loss: "Fat Loss",
       muscle_gain: "Hypertrophy",
@@ -82,6 +102,16 @@ const dietCopy = {
     lockedPlan: "BLOQUEADA",
     emptyTitle: "Dieta aún no generada",
     emptyBody: "Completa tu perfil con altura, peso y país para que GUTO cree tu plan.",
+    coachDietTitle: "DIETA DEL COACH",
+    coachDietBadge: "DEFINIDA POR COACH",
+    coachBreakfast: "Desayuno",
+    coachLunch: "Almuerzo",
+    coachDinner: "Cena",
+    coachSnacks: "Snacks",
+    coachHydration: "Hidratación",
+    coachNotes: "Observaciones",
+    coachCalories: "kcal estimadas",
+    coachProtein: "proteína estimada",
     goalNames: {
       fat_loss: "Adelgazar",
       muscle_gain: "Hipertrofia",
@@ -108,6 +138,16 @@ const dietCopy = {
     lockedPlan: "BLOCCATA",
     emptyTitle: "Dieta non ancora creata",
     emptyBody: "Completa il profilo con altezza, peso e paese per far creare la dieta a GUTO.",
+    coachDietTitle: "DIETA DEL COACH",
+    coachDietBadge: "DEFINITA DAL COACH",
+    coachBreakfast: "Colazione",
+    coachLunch: "Pranzo",
+    coachDinner: "Cena",
+    coachSnacks: "Spuntini",
+    coachHydration: "Idratazione",
+    coachNotes: "Note",
+    coachCalories: "kcal stimate",
+    coachProtein: "proteine stimate",
     goalNames: {
       fat_loss: "Dimagrire",
       muscle_gain: "Ipertrofia",
@@ -278,6 +318,138 @@ function MealCard({
   )
 }
 
+// ─── Coach Diet View ─────────────────────────────────────────────────────────
+
+type CoachDietDay = {
+  breakfast?: string
+  lunch?: string
+  dinner?: string
+  snacks?: string
+  notes?: string
+  hydration?: string
+  caloriesEstimate?: number
+  proteinEstimate?: number
+}
+
+interface CoachDietCopy {
+  coachDietTitle: string
+  coachDietBadge: string
+  coachBreakfast: string
+  coachLunch: string
+  coachDinner: string
+  coachSnacks: string
+  coachHydration: string
+  coachNotes: string
+  coachCalories: string
+  coachProtein: string
+}
+
+function CoachMealCard({ emoji, label, text, index }: { emoji: string; label: string; text: string; index: number }) {
+  return (
+    <motion.div
+      className="rounded-[1.1rem] border border-white/60 bg-white/30 px-3.5 py-3"
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.05, duration: 0.22 }}
+    >
+      <div className="flex items-start gap-2.5">
+        <span className="text-[16px] shrink-0 mt-0.5">{emoji}</span>
+        <div className="min-w-0 flex-1">
+          <h3 className="text-[10px] font-black uppercase tracking-[0.06em] text-[var(--guto-cyan)] mb-1">{label}</h3>
+          <p className="text-[12px] leading-relaxed text-[var(--guto-navy)]/80 whitespace-pre-wrap">{text}</p>
+        </div>
+      </div>
+    </motion.div>
+  )
+}
+
+function CoachDietView({ coachDiet, copy }: { coachDiet: CoachDietDay; copy: CoachDietCopy }) {
+  const meals = [
+    { key: "breakfast", emoji: "☕", label: copy.coachBreakfast, text: coachDiet.breakfast },
+    { key: "lunch", emoji: "🍽️", label: copy.coachLunch, text: coachDiet.lunch },
+    { key: "dinner", emoji: "🌙", label: copy.coachDinner, text: coachDiet.dinner },
+    { key: "snacks", emoji: "🍎", label: copy.coachSnacks, text: coachDiet.snacks },
+  ].filter((m): m is { key: string; emoji: string; label: string; text: string } => Boolean(m.text))
+
+  return (
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="shrink-0 pb-2.5 pt-0.5 text-center">
+        <h1 className="text-[1.1rem] font-black uppercase leading-tight tracking-[0.08em] text-[var(--guto-navy)]">
+          {copy.coachDietTitle}
+        </h1>
+        <div className="mt-2 flex items-center justify-center">
+          <span className="rounded-full bg-[rgba(82,231,255,0.13)] px-2 py-0.5 font-mono text-[7px] font-black uppercase tracking-[0.12em] text-[var(--guto-cyan)]">
+            {copy.coachDietBadge}
+          </span>
+        </div>
+      </div>
+
+      {(coachDiet.caloriesEstimate || coachDiet.proteinEstimate) && (
+        <motion.div
+          className="shrink-0 mb-3 rounded-[1.1rem] border border-white/60 bg-white/30 flex items-center px-4 py-2.5"
+          initial={{ opacity: 0, y: -6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.28 }}
+        >
+          {coachDiet.caloriesEstimate && (
+            <div className="flex flex-col items-center gap-0.5 flex-1">
+              <Flame className="h-3 w-3 text-[var(--guto-cyan)]" />
+              <span className="text-[14px] font-black leading-none text-[var(--guto-navy)]">{coachDiet.caloriesEstimate}</span>
+              <span className="font-mono text-[7px] uppercase tracking-[0.1em] text-[rgba(13,35,65,0.38)] mt-0.5">{copy.coachCalories}</span>
+            </div>
+          )}
+          {coachDiet.caloriesEstimate && coachDiet.proteinEstimate && (
+            <div className="w-px h-6 bg-[rgba(13,35,65,0.07)]" />
+          )}
+          {coachDiet.proteinEstimate && (
+            <div className="flex flex-col items-center gap-0.5 flex-1">
+              <Zap className="h-3 w-3 text-[var(--guto-cyan)]" />
+              <span className="text-[14px] font-black leading-none text-[var(--guto-navy)]">{coachDiet.proteinEstimate}g</span>
+              <span className="font-mono text-[7px] uppercase tracking-[0.1em] text-[rgba(13,35,65,0.38)] mt-0.5">{copy.coachProtein}</span>
+            </div>
+          )}
+        </motion.div>
+      )}
+
+      <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto flex flex-col gap-2 pb-[calc(8rem+env(safe-area-inset-bottom))] overscroll-contain [scroll-padding-bottom:calc(8rem+env(safe-area-inset-bottom))] [-webkit-overflow-scrolling:touch]">
+        {meals.map((m, i) => (
+          <CoachMealCard key={m.key} emoji={m.emoji} label={m.label} text={m.text} index={i} />
+        ))}
+
+        {coachDiet.hydration && (
+          <motion.div
+            className="rounded-[1.1rem] border border-white/60 bg-white/30 px-3.5 py-3 flex items-start gap-2.5"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: meals.length * 0.05, duration: 0.22 }}
+          >
+            <span className="text-[16px] shrink-0 mt-0.5">💧</span>
+            <div className="min-w-0 flex-1">
+              <h3 className="text-[10px] font-black uppercase tracking-[0.06em] text-[var(--guto-cyan)] mb-1">{copy.coachHydration}</h3>
+              <p className="text-[12px] leading-relaxed text-[var(--guto-navy)]/80">{coachDiet.hydration}</p>
+            </div>
+          </motion.div>
+        )}
+
+        {coachDiet.notes && (
+          <motion.div
+            className="rounded-[1.1rem] border border-[rgba(82,231,255,0.25)] bg-[rgba(82,231,255,0.06)] px-3.5 py-3 flex items-start gap-2.5"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: (meals.length + (coachDiet.hydration ? 1 : 0)) * 0.05, duration: 0.22 }}
+          >
+            <span className="text-[16px] shrink-0 mt-0.5">📋</span>
+            <div className="min-w-0 flex-1">
+              <h3 className="text-[10px] font-black uppercase tracking-[0.06em] text-[var(--guto-cyan)] mb-1">{copy.coachNotes}</h3>
+              <p className="text-[12px] leading-relaxed text-[var(--guto-navy)]/80 italic">{coachDiet.notes}</p>
+            </div>
+          </motion.div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function DietTab({ userId, language, onFoodDoubt, memory }: DietTabProps) {
@@ -288,6 +460,9 @@ export function DietTab({ userId, language, onFoodDoubt, memory }: DietTabProps)
   const [status, setStatus] = useState<"loading" | "generating" | "error" | "ready">("loading")
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [retrying, setRetrying] = useState(false)
+
+  const weekDaysOrder = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"] as const
+  const todayCoachDiet = memory?.weeklyDietPlan?.days?.[weekDaysOrder[new Date().getDay()]] ?? null
 
   function isPlanStale(generatedAt: string): boolean {
     const planDate = new Date(generatedAt)
@@ -312,6 +487,11 @@ export function DietTab({ userId, language, onFoodDoubt, memory }: DietTabProps)
 
   useEffect(() => {
     if (!userId) return
+    // If coach defined today's diet, skip API call
+    if (todayCoachDiet) {
+      setStatus("ready")
+      return
+    }
     let cancelled = false
 
     const hardTimeout = setTimeout(() => {
@@ -385,6 +565,11 @@ export function DietTab({ userId, language, onFoodDoubt, memory }: DietTabProps)
     "es-ES": "Error al generar. Inténtalo de nuevo.",
   }
 
+  // ── Coach weekly diet takes priority over AI-generated plan ─────────────
+  if (todayCoachDiet) {
+    return <CoachDietView coachDiet={todayCoachDiet} copy={copy} />
+  }
+
   // ── Loading / Generating ──────────────────────────────────────────────────
   if (status === "loading" || status === "generating") {
     return (
@@ -439,18 +624,7 @@ export function DietTab({ userId, language, onFoodDoubt, memory }: DietTabProps)
             </h2>
             <p className="text-[12px] leading-relaxed text-[rgba(13,35,65,0.60)]">{bodyText}</p>
           </div>
-          {profileComplete && (
-            <motion.button
-              type="button"
-              whileTap={{ scale: 0.97 }}
-              onClick={handleRetry}
-              disabled={retrying}
-              className="h-10 px-6 rounded-full border border-[rgba(82,231,255,0.5)] bg-[rgba(82,231,255,0.08)] text-[var(--guto-cyan)] font-mono text-[9px] font-black uppercase tracking-[0.18em] flex items-center gap-2 disabled:opacity-40"
-            >
-              <RefreshCw className="h-3.5 w-3.5" />
-              {copy.regenerateButton}
-            </motion.button>
-          )}
+          {/* Students request diet changes via chat, not by regenerating directly */}
         </div>
       </div>
     )
