@@ -76,12 +76,17 @@ import {
   updateAdminStudent,
   updateAdminStudentDiet,
   updateAdminStudentWorkout,
+  getAdminStudentWeeklyWorkout,
+  updateAdminStudentWeeklyWorkout,
   type AdminCatalogExercise,
   type AdminCoach,
   type AdminLog,
   type AdminStudent,
   type AdminTeam,
   type AdminTeamSummary,
+  type AdminWeeklyWorkoutPlan,
+  type AdminWeeklyWorkoutDays,
+  type WeekDayKey,
 } from "@/lib/api/admin";
 import type { DietPlan, GutoMemory, GutoWorkoutExercise, GutoWorkoutPlan } from "@/lib/api/guto";
 
@@ -500,6 +505,8 @@ function CoachInner() {
   const [selectedDetail, setSelectedDetail] = useState<StudentDetail | null>(null);
   const [detailTab, setDetailTab] = useState<DetailTab>("resumo");
   const [workoutEditor, setWorkoutEditor] = useState<GutoWorkoutPlan | null>(null);
+  const [weeklyWorkoutPlan, setWeeklyWorkoutPlan] = useState<AdminWeeklyWorkoutPlan | null>(null);
+  const [treinoSubTab, setTreinoSubTab] = useState<"oficial" | "semana">("oficial");
   const [dietEditor, setDietEditor] = useState<DietPlan | null>(null);
   const [calibrationDraft, setCalibrationDraft] = useState<CalibrationDraft>(calibrationFromMemory(null));
   const [showCreateStudent, setShowCreateStudent] = useState(false);
@@ -608,9 +615,10 @@ function CoachInner() {
   }, [activeDashboardTab, fetchGlobalLogs, fetchRankings]);
 
   const refreshSelected = useCallback(async (studentId: string) => {
-    const [detail, workout, diet, logs, workoutHistory, dietHistory] = await Promise.all([
+    const [detail, workout, weeklyWorkout, diet, logs, workoutHistory, dietHistory] = await Promise.all([
       getAdminStudentDetail(studentId),
       getAdminStudentWorkout(studentId),
+      getAdminStudentWeeklyWorkout(studentId),
       getAdminStudentDiet(studentId),
       getAdminLogs(studentId),
       getAdminStudentWorkoutHistory(studentId),
@@ -627,6 +635,7 @@ function CoachInner() {
     };
     setSelectedDetail(nextDetail);
     setWorkoutEditor(normalizeWorkoutForEditor(workout.workout, detail.student));
+    setWeeklyWorkoutPlan(weeklyWorkout.weeklyWorkout);
     setDietEditor(normalizeDietForEditor(diet.diet, detail.student));
     setCalibrationDraft(calibrationFromMemory(detail.memory));
     setStudents((current) => current.map((student) => student.userId === detail.student.userId ? detail.student : student));
@@ -1213,39 +1222,68 @@ function CoachInner() {
                 )}
 
                 {detailTab === "treino" && workoutEditor && (
-                  <WorkoutEditor
-                    student={selected}
-                    value={workoutEditor}
-                    exerciseCatalog={exerciseCatalog}
-                    history={selectedDetail.workoutHistory}
-                    acting={acting}
-                    onChange={setWorkoutEditor}
-                    onSave={() => void act(async () => {
-                      if (hasInvalidWorkoutExerciseContract(workoutEditor)) {
-                        toast.error("Escolha um exercício do catálogo oficial antes de salvar.");
-                        return;
-                      }
-                      const source = selectedDetail.workout?.source === "guto_generated" ? "mixed" : workoutEditor.source || "coach_manual";
-                      const result = await updateAdminStudentWorkout(selected.userId, { ...workoutEditor, source, blocks: [{ name: "Principal", exercises: workoutEditor.exercises }] }, "Coach/admin manual edit");
-                      setWorkoutEditor(normalizeWorkoutForEditor(result.workout, selected));
-                    }, "Treino oficial salvo.")}
-                    onCreateManual={() => setWorkoutEditor(blankWorkout(selected))}
-                    onGenerate={() => void act(async () => {
-                      const result = await generateAdminStudentWorkout(selected.userId);
-                      setWorkoutEditor(normalizeWorkoutForEditor(result.workout, selected));
-                    }, "Treino gerado pelo GUTO.")}
-                    onLock={() => void act(async () => {
-                      const result = workoutEditor.lockedByCoach ? await unlockAdminStudentWorkout(selected.userId) : await lockAdminStudentWorkout(selected.userId);
-                      setWorkoutEditor(normalizeWorkoutForEditor(result.workout, selected));
-                    }, workoutEditor.lockedByCoach ? "GUTO liberado para atualizar treino." : "Treino bloqueado contra sobrescrita.")}
-                    onReset={() => {
-                      if (!window.confirm("Resetar treino oficial deste aluno?")) return;
-                      void act(async () => {
-                        await resetAdminStudentWorkout(selected.userId);
-                        setWorkoutEditor(blankWorkout(selected));
-                      }, "Treino resetado.");
-                    }}
-                  />
+                  <div className="space-y-3">
+                    <div className="flex gap-1 rounded-lg border border-white/10 bg-white/5 p-1">
+                      {(["oficial", "semana"] as const).map((tab) => (
+                        <button
+                          key={tab}
+                          onClick={() => setTreinoSubTab(tab)}
+                          className={`flex-1 rounded-md py-1.5 text-xs font-bold uppercase tracking-widest transition-colors ${treinoSubTab === tab ? "bg-[#00e5ff] text-[#0a0f1e]" : "text-white/50 hover:text-white"}`}
+                        >
+                          {tab === "oficial" ? "Treino oficial" : "Plano semanal"}
+                        </button>
+                      ))}
+                    </div>
+
+                    {treinoSubTab === "oficial" && (
+                      <WorkoutEditor
+                        student={selected}
+                        value={workoutEditor}
+                        exerciseCatalog={exerciseCatalog}
+                        history={selectedDetail.workoutHistory}
+                        acting={acting}
+                        onChange={setWorkoutEditor}
+                        onSave={() => void act(async () => {
+                          if (hasInvalidWorkoutExerciseContract(workoutEditor)) {
+                            toast.error("Escolha um exercício do catálogo oficial antes de salvar.");
+                            return;
+                          }
+                          const source = selectedDetail.workout?.source === "guto_generated" ? "mixed" : workoutEditor.source || "coach_manual";
+                          const result = await updateAdminStudentWorkout(selected.userId, { ...workoutEditor, source, blocks: [{ name: "Principal", exercises: workoutEditor.exercises }] }, "Coach/admin manual edit");
+                          setWorkoutEditor(normalizeWorkoutForEditor(result.workout, selected));
+                        }, "Treino oficial salvo.")}
+                        onCreateManual={() => setWorkoutEditor(blankWorkout(selected))}
+                        onGenerate={() => void act(async () => {
+                          const result = await generateAdminStudentWorkout(selected.userId);
+                          setWorkoutEditor(normalizeWorkoutForEditor(result.workout, selected));
+                        }, "Treino gerado pelo GUTO.")}
+                        onLock={() => void act(async () => {
+                          const result = workoutEditor.lockedByCoach ? await unlockAdminStudentWorkout(selected.userId) : await lockAdminStudentWorkout(selected.userId);
+                          setWorkoutEditor(normalizeWorkoutForEditor(result.workout, selected));
+                        }, workoutEditor.lockedByCoach ? "GUTO liberado para atualizar treino." : "Treino bloqueado contra sobrescrita.")}
+                        onReset={() => {
+                          if (!window.confirm("Resetar treino oficial deste aluno?")) return;
+                          void act(async () => {
+                            await resetAdminStudentWorkout(selected.userId);
+                            setWorkoutEditor(blankWorkout(selected));
+                          }, "Treino resetado.");
+                        }}
+                      />
+                    )}
+
+                    {treinoSubTab === "semana" && (
+                      <WeeklyWorkoutEditor
+                        student={selected}
+                        weeklyPlan={weeklyWorkoutPlan}
+                        exerciseCatalog={exerciseCatalog}
+                        acting={acting}
+                        onSave={async (days) => {
+                          const result = await updateAdminStudentWeeklyWorkout(selected.userId, days);
+                          setWeeklyWorkoutPlan(result.weeklyWorkout);
+                        }}
+                      />
+                    )}
+                  </div>
                 )}
 
                 {detailTab === "dieta" && dietEditor && (
@@ -1491,6 +1529,240 @@ function Field({ label, value, onChange, className = "" }: { label: string; valu
       <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-white/30">{label}</span>
       <Input value={value} onChange={(event) => onChange(event.target.value)} className="h-10 border-white/10 bg-white/5 text-white" />
     </label>
+  );
+}
+
+const WEEK_DAYS: { key: WeekDayKey; label: string; short: string }[] = [
+  { key: "monday",    label: "Segunda-feira", short: "Seg" },
+  { key: "tuesday",  label: "Terça-feira",   short: "Ter" },
+  { key: "wednesday",label: "Quarta-feira",  short: "Qua" },
+  { key: "thursday", label: "Quinta-feira",  short: "Qui" },
+  { key: "friday",   label: "Sexta-feira",   short: "Sex" },
+  { key: "saturday", label: "Sábado",        short: "Sáb" },
+  { key: "sunday",   label: "Domingo",       short: "Dom" },
+];
+
+function WeeklyWorkoutEditor({
+  student,
+  weeklyPlan,
+  exerciseCatalog,
+  acting,
+  onSave,
+}: {
+  student: AdminStudent;
+  weeklyPlan: AdminWeeklyWorkoutPlan | null;
+  exerciseCatalog: AdminCatalogExercise[];
+  acting: boolean;
+  onSave: (days: AdminWeeklyWorkoutDays) => Promise<void>;
+}) {
+  const [days, setDays] = useState<AdminWeeklyWorkoutDays>(() => weeklyPlan?.days ?? {});
+  const [expandedDay, setExpandedDay] = useState<WeekDayKey | null>(null);
+  const [daySearch, setDaySearch] = useState<Record<WeekDayKey, string>>({} as Record<WeekDayKey, string>);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setDays(weeklyPlan?.days ?? {});
+  }, [weeklyPlan]);
+
+  function blankDayPlan(): GutoWorkoutPlan {
+    return {
+      studentId: student.userId,
+      title: "Treino do dia",
+      focus: "Treino do dia",
+      dateLabel: "Hoje",
+      scheduledFor: new Date().toISOString(),
+      summary: "",
+      source: "coach_manual",
+      lockedByCoach: true,
+      manualOverride: true,
+      exercises: [],
+      blocks: [],
+    };
+  }
+
+  function setDayPlan(day: WeekDayKey, plan: GutoWorkoutPlan | undefined) {
+    setDays((current) => {
+      const next = { ...current };
+      if (plan === undefined) {
+        delete next[day];
+      } else {
+        next[day] = plan;
+      }
+      return next;
+    });
+  }
+
+  function addExerciseToDayFromCatalog(day: WeekDayKey, catalog: AdminCatalogExercise) {
+    const current = days[day] ?? blankDayPlan();
+    const index = current.exercises.length;
+    const exercise = workoutExerciseFromCatalog(catalog, blankExercise(index), index);
+    setDayPlan(day, { ...current, exercises: [...current.exercises, exercise], blocks: [{ name: "Principal", exercises: [...current.exercises, exercise] }] });
+    setDaySearch((s) => ({ ...s, [day]: "" }));
+  }
+
+  function removeExerciseFromDay(day: WeekDayKey, index: number) {
+    const current = days[day];
+    if (!current) return;
+    const exercises = current.exercises.filter((_, i) => i !== index);
+    setDayPlan(day, { ...current, exercises, blocks: [{ name: "Principal", exercises }] });
+  }
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      await onSave(days);
+      toast.success("Plano semanal salvo.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Erro ao salvar plano semanal.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const searchFor = (day: WeekDayKey) => normalizeCatalogSearch(daySearch[day] ?? "");
+
+  return (
+    <Panel title="Plano semanal">
+      <p className="mb-4 text-[11px] text-white/40">Monte o treino de cada dia. O aluno verá apenas o treino do dia atual no app.</p>
+
+      <div className="space-y-2">
+        {WEEK_DAYS.map(({ key, label, short }) => {
+          const plan = days[key];
+          const isExpanded = expandedDay === key;
+          const exerciseCount = plan?.exercises?.length ?? 0;
+          const focusLabel = plan?.focus || plan?.title || "";
+          const query = searchFor(key);
+          const catalogResults = query.length >= 2
+            ? exerciseCatalog.filter((e) => catalogSearchText(e).includes(query)).slice(0, 8)
+            : [];
+
+          return (
+            <div key={key} className="rounded-lg border border-white/10 bg-white/5">
+              <button
+                className="flex w-full items-center justify-between px-4 py-3 text-left"
+                onClick={() => setExpandedDay(isExpanded ? null : key)}
+              >
+                <div className="flex items-center gap-3">
+                  <span className="w-8 text-[11px] font-black uppercase tracking-widest text-white/40">{short}</span>
+                  <span className="text-sm font-semibold text-white">{label}</span>
+                  {plan && exerciseCount > 0 && (
+                    <span className="rounded-full bg-[#00e5ff]/15 px-2 py-0.5 text-[10px] font-bold text-[#00e5ff]">
+                      {exerciseCount} ex.
+                    </span>
+                  )}
+                  {plan && focusLabel && (
+                    <span className="hidden truncate text-xs text-white/40 sm:block">{focusLabel}</span>
+                  )}
+                  {!plan && (
+                    <span className="text-xs text-white/25">Descanso / sem treino</span>
+                  )}
+                </div>
+                <span className="text-white/30">{isExpanded ? "▲" : "▼"}</span>
+              </button>
+
+              {isExpanded && (
+                <div className="border-t border-white/8 px-4 pb-4 pt-3 space-y-3">
+                  {plan && (
+                    <>
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        <label className="block">
+                          <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-white/30">Foco do dia</span>
+                          <Input
+                            value={plan.focus || ""}
+                            onChange={(e) => setDayPlan(key, { ...plan, focus: e.target.value, title: e.target.value })}
+                            placeholder="Ex: Peito + tríceps"
+                            className="h-9 border-white/10 bg-white/5 text-sm text-white"
+                          />
+                        </label>
+                        <label className="block">
+                          <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-white/30">Notas do coach</span>
+                          <Input
+                            value={plan.coachNotes || ""}
+                            onChange={(e) => setDayPlan(key, { ...plan, coachNotes: e.target.value })}
+                            placeholder="Observações opcionais"
+                            className="h-9 border-white/10 bg-white/5 text-sm text-white"
+                          />
+                        </label>
+                      </div>
+
+                      {plan.exercises.length > 0 && (
+                        <div className="space-y-1">
+                          {plan.exercises.map((ex, i) => (
+                            <div key={i} className="flex items-center gap-2 rounded-md border border-white/8 bg-white/5 px-3 py-2">
+                              <span className="min-w-0 flex-1 truncate text-xs text-white">{ex.name || ex.canonicalNamePt || ex.id}</span>
+                              <span className="shrink-0 text-[10px] text-white/30">{ex.sets}×{ex.reps}</span>
+                              <button
+                                onClick={() => removeExerciseFromDay(key, i)}
+                                className="shrink-0 text-white/30 hover:text-red-400"
+                                aria-label="Remover exercício"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  <div className="relative">
+                    <Input
+                      value={daySearch[key] ?? ""}
+                      onChange={(e) => setDaySearch((s) => ({ ...s, [key]: e.target.value }))}
+                      placeholder="Buscar exercício no catálogo…"
+                      className="h-9 border-white/10 bg-white/5 text-sm text-white"
+                    />
+                    {catalogResults.length > 0 && (
+                      <div className="absolute left-0 right-0 top-10 z-20 rounded-lg border border-white/10 bg-[#0d1426] shadow-xl">
+                        {catalogResults.map((catalog) => (
+                          <button
+                            key={catalog.id}
+                            className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs hover:bg-white/5"
+                            onClick={() => addExerciseToDayFromCatalog(key, catalog)}
+                          >
+                            <span className="font-medium text-white">{catalog.canonicalNamePt}</span>
+                            <span className="text-white/35">{catalog.muscleGroup}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex gap-2">
+                    {!plan && (
+                      <Button size="sm" variant="outline" className="border-[#00e5ff]/30 text-[#00e5ff] hover:bg-[#00e5ff]/10" onClick={() => setDayPlan(key, blankDayPlan())}>
+                        <Plus className="mr-1 h-3.5 w-3.5" /> Adicionar treino
+                      </Button>
+                    )}
+                    {plan && (
+                      <Button size="sm" variant="outline" className="border-white/10 text-white/50 hover:bg-white/5" onClick={() => setDayPlan(key, undefined)}>
+                        <Trash2 className="mr-1 h-3.5 w-3.5" /> Remover dia
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="mt-4 border-t border-white/8 pt-4">
+        <Button
+          className="bg-[#00e5ff] text-[#0a0f1e] hover:bg-white"
+          disabled={acting || saving}
+          onClick={() => void handleSave()}
+        >
+          <Save className="mr-2 h-4 w-4" />
+          {saving ? "Salvando…" : "Salvar plano semanal"}
+        </Button>
+        {weeklyPlan?.updatedAt && (
+          <p className="mt-2 text-[10px] text-white/30">
+            Última atualização: {new Date(weeklyPlan.updatedAt).toLocaleString("pt-BR")}
+          </p>
+        )}
+      </div>
+    </Panel>
   );
 }
 

@@ -338,6 +338,32 @@ export function getAdminStudentWorkoutHistory(userId: string): Promise<{ history
   return apiRequest<{ history: AdminLog[] }>(`/admin/students/${userId}/workout/history`)
 }
 
+export type WeekDayKey = "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday"
+
+export type AdminWeeklyWorkoutDays = Partial<Record<WeekDayKey, GutoWorkoutPlan>>
+
+export interface AdminWeeklyWorkoutPlan {
+  studentId: string
+  updatedAt: string
+  updatedBy: string
+  days: AdminWeeklyWorkoutDays
+}
+
+export function getAdminStudentWeeklyWorkout(userId: string): Promise<{ weeklyWorkout: AdminWeeklyWorkoutPlan | null }> {
+  return apiRequest<{ weeklyWorkout: AdminWeeklyWorkoutPlan | null }>(`/admin/students/${userId}/workout/week`)
+}
+
+export function updateAdminStudentWeeklyWorkout(userId: string, days: AdminWeeklyWorkoutDays): Promise<{ weeklyWorkout: AdminWeeklyWorkoutPlan }> {
+  return apiRequest<{ weeklyWorkout: AdminWeeklyWorkoutPlan }>(`/admin/students/${userId}/workout/week`, {
+    method: "PUT",
+    body: JSON.stringify({ days }),
+  })
+}
+
+export function getAdminStudentTodayWorkout(userId: string): Promise<{ workout: GutoWorkoutPlan | null; dayKey: WeekDayKey; fromWeeklyPlan: boolean }> {
+  return apiRequest<{ workout: GutoWorkoutPlan | null; dayKey: WeekDayKey; fromWeeklyPlan: boolean }>(`/admin/students/${userId}/workout/today`)
+}
+
 export function getAdminUserDiet(userId: string): Promise<{ diet: DietPlan | null }> {
   return apiRequest<{ diet: DietPlan | null }>(`/admin/users/${userId}/diet`)
 }
