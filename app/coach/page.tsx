@@ -136,6 +136,8 @@ type StudentDraft = {
   active: boolean;
   coachId: string;
   teamId: string;
+  sex: string;
+  age: string;
 };
 
 type CoachDraft = {
@@ -523,7 +525,7 @@ function CoachInner() {
   const [showCreateStudent, setShowCreateStudent] = useState(false);
   const [showCreateCoach, setShowCreateCoach] = useState(false);
   const [showCreateTeam, setShowCreateTeam] = useState(false);
-  const [studentDraft, setStudentDraft] = useState<StudentDraft>({ name: "", email: "", phone: "", password: "", active: false, coachId: "", teamId: "" });
+  const [studentDraft, setStudentDraft] = useState<StudentDraft>({ name: "", email: "", phone: "", password: "", active: false, coachId: "", teamId: "", sex: "", age: "" });
   const [coachDraft, setCoachDraft] = useState<CoachDraft>({ name: "", email: "", password: "", teamId: "" });
   const [teamDraft, setTeamDraft] = useState<TeamDraft>({ name: "", plan: "pro", maxStudents: "", maxCoaches: "" });
   const [lastSecret, setLastSecret] = useState<string | null>(null);
@@ -752,7 +754,7 @@ function CoachInner() {
               className="h-9 bg-[#00e5ff] px-3 text-xs text-[#0a0f1e] hover:bg-white"
               disabled={studentLimitReached || superAdminNeedsTeam}
               title={superAdminNeedsTeam ? "Selecione um Time antes de criar aluno." : undefined}
-              onClick={() => { setStudentDraft({ name: "", email: "", phone: "", password: "", active: false, coachId: "", teamId: selectedTeamId || "" }); setShowCreateStudent(true); }}
+              onClick={() => { setStudentDraft({ name: "", email: "", phone: "", password: "", active: false, coachId: "", teamId: selectedTeamId || "", sex: "", age: "" }); setShowCreateStudent(true); }}
             >
               <Plus className="mr-2 h-3.5 w-3.5" />
               <span className="hidden sm:inline">Criar aluno</span>
@@ -1405,7 +1407,7 @@ function CoachInner() {
                         <KeyRound className="mr-2 h-4 w-4" />
                         Gerar senha temporária
                       </ActionButton>
-                      {isAdmin && (
+                      {isSuperAdmin && (
                         <ActionButton danger disabled={acting} onClick={() => {
                           if (!window.confirm("Excluir permanentemente este aluno e todos os dados vinculados?")) return;
                           void act(async () => {
@@ -1453,9 +1455,11 @@ function CoachInner() {
             active: studentDraft.active,
             coachId: studentDraft.coachId || undefined,
             teamId: studentDraft.teamId || undefined,
+            biologicalSex: studentDraft.sex || undefined,
+            age: studentDraft.age ? parseInt(studentDraft.age) || undefined : undefined,
           });
           if (result.inviteLink) setLastSecret(result.inviteLink);
-          setStudentDraft({ name: "", email: "", phone: "", password: "", active: false, coachId: "", teamId: "" });
+          setStudentDraft({ name: "", email: "", phone: "", password: "", active: false, coachId: "", teamId: "", sex: "", age: "" });
           setShowCreateStudent(false);
         }, "Aluno criado.")}
       />
@@ -2466,6 +2470,15 @@ function CreateStudentDialog({
           <Field label="Nome" value={draft.name} onChange={(name) => onDraftChange({ ...draft, name })} />
           <Field label="Email" value={draft.email} onChange={(email) => onDraftChange({ ...draft, email })} />
           <Field label="Telefone" value={draft.phone} onChange={(phone) => onDraftChange({ ...draft, phone })} />
+          <div className="grid grid-cols-2 gap-3">
+            <select value={draft.sex} onChange={(e) => onDraftChange({ ...draft, sex: e.target.value })} className="h-10 rounded-md border border-white/10 bg-white/5 px-3 text-sm text-white">
+              <option value="" className="bg-[#0d1426]">Sexo</option>
+              <option value="male" className="bg-[#0d1426]">Masculino</option>
+              <option value="female" className="bg-[#0d1426]">Feminino</option>
+              <option value="prefer_not_to_say" className="bg-[#0d1426]">Prefiro não dizer</option>
+            </select>
+            <Field label="Idade" value={draft.age} onChange={(age) => onDraftChange({ ...draft, age })} />
+          </div>
           <Field label="Senha inicial opcional" value={draft.password} onChange={(password) => onDraftChange({ ...draft, password })} />
           {isSuperAdmin && (
             draft.teamId && teams.find((t) => t.id === draft.teamId) ? (
