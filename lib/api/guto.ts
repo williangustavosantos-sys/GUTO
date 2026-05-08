@@ -412,18 +412,16 @@ export async function getGutoProactive({
   })
 }
 
-export async function getArenaWeekly(arenaGroupId = "will-personal-alpha") {
-  return apiRequest<ArenaRankingResponse>(
-    `/guto/arena/weekly?arenaGroupId=${encodeURIComponent(arenaGroupId)}`,
-    { method: "GET" }
-  )
+// Bug fix: NÃO passar arenaGroupId hardcoded. Quando o frontend envia
+// "will-personal-alpha" mas o backend salvou o profile com o teamId real do
+// usuário (ex: GUTO_CORE_TEAM), o ranking vinha vazio. Sem o query param,
+// o backend resolve o grupo automaticamente via getUserArenaGroup(userId).
+export async function getArenaWeekly(_arenaGroupId?: string) {
+  return apiRequest<ArenaRankingResponse>(`/guto/arena/weekly`, { method: "GET" })
 }
 
-export async function getArenaMonthly(arenaGroupId = "will-personal-alpha") {
-  return apiRequest<ArenaRankingResponse>(
-    `/guto/arena/monthly?arenaGroupId=${encodeURIComponent(arenaGroupId)}`,
-    { method: "GET" }
-  )
+export async function getArenaMonthly(_arenaGroupId?: string) {
+  return apiRequest<ArenaRankingResponse>(`/guto/arena/monthly`, { method: "GET" })
 }
 
 /**
@@ -438,9 +436,10 @@ export async function getArenaIndividual(_arenaGroupId?: string) {
   )
 }
 
-export async function getArenaMe(userId: string, arenaGroupId = "will-personal-alpha") {
+export async function getArenaMe(userId: string, _arenaGroupId?: string) {
+  // Mesma correção: o backend resolve o arenaGroupId pelo userId autenticado
   return apiRequest<ArenaMyProfile>(
-    `/guto/arena/me?userId=${encodeURIComponent(userId)}&arenaGroupId=${encodeURIComponent(arenaGroupId)}`,
+    `/guto/arena/me?userId=${encodeURIComponent(userId)}`,
     { method: "GET" }
   )
 }
