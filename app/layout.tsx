@@ -1,7 +1,22 @@
 import type { Metadata, Viewport } from "next"
+import { Inter, JetBrains_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { AuthProvider } from "@/components/auth-provider"
 import "./globals.css"
+
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  weight: ["400", "500", "600", "700", "800", "900"],
+  display: "swap",
+})
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-jetbrains-mono",
+  weight: ["400", "500", "700", "800"],
+  display: "swap",
+})
 
 export const metadata: Metadata = {
   title: 'GUTO - Sistema de Evolução Humana',
@@ -69,7 +84,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="pt-BR" className="bg-background">
+    <html lang="pt-BR" className={`bg-background ${inter.variable} ${jetbrainsMono.variable}`}>
       <body className="font-sans text-foreground">
         <AuthProvider>
           <main className="mx-auto flex h-dvh w-full max-w-[430px] flex-col overflow-hidden bg-white">

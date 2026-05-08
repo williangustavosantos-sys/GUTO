@@ -12,6 +12,12 @@
   --guto-cyan-soft: rgba(82, 231, 255, 0.18);
   --guto-steel: #b8c4d6;
   --guto-void: #7f8794;
+  /* Premium V2 — text palette */
+  --guto-charcoal: #2D3748;
+  --guto-exec: #4A5568;
+  --guto-soft: #5A7CA8;
+  /* Premium V2 — gradient para CTA primário */
+  --guto-cta-gradient: linear-gradient(180deg, #7df0ff 0%, #52e7ff 50%, #1ec1de 100%);
   --guto-varnish: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(255, 255, 255, 0.72) 14%, rgba(255, 255, 255, 0) 36%);
   --guto-chrome: linear-gradient(
     180deg,
@@ -54,8 +60,13 @@
   --sidebar-accent-foreground: var(--guto-navy);
   --sidebar-border: rgba(193, 204, 218, 0.86);
   --sidebar-ring: rgba(82, 231, 255, 0.32);
-  --font-display: "SF Pro Display", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
-  --font-tech: "SFMono-Regular", "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  --font-display: var(--font-inter), "Inter", "Montserrat", system-ui, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  /* Premium V2: o app inteiro passa a usar Inter (sans-serif) como fonte principal,
+     mesmo onde o código atual usa "font-mono". JetBrains Mono fica disponível
+     via .guto-mono para kickers/labels específicos. */
+  --font-tech: var(--font-inter), "Inter", "Montserrat", system-ui, sans-serif;
+  --font-mono-real: var(--font-jetbrains-mono), "JetBrains Mono", "SFMono-Regular", "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  --guto-font-tech: var(--font-display);
 }
 
 @theme inline {
@@ -1172,6 +1183,13 @@
 .guto-tech {
   font-family: var(--font-tech);
   letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+/* Premium V2 — JetBrains Mono utility para kickers e numeração técnica */
+.guto-mono {
+  font-family: var(--font-mono-real);
+  letter-spacing: 0.24em;
   text-transform: uppercase;
 }
 
