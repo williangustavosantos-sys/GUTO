@@ -78,6 +78,8 @@ import {
   updateAdminStudentWorkout,
   getAdminStudentWeeklyWorkout,
   updateAdminStudentWeeklyWorkout,
+  getStudentWeeklyDiet,
+  saveStudentWeeklyDiet,
   type AdminCatalogExercise,
   type AdminCoach,
   type AdminLog,
@@ -86,6 +88,9 @@ import {
   type AdminTeamSummary,
   type AdminWeeklyWorkoutPlan,
   type AdminWeeklyWorkoutDays,
+  type AdminWeeklyDietPlan,
+  type AdminWeeklyDietDays,
+  type AdminWeeklyDietDay,
   type WeekDayKey,
 } from "@/lib/api/admin";
 import type { DietPlan, GutoMemory, GutoWorkoutExercise, GutoWorkoutPlan } from "@/lib/api/guto";
@@ -462,22 +467,26 @@ function formatHuman(val: string | null | undefined): string {
     archived: "Arquivado",
     paid: "Pago",
     unpaid: "Pendente",
-    pending_payment: "Pendente",
+    pending_payment: "Pagamento pendente",
     trial: "Teste",
     expired: "Expirado",
     cancelled: "Cancelado",
     muscle_gain: "Ganho de massa",
     fat_loss: "Perda de gordura",
+    conditioning: "Condicionamento",
+    mobility_health: "Saúde e mobilidade",
+    consistency: "Consistência",
     maintenance: "Manutenção",
     gym: "Academia",
     home: "Casa",
     park: "Parque",
+    mixed: "Misto",
     start: "GUTO Time Start",
     pro: "GUTO Time Pro",
     elite: "GUTO Time Elite",
     custom: "Custom",
   };
-  return m[val] || val.replace("_", " ");
+  return m[val] ?? val.replace(/_/g, " ");
 }
 
 function CoachInner() {
@@ -507,6 +516,8 @@ function CoachInner() {
   const [workoutEditor, setWorkoutEditor] = useState<GutoWorkoutPlan | null>(null);
   const [weeklyWorkoutPlan, setWeeklyWorkoutPlan] = useState<AdminWeeklyWorkoutPlan | null>(null);
   const [treinoSubTab, setTreinoSubTab] = useState<"oficial" | "semana">("oficial");
+  const [dietaSubTab, setDietaSubTab] = useState<"oficial" | "semanal">("oficial");
+  const [weeklyDietPlan, setWeeklyDietPlan] = useState<AdminWeeklyDietPlan | null>(null);
   const [dietEditor, setDietEditor] = useState<DietPlan | null>(null);
   const [calibrationDraft, setCalibrationDraft] = useState<CalibrationDraft>(calibrationFromMemory(null));
   const [showCreateStudent, setShowCreateStudent] = useState(false);
@@ -615,11 +626,12 @@ function CoachInner() {
   }, [activeDashboardTab, fetchGlobalLogs, fetchRankings]);
 
   const refreshSelected = useCallback(async (studentId: string) => {
-    const [detail, workout, weeklyWorkout, diet, logs, workoutHistory, dietHistory] = await Promise.all([
+    const [detail, workout, weeklyWorkout, diet, weeklyDiet, logs, workoutHistory, dietHistory] = await Promise.all([
       getAdminStudentDetail(studentId),
       getAdminStudentWorkout(studentId),
       getAdminStudentWeeklyWorkout(studentId),
       getAdminStudentDiet(studentId),
+      getStudentWeeklyDiet(studentId),
       getAdminLogs(studentId),
       getAdminStudentWorkoutHistory(studentId),
       getAdminStudentDietHistory(studentId),
@@ -636,6 +648,7 @@ function CoachInner() {
     setSelectedDetail(nextDetail);
     setWorkoutEditor(normalizeWorkoutForEditor(workout.workout, detail.student));
     setWeeklyWorkoutPlan(weeklyWorkout.weeklyWorkout);
+    setWeeklyDietPlan(weeklyDiet.weeklyDiet);
     setDietEditor(normalizeDietForEditor(diet.diet, detail.student));
     setCalibrationDraft(calibrationFromMemory(detail.memory));
     setStudents((current) => current.map((student) => student.userId === detail.student.userId ? detail.student : student));
@@ -782,7 +795,7 @@ function CoachInner() {
           )}
         </div>
 
-        <div className={`mb-6 grid grid-cols-2 gap-2 rounded-lg bg-white/5 p-1 ${isSuperAdmin ? "md:grid-cols-5" : "md:grid-cols-4"}`}>
+        <div className={`mb-6 grid gap-2 rounded-lg bg-white/5 p-1 ${isSuperAdmin ? "grid-cols-3 sm:grid-cols-5" : "grid-cols-2 sm:grid-cols-4"}`}>
           <DashboardButton active={activeDashboardTab === "students"} onClick={() => setActiveDashboardTab("students")} icon={<Users className="h-4 w-4" />} label="Alunos" />
           <DashboardButton active={activeDashboardTab === "coaches"} onClick={() => setActiveDashboardTab("coaches")} icon={<Shield className="h-4 w-4" />} label="Coaches" disabled={!isAdmin} />
           <DashboardButton active={activeDashboardTab === "arena"} onClick={() => setActiveDashboardTab("arena")} icon={<Activity className="h-4 w-4" />} label="Arena" />
@@ -815,23 +828,23 @@ function CoachInner() {
                 ))}
               </div>
             </div>
-            <div className="mb-4 grid grid-cols-2 gap-2 md:grid-cols-5">
+            <div className="mb-4 flex flex-wrap gap-2">
               {isAdmin && (
-                <select value={coachFilter} onChange={(event) => setCoachFilter(event.target.value)} className="col-span-2 h-10 rounded-md border border-white/10 bg-white/5 px-3 text-sm text-white md:col-span-1">
+                <select value={coachFilter} onChange={(event) => setCoachFilter(event.target.value)} className="h-10 min-w-[160px] flex-1 rounded-md border border-white/10 bg-white/5 px-3 text-sm text-white">
                   <option value="" className="bg-[#0d1426]">Todos os coaches</option>
                   {coaches.map((coach) => <option key={coach.userId} value={coach.userId} className="bg-[#0d1426]">{coach.name || coach.email || coach.userId}</option>)}
                 </select>
               )}
-              <Input placeholder="Sexo/gênero" value={genderFilter} onChange={(event) => setGenderFilter(event.target.value)} className="h-10 border-white/10 bg-white/5 text-white placeholder:text-white/25" />
-              <select value={subscriptionStatusFilter} onChange={(event) => setSubscriptionStatusFilter(event.target.value)} className="h-10 rounded-md border border-white/10 bg-white/5 px-3 text-sm text-white">
+              <Input placeholder="Sexo/gênero" value={genderFilter} onChange={(event) => setGenderFilter(event.target.value)} className="h-10 min-w-[120px] flex-1 border-white/10 bg-white/5 text-white placeholder:text-white/25" />
+              <select value={subscriptionStatusFilter} onChange={(event) => setSubscriptionStatusFilter(event.target.value)} className="h-10 min-w-[140px] flex-1 rounded-md border border-white/10 bg-white/5 px-3 text-sm text-white">
                 <option value="" className="bg-[#0d1426]">Pagamento</option>
                 <option value="pending_payment" className="bg-[#0d1426]">Pendente</option>
                 <option value="active" className="bg-[#0d1426]">Ativo</option>
                 <option value="expired" className="bg-[#0d1426]">Expirado</option>
                 <option value="cancelled" className="bg-[#0d1426]">Cancelado</option>
               </select>
-              <Input placeholder="Idade mín." value={minAgeFilter} onChange={(event) => setMinAgeFilter(event.target.value)} className="h-10 border-white/10 bg-white/5 text-white placeholder:text-white/25" />
-              <Input placeholder="Idade máx." value={maxAgeFilter} onChange={(event) => setMaxAgeFilter(event.target.value)} className="h-10 border-white/10 bg-white/5 text-white placeholder:text-white/25" />
+              <Input placeholder="Idade mín." value={minAgeFilter} onChange={(event) => setMinAgeFilter(event.target.value)} className="h-10 min-w-[100px] flex-1 border-white/10 bg-white/5 text-white placeholder:text-white/25" />
+              <Input placeholder="Idade máx." value={maxAgeFilter} onChange={(event) => setMaxAgeFilter(event.target.value)} className="h-10 min-w-[100px] flex-1 border-white/10 bg-white/5 text-white placeholder:text-white/25" />
             </div>
 
             <div className="grid gap-3">
@@ -840,7 +853,7 @@ function CoachInner() {
                 return (
                   <div
                     key={student.userId}
-                    className="flex flex-col gap-4 rounded-xl border border-white/7 bg-white/[0.035] p-4 transition hover:border-[#00e5ff]/40 hover:bg-white/[0.06] lg:grid lg:grid-cols-[minmax(0,1.4fr)_repeat(6,minmax(0,.85fr))_auto_auto] lg:items-center"
+                    className="flex flex-col gap-4 rounded-xl border border-white/7 bg-white/[0.035] p-4 transition hover:border-[#00e5ff]/40 hover:bg-white/[0.06] xl:grid xl:grid-cols-[minmax(180px,2fr)_repeat(6,minmax(90px,1fr))_auto_auto] xl:items-center"
                   >
                     <button
                       type="button"
@@ -856,7 +869,7 @@ function CoachInner() {
                       </div>
                       <span className="text-2xl text-white/20 lg:hidden">›</span>
                     </button>
-                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:contents">
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:contents">
                       <Metric label="Telefone" value={student.phone || "-"} />
                       <Metric label="Coach" value={coachLabel(student, coaches)} />
                       <Metric label="Semana" value={`${student.weeklyXp} XP`} cyan />
@@ -1022,7 +1035,7 @@ function CoachInner() {
                       </div>
                       <div className="flex items-center gap-2">
                         <Badge variant={team.status === "active" ? "default" : "secondary"} className="text-[10px] font-black uppercase">
-                          {team.status === "active" ? "Ativo" : team.status}
+                          {formatHuman(team.status)}
                         </Badge>
                         <Button size="sm" variant="outline" className="border-white/10 bg-white/5 text-white" onClick={() => {
                           setEditingTeamId(team.id);
@@ -1093,7 +1106,7 @@ function CoachInner() {
                     <Panel title="Sistema">
                       <DataRow label="Status" value={<Badge variant={getStatusInfo(selected).variant}>{getStatusInfo(selected).text}</Badge>} />
                       <DataRow label="Telefone" value={selected.phone || "-"} />
-                      <DataRow label="Assinatura" value={selected.subscriptionStatus?.replace("_", " ") || "-"} />
+                      <DataRow label="Assinatura" value={formatHuman(selected.subscriptionStatus)} />
                       <DataRow label="Expira em" value={formatDate(selected.subscriptionEndsAt)} />
                       <DataRow label="Coach" value={coachLabel(selected, coaches)} />
                       {user.role === "super_admin" && <DataRow label="Time" value={selected.teamId || "-"} />}
@@ -1287,34 +1300,62 @@ function CoachInner() {
                 )}
 
                 {detailTab === "dieta" && dietEditor && (
-                  <DietEditor
-                    student={selected}
-                    value={dietEditor}
-                    history={selectedDetail.dietHistory}
-                    acting={acting}
-                    onChange={setDietEditor}
-                    onSave={() => void act(async () => {
-                      const source = selectedDetail.diet?.source === "guto_generated" ? "mixed" : dietEditor.source || "coach_manual";
-                      const result = await updateAdminStudentDiet(selected.userId, { ...dietEditor, source }, "Coach/admin manual edit");
-                      setDietEditor(normalizeDietForEditor(result.diet, selected));
-                    }, "Dieta oficial salva.")}
-                    onCreateManual={() => setDietEditor(blankDiet(selected))}
-                    onGenerate={() => void act(async () => {
-                      const result = await generateAdminStudentDiet(selected.userId);
-                      setDietEditor(normalizeDietForEditor(result.diet, selected));
-                    }, "Dieta do GUTO carregada.")}
-                    onLock={() => void act(async () => {
-                      const result = dietEditor.lockedByCoach ? await unlockAdminStudentDiet(selected.userId) : await lockAdminStudentDiet(selected.userId);
-                      setDietEditor(normalizeDietForEditor(result.diet, selected));
-                    }, dietEditor.lockedByCoach ? "GUTO liberado para atualizar dieta." : "Dieta bloqueada contra sobrescrita.")}
-                    onReset={() => {
-                      if (!window.confirm("Resetar dieta oficial deste aluno?")) return;
-                      void act(async () => {
-                        await resetAdminStudentDiet(selected.userId);
-                        setDietEditor(blankDiet(selected));
-                      }, "Dieta resetada.");
-                    }}
-                  />
+                  <div className="space-y-3">
+                    <div className="flex gap-1 rounded-lg border border-white/10 bg-white/5 p-1">
+                      {(["oficial", "semanal"] as const).map((tab) => (
+                        <button
+                          key={tab}
+                          onClick={() => setDietaSubTab(tab)}
+                          className={`flex-1 rounded-md py-1.5 text-xs font-bold uppercase tracking-widest transition-colors ${dietaSubTab === tab ? "bg-[#00e5ff] text-[#0a0f1e]" : "text-white/50 hover:text-white"}`}
+                        >
+                          {tab === "oficial" ? "Dieta oficial" : "Plano semanal"}
+                        </button>
+                      ))}
+                    </div>
+
+                    {dietaSubTab === "oficial" && (
+                      <DietEditor
+                        student={selected}
+                        value={dietEditor}
+                        history={selectedDetail.dietHistory}
+                        acting={acting}
+                        onChange={setDietEditor}
+                        onSave={() => void act(async () => {
+                          const source = selectedDetail.diet?.source === "guto_generated" ? "mixed" : dietEditor.source || "coach_manual";
+                          const result = await updateAdminStudentDiet(selected.userId, { ...dietEditor, source }, "Coach/admin manual edit");
+                          setDietEditor(normalizeDietForEditor(result.diet, selected));
+                        }, "Dieta oficial salva.")}
+                        onCreateManual={() => setDietEditor(blankDiet(selected))}
+                        onGenerate={() => void act(async () => {
+                          const result = await generateAdminStudentDiet(selected.userId);
+                          setDietEditor(normalizeDietForEditor(result.diet, selected));
+                        }, "Dieta do GUTO carregada.")}
+                        onLock={() => void act(async () => {
+                          const result = dietEditor.lockedByCoach ? await unlockAdminStudentDiet(selected.userId) : await lockAdminStudentDiet(selected.userId);
+                          setDietEditor(normalizeDietForEditor(result.diet, selected));
+                        }, dietEditor.lockedByCoach ? "GUTO liberado para atualizar dieta." : "Dieta bloqueada contra sobrescrita.")}
+                        onReset={() => {
+                          if (!window.confirm("Resetar dieta oficial deste aluno?")) return;
+                          void act(async () => {
+                            await resetAdminStudentDiet(selected.userId);
+                            setDietEditor(blankDiet(selected));
+                          }, "Dieta resetada.");
+                        }}
+                      />
+                    )}
+
+                    {dietaSubTab === "semanal" && (
+                      <WeeklyDietEditor
+                        student={selected}
+                        weeklyPlan={weeklyDietPlan}
+                        acting={acting}
+                        onSave={async (days) => {
+                          const result = await saveStudentWeeklyDiet(selected.userId, days);
+                          setWeeklyDietPlan(result.weeklyDiet);
+                        }}
+                      />
+                    )}
+                  </div>
                 )}
 
                 {detailTab === "arena" && (
@@ -1472,7 +1513,7 @@ function DashboardButton({ active, onClick, icon, label, disabled }: { active: b
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className={`flex items-center justify-center gap-2 rounded-md px-3 py-3 text-[10px] font-black uppercase tracking-widest transition disabled:cursor-not-allowed disabled:opacity-25 ${
+      className={`flex min-w-0 items-center justify-center gap-1.5 rounded-md px-2 py-3 text-[10px] font-black uppercase tracking-widest transition disabled:cursor-not-allowed disabled:opacity-25 sm:gap-2 sm:px-3 ${
         active ? "bg-[#00e5ff] text-[#0a0f1e]" : "text-white/45 hover:bg-white/5 hover:text-white"
       }`}
     >
@@ -1486,7 +1527,7 @@ function Metric({ label, value, cyan }: { label: string; value: ReactNode; cyan?
   return (
     <div className="min-w-0">
       <p className="mb-1 text-[9px] font-black uppercase tracking-widest text-white/20">{label}</p>
-      <p className={`truncate font-mono text-xs font-bold ${cyan ? "text-[#00e5ff]" : "text-white/60"}`}>{value}</p>
+      <p className={`overflow-hidden text-ellipsis whitespace-nowrap font-mono text-xs font-bold ${cyan ? "text-[#00e5ff]" : "text-white/60"}`} title={typeof value === "string" ? value : undefined}>{value}</p>
     </div>
   );
 }
@@ -2026,6 +2067,223 @@ function WorkoutEditor({
         <LogList logs={history} empty="Sem histórico de treino." />
       </Panel>
     </div>
+  );
+}
+
+// ─── Weekly Diet Editor ────────────────────────────────────────────────────────
+
+const DIET_WEEK_DAYS: Array<{ key: WeekDayKey; label: string }> = [
+  { key: "monday", label: "Segunda-feira" },
+  { key: "tuesday", label: "Terça-feira" },
+  { key: "wednesday", label: "Quarta-feira" },
+  { key: "thursday", label: "Quinta-feira" },
+  { key: "friday", label: "Sexta-feira" },
+  { key: "saturday", label: "Sábado" },
+  { key: "sunday", label: "Domingo" },
+];
+
+function dietDaySummary(day?: AdminWeeklyDietDay): string {
+  if (!day) return "Sem dieta programada";
+  const meals = [day.breakfast && "café", day.lunch && "almoço", day.dinner && "jantar", day.snacks && "lanches"].filter(Boolean);
+  const parts: string[] = [];
+  if (meals.length) parts.push(meals.join(", "));
+  if (day.caloriesEstimate) parts.push(`${day.caloriesEstimate} kcal`);
+  if (day.notes) parts.push("obs.");
+  return parts.length ? parts.join(" · ") : "Preenchido";
+}
+
+function blankDietDay(): AdminWeeklyDietDay {
+  return { breakfast: "", lunch: "", dinner: "", snacks: "", hydration: "", notes: "" };
+}
+
+function WeeklyDietEditor({
+  student,
+  weeklyPlan,
+  acting,
+  onSave,
+}: {
+  student: AdminStudent;
+  weeklyPlan: AdminWeeklyDietPlan | null;
+  acting: boolean;
+  onSave: (days: AdminWeeklyDietDays) => Promise<void>;
+}) {
+  const [days, setDays] = useState<AdminWeeklyDietDays>(() => weeklyPlan?.days ?? {});
+  const [expandedDay, setExpandedDay] = useState<WeekDayKey | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setDays(weeklyPlan?.days ?? {});
+  }, [weeklyPlan]);
+
+  function setDayField(day: WeekDayKey, field: keyof AdminWeeklyDietDay, value: string | number | undefined) {
+    setDays((current) => {
+      const existing = current[day] ?? blankDietDay();
+      return { ...current, [day]: { ...existing, [field]: value } };
+    });
+  }
+
+  function clearDay(day: WeekDayKey) {
+    setDays((current) => {
+      const next = { ...current };
+      delete next[day];
+      return next;
+    });
+  }
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      await onSave(days);
+      toast.success("Plano semanal de dieta salvo.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Erro ao salvar plano semanal de dieta.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Panel title="Plano semanal de dieta">
+      <p className="mb-4 text-[11px] text-white/40">Monte a dieta de cada dia. Campos em branco não serão salvos. O aluno verá a dieta do dia atual via integração futura.</p>
+      <div className="space-y-2">
+        {DIET_WEEK_DAYS.map(({ key, label }) => {
+          const dayData = days[key];
+          const isExpanded = expandedDay === key;
+          const summary = dietDaySummary(dayData);
+
+          return (
+            <div key={key} className="rounded-lg border border-white/10 bg-white/5">
+              <button
+                className="flex w-full items-center justify-between px-4 py-3 text-left"
+                onClick={() => setExpandedDay(isExpanded ? null : key)}
+              >
+                <div>
+                  <span className="text-sm font-bold text-white">{label}</span>
+                  {dayData && <span className="ml-2 text-[11px] text-[#00e5ff]">preenchido</span>}
+                </div>
+                <span className="text-[11px] text-white/40">{isExpanded ? "▲" : "▼"}</span>
+              </button>
+              {!isExpanded && (
+                <p className="px-4 pb-2 text-[11px] text-white/30">{summary}</p>
+              )}
+              {isExpanded && (
+                <div className="border-t border-white/10 px-4 pb-4 pt-3">
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div>
+                      <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-white/40">Café da manhã</label>
+                      <textarea
+                        value={dayData?.breakfast ?? ""}
+                        onChange={(e) => setDayField(key, "breakfast", e.target.value)}
+                        rows={2}
+                        placeholder="Ex: Aveia com banana, ovo mexido..."
+                        className="w-full resize-none rounded-md border border-white/10 bg-black/20 px-3 py-2 text-sm text-white placeholder-white/20 focus:border-[#00e5ff]/50 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-white/40">Almoço</label>
+                      <textarea
+                        value={dayData?.lunch ?? ""}
+                        onChange={(e) => setDayField(key, "lunch", e.target.value)}
+                        rows={2}
+                        placeholder="Ex: Frango grelhado, arroz, legumes..."
+                        className="w-full resize-none rounded-md border border-white/10 bg-black/20 px-3 py-2 text-sm text-white placeholder-white/20 focus:border-[#00e5ff]/50 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-white/40">Jantar</label>
+                      <textarea
+                        value={dayData?.dinner ?? ""}
+                        onChange={(e) => setDayField(key, "dinner", e.target.value)}
+                        rows={2}
+                        placeholder="Ex: Sopa de legumes, peixe grelhado..."
+                        className="w-full resize-none rounded-md border border-white/10 bg-black/20 px-3 py-2 text-sm text-white placeholder-white/20 focus:border-[#00e5ff]/50 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-white/40">Lanches</label>
+                      <textarea
+                        value={dayData?.snacks ?? ""}
+                        onChange={(e) => setDayField(key, "snacks", e.target.value)}
+                        rows={2}
+                        placeholder="Ex: Iogurte, fruta, castanhas..."
+                        className="w-full resize-none rounded-md border border-white/10 bg-black/20 px-3 py-2 text-sm text-white placeholder-white/20 focus:border-[#00e5ff]/50 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-white/40">Hidratação</label>
+                      <input
+                        type="text"
+                        value={dayData?.hydration ?? ""}
+                        onChange={(e) => setDayField(key, "hydration", e.target.value)}
+                        placeholder="Ex: 2,5 litros de água"
+                        className="w-full rounded-md border border-white/10 bg-black/20 px-3 py-2 text-sm text-white placeholder-white/20 focus:border-[#00e5ff]/50 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-white/40">Observações</label>
+                      <textarea
+                        value={dayData?.notes ?? ""}
+                        onChange={(e) => setDayField(key, "notes", e.target.value)}
+                        rows={2}
+                        placeholder="Ex: Evitar açúcar refinado após as 18h..."
+                        className="w-full resize-none rounded-md border border-white/10 bg-black/20 px-3 py-2 text-sm text-white placeholder-white/20 focus:border-[#00e5ff]/50 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-white/40">Estimativa calórica (kcal)</label>
+                      <input
+                        type="number"
+                        value={dayData?.caloriesEstimate ?? ""}
+                        onChange={(e) => setDayField(key, "caloriesEstimate", e.target.value ? Number(e.target.value) : undefined)}
+                        placeholder="Ex: 2200"
+                        min={0}
+                        className="w-full rounded-md border border-white/10 bg-black/20 px-3 py-2 text-sm text-white placeholder-white/20 focus:border-[#00e5ff]/50 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-white/40">Estimativa proteína (g)</label>
+                      <input
+                        type="number"
+                        value={dayData?.proteinEstimate ?? ""}
+                        onChange={(e) => setDayField(key, "proteinEstimate", e.target.value ? Number(e.target.value) : undefined)}
+                        placeholder="Ex: 160"
+                        min={0}
+                        className="w-full rounded-md border border-white/10 bg-black/20 px-3 py-2 text-sm text-white placeholder-white/20 focus:border-[#00e5ff]/50 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                  <div className="mt-3 flex gap-2">
+                    <Button
+                      variant="outline"
+                      className="border-red-500/30 bg-transparent text-red-300 text-xs"
+                      onClick={() => clearDay(key)}
+                    >
+                      <Trash2 className="mr-1 h-3 w-3" />
+                      Limpar dia
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      <div className="mt-4 flex flex-wrap gap-2">
+        <Button
+          className="bg-[#00e5ff] text-[#0a0f1e] hover:bg-white"
+          disabled={acting || saving}
+          onClick={() => void handleSave()}
+        >
+          <Save className="mr-2 h-4 w-4" />
+          Salvar plano semanal
+        </Button>
+      </div>
+      {weeklyPlan && (
+        <p className="mt-2 text-[10px] text-white/30">
+          Última atualização: {new Date(weeklyPlan.updatedAt).toLocaleString("pt-BR")} por {weeklyPlan.updatedBy}
+        </p>
+      )}
+    </Panel>
   );
 }
 

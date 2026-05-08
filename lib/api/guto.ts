@@ -171,6 +171,12 @@ export interface GutoMemory {
   }[]
   lastLimitationCheckAt?: string
   lastWorkoutPlan?: GutoWorkoutPlan | null
+  weeklyWorkoutPlan?: {
+    studentId: string
+    updatedAt: string
+    updatedBy: string
+    days: Partial<Record<"monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday", GutoWorkoutPlan>>
+  } | null
   proactiveSent: Record<string, string[]>
   initialXpRewardSeen: boolean
   validationHistory?: WorkoutValidationRecord[]

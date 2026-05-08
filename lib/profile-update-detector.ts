@@ -248,6 +248,12 @@ export function detectProfileUpdateIntent(
       /(?:change|switch)\s+(?:the\s+)?(?:language|lang)\s+to\s+(.+)/i,
       /(?:cambia|pon|coloca)\s+(?:el\s+)?idioma\s+(?:a|en)\s+(.+)/i,
       /(?:cambia|metti)\s+(?:la\s+)?lingua\s+(?:in|a)\s+(.+)/i,
+      // Broader conversational patterns to prevent LLM from claiming it can't change language
+      /(?:quero|gostaria\s+de|pode|podes)\s+(?:mudar|trocar|alterar|colocar)\s+(?:o\s+)?idioma\s+(?:para|pra)\s+(.+)/i,
+      /(?:quero|prefiro|gostaria)\s+(?:o\s+app|tudo|ver)\s+(?:em|no|na)\s+(português|inglês|espanhol|italiano|english|spanish|italian)/i,
+      /(?:coloca|muda|troca)\s+(?:para|pra)\s+(português|inglês|espanhol|italiano|english|spanish|italian)/i,
+      /usar?\s+(?:o\s+app\s+)?em\s+(português|inglês|espanhol|italiano|english|spanish|italian)/i,
+      /(?:set|please\s+set|can\s+you\s+set)\s+(?:the\s+)?(?:language|lang)\s+to\s+(.+)/i,
     ]
     for (const p of patterns) {
       const m = sl.match(p)

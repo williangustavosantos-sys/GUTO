@@ -547,8 +547,10 @@ function resolveAuthenticatedStage(
     return "system"
   }
 
-  if (!hasStoredName(profile) && !hasMemoryName(memory)) {
-    console.log("[GUTO_ONBOARDING] missing name")
+  // Only skip naming if the user explicitly confirmed their duo name in this client.
+  // A name set by the admin in GutoMemory does NOT count as confirmed by the student.
+  if (!hasStoredName(profile)) {
+    console.log("[GUTO_ONBOARDING] missing confirmed name")
     console.log("[GUTO_ONBOARDING] resolved stage naming")
     return "naming"
   }
@@ -869,7 +871,15 @@ export function GutoApp({
         if (loadedMemory) {
           setMemory(loadedMemory)
           setEvolution(resolveEvolutionStage(loadedMemory.totalXp || 0))
-          setWorkoutPlan(loadedMemory.lastWorkoutPlan?.exercises?.length ? loadedMemory.lastWorkoutPlan : null)
+          // Prefer coach-set weekly plan for today over the GUTO-generated lastWorkoutPlan
+          const weekDays = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"] as const
+          const todayKey = weekDays[new Date().getDay()]
+          const todayWeeklyWorkout = loadedMemory.weeklyWorkoutPlan?.days?.[todayKey]
+          if (todayWeeklyWorkout?.exercises?.length) {
+            setWorkoutPlan(todayWeeklyWorkout)
+          } else if (loadedMemory.lastWorkoutPlan?.exercises?.length) {
+            setWorkoutPlan(loadedMemory.lastWorkoutPlan)
+          }
         }
 
         const persistedLanguage = readResolvedStoredLanguage({
@@ -1670,7 +1680,12 @@ export function GutoApp({
           setCommittedName((prev) => prev || memoryName)
         }
         setEvolution(resolveEvolutionStage(memory?.totalXp || 0))
-        if (memory?.lastWorkoutPlan?.exercises?.length) {
+        const weekDays = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"] as const
+        const todayKey = weekDays[new Date().getDay()]
+        const todayWeeklyWorkout = memory?.weeklyWorkoutPlan?.days?.[todayKey]
+        if (todayWeeklyWorkout?.exercises?.length) {
+          setWorkoutPlan(todayWeeklyWorkout)
+        } else if (memory?.lastWorkoutPlan?.exercises?.length) {
           setWorkoutPlan(memory.lastWorkoutPlan)
         } else {
           setWorkoutPlan((prev) => prev ? prev : null)
@@ -1754,9 +1769,10 @@ export function GutoApp({
         if (inviteResolvedName) {
           setDraftName(inviteResolvedName)
           setCommittedName(inviteResolvedName)
+          // Do NOT write userName here — the student must confirm on the naming screen.
+          // Only save language so hydration doesn't reset to a wrong language.
           writeStorageItem(`${STORAGE_KEY}-${res.userId}`, JSON.stringify({
             language: selectedLanguage,
-            userName: inviteResolvedName,
             onboardingComplete: false,
           }))
           void saveGutoMemory({ userId: res.userId, name: inviteResolvedName, language: selectedLanguage }).catch(() => {})
