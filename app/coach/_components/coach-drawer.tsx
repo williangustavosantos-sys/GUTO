@@ -65,9 +65,6 @@ function DrawerHeader({ coach, onClose }: { coach: AdminCoach; onClose: () => vo
         padding: "20px 24px",
         borderBottom: `1px solid ${T.border}`,
         background: "linear-gradient(180deg, rgba(8,14,28,0.96) 0%, rgba(4,7,16,0.84) 100%)",
-        position: "sticky",
-        top: 0,
-        zIndex: 10,
       }}
     >
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
