@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>GUTO · Coach Panel</title>
+<link rel="stylesheet" href="colors_and_type.css"/>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; background: #060912; }
+  body { font-family: "JetBrains Mono", "SF Mono", Menlo, Monaco, Consolas, monospace; color: #e8f4ff; }
+
+  ::-webkit-scrollbar       { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(82,231,255,0.18); border-radius: 99px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(82,231,255,0.35); }
+
+  button { font-family: inherit; }
+  input, select { font-family: inherit; outline: none; }
+  select option { background: #0d1426; color: #e8f4ff; }
+
+  input::placeholder { color: rgba(232,244,255,0.25); }
+  input:focus { border-color: rgba(82,231,255,0.40) !important;
+    box-shadow: 0 0 0 1px rgba(82,231,255,0.20) !important; }
+
+  button:hover { filter: brightness(1.12); }
+  button:active { transform: scale(0.97); }
+
+  input[type="range"] {
+    -webkit-appearance: none; height: 4px; border-radius: 99px;
+    background: rgba(82,231,255,0.18); outline: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%;
+    background: #52e7ff; border: 2px solid #04131e; cursor: pointer;
+    box-shadow: 0 0 8px rgba(82,231,255,0.55);
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 16px; height: 16px; border-radius: 50%;
+    background: #52e7ff; border: 2px solid #04131e; cursor: pointer;
+  }
+
+  @keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to   { transform: translateX(0);    opacity: 1; }
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js"
+  integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L"
+  crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js"
+  integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm"
+  crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js"
+  integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y"
+  crossorigin="anonymous"></script>
+
+<!-- Context must exist before component scripts run -->
+<script type="text/babel">
+  window.PanelCtx = React.createContext(null);
+</script>
+
+<script type="text/babel" src="panel-data.jsx"></script>
+<script type="text/babel" src="panel-shell.jsx"></script>
+<script type="text/babel" src="panel-screens.jsx"></script>
+<script type="text/babel" src="panel-student.jsx"></script>
+
+<script type="text/babel">
+const { useState, useCallback, useEffect, useMemo } = React;
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "sidebarCollapsed": false,
+  "density": "normal",
+  "accent": "cyan",
+  "glow": 100,
+  "atencaoDays": 3,
+  "criticoDays": 7,
+  "semSinalDays": 14,
+  "showCta": true,
+  "anim": true,
+  "hostToolbar": false
+}/*EDITMODE-END*/;
+
+/* Accent palettes — applied by mutating shared T token object */
+const ACCENTS = {
+  cyan:   { cyan:"#52e7ff", cyanSoft:"rgba(82,231,255,0.14)",  cyanLine:"rgba(82,231,255,0.24)",  scrollbar:"rgba(82,231,255,0.18)" },
+  violet: { cyan:"#a78bfa", cyanSoft:"rgba(167,139,250,0.16)", cyanLine:"rgba(167,139,250,0.30)", scrollbar:"rgba(167,139,250,0.22)" },
+  lime:   { cyan:"#bef264", cyanSoft:"rgba(190,242,100,0.16)", cyanLine:"rgba(190,242,100,0.32)", scrollbar:"rgba(190,242,100,0.22)" },
+  orange: { cyan:"#fbbf24", cyanSoft:"rgba(251,191,36,0.16)",  cyanLine:"rgba(251,191,36,0.32)",  scrollbar:"rgba(251,191,36,0.22)"  },
+};
+
+function applyAccent(id) {
+  const a = ACCENTS[id] ?? ACCENTS.cyan;
+  if (window.T) {
+    window.T.cyan = a.cyan;
+    window.T.cyanSoft = a.cyanSoft;
+    window.T.cyanLine = a.cyanLine;
+  }
+  // Tweak scrollbar through a style override
+  let style = document.getElementById("__accent-style");
+  if (!style) {
+    style = document.createElement("style");
+    style.id = "__accent-style";
+    document.head.appendChild(style);
+  }
+  style.textContent = `
+    ::-webkit-scrollbar-thumb { background: ${a.scrollbar} !important; }
+    ::-webkit-scrollbar-thumb:hover { background: ${a.cyan} !important; }
+    input:focus { border-color: ${a.cyanLine} !important;
+      box-shadow: 0 0 0 1px ${a.cyanSoft} !important; }
+  `;
+}
+
+function App() {
+  const [tweaks, setTweaks]               = useState(TWEAK_DEFAULTS);
+  const [activeScreen, setActiveScreen]   = useState("hoje");
+  const [collapsed, setCollapsed]         = useState(TWEAK_DEFAULTS.sidebarCollapsed);
+  const [selectedStudent, setSelected]    = useState(null);
+  const [detailTab, setDetailTab]         = useState("resumo");
+  const [showCreate, setShowCreate]       = useState(false);
+
+  // Apply accent on mount + when changed
+  useEffect(() => { applyAccent(tweaks.accent); }, [tweaks.accent]);
+
+  // Sync sidebar default when tweak changes
+  useEffect(() => { setCollapsed(tweaks.sidebarCollapsed); }, [tweaks.sidebarCollapsed]);
+
+  // Host toolbar wiring (only when enabled)
+  useEffect(() => {
+    if (!tweaks.hostToolbar) return;
+    const handler = (e) => {
+      if (e.data?.type === "__activate_edit_mode")   setActiveScreen("tweaks");
+      if (e.data?.type === "__deactivate_edit_mode") setActiveScreen("hoje");
+    };
+    window.addEventListener("message", handler);
+    window.parent.postMessage({ type:"__edit_mode_available" }, "*");
+    return () => window.removeEventListener("message", handler);
+  }, [tweaks.hostToolbar]);
+
+  const setTweak = useCallback((key, val) => {
+    setTweaks(prev => ({ ...prev, [key]: val }));
+    window.parent.postMessage({ type:"__edit_mode_set_keys", edits:{ [key]: val } }, "*");
+  }, []);
+
+  const resetTweaks = useCallback(() => {
+    setTweaks(TWEAK_DEFAULTS);
+    window.parent.postMessage({ type:"__edit_mode_set_keys", edits: TWEAK_DEFAULTS }, "*");
+  }, []);
+
+  const openStudent = useCallback((student, tab = "resumo") => {
+    setSelected(student);
+    setDetailTab(tab);
+  }, []);
+
+  const closeStudent = useCallback(() => setSelected(null), []);
+
+  const ctx = {
+    activeScreen, setActiveScreen,
+    selectedStudent, openStudent, closeStudent,
+    detailTab, setDetailTab,
+    showCreate, setShowCreate,
+    collapsed,
+    tweaks, setTweak, resetTweaks,
+  };
+
+  const animOn = tweaks.anim !== false;
+  // Keyed wrapper forces remount of children when accent changes so cached T values re-read
+  const accentKey = tweaks.accent;
+
+  return (
+    <window.PanelCtx.Provider value={ctx}>
+      <div key={accentKey} style={{
+        display: "flex",
+        height: "100vh",
+        overflow: "hidden",
+        background: "#060912",
+      }}>
+        {/* Sidebar */}
+        <Sidebar collapsed={collapsed} onToggle={() => setCollapsed(v => !v)} />
+
+        {/* Right side: header + main */}
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
+          <Header onMobileMenu={() => setCollapsed(v => !v)} />
+          <main style={{ flex: 1, overflowY: "auto" }}>
+            <ActiveScreen />
+          </main>
+        </div>
+
+        {/* Student detail panel (overlay) */}
+        {selectedStudent && (
+          <div style={{ animation: animOn ? "slideIn 220ms cubic-bezier(0.16,1,0.3,1)" : "none" }}>
+            <StudentPanel />
+          </div>
+        )}
+
+        {/* Create student modal (placeholder) */}
+        {showCreate && (
+          <div style={{
+            position: "fixed", inset: 0,
+            background: "rgba(0,0,0,0.65)",
+            backdropFilter: "blur(4px)",
+            zIndex: 60,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            animation: animOn ? "fadeIn 160ms ease" : "none",
+          }}
+            onClick={() => setShowCreate(false)}
+          >
+            <div onClick={e => e.stopPropagation()} style={{
+              width: 480,
+              background: "linear-gradient(180deg,#0d1428,#080e1c)",
+              border: `1px solid ${T.cyanLine}`,
+              borderRadius: 18,
+              padding: "28px 28px 24px",
+              boxShadow: `0 30px 80px rgba(0,0,0,0.7), 0 0 40px ${T.cyanSoft}`,
+            }}>
+              <Kicker cyan style={{ display:"block", marginBottom:10 }}>NOVO ALUNO</Kicker>
+              <h2 style={{ fontFamily:T.mono, fontSize:18, fontWeight:900, color:T.fg, marginBottom:20 }}>
+                Criar aluno
+              </h2>
+              {[["NOME","text","Nome completo"],["EMAIL","email","email@exemplo.com"],
+                ["TELEFONE","tel","+55 11 99999-9999"],["SENHA","password","Senha inicial"]].map(([lbl,type,ph])=>(
+                <div key={lbl} style={{ marginBottom:14 }}>
+                  <Label>{lbl}</Label>
+                  <input type={type} placeholder={ph} style={{
+                    width:"100%", height:42, padding:"0 14px",
+                    background:"rgba(0,0,0,0.35)",
+                    border:`1px solid ${T.border}`,
+                    borderRadius:10,
+                    boxShadow:"inset 0 2px 6px rgba(0,0,0,0.45)",
+                    color:T.fg, fontSize:12,
+                  }}/>
+                </div>
+              ))}
+              <div style={{ display:"flex", gap:10, marginTop:20 }}>
+                <Btn cyan onClick={() => setShowCreate(false)} style={{ flex:1, height:44 }}>
+                  <IPlus size={14}/>Criar aluno
+                </Btn>
+                <Btn ghost onClick={() => setShowCreate(false)}>Cancelar</Btn>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </window.PanelCtx.Provider>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>

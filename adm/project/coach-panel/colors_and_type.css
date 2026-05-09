@@ -1,0 +1,281 @@
+/* ============================================================================
+   GUTO Design System — Colors & Type
+   ----------------------------------------------------------------------------
+   Sourced from GUTOO/app/globals.css (production tokens). Two layers:
+     1. RAW TOKENS — brand colors, gradients, shadows, fonts.
+     2. SEMANTIC TOKENS — what to actually consume in components.
+   ============================================================================ */
+
+/* Webfonts: SF Pro Display + SF Mono are Apple system fonts. We substitute
+   with Inter Tight (humanist sans, similar density) + JetBrains Mono
+   (geometric mono, closest to SF Mono). FLAGGED — see README. */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Inter+Tight:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap");
+
+:root {
+  /* --------------------------------------------------------------------------
+     1. RAW BRAND TOKENS
+     -------------------------------------------------------------------------- */
+
+  /* Core palette — white-room futurism, "glass / ice / cyan / navy" */
+  --guto-white:         #ffffff;
+  --guto-surface:       #f7f9fc;  /* page surface, very faint blue-grey */
+  --guto-surface-deep:  #edf2f8;  /* deeper panel / page bottom */
+  --guto-navy:          #0d2341;  /* legacy navy — still used for stamps */
+  --guto-charcoal:      #2D3748;  /* TITLES — Cyber-Luxury executive charcoal */
+  --guto-executive:     #4A5568;  /* BODY — executive grey */
+  --guto-soft-blue:     #5A7CA8;  /* SUBTITLES (ALL CAPS) — sophisticated soft blue */
+  --guto-arctic:        #F5F8FC;  /* arctic-white page background */
+  --guto-cyan:          #52e7ff;  /* the signature accent — buttons, focus, glow */
+  --guto-cyan-soft:     rgba(82, 231, 255, 0.18);
+  --guto-steel:         #b8c4d6;  /* steel/chrome edge color */
+  --guto-void:          #7f8794;  /* tertiary / disabled text */
+  --guto-destructive:  #9d2b2b;
+  --guto-destructive-fg:#fff6f6;
+
+  /* Translucent fills — every surface is a frosted glass plate */
+  --guto-frost:         rgba(255, 255, 255, 0.16);
+  --guto-frost-strong:  rgba(255, 255, 255, 0.40);
+  --guto-frost-card:    rgba(255, 255, 255, 0.82);
+  --guto-frost-popover: rgba(255, 255, 255, 0.90);
+  --guto-border:        rgba(193, 204, 218, 0.86);
+  --guto-ring:          rgba(82, 231, 255, 0.32);
+
+  /* Signature gradients */
+  --guto-varnish: linear-gradient(180deg,
+      rgba(255, 255, 255, 0.96) 0%,
+      rgba(255, 255, 255, 0.72) 14%,
+      rgba(255, 255, 255, 0)    36%);
+
+  --guto-chrome: linear-gradient(180deg,
+      #f6fbff 0%, #d6e1ec 12%, #93a4bc 29%, #eff6fd 44%,
+      #91a4bd 58%, #d7e0ea 74%, #fdfefe 100%);
+
+  --guto-bg-page: linear-gradient(180deg, #edf2f7 0%, #dfe7f0 100%);
+  --guto-bg-portal:
+      linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(255,255,255,0.54) 13%, rgba(255,255,255,0) 34%),
+      radial-gradient(120% 64% at 50% -10%, rgba(255,255,255,0.96) 0%, rgba(235,241,248,0.5) 36%, rgba(255,255,255,0) 64%),
+      linear-gradient(180deg, #ffffff 0%, #f7f9fc 48%, #edf2f8 100%);
+
+  /* Inner-shadow "deboss" — every input, slot, recessed surface uses this */
+  --guto-deboss:
+      inset 2px 2px 8px rgba(152, 163, 179, 0.22),
+      inset -6px -6px 12px rgba(255, 255, 255, 0.94);
+  --guto-deboss-deep:
+      inset 4px 5px 14px rgba(124, 136, 152, 0.26),
+      inset -7px -7px 16px rgba(255, 255, 255, 0.96);
+
+  /* Outer shadows — elevated chrome plates */
+  --guto-shadow-plate: 0 22px 46px rgba(91, 109, 132, 0.18);
+  --guto-shadow-card:  0 14px 30px rgba(122, 138, 156, 0.12);
+
+  /* Cyan glow — the "alive" signal: focus, primary button, voice/active state */
+  --guto-glow-sm: 0 0 16px rgba(82, 231, 255, 0.18);
+  --guto-glow-md: 0 0 24px rgba(82, 231, 255, 0.36);
+  --guto-glow-lg: 0 0 34px rgba(82, 231, 255, 0.58);
+
+  /* Radii — generous, pill for actions, 1rem for cards */
+  --guto-radius-xs:  6px;
+  --guto-radius-sm:  10px;
+  --guto-radius-md:  14px;
+  --guto-radius-lg:  16px;   /* default */
+  --guto-radius-xl:  22px;
+  --guto-radius-pill: 999px;
+
+  /* Spacing — tailwind-style scale, multiples of 4px */
+  --guto-space-1:  4px;
+  --guto-space-2:  8px;
+  --guto-space-3:  12px;
+  --guto-space-4:  16px;
+  --guto-space-5:  20px;
+  --guto-space-6:  24px;
+  --guto-space-8:  32px;
+  --guto-space-10: 40px;
+  --guto-space-12: 48px;
+  --guto-space-16: 64px;
+
+  /* Typography — two families. Mono is the dominant UI face;
+     "display" is reserved for the brand mark / hero moments. */
+  --guto-font-display: "Inter Tight", "SF Pro Display", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --guto-font-sans:    "Inter", "Montserrat", "SF Pro Display", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --guto-font-tech:    "JetBrains Mono", "SFMono-Regular", "SF Mono", Menlo, Monaco, Consolas, "Courier New", monospace;
+
+  /* Type scale */
+  --guto-text-9xl:   72px;
+  --guto-text-7xl:   56px;
+  --guto-text-5xl:   36px;
+  --guto-text-4xl:   30px;
+  --guto-text-3xl:   24px;
+  --guto-text-2xl:   20px;
+  --guto-text-xl:    18px;
+  --guto-text-lg:    16px;
+  --guto-text-base:  14px;
+  --guto-text-sm:    12px;
+  --guto-text-xs:    11px;
+  --guto-text-2xs:   10px;
+  --guto-text-3xs:    9px;   /* the tiny all-caps trackers, e.g. "ACESSO RESTRITO" */
+
+  /* Tracking — wide letter-spacing on uppercase labels is a brand signature */
+  --guto-track-tight:  -0.01em;
+  --guto-track-normal:  0;
+  --guto-track-wide:    0.08em;
+  --guto-track-wider:   0.18em;
+  --guto-track-widest:  0.30em;
+
+  /* Motion */
+  --guto-ease:           cubic-bezier(0.4, 0, 0.2, 1);
+  --guto-ease-out:       cubic-bezier(0.16, 1, 0.3, 1);
+  --guto-dur-fast:  160ms;
+  --guto-dur-base:  180ms;
+  --guto-dur-slow:  280ms;
+
+  /* --------------------------------------------------------------------------
+     2. SEMANTIC TOKENS — what UI components reference
+     -------------------------------------------------------------------------- */
+
+  --bg:               var(--guto-white);
+  --bg-page:          var(--guto-bg-page);
+  --bg-surface:       var(--guto-surface);
+  --bg-surface-deep:  var(--guto-surface-deep);
+
+  --fg1:              var(--guto-charcoal);                /* primary text — Cyber-Luxury */
+  --fg2:              var(--guto-executive);               /* body / secondary */
+  --fg-subtitle:      var(--guto-soft-blue);               /* ALL-CAPS subtitles */
+  --fg3:              rgba(45, 55, 72, 0.48);              /* tertiary / placeholder lite */
+  --fg-mute:          rgba(13, 35, 65, 0.20);              /* placeholder */
+  --fg-on-cyan:       var(--guto-navy);                    /* text on the cyan CTA */
+  --fg-on-dark:       #ffffff;
+
+  --accent:           var(--guto-cyan);
+  --accent-soft:      var(--guto-cyan-soft);
+  --accent-glow:      var(--guto-glow-md);
+
+  --card-bg:          var(--guto-frost-card);
+  --card-border:      var(--guto-border);
+  --card-shadow:      var(--guto-shadow-card);
+
+  --input-bg:         var(--guto-frost-card);
+  --input-shadow:     var(--guto-deboss);
+  --input-fg:         var(--guto-navy);
+  --input-placeholder:var(--fg-mute);
+
+  --focus-ring:       0 0 0 1px var(--guto-cyan), 0 0 18px rgba(82,231,255,0.42);
+}
+
+/* ============================================================================
+   SEMANTIC TYPE — drop these classes onto elements; never hardcode sizes
+   ============================================================================ */
+
+body, .gd-base {
+  font-family: var(--guto-font-tech);
+  font-size: var(--guto-text-base);
+  line-height: 1.45;
+  color: var(--fg1);
+  background: var(--bg-page);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* H1 — hero / portal moment. Almost never used; reserved for the GUTO mark
+   and stage titles like "PACT". */
+.gd-h1 {
+  font-family: var(--guto-font-tech);
+  font-size: clamp(36px, 7vw, 72px);
+  font-weight: 900;
+  line-height: 0.98;
+  letter-spacing: var(--guto-track-tight);
+  color: var(--fg1);
+}
+
+/* H2 — section title in calibration / settings */
+.gd-h2 {
+  font-family: var(--guto-font-tech);
+  font-size: var(--guto-text-3xl);
+  font-weight: 900;
+  line-height: 1.15;
+  letter-spacing: var(--guto-track-normal);
+  color: var(--fg1);
+  text-wrap: balance;
+}
+
+/* H3 — card titles, screen subtitles */
+.gd-h3 {
+  font-family: var(--guto-font-tech);
+  font-size: var(--guto-text-xl);
+  font-weight: 800;
+  line-height: 1.2;
+  color: var(--fg1);
+}
+
+/* Body — chat, descriptions */
+.gd-p {
+  font-family: var(--guto-font-tech);
+  font-size: var(--guto-text-base);
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--fg1);
+}
+
+.gd-p-soft {
+  font-family: var(--guto-font-tech);
+  font-size: var(--guto-text-base);
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--fg2);
+}
+
+/* Eyebrow / kicker — uppercase tech label. Used EVERYWHERE: above titles,
+   on chips, as button text, as data labels. The brand's voice on screen. */
+.gd-kicker {
+  font-family: var(--guto-font-tech);
+  font-size: var(--guto-text-2xs);
+  font-weight: 900;
+  letter-spacing: var(--guto-track-widest);
+  text-transform: uppercase;
+  color: var(--fg2);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.72);
+}
+
+.gd-kicker-cyan {
+  composes: gd-kicker;
+  color: var(--guto-cyan);
+  text-shadow:
+      0 0 8px rgba(82, 231, 255, 0.54),
+      0 1px 0 rgba(255, 255, 255, 0.82);
+}
+
+/* Field label — sits above an input */
+.gd-label {
+  font-family: var(--guto-font-tech);
+  font-size: var(--guto-text-2xs);
+  font-weight: 900;
+  letter-spacing: var(--guto-track-wider);
+  text-transform: uppercase;
+  color: var(--fg2);
+}
+
+/* Button / CTA text */
+.gd-cta {
+  font-family: var(--guto-font-tech);
+  font-size: var(--guto-text-sm);
+  font-weight: 900;
+  letter-spacing: var(--guto-track-wider);
+  text-transform: uppercase;
+}
+
+/* Tiny micro-copy — "ACESSO RESTRITO" sub-stamp under logo */
+.gd-stamp {
+  font-family: var(--guto-font-tech);
+  font-size: var(--guto-text-3xs);
+  font-weight: 900;
+  letter-spacing: var(--guto-track-widest);
+  text-transform: uppercase;
+  color: var(--fg3);
+}
+
+/* Mono code / data readouts */
+.gd-code {
+  font-family: var(--guto-font-tech);
+  font-size: var(--guto-text-sm);
+  font-weight: 500;
+  color: var(--fg1);
+}
