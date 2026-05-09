@@ -2,11 +2,28 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import Image from "next/image"
+import { Loader2, ShieldCheck, UserCog } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 import { loginAdmin, loginCoach } from "@/lib/api/auth"
 import { getApiErrorMessage } from "@/lib/api/client"
-import { Loader2, ShieldCheck, UserCog } from "lucide-react"
+
+const T = {
+  ink: "#04060f",
+  panel: "rgba(15,22,42,0.86)",
+  panelDp: "rgba(8,12,26,0.92)",
+  border: "rgba(82,231,255,0.10)",
+  borderHi: "rgba(82,231,255,0.26)",
+  fg: "#e8f4ff",
+  fg2: "rgba(232,244,255,0.60)",
+  fg3: "rgba(232,244,255,0.38)",
+  fg4: "rgba(232,244,255,0.18)",
+  cyan: "#52e7ff",
+  cyanSoft: "rgba(82,231,255,0.14)",
+  cyanLine: "rgba(82,231,255,0.24)",
+  bad: "#f87171",
+  badS: "rgba(248,113,113,0.13)",
+  mono: '"JetBrains Mono","SF Mono",Menlo,Monaco,Consolas,monospace',
+} as const
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState("")
@@ -22,11 +39,21 @@ export default function AdminLoginPage() {
     setIsLoading(true)
     setError(null)
     try {
-      const res = mode === "admin"
-        ? await loginAdmin(email, password)
-        : await loginCoach(email, password)
+      const res = mode === "admin" ? await loginAdmin(email, password) : await loginCoach(email, password)
       login(res)
-      router.push("/coach")
+
+      // Redirect por role:
+      //  - super_admin / admin → Sala de Controle (/coach é a rota host)
+      //  - coach              → /coach (a UI ajusta automaticamente, sidebar restrita)
+      //  - student            → erro: aluno deve usar /login
+      const role = res.role
+      if (role === "super_admin" || role === "admin" || role === "coach") {
+        router.push("/coach")
+      } else if (role === "student") {
+        setError("Esta entrada é só para coaches e admin. Use a tela de aluno.")
+      } else {
+        setError("Sua conta não tem acesso à Sala de Controle.")
+      }
     } catch (err) {
       setError(getApiErrorMessage(err))
     } finally {
@@ -34,91 +61,262 @@ export default function AdminLoginPage() {
     }
   }
 
-  const modeActive = "flex flex-1 items-center justify-center gap-2 rounded-full py-3 font-mono text-[10px] font-black uppercase tracking-wider transition-all bg-[var(--guto-navy)] text-[var(--guto-cyan)] border border-[var(--guto-navy)] shadow-sm"
-  const modeInactive = "flex flex-1 items-center justify-center gap-2 rounded-full py-3 font-mono text-[10px] font-black uppercase tracking-wider transition-all bg-white/60 text-[rgba(13,35,65,0.65)] border border-[rgba(13,35,65,0.18)] hover:border-[rgba(13,35,65,0.35)]"
-
   return (
-    <div className="sala-guto flex min-h-dvh flex-col overflow-y-auto">
-      <div className="flex flex-1 flex-col items-center justify-center px-8 py-12">
+    <div
+      style={{
+        minHeight: "100dvh",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "32px 16px",
+        background: `
+          radial-gradient(80% 60% at 0% 0%, rgba(82,231,255,0.06) 0%, transparent 60%),
+          radial-gradient(60% 50% at 100% 100%, rgba(82,231,255,0.05) 0%, transparent 60%),
+          ${T.ink}
+        `,
+        color: T.fg,
+        fontFamily: T.mono,
+        position: "relative",
+      }}
+    >
+      {/* scanlines */}
+      <div
+        aria-hidden
+        style={{
+          position: "fixed",
+          inset: 0,
+          pointerEvents: "none",
+          background:
+            "repeating-linear-gradient(0deg, rgba(82,231,255,0.018) 0px, rgba(82,231,255,0.018) 1px, transparent 1px, transparent 3px)",
+          mixBlendMode: "screen",
+        }}
+      />
 
-        {/* Logo */}
-        <div className="mb-10 flex flex-col items-center">
-          <Image
-            src="/assets/guto/logo_guto.png"
-            alt="GUTO"
-            width={160}
-            height={54}
-            priority
-            className="drop-shadow-sm"
-          />
-          <div className="mt-4 flex items-center gap-2">
-            <ShieldCheck className="h-3 w-3 text-[var(--guto-navy)]" />
-            <p className="font-mono text-[10px] font-black uppercase tracking-[0.3em] text-[var(--guto-navy)]">
-              Painel de Controle
-            </p>
-          </div>
+      {/* Brand */}
+      <div style={{ marginBottom: 32, textAlign: "center", position: "relative", zIndex: 1 }}>
+        <div
+          style={{
+            fontFamily: T.mono,
+            fontSize: 22,
+            fontWeight: 900,
+            color: T.cyan,
+            letterSpacing: "0.32em",
+            textShadow: "0 0 14px rgba(82,231,255,0.6)",
+            marginBottom: 8,
+          }}
+        >
+          GUTO
         </div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+          <ShieldCheck style={{ width: 12, height: 12, color: T.cyan }} />
+          <span
+            style={{
+              fontFamily: T.mono,
+              fontSize: 9,
+              fontWeight: 900,
+              color: T.cyan,
+              letterSpacing: "0.34em",
+              textTransform: "uppercase",
+            }}
+          >
+            Sala de Controle
+          </span>
+        </div>
+      </div>
 
+      {/* Card */}
+      <div
+        style={{
+          width: "100%",
+          maxWidth: 400,
+          background: T.panelDp,
+          border: `1px solid ${T.borderHi}`,
+          borderRadius: 16,
+          padding: 32,
+          boxShadow: "0 0 40px rgba(82,231,255,0.10), 0 4px 30px rgba(0,0,0,0.5)",
+          backdropFilter: "blur(12px)",
+          position: "relative",
+          zIndex: 1,
+        }}
+      >
         {/* Mode toggle */}
-        <div className="mb-8 flex w-full max-w-sm gap-2">
-          <button onClick={() => setMode("coach")} className={mode === "coach" ? modeActive : modeInactive}>
-            <UserCog className="h-3.5 w-3.5" />
-            Coach
-          </button>
-          <button onClick={() => setMode("admin")} className={mode === "admin" ? modeActive : modeInactive}>
-            <ShieldCheck className="h-3.5 w-3.5" />
-            Admin
-          </button>
+        <div style={{ display: "flex", gap: 6, marginBottom: 24 }}>
+          <ModeButton active={mode === "admin"} onClick={() => setMode("admin")}>
+            <ShieldCheck style={{ width: 12, height: 12 }} />
+            ADMIN
+          </ModeButton>
+          <ModeButton active={mode === "coach"} onClick={() => setMode("coach")}>
+            <UserCog style={{ width: 12, height: 12 }} />
+            COACH
+          </ModeButton>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="w-full max-w-sm space-y-4">
-          <div className="guto-deboss rounded-2xl p-4">
-            <label className="mb-1.5 block font-mono text-[10px] font-black uppercase tracking-wider text-[rgba(13,35,65,0.55)]">
-              E-mail
-            </label>
+        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <FormField label="E-mail">
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full border-none bg-transparent font-mono text-sm font-black text-[var(--guto-navy)] outline-none placeholder:text-[rgba(13,35,65,0.2)]"
-              placeholder="contato@guto.app"
-              required
               autoComplete="email"
+              required
+              placeholder="admin@guto.fit"
+              style={fieldStyle}
             />
-          </div>
+          </FormField>
 
-          <div className="guto-deboss rounded-2xl p-4">
-            <label className="mb-1.5 block font-mono text-[10px] font-black uppercase tracking-wider text-[rgba(13,35,65,0.55)]">
-              Senha
-            </label>
+          <FormField label="Senha">
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full border-none bg-transparent font-mono text-sm font-black text-[var(--guto-navy)] outline-none placeholder:text-[rgba(13,35,65,0.2)]"
-              placeholder="••••••••"
-              required
               autoComplete="current-password"
+              required
+              placeholder="••••••••"
+              style={fieldStyle}
             />
-          </div>
+          </FormField>
 
           {error && (
-            <p className="text-center font-mono text-[10px] font-black uppercase text-red-500">
-              {error}
-            </p>
+            <div
+              style={{
+                padding: "10px 14px",
+                borderRadius: 8,
+                background: T.badS,
+                border: "1px solid rgba(248,113,113,0.30)",
+                color: T.bad,
+                fontFamily: T.mono,
+                fontSize: 10,
+                letterSpacing: "0.10em",
+                textAlign: "center",
+              }}
+            >
+              ⚠ {error}
+            </div>
           )}
 
           <button
             type="submit"
             disabled={isLoading}
-            className="mt-2 flex h-14 w-full items-center justify-center rounded-full bg-[var(--guto-navy)] font-mono text-xs font-black uppercase tracking-[0.2em] text-[var(--guto-cyan)] shadow-[0_4px_24px_rgba(13,35,65,0.25)] transition-all active:scale-95 disabled:opacity-50"
+            style={{
+              marginTop: 8,
+              height: 48,
+              borderRadius: 999,
+              border: "1px solid transparent",
+              background: "linear-gradient(135deg,#7df0ff,#1ec5e0)",
+              color: "#04131e",
+              fontFamily: T.mono,
+              fontSize: 11,
+              fontWeight: 900,
+              letterSpacing: "0.24em",
+              textTransform: "uppercase",
+              boxShadow: "0 0 22px rgba(82,231,255,0.30)",
+              cursor: isLoading ? "not-allowed" : "pointer",
+              opacity: isLoading ? 0.5 : 1,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+            }}
           >
-            {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : "ACESSAR PAINEL"}
+            {isLoading ? (
+              <Loader2 style={{ width: 18, height: 18 }} className="animate-spin" />
+            ) : (
+              "Entrar na Sala de Controle"
+            )}
           </button>
         </form>
+      </div>
 
+      {/* Footer */}
+      <div
+        style={{
+          marginTop: 32,
+          fontFamily: T.mono,
+          fontSize: 9,
+          color: T.fg4,
+          letterSpacing: "0.20em",
+          textTransform: "uppercase",
+          textAlign: "center",
+          position: "relative",
+          zIndex: 1,
+        }}
+      >
+        Aluno?{" "}
+        <a href="/login" style={{ color: T.cyan, textDecoration: "none" }}>
+          Login do app
+        </a>
       </div>
     </div>
   )
+}
+
+function ModeButton({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean
+  onClick: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        flex: 1,
+        height: 36,
+        borderRadius: 10,
+        cursor: "pointer",
+        border: active ? `1px solid ${T.cyan}` : `1px solid ${T.border}`,
+        background: active ? T.cyanSoft : "transparent",
+        color: active ? T.cyan : T.fg3,
+        fontFamily: T.mono,
+        fontSize: 9,
+        fontWeight: 900,
+        letterSpacing: "0.22em",
+        textTransform: "uppercase",
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 6,
+      }}
+    >
+      {children}
+    </button>
+  )
+}
+
+function FormField({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <span
+        style={{
+          fontFamily: T.mono,
+          fontSize: 9,
+          fontWeight: 900,
+          color: T.fg3,
+          letterSpacing: "0.22em",
+          textTransform: "uppercase",
+        }}
+      >
+        {label}
+      </span>
+      {children}
+    </label>
+  )
+}
+
+const fieldStyle: React.CSSProperties = {
+  height: 44,
+  padding: "0 14px",
+  background: "rgba(0,0,0,0.40)",
+  border: `1px solid ${T.border}`,
+  borderRadius: 10,
+  boxShadow: "inset 0 2px 6px rgba(0,0,0,0.45)",
+  color: T.fg,
+  fontFamily: T.mono,
+  fontSize: 13,
+  outline: "none",
 }

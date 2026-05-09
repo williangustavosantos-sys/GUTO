@@ -62,6 +62,8 @@ export interface AdminUser extends AuthUser {
   accessDurationDays?: number
   createdAt?: string
   updatedAt?: string
+  teamId?: string
+  teamName?: string | null
 }
 
 export interface AdminStudent extends AdminUser {
@@ -187,6 +189,32 @@ export function createAdminCustomExercise(data: {
     method: "POST",
     body: JSON.stringify(data),
   })
+}
+
+// ─── Aprovações de exercícios (super_admin / admin) ──────────────────────────
+
+export function getAdminCustomExercises(): Promise<{ exercises: AdminCustomExerciseRequest[] }> {
+  return apiRequest<{ exercises: AdminCustomExerciseRequest[] }>("/admin/exercises/custom")
+}
+
+export function approveAdminCustomExercise(exerciseId: string): Promise<{ exercise: AdminCustomExerciseRequest }> {
+  return apiRequest<{ exercise: AdminCustomExerciseRequest }>(
+    `/admin/exercises/custom/${exerciseId}/approve`,
+    { method: "POST" }
+  )
+}
+
+export function rejectAdminCustomExercise(
+  exerciseId: string,
+  reason?: string
+): Promise<{ exercise: AdminCustomExerciseRequest }> {
+  return apiRequest<{ exercise: AdminCustomExerciseRequest }>(
+    `/admin/exercises/custom/${exerciseId}/reject`,
+    {
+      method: "POST",
+      body: JSON.stringify({ reason: reason ?? "" }),
+    }
+  )
 }
 
 export function createAdminUser(data: Partial<AdminUser> & { password?: string }): Promise<{ user: AdminUser; student?: AdminStudent; inviteLink: string }> {

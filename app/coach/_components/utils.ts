@@ -10,9 +10,21 @@ import { ApiError } from "@/lib/api/client"
 
 // ─── Screen & Tab Types ────────────────────────────────────────────────────────
 
-export type Screen = "hoje" | "students" | "treinos" | "dietas" | "arena" | "coaches" | "teams" | "logs"
+export type Screen =
+  | "hoje"
+  | "empresas"
+  | "students"
+  | "coaches"
+  | "treinos"
+  | "dietas"
+  | "aprovacoes"
+  | "banco"
+  | "arena"
+  | "logs"
 export type FilterTab = "ativos" | "pausados" | "arquivados" | "todos"
 export type DetailTab = "resumo" | "calibragem" | "treino" | "dieta" | "historico" | "acesso"
+export type EmpresaTab = "resumo" | "coaches" | "alunos" | "plano" | "logs"
+export type CoachDetailTab = "resumo" | "alunos" | "treinos" | "dietas" | "logs"
 export type AvatarStage = "baby" | "teen" | "adult" | "elite"
 export type ResetScope = "weekly" | "monthly" | "individual" | "validationHistory" | "all"
 

@@ -14,31 +14,39 @@ import {
   CreateTeamDialog,
 } from "./_components/create-dialogs"
 import { HojeScreen } from "./_components/screens/hoje-screen"
+import { EmpresasScreen } from "./_components/screens/empresas-screen"
 import { StudentsScreen } from "./_components/screens/students-screen"
+import { CoachesScreen } from "./_components/screens/coaches-screen"
 import { TreinosScreen } from "./_components/screens/treinos-screen"
 import { DietasScreen } from "./_components/screens/dietas-screen"
+import { AprovacoesScreen } from "./_components/screens/aprovacoes-screen"
+import { BancoScreen } from "./_components/screens/banco-screen"
 import { ArenaScreen } from "./_components/screens/arena-screen"
-import { CoachesScreen } from "./_components/screens/coaches-screen"
-import { TeamsScreen } from "./_components/screens/teams-screen"
 import { LogsScreen } from "./_components/screens/logs-screen"
+import { EmpresaDrawer } from "./_components/empresa-drawer"
+import { CoachDrawer } from "./_components/coach-drawer"
 
 function ActiveScreen() {
   const { activeScreen } = useCockpit()
   switch (activeScreen) {
     case "hoje":
       return <HojeScreen />
+    case "empresas":
+      return <EmpresasScreen />
     case "students":
       return <StudentsScreen />
+    case "coaches":
+      return <CoachesScreen />
     case "treinos":
       return <TreinosScreen />
     case "dietas":
       return <DietasScreen />
+    case "aprovacoes":
+      return <AprovacoesScreen />
+    case "banco":
+      return <BancoScreen />
     case "arena":
       return <ArenaScreen />
-    case "coaches":
-      return <CoachesScreen />
-    case "teams":
-      return <TeamsScreen />
     case "logs":
       return <LogsScreen />
     default:
@@ -53,6 +61,8 @@ function CockpitContent() {
         <ActiveScreen />
       </CockpitLayout>
       <StudentDrawer />
+      <EmpresaDrawer />
+      <CoachDrawer />
       <CreateStudentDialog />
       <CreateCoachDialog />
       <CreateTeamDialog />
