@@ -2,10 +2,10 @@
 
 import { useMemo } from "react"
 import { Building2, Users, Shield, CreditCard, ScrollText, X } from "lucide-react"
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
 import { useCockpit } from "./cockpit-context"
 import { T, planLabel, teamStatusLabel, teamStatusTone } from "./control-tokens"
-import { Plate, Pill, Btn, Kicker, CtrlDataRow, UsageBar, SectionTitle, FilterPill } from "./controls"
+import { Plate, Pill, Btn, Kicker, CtrlDataRow, UsageBar, SectionTitle } from "./controls"
 import type { EmpresaTab } from "./utils"
 import { coachLabel, relativeTime, studentRisk } from "./utils"
 import type { AdminCoach, AdminStudent, AdminTeam } from "@/lib/api/admin"

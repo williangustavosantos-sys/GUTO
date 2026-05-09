@@ -34,7 +34,10 @@ export default function PricingPage() {
     try {
       const { url } = await createCheckoutSession(plan)
       if (url) {
-        window.location.href = url
+        // Usar assign() em vez de `location.href = url` por causa do
+        // react-hooks/immutability — comportamento idêntico para o usuário
+        // (navegação top-level) e fica histórico no back button.
+        window.location.assign(url)
       } else {
         setError("Não foi possível iniciar o checkout.")
         setBusyPlan(null)

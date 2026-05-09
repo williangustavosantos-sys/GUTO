@@ -7,7 +7,7 @@ import { getAdminStudentInvite, regenerateAdminStudentInvite } from "@/lib/api/a
 import { useCockpit } from "../cockpit-context"
 import { T } from "../control-tokens"
 import { Plate, Pill, SearchBox, FilterPill, SelectInput } from "../controls"
-import { coachLabel, relativeTime, studentRisk, type RiskLevel } from "../utils"
+import { coachLabel, studentRisk, type RiskLevel } from "../utils"
 
 const STATUS_FILTERS: { id: "ativos" | "pausados" | "arquivados" | "todos"; label: string }[] = [
   { id: "ativos", label: "Ativos" },

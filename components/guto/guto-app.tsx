@@ -1321,6 +1321,11 @@ export function GutoApp({
     [commitOnboardingName, draftName, isValidatingName]
   )
 
+  // Hoist `userId` para que o React Compiler enxergue apenas o primitivo
+  // dentro de `openSettings` — assim a dep inferida bate com a manual e
+  // mantemos a memoização granular (re-cria só quando o userId muda, não
+  // quando qualquer campo de `user` muda).
+  const settingsUserId = user?.userId
   const openSettings = useCallback(() => {
     gutoAudio.playGutoFeedback("tap")
     setSettingsNameDraft(committedName || formatGutoName(userName || ""))
@@ -1334,8 +1339,8 @@ export function GutoApp({
     setSettingsCountryDraft(memory?.country ?? "")
     setSettingsFoodRestrictionsDraft(memory?.foodRestrictions ?? "")
     const stored = (() => {
-      if (typeof window === "undefined" || !user?.userId) return null
-      try { return JSON.parse(window.localStorage.getItem(`${STORAGE_KEY}-${user.userId}`) ?? "null") as StoredProfile | null } catch { return null }
+      if (typeof window === "undefined" || !settingsUserId) return null
+      try { return JSON.parse(window.localStorage.getItem(`${STORAGE_KEY}-${settingsUserId}`) ?? "null") as StoredProfile | null } catch { return null }
     })()
     setSettingsPhoneDraft(stored?.phone ?? "")
     setSettingsFoodIntolerancesDraft(stored?.foodIntolerances ?? "")
@@ -1343,7 +1348,7 @@ export function GutoApp({
     setSettingsSavedToast(false)
     setNameGate(null)
     setStage("settings")
-  }, [committedName, memory, user?.userId, userName])
+  }, [committedName, memory, settingsUserId, userName])
 
   const handleSettingsBack = useCallback(() => {
     gutoAudio.playGutoFeedback("tap")
