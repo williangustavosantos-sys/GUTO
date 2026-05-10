@@ -4,6 +4,18 @@ const RAW_API_URL =
 
 export const API_URL = RAW_API_URL.replace(/\/+$/, "")
 
+function isQaDemoMode() {
+  const demoEnv = process.env.NEXT_PUBLIC_VERCEL_ENV
+
+  return Boolean(
+    typeof window !== "undefined" &&
+      process.env.NEXT_PUBLIC_ENABLE_DEMO_LOGIN === "true" &&
+      (demoEnv === "preview" || demoEnv === "development") &&
+      window.location.pathname.startsWith("/coach") &&
+      new URLSearchParams(window.location.search).has("demo")
+  )
+}
+
 export class ApiError extends Error {
   status?: number
   details?: unknown
@@ -58,12 +70,15 @@ export async function apiRequest<T>(
     if (res.status === 401) {
       const body = await res.json().catch(() => ({}))
       const isLoginEndpoint = path.includes("/login")
-      if (!isLoginEndpoint && typeof window !== "undefined") {
+      const suppressAuthRedirect = isQaDemoMode()
+
+      if (!isLoginEndpoint && typeof window !== "undefined" && !suppressAuthRedirect) {
         window.localStorage.removeItem("guto-auth-token")
         if (!window.location.pathname.includes("/login") && !window.location.pathname.includes("/convite")) {
           window.location.href = "/login"
         }
       }
+
       throw new ApiError(isApiErrorBody(body) ? body.message || "Credenciais inválidas." : "Credenciais inválidas.", 401)
     }
 
