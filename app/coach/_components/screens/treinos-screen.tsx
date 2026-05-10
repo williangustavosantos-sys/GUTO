@@ -3,49 +3,22 @@
 import { useMemo, useState } from "react"
 import { Dumbbell } from "lucide-react"
 import { useCockpit } from "../cockpit-context"
-import { studentRisk, relativeTime } from "../utils"
-import { RiskBadge } from "../ui"
+import { T } from "../control-tokens"
+import { Plate, Pill, FilterPill } from "../controls"
+import { studentRisk, relativeTime, coachLabel, type RiskLevel } from "../utils"
 import type { AdminStudent } from "@/lib/api/admin"
 
 type QueueFilter = "todos" | "critico" | "atencao" | "sem-sinal"
 
-function StudentQueueRow({ student }: { student: AdminStudent }) {
-  const { openStudent } = useCockpit()
-  const risk = studentRisk(student)
-
-  return (
-    <button
-      type="button"
-      onClick={() => void openStudent(student, "treino")}
-      className="flex w-full items-center justify-between gap-3 rounded-xl border border-white/7 bg-white/[0.035] px-4 py-4 text-left transition hover:border-[#00e5ff]/30 hover:bg-white/[0.05]"
-    >
-      <div className="min-w-0 flex-1">
-        <div className="mb-1 flex items-center gap-2">
-          <span className="truncate font-bold text-white">{student.name}</span>
-          <RiskBadge level={risk} />
-        </div>
-        <p className="font-mono text-[10px] text-white/30">
-          {student.lastValidationAt
-            ? `último treino ${relativeTime(student.lastValidationAt)}`
-            : student.lastActiveAt
-            ? `visto ${relativeTime(student.lastActiveAt)}`
-            : "sem sinal de atividade"}
-        </p>
-      </div>
-      <div className="flex shrink-0 items-center gap-3">
-        <span className="hidden font-mono text-[11px] text-white/30 sm:block">
-          {student.weeklyXp} XP / semana
-        </span>
-        <span className="rounded-md border border-[#00e5ff]/30 bg-[#00e5ff]/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-[#00e5ff]">
-          Editar treino ›
-        </span>
-      </div>
-    </button>
-  )
+function riskTone(risk: RiskLevel): "ok" | "warn" | "bad" | "mute" {
+  return risk === "critico" ? "bad" : risk === "atencao" ? "warn" : risk === "sem-sinal" ? "mute" : "ok"
+}
+function riskLabel(risk: RiskLevel): string {
+  return risk === "critico" ? "CRÍTICO" : risk === "atencao" ? "ATENÇÃO" : risk === "sem-sinal" ? "SEM SINAL" : "EM DIA"
 }
 
 export function TreinosScreen() {
-  const { students } = useCockpit()
+  const { students, coaches, openStudent } = useCockpit()
   const [queueFilter, setQueueFilter] = useState<QueueFilter>("todos")
 
   const ativos = useMemo(() => students.filter((s) => s.active && !s.archived), [students])
@@ -53,19 +26,18 @@ export function TreinosScreen() {
   const sorted = useMemo(() => {
     const order: Record<string, number> = { critico: 0, atencao: 1, "sem-sinal": 2, ok: 3 }
     const filtered =
-      queueFilter === "todos"
-        ? ativos
-        : ativos.filter((s) => studentRisk(s) === queueFilter)
-    return [...filtered].sort(
-      (a, b) => (order[studentRisk(a)] ?? 9) - (order[studentRisk(b)] ?? 9)
-    )
+      queueFilter === "todos" ? ativos : ativos.filter((s) => studentRisk(s) === queueFilter)
+    return [...filtered].sort((a, b) => (order[studentRisk(a)] ?? 9) - (order[studentRisk(b)] ?? 9))
   }, [ativos, queueFilter])
 
-  const counts = useMemo(() => ({
-    critico: ativos.filter((s) => studentRisk(s) === "critico").length,
-    atencao: ativos.filter((s) => studentRisk(s) === "atencao").length,
-    "sem-sinal": ativos.filter((s) => studentRisk(s) === "sem-sinal").length,
-  }), [ativos])
+  const counts = useMemo(
+    () => ({
+      critico: ativos.filter((s) => studentRisk(s) === "critico").length,
+      atencao: ativos.filter((s) => studentRisk(s) === "atencao").length,
+      "sem-sinal": ativos.filter((s) => studentRisk(s) === "sem-sinal").length,
+    }),
+    [ativos]
+  )
 
   const FILTERS: { id: QueueFilter; label: string; count?: number }[] = [
     { id: "todos", label: "Todos" },
@@ -75,52 +47,101 @@ export function TreinosScreen() {
   ]
 
   return (
-    <div className="p-5">
-      <div className="mb-2">
-        <p className="text-[11px] text-white/35">
-          Alunos ordenados por urgência. Clique em qualquer aluno para editar o treino direto.
-        </p>
-      </div>
+    <div style={{ padding: "24px 28px" }}>
+      <p style={{ fontFamily: T.mono, fontSize: 11, color: T.fg3, marginBottom: 14 }}>
+        Alunos ordenados por urgência. Clique para abrir direto na aba Treino.
+      </p>
 
-      {/* Filter pills */}
-      <div className="mb-5 flex flex-wrap gap-2">
+      {/* Filtros */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
         {FILTERS.map(({ id, label, count }) => (
-          <button
-            key={id}
-            onClick={() => setQueueFilter(id)}
-            className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[10px] font-black uppercase tracking-widest transition ${
-              queueFilter === id
-                ? "border-[#00e5ff] bg-[#00e5ff] text-[#0a0f1e]"
-                : "border-white/10 bg-white/5 text-white/40 hover:text-white"
-            }`}
-          >
+          <FilterPill key={id} active={queueFilter === id} onClick={() => setQueueFilter(id)} count={count}>
             {label}
-            {count !== undefined && count > 0 && (
-              <span
-                className={`rounded-full px-1.5 text-[9px] font-black ${
-                  queueFilter === id ? "bg-[#0a0f1e] text-[#00e5ff]" : "bg-white/10"
-                }`}
-              >
-                {count}
-              </span>
-            )}
-          </button>
+          </FilterPill>
         ))}
       </div>
 
-      {/* Queue */}
+      {/* Lista */}
       {sorted.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-white/10 py-16 text-center">
-          <Dumbbell className="mx-auto mb-3 h-8 w-8 text-white/20" />
-          <p className="text-sm text-white/35">Nenhum aluno nesta fila.</p>
-        </div>
+        <Plate style={{ padding: 48, textAlign: "center" }}>
+          <Dumbbell className="mx-auto mb-3 h-7 w-7" style={{ color: T.fg4 }} />
+          <p style={{ fontFamily: T.mono, fontSize: 12, color: T.fg3 }}>
+            Nenhum aluno nesta fila.
+          </p>
+        </Plate>
       ) : (
-        <div className="grid gap-2">
-          {sorted.map((student) => (
-            <StudentQueueRow key={student.userId} student={student} />
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {sorted.map((s) => (
+            <QueueRow key={s.userId} student={s} mode="treino" coachName={coachLabel(s, coaches)} />
           ))}
         </div>
       )}
     </div>
   )
+
+  function QueueRow({
+    student,
+    mode,
+    coachName,
+  }: {
+    student: AdminStudent
+    mode: "treino" | "dieta"
+    coachName: string
+  }) {
+    const risk = studentRisk(student)
+    return (
+      <button
+        onClick={() => openStudent(student, mode)}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 14,
+          padding: "14px 18px",
+          background: T.panel,
+          border: `1px solid ${T.border}`,
+          borderRadius: 12,
+          cursor: "pointer",
+          textAlign: "left",
+        }}
+      >
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 3 }}>
+            <span style={{ fontFamily: T.mono, fontSize: 13, fontWeight: 700, color: T.fg }}>
+              {student.name}
+            </span>
+            <Pill tone={riskTone(risk)}>{riskLabel(risk)}</Pill>
+          </div>
+          <span style={{ fontFamily: T.mono, fontSize: 10, color: T.fg3 }}>
+            {student.lastValidationAt
+              ? `última validação ${relativeTime(student.lastValidationAt)}`
+              : "sem sinal"}
+            {" · "}
+            {coachName}
+          </span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 14, flexShrink: 0 }}>
+          <span style={{ fontFamily: T.mono, fontSize: 10, color: T.fg3 }}>
+            {student.weeklyXp} XP
+          </span>
+          <span
+            style={{
+              padding: "6px 12px",
+              borderRadius: 8,
+              border: `1px solid ${T.cyanLine}`,
+              background: T.cyanSoft,
+              fontFamily: T.mono,
+              fontSize: 9,
+              fontWeight: 900,
+              letterSpacing: "0.18em",
+              color: T.cyan,
+              textTransform: "uppercase",
+            }}
+          >
+            Editar treino ›
+          </span>
+        </div>
+      </button>
+    )
+  }
 }

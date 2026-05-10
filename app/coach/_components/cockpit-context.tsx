@@ -7,6 +7,9 @@ import { useCoachFilters, type CoachFilters } from "../_hooks/use-coach-filters"
 import { useCoachData, type CoachData } from "../_hooks/use-coach-data"
 import { useStudentDetail, type StudentDetailHook } from "../_hooks/use-student-detail"
 import { useStudentActions, type StudentActions } from "../_hooks/use-student-actions"
+import { useEmpresaDetail, type EmpresaDetailHook } from "../_hooks/use-empresa-detail"
+import { useCoachDetail, type CoachDetailHook } from "../_hooks/use-coach-detail"
+import { useAprovacoes, type AprovacoesHook } from "../_hooks/use-aprovacoes"
 import type { Screen } from "./utils"
 
 // ─── Context shape ────────────────────────────────────────────────────────────
@@ -15,7 +18,10 @@ interface CockpitContextValue
   extends CoachFilters,
     Omit<CoachData, "setStudents" | "setCoaches" | "setTeams">,
     StudentDetailHook,
-    StudentActions {
+    StudentActions,
+    EmpresaDetailHook,
+    CoachDetailHook,
+    AprovacoesHook {
   user: AuthUser
   isAdmin: boolean
   isSuperAdmin: boolean
@@ -53,6 +59,9 @@ export function CockpitProvider({
     fetchTeamSummary: data.fetchTeamSummary,
     refreshSelected: detail.refreshSelected,
   })
+  const empresaDetail = useEmpresaDetail()
+  const coachDetail = useCoachDetail()
+  const aprovacoes = useAprovacoes()
 
   const studentLimitReached = Boolean(
     data.teamSummary &&
@@ -79,6 +88,9 @@ export function CockpitProvider({
     ...data,
     ...detail,
     ...actions,
+    ...empresaDetail,
+    ...coachDetail,
+    ...aprovacoes,
   }
 
   return <CockpitContext.Provider value={value}>{children}</CockpitContext.Provider>
