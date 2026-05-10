@@ -1,10 +1,11 @@
 "use client"
 
 import { Suspense, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Toaster } from "sonner"
 
 import { useAuth } from "@/components/auth-provider"
+import type { AuthUser } from "@/lib/api/auth"
 import { CockpitProvider, useCockpit } from "./_components/cockpit-context"
 import { CockpitLayout } from "./_components/cockpit-layout"
 import { StudentDrawer } from "./_components/student-drawer"
@@ -25,6 +26,60 @@ import { ArenaScreen } from "./_components/screens/arena-screen"
 import { LogsScreen } from "./_components/screens/logs-screen"
 import { EmpresaDrawer } from "./_components/empresa-drawer"
 import { CoachDrawer } from "./_components/coach-drawer"
+import { QaDemoBanner } from "./_components/qa-demo-banner"
+
+// ─── QA / demo mode ──────────────────────────────────────────────────────────
+//
+// REGRAS (devem TODAS ser verdadeiras para o modo demo ativar):
+//  1. `NEXT_PUBLIC_ENABLE_DEMO_LOGIN === "true"`  (opt-in explícito)
+//  2. `NEXT_PUBLIC_VERCEL_ENV !== "production"`   (bloqueio em produção)
+//  3. URL contém `?demo=super_admin` ou `?demo=coach`
+//
+// Se qualquer regra falhar → fluxo de login real intacto, parâmetro ignorado.
+// Não substituímos NENHUMA chamada de API: se o backend exigir JWT real e
+// retornar 401/403/CORS, o erro aparece no toast como aconteceria normalmente.
+// Esse modo é puramente UI — serve para auditar role-gating, sidebar e
+// drawers sem precisar de credenciais válidas.
+//
+// Como remover depois do merge:
+//   - apagar este bloco e o `if (demoUser)` em CoachInner
+//   - apagar `app/coach/_components/qa-demo-banner.tsx`
+//   - remover env vars na Vercel
+// (Nenhum outro arquivo precisa mudar.)
+
+const DEMO_ENV = process.env.NEXT_PUBLIC_VERCEL_ENV
+const IS_DEMO_ENV = DEMO_ENV === "preview" || DEMO_ENV === "development"
+const IS_PRODUCTION_ENV = DEMO_ENV === "production" || process.env.VERCEL_ENV === "production"
+
+const DEMO_ENABLED =
+  process.env.NEXT_PUBLIC_ENABLE_DEMO_LOGIN === "true" &&
+  IS_DEMO_ENV &&
+  !IS_PRODUCTION_ENV
+
+function buildDemoUser(param: string | null): AuthUser | null {
+  if (!DEMO_ENABLED || !param) return null
+  if (param === "super_admin") {
+    return {
+      userId: "qa-super-admin",
+      name: "QA Super Admin",
+      email: "qa-super@demo.local",
+      role: "super_admin",
+      active: true,
+    }
+  }
+  if (param === "coach") {
+    return {
+      userId: "qa-coach",
+      name: "QA Coach",
+      email: "qa-coach@demo.local",
+      role: "coach",
+      active: true,
+    }
+  }
+  return null
+}
+
+// ─── Active screen switch ────────────────────────────────────────────────────
 
 function ActiveScreen() {
   const { activeScreen } = useCockpit()
@@ -71,11 +126,19 @@ function CockpitContent() {
   )
 }
 
+// ─── Coach inner: orquestra auth real + bypass de QA ─────────────────────────
+
 function CoachInner() {
   const router = useRouter()
   const { user, isLoading } = useAuth()
+  const searchParams = useSearchParams()
 
+  // Hooks SEMPRE chamados antes de qualquer return (regra do React).
+  const demoUser = buildDemoUser(searchParams.get("demo"))
+
+  // Redirect só roda no fluxo real. Em modo demo, viramos no-op.
   useEffect(() => {
+    if (demoUser) return
     if (isLoading) return
     if (!user) {
       router.replace("/login")
@@ -84,8 +147,19 @@ function CoachInner() {
     if (user.role !== "coach" && user.role !== "admin" && user.role !== "super_admin") {
       router.replace("/")
     }
-  }, [user, isLoading, router])
+  }, [demoUser, user, isLoading, router])
 
+  // ─── Caminho QA: bypass total do auth-provider ─────────────────────────────
+  if (demoUser) {
+    return (
+      <CockpitProvider user={demoUser}>
+        <CockpitContent />
+        <QaDemoBanner role={demoUser.role} />
+      </CockpitProvider>
+    )
+  }
+
+  // ─── Caminho real (intocado) ───────────────────────────────────────────────
   if (isLoading || !user) {
     return (
       <div className="flex h-screen items-center justify-center bg-[#0a0f1e] text-white/50">
