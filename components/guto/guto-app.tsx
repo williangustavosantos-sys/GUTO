@@ -1591,18 +1591,20 @@ export function GutoApp({
   const saveFoodIntolerancesSettings = useCallback(() => {
     const val = settingsFoodIntolerancesDraft.trim()
     persistProfile({ foodIntolerances: val || undefined })
+    persistMemory({ foodIntolerances: val || undefined })
     showSavedToast()
     setSettingsMode("menu")
     setStage("system")
-  }, [persistProfile, settingsFoodIntolerancesDraft, showSavedToast])
+  }, [persistMemory, persistProfile, settingsFoodIntolerancesDraft, showSavedToast])
 
   const savePhoneSettings = useCallback(() => {
     const val = settingsPhoneDraft.trim()
     persistProfile({ phone: val || undefined })
+    persistMemory({ phone: val || undefined })
     showSavedToast()
     setSettingsMode("menu")
     setStage("system")
-  }, [persistProfile, settingsPhoneDraft, showSavedToast])
+  }, [persistMemory, persistProfile, settingsPhoneDraft, showSavedToast])
 
   const handleDownloadData = useCallback(() => {
     if (typeof window === "undefined" || !user?.userId) return
@@ -1728,9 +1730,11 @@ export function GutoApp({
           break
         case "phone":
           persistProfile({ phone: String(value) || undefined })
+          persistMemory({ phone: String(value) || undefined })
           break
         case "foodIntolerances":
           persistProfile({ foodIntolerances: String(value) || undefined })
+          persistMemory({ foodIntolerances: String(value) || undefined })
           break
         case "language": {
           const lang = value as SupportedLanguage

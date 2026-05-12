@@ -5,7 +5,7 @@ import Image from "next/image"
 import { AnimatePresence, motion } from "framer-motion"
 import { Loader2, Mic, Send, TrendingUp, Volume2, VolumeX } from "lucide-react"
 
-import { API_URL, getApiErrorMessage } from "@/lib/api/client"
+import { getApiErrorMessage } from "@/lib/api/client"
 import { getGutoProactive, sendGutoMessage, trackGutoEvent } from "@/lib/api/guto"
 import type { DietMeal, GutoAvatarEmotion, GutoExpectedResponse, GutoMemory, GutoWorkoutPlan } from "@/lib/api/guto"
 import type { EvolutionStage, SupportedLanguage } from "@/types/contract"
@@ -23,6 +23,7 @@ import { getLanguage, translations } from "../translations"
 import type { MissionExercise } from "../view-models"
 import { gutoAudio } from "@/lib/audio-haptics"
 import { firstRealGutoName } from "@/lib/guto-profile"
+import { gutoVoice } from "@/lib/guto-voice/guto-voice-service"
 
 interface PendingExerciseQuestion {
   id: string
@@ -346,7 +347,6 @@ export function ChatTab({
 
   const scrollRef = useRef<HTMLDivElement>(null)
   const messagesRef = useRef<Message[]>(messages)
-  const currentAudioRef = useRef<HTMLAudioElement | null>(null)
   const speechRecognitionRef = useRef<BrowserSpeechRecognition | null>(null)
   const speechTranscriptRef = useRef("")
   const speechResultHandledRef = useRef(false)
@@ -429,10 +429,7 @@ export function ChatTab({
 
   useEffect(() => {
     return () => {
-      if (currentAudioRef.current) {
-        currentAudioRef.current.pause()
-        currentAudioRef.current = null
-      }
+      gutoVoice.stop()
     }
   }, [])
 
@@ -441,72 +438,17 @@ export function ChatTab({
     [messages]
   )
 
-  const playBase64Mp3 = useCallback(async (audioBase64: string, meta?: Record<string, unknown>) => {
-    if (!audioBase64 || audioBase64.length < 100) {
-      console.warn("[GUTO_VOICE] empty_audio_payload", meta)
-      return
-    }
-
-    try {
-      if (currentAudioRef.current) {
-        currentAudioRef.current.pause()
-        currentAudioRef.current = null
-      }
-
-      const audio = new Audio(`data:audio/mp3;base64,${audioBase64}`)
-      currentAudioRef.current = audio
-      setIsSpeaking(true)
-
-      audio.onended = () => setIsSpeaking(false)
-      audio.onerror = () => setIsSpeaking(false)
-
-      await audio.play()
-      console.info("[GUTO_VOICE] playback_started", meta)
-    } catch (error) {
-      setIsSpeaking(false)
-      console.error("[GUTO_VOICE] playback_failed", { ...meta, error })
-    }
-  }, [])
-
   const synthesizeAndPlay = useCallback(async (text: string, lang: SupportedLanguage) => {
-    try {
-      console.info("[GUTO_VOICE] request", { language: lang, textLength: text.length })
-      const token =
-        typeof window !== "undefined" ? window.localStorage.getItem("guto-auth-token") : null
-      const response = await fetch(`${API_URL}/voz`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({ text, language: lang }),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok || !data?.audioContent) {
-        console.error("[GUTO_VOICE] synthesis_failed", {
-          status: response.status,
-          language: lang,
-          data,
-        })
-        return
-      }
-
-      console.info("[GUTO_VOICE] synthesis_ok", {
-        language: lang,
-        voiceUsed: data.voiceUsed,
-        languageCode: data.languageCode,
-      })
-      await playBase64Mp3(data.audioContent, {
-        language: lang,
-        voiceUsed: data.voiceUsed,
-        languageCode: data.languageCode,
-      })
-    } catch (error) {
-      console.error("[GUTO_VOICE] request_failed", { language: lang, error })
-    }
-  }, [playBase64Mp3])
+    console.info("[GUTO_VOICE] speak", { language: lang, textLength: text.length, source: "chat" })
+    await gutoVoice.speak({
+      text,
+      language: lang,
+      source: "chat",
+      preferStatic: false,
+      onStart: () => setIsSpeaking(true),
+      onEnd: () => setIsSpeaking(false),
+    })
+  }, [])
 
   const checkProactiveMessage = useCallback(async (forceArrivalBriefing = false) => {
     if (proactiveInFlightRef.current || sendInFlightRef.current) return
@@ -989,9 +931,8 @@ export function ChatTab({
               window.localStorage.setItem(`guto-voice-enabled-${userId}`, next ? "false" : "true")
             } catch {}
 
-            if (next && currentAudioRef.current) {
-              currentAudioRef.current.pause()
-              currentAudioRef.current = null
+            if (next) {
+              gutoVoice.stop()
               setIsSpeaking(false)
             } else if (!next) {
               const testPhrases: Record<SupportedLanguage, string> = {
