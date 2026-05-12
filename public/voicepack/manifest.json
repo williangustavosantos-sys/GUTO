@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "voiceId": "Puck",
+  "voiceVersion": "ptbr-static-v1",
+  "languages": {
+    "pt-BR": {
+      "intents": {
+        "session.entry.first_time": [
+          {
+            "id": "session.entry.first_time.v1",
+            "variation": 1,
+            "tone": "firme_curto",
+            "structureKey": "entry_direct",
+            "text": "Estamos juntos nessa. Bora iniciar, hoje a gente não falha.",
+            "url": "/voicepack/ptbr/session_entry_first_time_v1_6a18ed75d520.wav"
+          },
+          {
+            "id": "session.entry.first_time.v2",
+            "variation": 2,
+            "tone": "parceiro",
+            "structureKey": "entry_partner",
+            "text": "A gente tá junto nessa, lembra disso. Fone no ouvido e foco.",
+            "url": "/voicepack/ptbr/session_entry_first_time_v2_7225010151b5.wav"
+          },
+          {
+            "id": "session.entry.first_time.v3",
+            "variation": 3,
+            "tone": "firme_curto",
+            "structureKey": "entry_mission",
+            "text": "Eu entro contigo agora. Você executa, eu seguro o ritmo.",
+            "url": "/voicepack/ptbr/session_entry_first_time_v3_1c0b24aab314.wav"
+          }
+        ]
+      }
+    }
+  }
+}
