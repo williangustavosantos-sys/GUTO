@@ -1,0 +1,110 @@
+{
+  "_comment": "Frasi del GUTO in italiano (it-IT) per la generazione del voicepack.",
+  "_note": "4 variazioni per intent. Il GUTO parla come un migliore amico — diretto, non robotico.",
+  "_generate": "node scripts/generate-voicepack.mjs --lang it-IT",
+
+  "session.entry.first_time": [
+    "Siamo insieme in questo. Forza — oggi non molliamo.",
+    "La squadra è in campo. Sono qui con te per ogni serie.",
+    "È il momento. Allenamento pronto, presenza attiva.",
+    "Sei arrivato. È già metà del lavoro. Il resto lo finiamo insieme."
+  ],
+
+  "session.entry.returning": [
+    "Sei tornato. Riprendiamo esattamente da dove ci eravamo fermati.",
+    "Bentornato. La missione è ancora aperta.",
+    "Sei tornato e questo conta. Finiamola insieme.",
+    "Si riprende. Ho tenuto i tuoi progressi. Andiamo da qui."
+  ],
+
+  "set.done.clean": [
+    "Bene. Serie registrata, andiamo avanti insieme.",
+    "Fatto. Un altro punto per la squadra.",
+    "Solido. Prossima serie quando sei pronto.",
+    "Ecco fatto. Serie annotata. Siamo in ritmo."
+  ],
+
+  "set.rest.short": [
+    "Bene. Serie registrata. Riposati e rimani con me.",
+    "Fatto. Respira. Ti chiamo io quando è ora.",
+    "Annotato. Buon riposo, poi prossima serie.",
+    "Serie chiusa. Riposa — non sparire."
+  ],
+
+  "set.rest.long": [
+    "Bene. Serie registrata. Riposati e rimani con me.",
+    "Solido. Riposo meritato. Ti chiamo io.",
+    "Annotato. Hai lavorato bene. Riposa adesso.",
+    "Serie chiusa. Conto io il tempo. Concentrati sul respiro."
+  ],
+
+  "set.return.now": [
+    "Torna con me. Prossima serie adesso.",
+    "Riposo finito. Si continua insieme.",
+    "È ora di tornare. Sono qui.",
+    "Forza. Prossimo esercizio in scena."
+  ],
+
+  "set.fatigue.adjust": [
+    "Aggiustiamo. Abbassa l'ego, tieni la tecnica e vai avanti con me.",
+    "Capito. Abbassa il peso e mantieni la forma. Sei ancora qui.",
+    "Pesante è diverso da impossibile. Cala del 20%, tieni l'esecuzione.",
+    "La fatica vuol dire che stai lavorando. Aggiusta e vai avanti."
+  ],
+
+  "set.swap.direct": [
+    "Cambio confermato. Stessa missione, movimento diverso.",
+    "Alternativa attivata. La squadra non si ferma per l'attrezzatura.",
+    "Vai con questa variante. La missione continua.",
+    "Adattato. Non rompiamo l'allenamento per questo."
+  ],
+
+  "set.swap.ask": [
+    "Nessun problema. Che attrezzatura hai adesso? Dimmi e mi adatto.",
+    "Attrezzatura occupata, capito. Cosa hai disponibile?",
+    "Lo sistemiamo. Dimmi cosa hai per lavorare.",
+    "Tranquillo. Dimmi cosa c'è disponibile e sistemo tutto io."
+  ],
+
+  "session.pain.ask": [
+    "Fermati. Dimmi in breve: è dolore, stanchezza o dubbio sulla tecnica? Voglio capire prima di continuare.",
+    "Piano. È un segnale importante. È dolore vero o solo stanchezza? Dimmi.",
+    "Mi fermo qui. Dove hai sentito dolore? Ho bisogno di saperlo prima di andare avanti.",
+    "Tutto fermo. Dimmi — è un dolore acuto o solo disagio? Decidiamo insieme."
+  ],
+
+  "session.paused.hold": [
+    "In pausa. Sono qui. Quando sei pronto, dimmi e continuiamo.",
+    "Va bene fermarsi. Non vado da nessuna parte. Torna quando vuoi.",
+    "Pausa attivata. Riposati. La missione riprende quando vuoi tu.",
+    "Ok. Respira. Sono qui quando torni."
+  ],
+
+  "session.unknown.ask": [
+    "Non ho capito bene. Dimmi: dolore, stanchezza, cambio esercizio o serie finita?",
+    "Ti ho sentito ma non ho riconosciuto il comando. Dolore, cambio, stanchezza o serie finita?",
+    "Ripeti. Può essere: dolore, cambio, stanchezza o serie completata.",
+    "Non ho preso. Cos'è? Dolore, stanchezza, cambio o serie finita? Dimmi in breve."
+  ],
+
+  "session.close.win": [
+    "Allenamento chiuso. Ci siamo fatti trovare oggi.",
+    "Missione compiuta. Questo va nel percorso.",
+    "Chiuso. Sapevi che saresti venuto e sei venuto. È questo che conta.",
+    "La squadra ha consegnato. Allenamento registrato."
+  ],
+
+  "set.cobranca.distraction": [
+    "Ti ho sentito. Ma adesso la rotta è l'allenamento. Dimmi: dolore, cambio, stanchezza o serie finita.",
+    "Capito. Il focus è la serie. Dolore, cambio, stanchezza o serie finita?",
+    "Tieni il focus. Dimmi cosa ti serve: dolore, cambio o serie finita.",
+    "Ne parliamo dopo l'allenamento. Adesso sono serie. Di cosa hai bisogno?"
+  ],
+
+  "set.cobranca.slow_pace": [
+    "Aggiustiamo. Abbassa l'ego, tieni la tecnica e vai avanti.",
+    "Il ritmo è calato, va bene. Riduci e tieni l'esecuzione pulita.",
+    "Senza fretta. La qualità vale più della velocità qui.",
+    "Respira. Abbassa il peso e chiudi questa serie con tecnica."
+  ]
+}

@@ -39,6 +39,18 @@ export interface GutoVoiceBankRecord {
   hitCount: number
 }
 
+export type GutoVoiceMode = "static-file" | "local-cache" | "remote-saved" | "browser-fallback" | "silent"
+
+export interface GutoVoiceResult {
+  mode: GutoVoiceMode
+  cacheKey?: string
+  file?: string
+  textHash?: string
+  voiceId: string
+  voiceVersion: string
+  contentType?: string
+}
+
 const VOICE_HISTORY_KEY = "guto.voice.history.v1"
 const DB_NAME = "guto-voice-bank"
 const DB_VERSION = 1
@@ -189,19 +201,25 @@ class GutoVoiceService {
     }
   }
 
-  async speak(options: SpeakGutoOptions) {
+  async speak(options: SpeakGutoOptions): Promise<GutoVoiceResult> {
     const {
       text,
       language,
       intentKey,
       source = "system",
-      preferStatic = true,
+      preferStatic = false,
       allowRemoteSynthesis = true,
       onStart,
       onEnd,
     } = options
 
-    if (!isBrowser() || !text.trim()) return
+    if (!isBrowser() || !text.trim()) {
+      return {
+        mode: "silent",
+        voiceId: getVoiceId(),
+        voiceVersion: getVoiceVersion(),
+      }
+    }
 
     onStart?.()
     this.stop()
@@ -214,7 +232,14 @@ class GutoVoiceService {
 
         if (voiceSource.kind === "file") {
           const played = await this.playFile(voiceSource.url)
-          if (played) return
+          if (played) {
+            return {
+              mode: "static-file",
+              file: voiceSource.url,
+              voiceId: getVoiceId(),
+              voiceVersion: getVoiceVersion(),
+            }
+          }
         }
       }
 
@@ -223,20 +248,58 @@ class GutoVoiceService {
       if (cached) {
         await touchCachedAudio(cached)
         await this.playBlob(cached.blob)
-        return
+        return {
+          mode: "local-cache",
+          cacheKey,
+          textHash: cached.textHash,
+          voiceId: cached.voiceId,
+          voiceVersion: cached.voiceVersion,
+          contentType: cached.contentType,
+        }
       }
 
       if (allowRemoteSynthesis && isRemoteCacheable(text)) {
         const generated = await this.generateRemoteAudio({ text, language, source, cacheKey })
         if (generated) {
           await this.playBlob(generated.blob)
-          return
+          return {
+            mode: "remote-saved",
+            cacheKey,
+            textHash: generated.textHash,
+            voiceId: generated.voiceId,
+            voiceVersion: generated.voiceVersion,
+            contentType: generated.contentType,
+          }
         }
       }
 
       await speakWithBrowser(text, language)
+      return {
+        mode: "browser-fallback",
+        cacheKey: await this.cacheKey({ text, language }),
+        textHash: await sha1(normalizeTextForHash(text)),
+        voiceId: getVoiceId(),
+        voiceVersion: getVoiceVersion(),
+      }
     } finally {
       onEnd?.()
+    }
+  }
+
+  async inspect(text: string, language: string) {
+    if (!isBrowser() || !text.trim()) return null
+    const cacheKey = await this.cacheKey({ text, language })
+    const cached = await getCachedAudio(cacheKey)
+    return {
+      cacheKey,
+      cached: Boolean(cached),
+      textHash: await sha1(normalizeTextForHash(text)),
+      voiceId: getVoiceId(),
+      voiceVersion: getVoiceVersion(),
+      contentType: cached?.contentType,
+      hitCount: cached?.hitCount ?? 0,
+      createdAt: cached?.createdAt,
+      lastUsedAt: cached?.lastUsedAt,
     }
   }
 
@@ -271,12 +334,13 @@ class GutoVoiceService {
       if (!response.ok || !data?.audioContent) return null
 
       const contentType = typeof data.mimeType === "string" ? data.mimeType : "audio/mpeg"
+      const voiceUsed = typeof data.voiceUsed === "string" && data.voiceUsed.trim() ? data.voiceUsed : getVoiceId()
       const record: GutoVoiceBankRecord = {
         key: cacheKey,
         textHash: await sha1(normalizeTextForHash(text)),
         text: normalizeTextForHash(text),
         language,
-        voiceId: getVoiceId(),
+        voiceId: voiceUsed,
         voiceVersion: getVoiceVersion(),
         source,
         provider: "backend-voz",

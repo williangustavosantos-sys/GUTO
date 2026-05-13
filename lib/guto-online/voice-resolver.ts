@@ -82,7 +82,6 @@ function normalizeLanguage(lang: string) {
   const normalized = lang.trim().replace("_", "-").toLowerCase()
   if (normalized === "pt" || normalized === "pt-br") return "pt-BR"
   if (normalized === "en" || normalized === "en-us") return "en-US"
-  if (normalized === "es" || normalized === "es-es") return "es-ES"
   if (normalized === "it" || normalized === "it-it") return "it-IT"
   return lang
 }

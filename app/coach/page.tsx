@@ -9,6 +9,7 @@ import {
   Copy,
   Dumbbell,
   FileVideo,
+  History,
   KeyRound,
   Lock,
   Plus,
@@ -16,12 +17,14 @@ import {
   Save,
   Search,
   Shield,
+  Signal,
   Trash2,
   Unlock,
   UserPlus,
   Users,
   Utensils,
   X,
+  Zap,
 } from "lucide-react";
 import { toast, Toaster } from "sonner";
 
@@ -103,7 +106,7 @@ import { formatCode, TRAINING_LOCATION_LABELS, BIOLOGICAL_SEX_LABELS, SUBSCRIPTI
 type AvatarStage = "baby" | "teen" | "adult" | "elite";
 type DashboardTab = "students" | "coaches" | "arena" | "logs" | "teams";
 type FilterTab = "ativos" | "pausados" | "arquivados" | "todos";
-type DetailTab = "resumo" | "acesso" | "calibragem" | "treino" | "dieta" | "arena" | "historico" | "seguranca";
+type DetailTab = "resumo" | "acesso" | "calibragem" | "treino" | "dieta" | "arena" | "seguranca";
 type ResetScope = "weekly" | "monthly" | "individual" | "validationHistory" | "all";
 
 interface RankingItem {
@@ -134,7 +137,8 @@ interface StudentDetail {
 }
 
 type StudentDraft = {
-  name: string;
+  firstName: string;
+  lastName: string;
   email: string;
   phone: string;
   password: string;
@@ -187,6 +191,13 @@ type CalibrationDraft = {
   foodRestrictions: string;
 };
 
+type DashboardNavItem = {
+  id: DashboardTab;
+  label: string;
+  icon: ReactNode;
+  badge?: ReactNode;
+};
+
 const SOURCE_LABEL: Record<string, string> = {
   guto_generated: "Gerado pelo GUTO",
   coach_manual: "Manual do Coach",
@@ -199,7 +210,6 @@ function getDetailTabs(isAdmin: boolean): Array<{ id: DetailTab; label: string }
     { id: "calibragem", label: "Calibragem" },
     { id: "treino", label: "Treino" },
     { id: "dieta", label: "Dieta" },
-    { id: "historico", label: "Histórico" },
   ];
   if (isAdmin) {
     allTabs.splice(1, 0, { id: "acesso", label: "Acesso" });
@@ -207,6 +217,18 @@ function getDetailTabs(isAdmin: boolean): Array<{ id: DetailTab; label: string }
     allTabs.push({ id: "seguranca", label: "Senha" });
   }
   return allTabs;
+}
+
+function dashboardScreenMeta(tab: DashboardTab, isSuperAdmin: boolean): { kicker: string; title: string; subtitle: string } {
+  const scope = isSuperAdmin ? "super admin" : "operação";
+  const map: Record<DashboardTab, { kicker: string; title: string; subtitle: string }> = {
+    students: { kicker: "SALA DE CONTROLE / ALUNOS", title: "Alunos", subtitle: `Base operacional · ${scope} · ação rápida` },
+    coaches: { kicker: "SALA DE CONTROLE / COACHES", title: "Coaches", subtitle: "Operadores limitados · permissões e vínculo com alunos" },
+    arena: { kicker: "SALA DE CONTROLE / ARENA", title: "Arena", subtitle: "XP semanal e mensal por time · ranking individual global" },
+    logs: { kicker: "SALA DE CONTROLE / HISTÓRICO", title: "Histórico", subtitle: "Auditoria das ações críticas do painel" },
+    teams: { kicker: "SALA DE CONTROLE / TIMES", title: "Times", subtitle: "Empresas, planos e limites B2B" },
+  };
+  return map[tab];
 }
 
 const EXERCISE_VIDEO_LIMIT_COPY = "Vídeo obrigatório: MP4, até 30s, até 12MB, máximo 720p, sem áudio, caminho interno /exercise/visuals/custom/.";
@@ -501,6 +523,30 @@ function formatHuman(val: string | null | undefined): string {
   return m[val] ?? val.replace(/_/g, " ");
 }
 
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i;
+
+function isValidEmail(value: string): boolean {
+  return EMAIL_PATTERN.test(value.trim());
+}
+
+function phoneDigits(value: string): string {
+  return value.replace(/\D/g, "");
+}
+
+function isValidPhone(value: string): boolean {
+  const digits = phoneDigits(value);
+  return digits.length >= 8 && digits.length <= 15 && !/^(\d)\1+$/.test(digits);
+}
+
+function studentDraftError(draft: StudentDraft, isSuperAdmin: boolean): string | null {
+  if (!draft.firstName.trim()) return "Informe o nome.";
+  if (!draft.lastName.trim()) return "Informe o sobrenome.";
+  if (!isValidEmail(draft.email)) return "Informe um email válido.";
+  if (!isValidPhone(draft.phone)) return "Informe um telefone válido.";
+  if (isSuperAdmin && !draft.teamId) return "Selecione um Time.";
+  return null;
+}
+
 function CoachInner() {
   const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
@@ -535,7 +581,7 @@ function CoachInner() {
   const [showCreateStudent, setShowCreateStudent] = useState(false);
   const [showCreateCoach, setShowCreateCoach] = useState(false);
   const [showCreateTeam, setShowCreateTeam] = useState(false);
-  const [studentDraft, setStudentDraft] = useState<StudentDraft>({ name: "", email: "", phone: "", password: "", active: false, coachId: "", teamId: "", sex: "", age: "" });
+  const [studentDraft, setStudentDraft] = useState<StudentDraft>({ firstName: "", lastName: "", email: "", phone: "", password: "", active: false, coachId: "", teamId: "", sex: "", age: "" });
   const [coachDraft, setCoachDraft] = useState<CoachDraft>({ name: "", email: "", password: "", teamId: "" });
   const [teamDraft, setTeamDraft] = useState<TeamDraft>({ name: "", plan: "pro", maxStudents: "", maxCoaches: "" });
   const [lastSecret, setLastSecret] = useState<string | null>(null);
@@ -565,6 +611,21 @@ function CoachInner() {
     archived: students.filter((student) => student.archived).length,
     visibleArena: students.filter((student) => student.visibleInArena && !student.archived).length,
   }), [students]);
+  const dashboardNavItems = useMemo<DashboardNavItem[]>(() => {
+    const items: DashboardNavItem[] = [
+      { id: "students", label: "ALUNOS", icon: <Users className="h-4 w-4" />, badge: studentSnapshot.active },
+      { id: "arena", label: "ARENA", icon: <Activity className="h-4 w-4" /> },
+    ];
+    if (isAdmin) {
+      items.splice(1, 0, { id: "coaches", label: "COACHES", icon: <Shield className="h-4 w-4" />, badge: coaches.length || undefined });
+      items.push({ id: "logs", label: "HISTÓRICO", icon: <History className="h-4 w-4" /> });
+    }
+    if (isSuperAdmin) {
+      items.push({ id: "teams", label: "TIMES", icon: <Building2 className="h-4 w-4" />, badge: teams.length || undefined });
+    }
+    return items;
+  }, [coaches.length, isAdmin, isSuperAdmin, studentSnapshot.active, teams.length]);
+  const screenMeta = dashboardScreenMeta(activeDashboardTab, isSuperAdmin);
 
   useEffect(() => {
     if (!authLoading && (!user || (user.role !== "coach" && user.role !== "admin" && user.role !== "super_admin"))) {
@@ -761,68 +822,54 @@ function CoachInner() {
   const selected = selectedDetail?.student ?? null;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-[#0a0f1e] text-white selection:bg-[#00e5ff]/30">
+    <div
+      className="fixed inset-0 z-50 overflow-hidden bg-[#04060f] text-[#e8f4ff] selection:bg-[#52e7ff]/30"
+      style={{ fontFamily: "\"JetBrains Mono\", \"SF Mono\", Menlo, Monaco, Consolas, monospace" }}
+    >
+      <div className="pointer-events-none fixed inset-0 z-0 bg-[radial-gradient(80%_60%_at_0%_0%,rgba(82,231,255,0.05)_0%,transparent_60%),radial-gradient(60%_50%_at_100%_100%,rgba(82,231,255,0.04)_0%,transparent_60%)]" />
+      <div className="pointer-events-none fixed inset-0 z-0 opacity-40 [background:repeating-linear-gradient(0deg,rgba(82,231,255,0.018)_0px,rgba(82,231,255,0.018)_1px,transparent_1px,transparent_3px)]" />
       <Toaster theme="dark" position="bottom-center" />
 
-      <header className="sticky top-0 z-30 border-b border-white/10 bg-[#0a0f1e]/88 px-5 py-4 backdrop-blur-md">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-black tracking-[0.24em] text-[#00e5ff]">GUTO</span>
-              <Badge variant="outline" className="h-5 border-white/15 text-[10px] font-mono text-white/50">
-                {user.role.toUpperCase()}
-              </Badge>
-            </div>
-            <p className="mt-1 font-mono text-[10px] text-white/35">{user.userId}</p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {isSuperAdmin && selectedTeam && (
-              <div className="flex items-center gap-1.5 rounded-md border border-[#00e5ff]/30 bg-[#00e5ff]/10 px-3 py-1.5">
-                <Building2 className="h-3 w-3 text-[#00e5ff]" />
-                <span className="text-[10px] font-black text-[#00e5ff]">{selectedTeam.name}</span>
-                <button onClick={() => { setSelectedTeamId(null); }} className="ml-1 text-[10px] text-[#00e5ff]/60 hover:text-[#00e5ff]">✕</button>
-              </div>
-            )}
-            {isSuperAdmin && !selectedTeam && (
-              <span className="text-[10px] font-bold text-white/35">Selecione um Time</span>
-            )}
-            {isSuperAdmin && (
-              <Button size="sm" variant="outline" className="h-9 border-white/10 bg-white/5 px-3 text-xs text-white hover:bg-white/10" onClick={() => setShowCreateTeam(true)}>
-                <Building2 className="mr-2 h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Criar Time</span>
-                <span className="sm:hidden">Time</span>
-              </Button>
-            )}
-            {isAdmin && (
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-9 border-white/10 bg-white/5 px-3 text-xs text-white hover:bg-white/10"
-                disabled={coachLimitReached || superAdminNeedsTeam}
-                title={superAdminNeedsTeam ? "Selecione um Time antes de criar coach." : undefined}
-                onClick={() => { setCoachDraft({ name: "", email: "", password: "", teamId: selectedTeamId || "" }); setShowCreateCoach(true); }}
-              >
-                <UserPlus className="mr-2 h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Criar coach</span>
-                <span className="sm:hidden">Coach</span>
-              </Button>
-            )}
-            <Button
-              size="sm"
-              className="h-9 bg-[#00e5ff] px-3 text-xs text-[#0a0f1e] hover:bg-white"
-              disabled={studentLimitReached || superAdminNeedsTeam}
-              title={superAdminNeedsTeam ? "Selecione um Time antes de criar aluno." : undefined}
-              onClick={() => { setStudentDraft({ name: "", email: "", phone: "", password: "", active: false, coachId: "", teamId: selectedTeamId || "", sex: "", age: "" }); setShowCreateStudent(true); }}
-            >
-              <Plus className="mr-2 h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Criar aluno</span>
-              <span className="sm:hidden">Aluno</span>
-            </Button>
-          </div>
-        </div>
-      </header>
+      <div className="relative z-10 flex h-screen overflow-hidden">
+        <AdminSidebar
+          items={dashboardNavItems}
+          activeTab={activeDashboardTab}
+          onSelect={setActiveDashboardTab}
+          role={user.role}
+          userId={user.userId}
+          teamName={selectedTeam?.name || teamSummary?.team.name}
+          studentCount={studentSnapshot.active}
+        />
 
-      <main className="mx-auto max-w-7xl px-5 py-6">
+        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+          <AdminShellHeader
+            meta={screenMeta}
+            role={user.role}
+            selectedTeam={selectedTeam}
+            needsTeam={superAdminNeedsTeam}
+            isAdmin={isAdmin}
+            isSuperAdmin={isSuperAdmin}
+            studentLimitReached={studentLimitReached}
+            coachLimitReached={coachLimitReached}
+            onClearTeam={() => setSelectedTeamId(null)}
+            onCreateTeam={() => setShowCreateTeam(true)}
+            onCreateCoach={() => {
+              setCoachDraft({ name: "", email: "", password: "", teamId: selectedTeamId || "" });
+              setShowCreateCoach(true);
+            }}
+            onCreateStudent={() => {
+              setStudentDraft({ firstName: "", lastName: "", email: "", phone: "", password: "", active: false, coachId: "", teamId: selectedTeamId || "", sex: "", age: "" });
+              setShowCreateStudent(true);
+            }}
+            telemetry={{
+              sys: "ONLINE",
+              students: String(students.length),
+              active: String(studentSnapshot.active),
+              filters: String(activeFilterCount || 0),
+            }}
+          />
+
+          <main className="min-w-0 flex-1 overflow-y-auto px-4 py-5 lg:px-7 lg:py-6">
         {lastSecret && (
           <div className="mb-5 rounded-xl border border-[#00e5ff]/30 bg-[#00e5ff]/10 p-4">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -876,18 +923,16 @@ function CoachInner() {
           </section>
         </div>
 
-        <div className="mb-5 flex flex-wrap gap-2 rounded-lg bg-white/5 p-1">
-          <DashboardButton active={activeDashboardTab === "students"} onClick={() => setActiveDashboardTab("students")} icon={<Users className="h-4 w-4" />} label="Alunos" />
-          {isAdmin && (
-            <DashboardButton active={activeDashboardTab === "coaches"} onClick={() => setActiveDashboardTab("coaches")} icon={<Shield className="h-4 w-4" />} label="Coaches" />
-          )}
-          <DashboardButton active={activeDashboardTab === "arena"} onClick={() => setActiveDashboardTab("arena")} icon={<Activity className="h-4 w-4" />} label="Arena" />
-          {isAdmin && (
-            <DashboardButton active={activeDashboardTab === "logs"} onClick={() => setActiveDashboardTab("logs")} icon={<RefreshCw className="h-4 w-4" />} label="Histórico" />
-          )}
-          {isSuperAdmin && (
-            <DashboardButton active={activeDashboardTab === "teams"} onClick={() => setActiveDashboardTab("teams")} icon={<Building2 className="h-4 w-4" />} label="Times" />
-          )}
+        <div className="mb-5 flex gap-2 overflow-x-auto rounded-[14px] border border-[#52e7ff]/10 bg-[#0f162a]/80 p-1 lg:hidden">
+          {dashboardNavItems.map((item) => (
+            <DashboardButton
+              key={item.id}
+              active={activeDashboardTab === item.id}
+              onClick={() => setActiveDashboardTab(item.id)}
+              icon={item.icon}
+              label={item.label}
+            />
+          ))}
         </div>
 
         {activeDashboardTab === "students" && (
@@ -955,10 +1000,10 @@ function CoachInner() {
               </div>
             </div>
 
-            <div className="hidden xl:block">
+            <div className="hidden lg:block">
               <StudentDesktopTable students={filtered} coaches={coaches} onOpen={(student) => void openStudent(student)} onCopyInvite={(student) => void copyStudentInvite(student)} />
             </div>
-            <div className="grid gap-3 xl:hidden">
+            <div className="grid gap-3 lg:hidden">
               <StudentMobileCards students={filtered} coaches={coaches} onOpen={(student) => void openStudent(student)} onCopyInvite={(student) => void copyStudentInvite(student)} />
             </div>
           </>
@@ -1116,7 +1161,9 @@ function CoachInner() {
             )}
           </div>
         )}
-      </main>
+          </main>
+        </div>
+      </div>
 
       <Sheet open={!!selectedDetail} onOpenChange={(open) => { if (!open) setSelectedDetail(null); }}>
         <SheetContent side="right" className="w-full overflow-y-auto border-l border-white/10 bg-[#0d1426] p-0 text-white sm:max-w-5xl">
@@ -1156,6 +1203,7 @@ function CoachInner() {
                   <div className="grid gap-4 md:grid-cols-2">
                     <Panel title="Sistema">
                       <DataRow label="Status" value={<Badge variant={getStatusInfo(selected).variant}>{getStatusInfo(selected).text}</Badge>} />
+                      <DataRow label="Email" value={selected.email || "-"} />
                       <DataRow label="Telefone" value={selected.phone || "-"} />
                       <DataRow label="Assinatura" value={formatHuman(selected.subscriptionStatus)} />
                       <DataRow label="Expira em" value={formatDate(selected.subscriptionEndsAt)} />
@@ -1209,7 +1257,7 @@ function CoachInner() {
                               setSelectedDetail((current) => current ? { ...current, student: result.student } : current);
                             }, "Aluno atribuído ao coach.");
                           }}
-                          className="h-11 rounded-md border border-white/10 bg-white/5 px-3 text-sm text-white"
+                          className="h-11 rounded-md border border-white/10 bg-white/5 px-3 text-center text-xs font-bold text-white hover:bg-white/10"
                         >
                           <option value="" className="bg-[#0d1426]">Atribuir coach</option>
                           {coaches.map((coach) => (
@@ -1432,20 +1480,6 @@ function CoachInner() {
                   </Panel>
                 )}
 
-                {detailTab === "historico" && (
-                  <div className="grid gap-4">
-                    <Panel title="Treino">
-                      <LogList logs={selectedDetail.workoutHistory} empty="Sem alterações de treino." />
-                    </Panel>
-                    <Panel title="Dieta">
-                      <LogList logs={selectedDetail.dietHistory} empty="Sem alterações de dieta." />
-                    </Panel>
-                    <Panel title="Geral">
-                      <LogList logs={selectedDetail.logs} empty="Sem histórico." />
-                    </Panel>
-                  </div>
-                )}
-
                 {isAdmin && detailTab === "seguranca" && (
                   <div className="grid gap-4 lg:grid-cols-2">
                     <Panel title="Senha temporária">
@@ -1502,7 +1536,9 @@ function CoachInner() {
         onDraftChange={setStudentDraft}
         onCreate={() => void act(async () => {
           const result = await createAdminStudent({
-            name: studentDraft.name,
+            firstName: studentDraft.firstName,
+            lastName: studentDraft.lastName,
+            name: `${studentDraft.firstName.trim()} ${studentDraft.lastName.trim()}`.trim(),
             email: studentDraft.email || undefined,
             phone: studentDraft.phone || undefined,
             password: studentDraft.password || undefined,
@@ -1513,7 +1549,7 @@ function CoachInner() {
             age: studentDraft.age ? parseInt(studentDraft.age) || undefined : undefined,
           });
           if (result.inviteLink) setLastSecret(result.inviteLink);
-          setStudentDraft({ name: "", email: "", phone: "", password: "", active: false, coachId: "", teamId: "", sex: "", age: "" });
+          setStudentDraft({ firstName: "", lastName: "", email: "", phone: "", password: "", active: false, coachId: "", teamId: "", sex: "", age: "" });
           setShowCreateStudent(false);
         }, "Aluno criado.")}
       />
@@ -1565,14 +1601,211 @@ function CoachInner() {
   );
 }
 
+function AdminSidebar({
+  items,
+  activeTab,
+  onSelect,
+  role,
+  userId,
+  teamName,
+  studentCount,
+}: {
+  items: DashboardNavItem[];
+  activeTab: DashboardTab;
+  onSelect: (tab: DashboardTab) => void;
+  role: string;
+  userId: string;
+  teamName?: string;
+  studentCount: number;
+}) {
+  const validationError = studentDraftError(draft, isSuperAdmin);
+  return (
+    <aside className="hidden h-screen w-[232px] shrink-0 flex-col overflow-hidden border-r border-[#52e7ff]/10 bg-[#040710]/95 lg:flex">
+      <div className="h-[72px] shrink-0 border-b border-[#52e7ff]/10 bg-[radial-gradient(120%_100%_at_50%_0%,rgba(82,231,255,0.08)_0%,rgba(82,231,255,0)_70%)] px-4 py-3">
+        <div className="text-[18px] font-black leading-none tracking-[0.34em] text-[#52e7ff] drop-shadow-[0_0_8px_rgba(82,231,255,0.45)]">GUTO</div>
+        <div className="mt-2 text-[8px] font-black uppercase tracking-[0.30em] text-[#52e7ff]/85">Sala de controle</div>
+      </div>
+
+      <div className="shrink-0 border-b border-[#52e7ff]/10 px-4 py-3">
+        <div className="mb-2 text-[8px] font-black uppercase tracking-[0.30em] text-white/20">Hierarquia</div>
+        <div className="space-y-1 text-[9px] font-bold uppercase tracking-[0.12em] text-white/32">
+          <div className="text-[#52e7ff]">{role.replace("_", " ")}</div>
+          <div>{teamName || "Time não selecionado"}</div>
+          <div className="text-white/22">{studentCount} alunos ativos</div>
+        </div>
+      </div>
+
+      <nav className="min-h-0 flex-1 overflow-y-auto py-3">
+        {items.map((item) => {
+          const active = activeTab === item.id;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => onSelect(item.id)}
+              className={`flex h-10 w-full items-center gap-3 border-r-2 px-4 text-left text-[10px] font-black uppercase tracking-[0.22em] transition ${
+                active
+                  ? "border-[#52e7ff] bg-[#52e7ff]/14 text-[#52e7ff]"
+                  : "border-transparent text-white/35 hover:bg-white/[0.03] hover:text-white/70"
+              }`}
+            >
+              <span className="shrink-0">{item.icon}</span>
+              <span className="min-w-0 flex-1 truncate">{item.label}</span>
+              {item.badge !== undefined && (
+                <span className={`rounded-full border px-2 py-0.5 text-[9px] tracking-normal ${active ? "border-[#52e7ff]/30 text-[#52e7ff]" : "border-white/10 text-white/30"}`}>
+                  {item.badge}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </nav>
+
+      <div className="shrink-0 border-t border-[#52e7ff]/10 bg-black/30 p-4">
+        <div className="mb-2 flex items-center gap-2">
+          <span className="h-2 w-2 rounded-full bg-[#4ade80] shadow-[0_0_8px_#4ade80]" />
+          <span className="truncate text-[10px] font-black text-white/65">{userId}</span>
+        </div>
+        <Badge variant="outline" className="border-[#52e7ff]/25 bg-[#52e7ff]/10 text-[9px] font-black uppercase tracking-[0.18em] text-[#52e7ff]">
+          {role.toUpperCase()}
+        </Badge>
+      </div>
+    </aside>
+  );
+}
+
+function AdminShellHeader({
+  meta,
+  role,
+  selectedTeam,
+  needsTeam,
+  isAdmin,
+  isSuperAdmin,
+  studentLimitReached,
+  coachLimitReached,
+  telemetry,
+  onClearTeam,
+  onCreateTeam,
+  onCreateCoach,
+  onCreateStudent,
+}: {
+  meta: { kicker: string; title: string; subtitle: string };
+  role: string;
+  selectedTeam: AdminTeam | null;
+  needsTeam: boolean;
+  isAdmin: boolean;
+  isSuperAdmin: boolean;
+  studentLimitReached: boolean;
+  coachLimitReached: boolean;
+  telemetry: { sys: string; students: string; active: string; filters: string };
+  onClearTeam: () => void;
+  onCreateTeam: () => void;
+  onCreateCoach: () => void;
+  onCreateStudent: () => void;
+}) {
+  return (
+    <header className="h-auto shrink-0 border-b border-[#52e7ff]/10 bg-[#080e1c]/90 backdrop-blur-md lg:h-16">
+      <div className="flex min-h-16 min-w-0 flex-col gap-3 px-4 py-3 lg:flex-row lg:items-center lg:justify-between lg:px-6 lg:py-0">
+        <div className="flex min-w-0 items-center gap-4">
+          <div className="lg:hidden">
+            <div className="text-sm font-black tracking-[0.30em] text-[#52e7ff]">GUTO</div>
+            <div className="mt-1 text-[8px] font-black uppercase tracking-[0.24em] text-white/25">{role.toUpperCase()}</div>
+          </div>
+          <div className="hidden h-9 w-px bg-[#52e7ff]/10 lg:block" />
+          <div className="min-w-0">
+            <div className="mb-1 text-[8px] font-black uppercase tracking-[0.34em] text-[#52e7ff]">{meta.kicker}</div>
+            <div className="truncate text-lg font-black leading-none text-white">{meta.title}</div>
+          </div>
+          <div className="hidden h-9 w-px bg-[#52e7ff]/10 xl:block" />
+          <div className="hidden max-w-[360px] text-[10px] font-medium tracking-[0.08em] text-white/32 xl:block">{meta.subtitle}</div>
+        </div>
+
+        <div className="flex min-w-0 items-center gap-2 overflow-x-auto pb-1 lg:pb-0">
+          <TelemetryStamp icon={<Signal className="h-3 w-3" />} label="SYS" value={telemetry.sys} tone="ok" />
+          <div className="hidden 2xl:block">
+            <TelemetryStamp icon={<Users className="h-3 w-3" />} label="ALUNOS" value={telemetry.students} />
+          </div>
+          <div className="hidden 2xl:block">
+            <TelemetryStamp icon={<Zap className="h-3 w-3" />} label="ATIVOS" value={telemetry.active} />
+          </div>
+          <div className="hidden 2xl:block">
+            <TelemetryStamp icon={<Search className="h-3 w-3" />} label="FILTROS" value={telemetry.filters} />
+          </div>
+
+          {(isSuperAdmin || isAdmin) && <div className="mx-1 h-6 w-px shrink-0 bg-[#52e7ff]/10" />}
+
+          {isSuperAdmin && selectedTeam && (
+            <div className="flex h-9 shrink-0 items-center gap-2 rounded-lg border border-[#52e7ff]/25 bg-[#52e7ff]/10 px-3">
+              <Building2 className="h-3.5 w-3.5 text-[#52e7ff]" />
+              <span className="max-w-[180px] truncate text-[10px] font-black text-[#52e7ff]">{selectedTeam.name}</span>
+              <button type="button" onClick={onClearTeam} className="text-[#52e7ff]/55 hover:text-[#52e7ff]" aria-label="Limpar time selecionado">
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          )}
+
+          {isSuperAdmin && !selectedTeam && (
+            <span className="shrink-0 rounded-lg border border-white/10 bg-black/25 px-3 py-2 text-[9px] font-black uppercase tracking-[0.18em] text-white/30">
+              Selecione um time
+            </span>
+          )}
+
+          {isSuperAdmin && (
+            <Button size="sm" variant="outline" className="h-9 shrink-0 rounded-full border-white/10 bg-white/5 px-3 text-[10px] font-black uppercase tracking-[0.16em] text-white hover:bg-white/10" onClick={onCreateTeam}>
+              <Building2 className="mr-2 h-3.5 w-3.5" />
+              Time
+            </Button>
+          )}
+
+          {isAdmin && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-9 shrink-0 rounded-full border-white/10 bg-white/5 px-3 text-[10px] font-black uppercase tracking-[0.16em] text-white hover:bg-white/10 disabled:opacity-30"
+              disabled={coachLimitReached || needsTeam}
+              title={needsTeam ? "Selecione um Time antes de criar coach." : undefined}
+              onClick={onCreateCoach}
+            >
+              <UserPlus className="mr-2 h-3.5 w-3.5" />
+              Coach
+            </Button>
+          )}
+
+          <Button
+            size="sm"
+            className="h-9 shrink-0 rounded-full bg-[#52e7ff] px-4 text-[10px] font-black uppercase tracking-[0.16em] text-[#04131e] shadow-[0_0_18px_rgba(82,231,255,0.28)] hover:bg-white disabled:opacity-30"
+            disabled={studentLimitReached || needsTeam}
+            title={needsTeam ? "Selecione um Time antes de criar aluno." : undefined}
+            onClick={onCreateStudent}
+          >
+            <Plus className="mr-2 h-3.5 w-3.5" />
+            Aluno
+          </Button>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+function TelemetryStamp({ icon, label, value, tone = "cyan" }: { icon: ReactNode; label: string; value: ReactNode; tone?: "cyan" | "ok" | "warn" | "bad" }) {
+  const color = tone === "ok" ? "text-[#4ade80]" : tone === "warn" ? "text-[#fbbf24]" : tone === "bad" ? "text-[#f87171]" : "text-[#52e7ff]";
+  return (
+    <div className="flex h-9 shrink-0 items-center gap-2 rounded-lg border border-[#52e7ff]/10 bg-black/30 px-2.5">
+      <span className={color}>{icon}</span>
+      <span className="text-[8px] font-black uppercase tracking-[0.22em] text-white/22">{label}</span>
+      <span className={`text-[10px] font-black ${color}`}>{value}</span>
+    </div>
+  );
+}
+
 function DashboardButton({ active, onClick, icon, label, disabled }: { active: boolean; onClick: () => void; icon: ReactNode; label: string; disabled?: boolean }) {
   return (
     <button
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className={`flex min-w-[116px] items-center justify-center gap-1.5 rounded-md px-2 py-3 text-[10px] font-black uppercase tracking-widest transition disabled:cursor-not-allowed disabled:opacity-25 sm:gap-2 sm:px-3 ${
-        active ? "bg-[#00e5ff] text-[#0a0f1e]" : "text-white/45 hover:bg-white/5 hover:text-white"
+      className={`flex h-10 min-w-[124px] shrink-0 items-center justify-center gap-2 rounded-[10px] px-3 text-[10px] font-black uppercase tracking-[0.18em] transition disabled:cursor-not-allowed disabled:opacity-25 ${
+        active ? "bg-[#52e7ff] text-[#04131e]" : "text-white/45 hover:bg-white/5 hover:text-white"
       }`}
     >
       {icon}
@@ -1583,9 +1816,9 @@ function DashboardButton({ active, onClick, icon, label, disabled }: { active: b
 
 function MetricCard({ label, value, cyan, className = "" }: { label: string; value: ReactNode; cyan?: boolean; className?: string }) {
   return (
-    <div className={`min-w-0 rounded-md border border-white/8 bg-black/15 p-3 ${className}`}>
-      <p className="mb-1 text-[9px] font-black uppercase tracking-widest text-white/25">{label}</p>
-      <p className={`truncate font-mono text-sm font-black ${cyan ? "text-[#00e5ff]" : "text-white"}`} title={typeof value === "string" ? value : undefined}>{value}</p>
+    <div className={`min-w-0 rounded-[14px] border border-[#52e7ff]/10 bg-black/20 p-3 shadow-[0_4px_20px_rgba(0,0,0,0.22)] ${className}`}>
+      <p className="mb-2 text-[9px] font-black uppercase tracking-[0.22em] text-white/25">{label}</p>
+      <p className={`truncate text-sm font-black ${cyan ? "text-[#52e7ff]" : "text-white"}`} title={typeof value === "string" ? value : undefined}>{value}</p>
     </div>
   );
 }
@@ -1610,27 +1843,27 @@ function StudentDesktopTable({
   }
 
   return (
-    <div className="rounded-lg border border-white/8 bg-white/[0.035]">
-      <Table>
+    <div className="overflow-x-auto rounded-[14px] border border-[#52e7ff]/10 bg-[#0f162a]/80 shadow-[0_4px_20px_rgba(0,0,0,0.35)] backdrop-blur">
+      <Table className="min-w-[1120px]">
         <TableHeader>
-          <TableRow className="border-white/10 hover:bg-transparent">
-            <TableHead className="pl-4 text-[10px] font-black uppercase tracking-widest text-white/35">Aluno</TableHead>
-            <TableHead className="text-[10px] font-black uppercase tracking-widest text-white/35">Status</TableHead>
-            <TableHead className="text-[10px] font-black uppercase tracking-widest text-white/35">Coach</TableHead>
-            <TableHead className="text-[10px] font-black uppercase tracking-widest text-white/35">Telefone</TableHead>
-            <TableHead className="text-[10px] font-black uppercase tracking-widest text-white/35">Semana</TableHead>
-            <TableHead className="text-[10px] font-black uppercase tracking-widest text-white/35">Mês</TableHead>
-            <TableHead className="text-[10px] font-black uppercase tracking-widest text-white/35">Último acesso</TableHead>
-            <TableHead className="text-[10px] font-black uppercase tracking-widest text-white/35">Assinatura</TableHead>
-            <TableHead className="text-right text-[10px] font-black uppercase tracking-widest text-white/35">Convite</TableHead>
-            <TableHead className="pr-4 text-right text-[10px] font-black uppercase tracking-widest text-white/35">Abrir</TableHead>
+          <TableRow className="border-[#52e7ff]/10 hover:bg-transparent">
+            <TableHead className="h-10 pl-4 text-[9px] font-black uppercase tracking-[0.24em] text-white/28">Aluno</TableHead>
+            <TableHead className="h-10 text-[9px] font-black uppercase tracking-[0.24em] text-white/28">Status</TableHead>
+            <TableHead className="h-10 text-[9px] font-black uppercase tracking-[0.24em] text-white/28">Coach</TableHead>
+            <TableHead className="h-10 text-[9px] font-black uppercase tracking-[0.24em] text-white/28">Telefone</TableHead>
+            <TableHead className="h-10 text-[9px] font-black uppercase tracking-[0.24em] text-white/28">Semana</TableHead>
+            <TableHead className="h-10 text-[9px] font-black uppercase tracking-[0.24em] text-white/28">Mês</TableHead>
+            <TableHead className="h-10 text-[9px] font-black uppercase tracking-[0.24em] text-white/28">Último acesso</TableHead>
+            <TableHead className="h-10 text-[9px] font-black uppercase tracking-[0.24em] text-white/28">Assinatura</TableHead>
+            <TableHead className="h-10 text-right text-[9px] font-black uppercase tracking-[0.24em] text-white/28">Convite</TableHead>
+            <TableHead className="h-10 pr-4 text-right text-[9px] font-black uppercase tracking-[0.24em] text-white/28">Abrir</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {students.map((student) => {
             const status = getStatusInfo(student);
             return (
-              <TableRow key={student.userId} className="border-white/[0.06] hover:bg-white/[0.04]">
+              <TableRow key={student.userId} className="border-[#52e7ff]/[0.08] hover:bg-[#52e7ff]/[0.045]">
                 <TableCell className="max-w-[280px] pl-4">
                   <button type="button" onClick={() => onOpen(student)} className="block min-w-0 text-left">
                     <span className="block truncate text-sm font-black text-white">{student.name}</span>
@@ -1645,12 +1878,12 @@ function StudentDesktopTable({
                 <TableCell className="font-mono text-xs text-white/55">{relativeTime(student.lastActiveAt)}</TableCell>
                 <TableCell className="max-w-[140px] truncate text-xs text-white/65">{formatHuman(student.subscriptionStatus)}</TableCell>
                 <TableCell className="text-right">
-                  <Button size="sm" variant="outline" className="h-8 border-white/10 bg-white/5 px-2 text-white/60 hover:text-[#00e5ff]" onClick={() => onCopyInvite(student)}>
+                  <Button size="sm" variant="outline" className="h-8 rounded-lg border-white/10 bg-white/5 px-2 text-white/60 hover:text-[#52e7ff]" onClick={() => onCopyInvite(student)}>
                     <Copy className="h-3.5 w-3.5" />
                   </Button>
                 </TableCell>
                 <TableCell className="pr-4 text-right">
-                  <Button size="sm" className="h-8 bg-[#00e5ff] px-2 text-[#0a0f1e] hover:bg-white" onClick={() => onOpen(student)}>
+                  <Button size="sm" className="h-8 rounded-lg bg-[#52e7ff] px-2 text-[#04131e] hover:bg-white" onClick={() => onOpen(student)}>
                     <ChevronRight className="h-4 w-4" />
                   </Button>
                 </TableCell>
@@ -1818,17 +2051,22 @@ function WeeklyWorkoutEditor({
     };
   }
 
-  function setDayPlan(day: WeekDayKey, plan: GutoWorkoutPlan | undefined) {
-    setDays((current) => {
-      const next = { ...current };
+	  function setDayPlan(day: WeekDayKey, plan: GutoWorkoutPlan | undefined) {
+	    setDays((current) => {
+	      const next = { ...current };
       if (plan === undefined) {
         delete next[day];
       } else {
         next[day] = plan;
       }
       return next;
-    });
-  }
+	    });
+	  }
+
+	  function planWithExercises(plan: GutoWorkoutPlan, exercises: GutoWorkoutExercise[]): GutoWorkoutPlan {
+	    const orderedExercises = exercises.map((exercise, index) => ({ ...exercise, order: index + 1 }));
+	    return { ...plan, exercises: orderedExercises, blocks: [{ name: "Principal", exercises: orderedExercises }] };
+	  }
 
   function addExerciseToDayFromCatalog(day: WeekDayKey, catalog: AdminCatalogExercise) {
     const current = days[day] ?? blankDayPlan();
@@ -1838,12 +2076,19 @@ function WeeklyWorkoutEditor({
     setDaySearch((s) => ({ ...s, [day]: "" }));
   }
 
-  function removeExerciseFromDay(day: WeekDayKey, index: number) {
-    const current = days[day];
-    if (!current) return;
-    const exercises = current.exercises.filter((_, i) => i !== index);
-    setDayPlan(day, { ...current, exercises, blocks: [{ name: "Principal", exercises }] });
-  }
+	  function removeExerciseFromDay(day: WeekDayKey, index: number) {
+	    const current = days[day];
+	    if (!current) return;
+	    const exercises = current.exercises.filter((_, i) => i !== index);
+	    setDayPlan(day, planWithExercises(current, exercises));
+	  }
+
+	  function updateExerciseInDay(day: WeekDayKey, index: number, patch: Partial<GutoWorkoutExercise>) {
+	    const current = days[day];
+	    if (!current) return;
+	    const exercises = current.exercises.map((exercise, i) => i === index ? { ...exercise, ...patch } : exercise);
+	    setDayPlan(day, planWithExercises(current, exercises));
+	  }
 
   async function handleSave() {
     setSaving(true);
@@ -1923,23 +2168,36 @@ function WeeklyWorkoutEditor({
                         </label>
                       </div>
 
-                      {plan.exercises.length > 0 && (
-                        <div className="space-y-1">
-                          {plan.exercises.map((ex, i) => (
-                            <div key={i} className="flex items-center gap-2 rounded-md border border-white/8 bg-white/5 px-3 py-2">
-                              <span className="min-w-0 flex-1 truncate text-xs text-white">{ex.name || ex.canonicalNamePt || ex.id}</span>
-                              <span className="shrink-0 text-[10px] text-white/30">{ex.sets}×{ex.reps}</span>
-                              <button
-                                onClick={() => removeExerciseFromDay(key, i)}
-                                className="shrink-0 text-white/30 hover:text-red-400"
-                                aria-label="Remover exercício"
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
+	                      {plan.exercises.length > 0 && (
+	                        <div className="space-y-2">
+	                          {plan.exercises.map((ex, i) => (
+	                            <div key={`${ex.id}-${i}`} className="rounded-md border border-white/8 bg-black/15 p-3">
+	                              <div className="mb-3 flex items-start justify-between gap-3">
+	                                <div className="min-w-0">
+	                                  <p className="truncate text-sm font-black text-white">{ex.name || ex.canonicalNamePt || ex.id}</p>
+	                                  <p className="mt-1 truncate font-mono text-[9px] uppercase tracking-widest text-white/30">{ex.muscleGroup || "catalogo"} · {ex.id}</p>
+	                                </div>
+	                                <button
+	                                  onClick={() => removeExerciseFromDay(key, i)}
+	                                  className="shrink-0 rounded-md border border-red-500/25 bg-red-500/10 p-2 text-red-300 hover:bg-red-500 hover:text-white"
+	                                  aria-label="Remover exercício"
+	                                >
+	                                  <Trash2 className="h-3.5 w-3.5" />
+	                                </button>
+	                              </div>
+	                              <div className="grid gap-2 md:grid-cols-4">
+	                                <Field label="Séries" value={String(ex.sets || "")} onChange={(sets) => updateExerciseInDay(key, i, { sets: Number(sets) || 0 })} />
+	                                <Field label="Reps" value={String(ex.reps || "")} onChange={(reps) => updateExerciseInDay(key, i, { reps })} />
+	                                <Field label="Carga" value={String(ex.load || "")} onChange={(load) => updateExerciseInDay(key, i, { load })} />
+	                                <Field label="Descanso" value={ex.rest || ""} onChange={(rest) => updateExerciseInDay(key, i, { rest })} />
+	                                <Field label="Técnica" value={ex.cue || ""} onChange={(cue) => updateExerciseInDay(key, i, { cue })} className="md:col-span-2" />
+	                                <Field label="Observação do movimento" value={ex.note || ""} onChange={(note) => updateExerciseInDay(key, i, { note })} className="md:col-span-2" />
+	                                <Field label="Substituições" value={(ex.alternatives || []).join(", ")} onChange={(alternatives) => updateExerciseInDay(key, i, { alternatives: alternatives.split(",").map((item) => item.trim()).filter(Boolean) })} className="md:col-span-4" />
+	                              </div>
+	                            </div>
+	                          ))}
+	                        </div>
+	                      )}
                     </>
                   )}
 
@@ -1955,12 +2213,12 @@ function WeeklyWorkoutEditor({
                         {catalogResults.map((catalog) => (
                           <button
                             key={catalog.id}
-                            className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs hover:bg-white/5"
-                            onClick={() => addExerciseToDayFromCatalog(key, catalog)}
-                          >
-                            <span className="font-medium text-white">{catalog.canonicalNamePt}</span>
-                            <span className="text-white/35">{catalog.muscleGroup}</span>
-                          </button>
+	                            className="flex w-full min-w-0 items-center gap-2 px-3 py-2 text-left text-xs hover:bg-white/5"
+	                            onClick={() => addExerciseToDayFromCatalog(key, catalog)}
+	                          >
+	                            <span className="min-w-0 flex-1 truncate font-medium text-white">{catalog.canonicalNamePt}</span>
+	                            <span className="shrink-0 text-white/35">{catalog.muscleGroup}</span>
+	                          </button>
                         ))}
                       </div>
                     )}
@@ -1968,14 +2226,14 @@ function WeeklyWorkoutEditor({
 
                   <div className="flex gap-2">
                     {!plan && (
-                      <Button size="sm" variant="outline" className="border-[#00e5ff]/30 text-[#00e5ff] hover:bg-[#00e5ff]/10" onClick={() => setDayPlan(key, blankDayPlan())}>
-                        <Plus className="mr-1 h-3.5 w-3.5" /> Adicionar treino
-                      </Button>
-                    )}
-                    {plan && (
-                      <Button size="sm" variant="outline" className="border-white/10 text-white/50 hover:bg-white/5" onClick={() => setDayPlan(key, undefined)}>
-                        <Trash2 className="mr-1 h-3.5 w-3.5" /> Remover dia
-                      </Button>
+	                      <Button size="sm" variant="outline" className="border-[#00e5ff]/30 bg-[#00e5ff]/10 text-[#00e5ff] hover:bg-[#00e5ff]/20" onClick={() => setDayPlan(key, blankDayPlan())}>
+	                        <Plus className="mr-1 h-3.5 w-3.5" /> Adicionar treino
+	                      </Button>
+	                    )}
+	                    {plan && (
+	                      <Button size="sm" variant="outline" className="border-red-500/25 bg-red-500/10 text-red-300 hover:bg-red-500 hover:text-white" onClick={() => setDayPlan(key, undefined)}>
+	                        <Trash2 className="mr-1 h-3.5 w-3.5" /> Remover dia
+	                      </Button>
                     )}
                   </div>
                 </div>
@@ -2028,10 +2286,11 @@ function WorkoutEditor({
   onGenerate: () => void;
   onLock: () => void;
   onReset: () => void;
-}) {
-  const [exerciseSearch, setExerciseSearch] = useState<Record<number, string>>({});
-  const [customExerciseDraft, setCustomExerciseDraft] = useState<CustomExerciseDraft>(blankCustomExerciseDraft());
-  const [creatingCustomExercise, setCreatingCustomExercise] = useState(false);
+	}) {
+	  const [exerciseSearch, setExerciseSearch] = useState<Record<number, string>>({});
+	  const [customExerciseDraft, setCustomExerciseDraft] = useState<CustomExerciseDraft>(blankCustomExerciseDraft());
+	  const [creatingCustomExercise, setCreatingCustomExercise] = useState(false);
+	  const [showHistory, setShowHistory] = useState(false);
 
   const updateExercise = (index: number, patch: Partial<GutoWorkoutExercise>) => {
     onChange({ ...value, exercises: value.exercises.map((exercise, i) => i === index ? { ...exercise, ...patch } : exercise) });
@@ -2121,14 +2380,14 @@ function WorkoutEditor({
           <Field label="Observações do coach" value={value.coachNotes || ""} onChange={(coachNotes) => onChange({ ...value, coachNotes, summary: coachNotes || value.summary })} className="md:col-span-2" />
         </div>
 
-        <div className="mt-4 flex flex-wrap gap-2">
-          <Button className="bg-[#00e5ff] text-[#0a0f1e] hover:bg-white" disabled={acting} onClick={onSave}><Save className="mr-2 h-4 w-4" />Salvar alterações</Button>
-          <Button variant="outline" className="border-white/10 bg-white/5 text-white" disabled={acting} onClick={onCreateManual}><Dumbbell className="mr-2 h-4 w-4" />Criar treino manual</Button>
-          <Button variant="outline" className="border-white/10 bg-white/5 text-white" disabled={acting} onClick={onGenerate}><RefreshCw className="mr-2 h-4 w-4" />Gerar com GUTO</Button>
-          <Button variant="outline" className="border-white/10 bg-white/5 text-white" disabled={acting} onClick={() => onChange({ ...value, title: `${value.title || value.focus} cópia`, source: "coach_manual", lockedByCoach: true })}>Duplicar treino</Button>
-          <Button variant="outline" className="border-white/10 bg-white/5 text-white" disabled={acting} onClick={onLock}>{value.lockedByCoach ? <Unlock className="mr-2 h-4 w-4" /> : <Lock className="mr-2 h-4 w-4" />}{value.lockedByCoach ? "Permitir GUTO atualizar" : "Bloquear alterações automáticas"}</Button>
-          <Button variant="outline" className="border-red-500/30 bg-transparent text-red-300" disabled={acting} onClick={onReset}><Trash2 className="mr-2 h-4 w-4" />Resetar treino</Button>
-        </div>
+	        <div className="mt-4 flex flex-wrap gap-2">
+	          <Button className="bg-[#00e5ff] text-[#0a0f1e] hover:bg-white" disabled={acting} onClick={onSave}><Save className="mr-2 h-4 w-4" />Salvar alterações</Button>
+	          <Button variant="outline" className="border-white/10 bg-white/5 text-white" disabled={acting} onClick={onCreateManual}><Dumbbell className="mr-2 h-4 w-4" />Criar treino manual</Button>
+	          <Button variant="outline" className="border-white/10 bg-white/5 text-white" disabled={acting} onClick={onGenerate}><RefreshCw className="mr-2 h-4 w-4" />Gerar com GUTO</Button>
+	          <Button variant="outline" className="border-white/10 bg-white/5 text-white" onClick={() => setShowHistory((current) => !current)}><History className="mr-2 h-4 w-4" />Histórico</Button>
+	          <Button variant="outline" className="border-white/10 bg-white/5 text-white" disabled={acting} onClick={onLock}>{value.lockedByCoach ? <Unlock className="mr-2 h-4 w-4" /> : <Lock className="mr-2 h-4 w-4" />}{value.lockedByCoach ? "Permitir GUTO atualizar" : "Bloquear alterações automáticas"}</Button>
+	          <Button variant="outline" className="border-red-500/30 bg-transparent text-red-300" disabled={acting} onClick={onReset}><Trash2 className="mr-2 h-4 w-4" />Resetar treino</Button>
+	        </div>
       </Panel>
 
       <Panel title="Adicionar novo exercício">
@@ -2219,12 +2478,12 @@ function WorkoutEditor({
                       key={item.id}
                       type="button"
                       onClick={() => selectCatalogExercise(index, item)}
-                      className="rounded-md border border-white/10 bg-white/[0.04] px-3 py-2 text-left hover:border-[#00e5ff]/45"
-                    >
-                      <span className="block text-xs font-black text-white">{item.canonicalNamePt}</span>
-                      <span className="font-mono text-[9px] uppercase tracking-widest text-white/35">{item.muscleGroup} · {item.id}</span>
-                    </button>
-                  ))}
+	                      className="min-w-0 rounded-md border border-white/10 bg-white/[0.04] px-3 py-2 text-left hover:border-[#00e5ff]/45"
+	                    >
+	                      <span className="block truncate text-xs font-black text-white">{item.canonicalNamePt}</span>
+	                      <span className="block truncate font-mono text-[9px] uppercase tracking-widest text-white/35">{item.muscleGroup} · {item.id}</span>
+	                    </button>
+	                  ))}
                 </div>
               )}
               {normalizedSearch && matches.length === 0 && (
@@ -2239,9 +2498,9 @@ function WorkoutEditor({
               )}
               {selectedCatalogExercise && (
                 <div className="mb-3 grid gap-2 md:grid-cols-[7rem_1fr]">
-                  <div className="h-[76px] overflow-hidden rounded-md border border-[#00e5ff]/30 bg-black/20">
-                    <video src={selectedCatalogExercise.videoUrl} muted loop playsInline preload="metadata" className="h-full w-full object-contain" />
-                  </div>
+	                  <div className="h-[96px] overflow-hidden rounded-md border border-[#00e5ff]/30 bg-black/20">
+	                    <video src={selectedCatalogExercise.videoUrl} muted loop playsInline controls preload="metadata" className="h-full w-full object-contain" />
+	                  </div>
                   <div className="rounded-md border border-white/10 bg-white/[0.035] px-3 py-2">
                     <p className="text-sm font-black text-white">{selectedCatalogExercise.canonicalNamePt}</p>
                     <p className="mt-1 font-mono text-[9px] uppercase tracking-widest text-white/35">
@@ -2257,7 +2516,7 @@ function WorkoutEditor({
                 <Field label="Carga" value={String(exercise.load || "")} onChange={(load) => updateExercise(index, { load })} />
                 <Field label="Intervalo" value={exercise.rest} onChange={(rest) => updateExercise(index, { rest })} />
                 <Field label="Técnica" value={exercise.cue || ""} onChange={(cue) => updateExercise(index, { cue })} className="md:col-span-2" />
-                <Field label="Observação" value={exercise.note || ""} onChange={(note) => updateExercise(index, { note })} className="md:col-span-2" />
+	                <Field label="Observação do movimento" value={exercise.note || ""} onChange={(note) => updateExercise(index, { note })} className="md:col-span-2" />
                 <Field label="Substituições" value={(exercise.alternatives || []).join(", ")} onChange={(alternatives) => updateExercise(index, { alternatives: alternatives.split(",").map((item) => item.trim()).filter(Boolean) })} className="md:col-span-4" />
               </div>
                   </>
@@ -2272,12 +2531,14 @@ function WorkoutEditor({
         </Button>
       </Panel>
 
-      <Panel title="Histórico do treino">
-        <LogList logs={history} empty="Sem histórico de treino." />
-      </Panel>
-    </div>
-  );
-}
+	      {showHistory && (
+	        <Panel title="Histórico do treino">
+	          <LogList logs={history} empty="Sem histórico de treino." />
+	        </Panel>
+	      )}
+	    </div>
+	  );
+	}
 
 // ─── Weekly Diet Editor ────────────────────────────────────────────────────────
 
@@ -2672,9 +2933,14 @@ function CreateStudentDialog({
           <AlertDialogDescription className="text-white/45">Cria acesso real no backend. Sem senha, o backend gera convite.</AlertDialogDescription>
         </AlertDialogHeader>
         <div className="grid gap-3">
-          <Field label="Nome" value={draft.name} onChange={(name) => onDraftChange({ ...draft, name })} />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="Nome" value={draft.firstName} onChange={(firstName) => onDraftChange({ ...draft, firstName })} />
+            <Field label="Sobrenome" value={draft.lastName} onChange={(lastName) => onDraftChange({ ...draft, lastName })} />
+          </div>
           <Field label="Email" value={draft.email} onChange={(email) => onDraftChange({ ...draft, email })} />
+          {draft.email && !isValidEmail(draft.email) && <p className="-mt-2 text-[11px] font-bold text-red-300">Use um email real. Exemplo: aluno@email.com.</p>}
           <Field label="Telefone" value={draft.phone} onChange={(phone) => onDraftChange({ ...draft, phone })} />
+          {draft.phone && !isValidPhone(draft.phone) && <p className="-mt-2 text-[11px] font-bold text-red-300">Use um telefone real com DDD. Sequências como 111 não entram.</p>}
           <div className="grid grid-cols-2 gap-3">
             <select value={draft.sex} onChange={(e) => onDraftChange({ ...draft, sex: e.target.value })} className="h-10 rounded-md border border-white/10 bg-white/5 px-3 text-sm text-white">
               <option value="" className="bg-[#0d1426]">Sexo</option>
@@ -2708,11 +2974,12 @@ function CreateStudentDialog({
             <input type="checkbox" checked={draft.active} onChange={(event) => onDraftChange({ ...draft, active: event.target.checked })} />
             Ativar acesso agora
           </label>
+          {validationError && <p className="text-xs font-bold text-red-300">{validationError}</p>}
           {limitReached && <p className="text-xs font-bold text-[#00e5ff]">Limite do plano atingido. Atualize o plano GUTO Time para cadastrar mais alunos.</p>}
         </div>
         <AlertDialogFooter>
           <AlertDialogCancel className="border-white/10 bg-white/5 text-white">Cancelar</AlertDialogCancel>
-          <Button disabled={acting || limitReached || !draft.name.trim() || (isSuperAdmin && !draft.teamId)} onClick={onCreate} className="bg-[#00e5ff] text-[#0a0f1e] hover:bg-white">Criar</Button>
+          <Button disabled={acting || limitReached || Boolean(validationError)} onClick={onCreate} className="bg-[#00e5ff] text-[#0a0f1e] hover:bg-white">Criar</Button>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

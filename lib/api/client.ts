@@ -1,6 +1,14 @@
+function shouldUsePreviewProxy() {
+  if (typeof window === "undefined") return false
+  const host = window.location.hostname
+  return host.endsWith(".vercel.app") && host !== "corpoguto.vercel.app"
+}
+
 const RAW_API_URL =
-  process.env.NEXT_PUBLIC_API_URL ||
-  (process.env.NODE_ENV === "production" ? "" : "http://localhost:3001")
+  shouldUsePreviewProxy()
+    ? "/api/guto"
+    : process.env.NEXT_PUBLIC_API_URL ||
+      (process.env.NODE_ENV === "production" ? "" : "http://localhost:3001")
 
 export const API_URL = RAW_API_URL.replace(/\/+$/, "")
 

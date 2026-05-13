@@ -23,7 +23,8 @@ interface ArenaTabProps {
   currentUserName?: string
 }
 
-const ARENA_GROUP = "will-personal-alpha"
+// ARENA_GROUP removido: as funções getArenaWeekly/Monthly/Individual
+// já não enviam arenaGroupId — o backend resolve via userId autenticado.
 
 const avatarStageColor: Record<string, string> = {
   baby: "text-[rgba(13,35,65,0.38)]",
@@ -33,10 +34,10 @@ const avatarStageColor: Record<string, string> = {
 }
 
 const avatarStageLabel: Record<string, Record<string, string>> = {
-  baby: { "pt-BR": "BABY", "en-US": "BABY", "it-IT": "BABY", "es-ES": "BEBÉ" },
-  teen: { "pt-BR": "GUTIM", "en-US": "GUTIM", "it-IT": "GUTIM", "es-ES": "GUTIM" },
-  adult: { "pt-BR": "ADULTO", "en-US": "ADULT", "it-IT": "ADULTO", "es-ES": "ADULTO" },
-  elite: { "pt-BR": "Elite", "en-US": "Elite", "it-IT": "Elite", "es-ES": "Elite" },
+  baby: { "pt-BR": "BABY", "en-US": "BABY", "it-IT": "BABY" },
+  teen: { "pt-BR": "GUTIM", "en-US": "GUTIM", "it-IT": "GUTIM" },
+  adult: { "pt-BR": "ADULTO", "en-US": "ADULT", "it-IT": "ADULTO" },
+  elite: { "pt-BR": "Elite", "en-US": "Elite", "it-IT": "Elite" },
 }
 
 const positionIcons = [Trophy, Star, TrendingUp]
@@ -214,9 +215,9 @@ export function ArenaTab({ userId, language, translations: t, refreshKey, curren
       setError(null)
       try {
         let result: ArenaRankingResponse
-        if (sub === "week") result = await getArenaWeekly(ARENA_GROUP)
-        else if (sub === "month") result = await getArenaMonthly(ARENA_GROUP)
-        else result = await getArenaIndividual(ARENA_GROUP)
+        if (sub === "week") result = await getArenaWeekly()
+        else if (sub === "month") result = await getArenaMonthly()
+        else result = await getArenaIndividual()
         setData(result)
       } catch {
         setError(t.arena.emptyState)

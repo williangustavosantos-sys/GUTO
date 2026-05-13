@@ -3,7 +3,7 @@ import { AuthUser } from "./auth"
 import type { DietPlan, GutoMemory, GutoWorkoutPlan } from "./guto"
 
 export type AdminPlanSource = "guto_generated" | "coach_manual" | "mixed"
-export type CatalogLanguage = "pt-BR" | "it-IT" | "en-US" | "es-ES"
+export type CatalogLanguage = "pt-BR" | "it-IT" | "en-US"
 
 export interface AdminCatalogExercise {
   id: string
@@ -45,6 +45,8 @@ export interface AdminCustomExerciseRequest extends AdminCatalogExercise {
 
 export interface AdminUser extends AuthUser {
   name?: string
+  firstName?: string | null
+  lastName?: string | null
   email?: string
   phone?: string
   whatsapp?: string

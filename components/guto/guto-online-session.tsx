@@ -6,6 +6,7 @@ import { Mic, MicOff, Pause, Play, RotateCcw, ShieldAlert, Shuffle, X } from "lu
 import type { GutoWorkoutExercise, GutoWorkoutPlan } from "@/lib/api/guto"
 import { GutoAvatar } from "@/components/guto/guto-avatar"
 import { gutoVoice } from "@/lib/guto-voice/guto-voice-service"
+import { API_URL } from "@/lib/api/client"
 
 type OnlinePhase = "briefing" | "executing" | "resting" | "paused" | "finished"
 type AudioState = "idle" | "listening" | "speaking" | "unsupported"
@@ -37,11 +38,176 @@ interface GutoOnlineSessionProps {
   onFinish?: () => void
 }
 
+// ─── Session persistence ──────────────────────────────────────────────────────
+// GUTO nunca descarta memória sem validar.
+// Estado é salvo no localStorage e restaurado se menos de 2h passaram.
+
+interface PersistedSession {
+  phase: OnlinePhase
+  exerciseIndex: number
+  currentSet: number
+  workoutKey: string
+  savedAt: number
+}
+
+const SESSION_PERSIST_PREFIX = "guto-online-session:"
+const SESSION_MAX_AGE_MS = 2 * 60 * 60 * 1000 // 2 horas
+
+function makeSessionKey(plan: GutoWorkoutPlan): string {
+  return `${SESSION_PERSIST_PREFIX}${plan.focus}:${plan.scheduledFor}`
+}
+
+function saveSessionState(key: string, state: Omit<PersistedSession, "savedAt">): void {
+  try {
+    const data: PersistedSession = { ...state, savedAt: Date.now() }
+    localStorage.setItem(key, JSON.stringify(data))
+  } catch {
+    // localStorage pode estar cheio ou bloqueado — não quebra o treino
+  }
+}
+
+function loadSessionState(key: string): PersistedSession | null {
+  try {
+    const raw = localStorage.getItem(key)
+    if (!raw) return null
+    const data = JSON.parse(raw) as PersistedSession
+    if (Date.now() - data.savedAt > SESSION_MAX_AGE_MS) {
+      localStorage.removeItem(key)
+      return null
+    }
+    return data
+  } catch {
+    return null
+  }
+}
+
+function clearSessionState(key: string): void {
+  try {
+    localStorage.removeItem(key)
+  } catch {
+    // silencioso — irrelevante para o fluxo
+  }
+}
+
+// ─── AI exception call ────────────────────────────────────────────────────────
+// GUTO pergunta como amigo. Quando não entende, ele pede clareza.
+// Quando entende (dor, troca, fadiga), ele responde com contexto real.
+// Timeout de 4s — se demorar, usa fallback local sem avisar de erro.
+
+type ExceptionType = "pain" | "substitute" | "fatigue" | "unknown_command"
+
+const EXCEPTION_FALLBACKS: Record<ExceptionType, string> = {
+  pain:            "Para. Me fala curto: é dor, cansaço ou dúvida de execução? Quero entender antes de seguir.",
+  substitute:      "Tudo bem. Qual equipamento você tem agora? Me fala e eu adapto na hora.",
+  fatigue:         "Entendido. Quanto você aguenta nessa carga? Baixa 20%, mantém a técnica e me fala quando a série fechar.",
+  unknown_command: "Não entendi bem o que você falou. Me diz: é dor, cansaço, troca de exercício ou a série fechou?",
+}
+
+async function askGutoOnline(
+  type: ExceptionType,
+  context: {
+    exerciseName?: string
+    exerciseMuscle?: string
+    currentSet?: number
+    totalSets?: number
+    userMessage?: string
+    alternatives?: string[]
+  }
+): Promise<string | null> {
+  const token = typeof window !== "undefined"
+    ? window.localStorage.getItem("guto-auth-token")
+    : null
+
+  if (!API_URL) return null
+
+  try {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 4000)
+
+    const res = await fetch(`${API_URL}/guto/online/exception`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({ type, context }),
+      signal: controller.signal,
+    })
+
+    clearTimeout(timeout)
+
+    if (!res.ok) return null
+    const data = (await res.json()) as { text?: string }
+    return data.text ?? null
+  } catch {
+    // Timeout, rede offline, etc — GUTO usa fallback local sem expor erro técnico
+    return null
+  }
+}
+
+// ─── Padrões de comando por idioma ───────────────────────────────────────────
+// GUTO ouve como amigo: entende variações naturais em PT, EN e IT.
+// Se o usuário falar de forma ligeiramente diferente, ainda é reconhecido.
+
+interface CommandPatterns {
+  pain: RegExp
+  setDone: RegExp
+  swap: RegExp
+  fatigue: RegExp
+  pause: RegExp
+  resume: RegExp
+  finish: RegExp
+  wake: RegExp
+}
+
+const COMMAND_PATTERNS: Record<string, CommandPatterns> = {
+  "pt-BR": {
+    wake:     /^(guto|gudo|gutoo|gutu|ei guto|oi guto)\b/,
+    pain:     /(doeu|dor|fisgada|pontada|travou|incomod)/,
+    setDone:  /(serie feita|série feita|feito|fiz|terminei|acabei|aquecimento finalizado)/,
+    swap:     /(ocupad|troca|substitui|sem maquina|sem máquina)/,
+    fatigue:  /(pesad|cansad|sem ar|falhei)/,
+    pause:    /(pausa|para|espera)/,
+    resume:   /(continua|voltei|segue|bora)/,
+    finish:   /(finaliza|encerra|acabou)/,
+  },
+  "en-US": {
+    wake:     /^(guto|hey guto|hi guto)\b/,
+    pain:     /(hurt|pain|ache|twinge|pulled|strain|sore)/,
+    setDone:  /(set done|done|finished|completed|i did it|that.s it|all done)/,
+    swap:     /(busy|swap|substitute|no machine|no equipment|occupied)/,
+    fatigue:  /(heavy|tired|out of breath|failed|exhausted|can.t)/,
+    pause:    /(pause|stop|wait|hold on)/,
+    resume:   /(continue|i.m back|let.s go|resume|keep going)/,
+    finish:   /(finish|end|done for today|wrap up)/,
+  },
+  "it-IT": {
+    wake:     /^(guto|ehi guto|ciao guto)\b/,
+    pain:     /(fa male|dolore|fitta|fitto|stirato|distorto|fastidio)/,
+    setDone:  /(serie fatta|finito|ho finito|completato|fatto|l.ho fatto)/,
+    swap:     /(occupato|cambio|sostituisci|senza macchina|non c.è)/,
+    fatigue:  /(pesante|stanco|senza fiato|ho fallito|non ce la faccio)/,
+    pause:    /(pausa|fermati|aspetta)/,
+    resume:   /(continua|sono tornato|dai|riprendi)/,
+    finish:   /(finisci|chiudi|basta per oggi)/,
+  },
+}
+
+function getPatterns(language: string): CommandPatterns {
+  if (language in COMMAND_PATTERNS) return COMMAND_PATTERNS[language]
+  // Fallback: tenta pelo prefixo (pt-BR → pt)
+  const prefix = language.split("-")[0]
+  const found = Object.keys(COMMAND_PATTERNS).find((k) => k.startsWith(prefix))
+  return found ? COMMAND_PATTERNS[found] : COMMAND_PATTERNS["pt-BR"]
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
 function normalize(text: string) {
   return text
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[̀-ͯ]/g, "")
     .replace(/[^\w\s]/g, " ")
     .replace(/\s+/g, " ")
     .trim()
@@ -51,7 +217,6 @@ function parseRestSeconds(rest?: string | null, restSeconds?: number) {
   if (typeof restSeconds === "number" && Number.isFinite(restSeconds) && restSeconds > 0) {
     return Math.round(restSeconds)
   }
-
   const match = String(rest || "").match(/\d+/)
   const parsed = match ? Number.parseInt(match[0], 10) : 60
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 60
@@ -64,6 +229,8 @@ function formatRest(seconds: number) {
   return `${minutes}:${String(rest).padStart(2, "0")}`
 }
 
+// ─── Componente ───────────────────────────────────────────────────────────────
+
 export function GutoOnlineSession({
   open,
   onClose,
@@ -73,6 +240,8 @@ export function GutoOnlineSession({
   onFinish,
 }: GutoOnlineSessionProps) {
   const exercises = useMemo(() => workoutPlan.exercises || [], [workoutPlan.exercises])
+  const sessionKey = useMemo(() => makeSessionKey(workoutPlan), [workoutPlan])
+
   const [phase, setPhase] = useState<OnlinePhase>("briefing")
   const [audioState, setAudioState] = useState<AudioState>("idle")
   const [exerciseIndex, setExerciseIndex] = useState(0)
@@ -82,9 +251,12 @@ export function GutoOnlineSession({
   const [lastGutoLine, setLastGutoLine] = useState("Estou contigo. O treino não fica sozinho agora.")
   const [lastTranscript, setLastTranscript] = useState("")
   const [lastAction, setLastAction] = useState("")
+
   const recognitionRef = useRef<RecognitionLike | null>(null)
   const listeningEnabledRef = useRef(false)
   const speakingRef = useRef(false)
+  // Permite que respostas IA assíncronas atualizem a linha só se o contexto não mudou
+  const currentContextRef = useRef<string>("")
 
   const currentExercise: GutoWorkoutExercise | undefined = exercises[exerciseIndex]
   const displayName = userName?.trim()
@@ -95,12 +267,27 @@ export function GutoOnlineSession({
     ? `${Math.min(exerciseIndex + 1, totalExercises)}/${totalExercises}`
     : "0/0"
 
+  // ─── Persistência de sessão ──────────────────────────────────────────────────
+
+  // Salva estado sempre que muda — menos quando está briefing ou finished
+  useEffect(() => {
+    if (!open || phase === "briefing") return
+    saveSessionState(sessionKey, {
+      phase,
+      exerciseIndex,
+      currentSet,
+      workoutKey: sessionKey,
+    })
+  }, [open, phase, exerciseIndex, currentSet, sessionKey])
+
+  // ─── Reconhecimento de voz ────────────────────────────────────────────────────
+
   const stopRecognition = useCallback(() => {
     listeningEnabledRef.current = false
     try {
       recognitionRef.current?.stop()
     } catch {
-      // Browser recognition can throw when already stopped.
+      // Browser recognition pode jogar exceção quando já parado.
     }
   }, [])
 
@@ -110,7 +297,7 @@ export function GutoOnlineSession({
       try {
         recognitionRef.current?.stop()
       } catch {
-        // Avoid echo while GUTO is speaking.
+        // Evita eco enquanto GUTO fala.
       }
 
       await gutoVoice.speak({
@@ -118,6 +305,7 @@ export function GutoOnlineSession({
         text: fallbackText,
         language,
         source: "online",
+        preferStatic: false,
         onStart: () => {
           setAudioState("speaking")
           speakingRef.current = true
@@ -130,7 +318,7 @@ export function GutoOnlineSession({
               try {
                 recognitionRef.current?.start()
               } catch {
-                // SpeechRecognition throws if it is already started.
+                // SpeechRecognition já iniciado ou browser negou o mic.
               }
             }
           }, 350)
@@ -139,6 +327,8 @@ export function GutoOnlineSession({
     },
     [language],
   )
+
+  // ─── Lógica de sessão ─────────────────────────────────────────────────────────
 
   const startRest = useCallback(
     (exercise: GutoWorkoutExercise) => {
@@ -155,9 +345,11 @@ export function GutoOnlineSession({
     setPhase("finished")
     setRestEndsAt(null)
     stopRecognition()
+    // Apaga persistência só quando o treino realmente fechou
+    clearSessionState(sessionKey)
     void speak("session.close.win", "Treino fechado. A gente apareceu hoje.")
     onFinish?.()
-  }, [onFinish, speak, stopRecognition])
+  }, [onFinish, sessionKey, speak, stopRecognition])
 
   const handleSetDone = useCallback(() => {
     if (!currentExercise || phase === "finished") return
@@ -198,21 +390,56 @@ export function GutoOnlineSession({
     totalSets,
   ])
 
+  // GUTO não chuta. Se o usuário disse que doeu, ele pergunta o que doeu.
   const handlePain = useCallback(() => {
     setPhase("paused")
     setRestEndsAt(null)
     setLastAction("Pausado por dor")
-    void speak("session.error.understood", "Calma. Para esse movimento e me fala curto: é dor, cansaço ou dúvida de execução?")
-  }, [speak])
+    const contextKey = `pain:${exerciseIndex}:${currentSet}`
+    currentContextRef.current = contextKey
 
+    // Responde imediatamente como amigo — não fica em silêncio esperando a IA
+    void speak("session.pain.ask", "Para. Me fala curto: é dor, cansaço ou dúvida de execução? Quero entender antes de seguir.")
+
+    // Chama IA em paralelo para resposta mais contextual
+    void askGutoOnline("pain", {
+      exerciseName: currentExercise?.name,
+      exerciseMuscle: currentExercise?.muscleGroup,
+      currentSet,
+      totalSets,
+    }).then((aiText) => {
+      if (aiText && currentContextRef.current === contextKey) {
+        setLastGutoLine(aiText)
+      }
+    })
+  }, [currentExercise, currentSet, exerciseIndex, speak, totalSets])
+
+  // GUTO não descarta a troca sem entender o contexto
   const handleSwap = useCallback(() => {
     const alternative = currentExercise?.alternatives?.[0]
-    const line = alternative
-      ? `Vai de ${alternative}. Mesma missão, sem quebrar o treino.`
-      : "Equipamento ocupado. Mantém a missão viva e escolhe uma variação segura do mesmo padrão."
-    setLastAction("Troca orientada")
-    void speak("set.cobranca.distraction", line)
-  }, [currentExercise?.alternatives, speak])
+    const contextKey = `swap:${exerciseIndex}:${currentSet}`
+    currentContextRef.current = contextKey
+
+    if (alternative) {
+      const line = `Vai de ${alternative}. Mesma missão, sem quebrar o treino.`
+      setLastAction("Troca orientada")
+      void speak("set.swap.direct", line)
+    } else {
+      // Sem alternativa definida — GUTO pergunta o que tem disponível
+      setLastAction("Aguardando contexto de troca")
+      void speak("set.swap.ask", "Tudo bem. Qual equipamento você tem agora? Me fala e eu adapto.")
+
+      // Chama IA para sugestão inteligente de substituição
+      void askGutoOnline("substitute", {
+        exerciseName: currentExercise?.name,
+        exerciseMuscle: currentExercise?.muscleGroup,
+      }).then((aiText) => {
+        if (aiText && currentContextRef.current === contextKey) {
+          setLastGutoLine(aiText)
+        }
+      })
+    }
+  }, [currentExercise, currentSet, exerciseIndex, speak])
 
   const handlePauseToggle = useCallback(() => {
     if (phase === "paused") {
@@ -224,7 +451,7 @@ export function GutoOnlineSession({
     setPhase("paused")
     setRestEndsAt(null)
     setLastAction("Sessão pausada")
-    void speak("session.error.understood", "Pausado. Eu fico aqui. Quando voltar, fala comigo e a gente segue.")
+    void speak("session.paused.hold", "Pausado. Eu fico aqui. Quando voltar, fala comigo e a gente segue.")
   }, [phase, speak])
 
   const handleTranscript = useCallback(
@@ -234,32 +461,79 @@ export function GutoOnlineSession({
 
       setLastTranscript(rawText)
       const shortCommand = text.split(" ").length <= 6
-      const hasWake = /^(guto|gudo|gutoo|gutu|ei guto|oi guto)\b/.test(text)
-      const command = text.replace(/^(ei|oi)?\s*guto+\s*/, "").trim()
+      const p = getPatterns(language)
+      const hasWake = p.wake.test(text)
+      const command = text.replace(/^(ei|oi|ehi|oye|hey|hi|ciao|hola)?\s*guto+\s*/, "").trim()
       const canActWithoutWake = phase === "executing" || phase === "resting"
       if (!hasWake && !canActWithoutWake && !shortCommand) return
 
-      if (/(doeu|dor|fisgada|pontada|travou|incomod)/.test(command)) {
+      if (p.pain.test(command)) {
         handlePain()
-      } else if (/(serie feita|série feita|feito|fiz|terminei|acabei|aquecimento finalizado)/.test(command)) {
+      } else if (p.setDone.test(command)) {
         handleSetDone()
-      } else if (/(ocupad|troca|substitui|sem maquina|sem máquina)/.test(command)) {
+      } else if (p.swap.test(command)) {
         handleSwap()
-      } else if (/(pesad|cansad|sem ar|falhei)/.test(command)) {
+      } else if (p.fatigue.test(command)) {
+        const contextKey = `fatigue:${exerciseIndex}:${currentSet}`
+        currentContextRef.current = contextKey
         setLastAction("Carga/ritmo ajustado")
-        void speak("set.cobranca.slow_pace", "A gente ajusta. Baixa o ego, segura a técnica e continua comigo.")
-      } else if (/(pausa|para|espera)/.test(command)) {
+
+        // Resposta imediata — não deixa o usuário sem resposta
+        void speak("set.fatigue.adjust", "A gente ajusta. Baixa o ego, segura a técnica e continua comigo.")
+
+        // IA para resposta mais contextual se disponível
+        void askGutoOnline("fatigue", {
+          exerciseName: currentExercise?.name,
+          currentSet,
+          totalSets,
+          userMessage: rawText,
+        }).then((aiText) => {
+          if (aiText && currentContextRef.current === contextKey) {
+            setLastGutoLine(aiText)
+          }
+        })
+      } else if (p.pause.test(command)) {
         handlePauseToggle()
-      } else if (/(continua|voltei|segue|bora)/.test(command)) {
+      } else if (p.resume.test(command)) {
         if (phase === "paused") handlePauseToggle()
-      } else if (/(finaliza|encerra|acabou)/.test(command)) {
+      } else if (p.finish.test(command)) {
         finishSession()
       } else {
-        setLastAction("Rota mantida")
-        void speak("set.cobranca.distraction", "Eu ouvi. Mas agora a rota é treino. Me fala dor, troca, cansaço ou série feita.")
+        // GUTO não entendeu. Ele pede clareza como amigo, não joga erro.
+        const contextKey = `unknown:${Date.now()}`
+        currentContextRef.current = contextKey
+        setLastAction("Aguardando clareza")
+
+        // Resposta imediata que orienta sem ser robótica
+        const fallback = EXCEPTION_FALLBACKS.unknown_command
+        void speak("session.unknown.ask", fallback)
+
+        // Tenta IA para resposta contextual ao que o usuário disse
+        void askGutoOnline("unknown_command", {
+          exerciseName: currentExercise?.name,
+          userMessage: rawText,
+          currentSet,
+        }).then((aiText) => {
+          if (aiText && currentContextRef.current === contextKey) {
+            setLastGutoLine(aiText)
+          }
+        })
       }
     },
-    [finishSession, handlePain, handlePauseToggle, handleSetDone, handleSwap, phase, speak],
+    [
+      currentExercise,
+      currentSet,
+      exerciseIndex,
+      finishSession,
+      handlePain,
+      handlePauseToggle,
+      handleSetDone,
+      handleSwap,
+      language,
+      phase,
+      speak,
+      totalSets,
+    ],
   )
 
   const startListening = useCallback(() => {
@@ -289,7 +563,7 @@ export function GutoOnlineSession({
               recognition.start()
               setAudioState("listening")
             } catch {
-              // Already started or browser denied the mic.
+              // Já iniciado ou browser negou.
             }
           }, 300)
         }
@@ -309,31 +583,56 @@ export function GutoOnlineSession({
     }
   }, [handleTranscript, language])
 
+  // ─── Efeitos ──────────────────────────────────────────────────────────────────
+
   useEffect(() => {
     if (!open) return
-    setPhase("briefing")
-    setExerciseIndex(0)
-    setCurrentSet(1)
-    setRestEndsAt(null)
-    void speak(
-      "session.entry.first_time",
-      displayName
-        ? `${displayName}, estamos juntos nessa. Bora iniciar, hoje a gente não falha.`
-        : "Estamos juntos nessa. Bora iniciar, hoje a gente não falha.",
-    )
-    setTimeout(() => {
-      setPhase("executing")
-      if (exercises[0]) {
-        void speak("set.return.now", `${exercises[0].name} agora. Primeira série. Eu tô contigo.`)
-      }
-    }, 2200)
+
+    // Tenta restaurar sessão salva antes de iniciar do zero
+    const saved = loadSessionState(sessionKey)
+
+    if (saved && saved.phase !== "finished" && saved.phase !== "briefing") {
+      // GUTO retoma de onde parou — não descarta progresso sem perguntar
+      setExerciseIndex(saved.exerciseIndex)
+      setCurrentSet(saved.currentSet)
+      // Se estava em descanso, volta em pausa para o usuário confirmar
+      setPhase(saved.phase === "resting" ? "paused" : saved.phase)
+      setRestEndsAt(null) // descanso vencido — não conta tempo que passou com app fechado
+
+      const resumeExercise = exercises[saved.exerciseIndex]
+      const resumeLine = resumeExercise
+        ? `Voltou. Estávamos em ${resumeExercise.name}, série ${saved.currentSet}. Quer continuar daqui?`
+        : "Voltou. A gente continua de onde parou."
+
+      void speak("session.entry.returning", resumeLine)
+    } else {
+      // Sessão nova
+      setPhase("briefing")
+      setExerciseIndex(0)
+      setCurrentSet(1)
+      setRestEndsAt(null)
+      void speak(
+        "session.entry.first_time",
+        displayName
+          ? `${displayName}, estamos juntos nessa. Bora iniciar, hoje a gente não falha.`
+          : "Estamos juntos nessa. Bora iniciar, hoje a gente não falha.",
+      )
+      setTimeout(() => {
+        setPhase("executing")
+        if (exercises[0]) {
+          void speak("set.return.now", `${exercises[0].name} agora. Primeira série. Eu tô contigo.`)
+        }
+      }, 2200)
+    }
+
     startListening()
 
     return () => {
       stopRecognition()
       gutoVoice.stop()
     }
-  }, [displayName, exercises, open, speak, startListening, stopRecognition])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]) // Só re-executa quando o modal abre — não em cada mudança de estado
 
   useEffect(() => {
     if (!open) return
@@ -492,7 +791,8 @@ export function GutoOnlineSession({
               setCurrentSet(1)
               setPhase("executing")
               setRestEndsAt(null)
-              void speak("session.entry.returning", "Voltou. Boa. A gente continua junto de onde parou.")
+              clearSessionState(sessionKey)
+              void speak("session.entry.returning", "Reiniciando. A gente começa do início.")
             }}
             className="grid h-11 w-11 place-items-center rounded-[1rem] border border-white/70 bg-white/44"
             aria-label="Reiniciar sessão online"

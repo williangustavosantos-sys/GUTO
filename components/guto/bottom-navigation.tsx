@@ -14,10 +14,9 @@ interface BottomNavigationProps {
   language: string
 }
 
-const tabLabels: Record<"pt-BR" | "it-IT" | "es-ES" | "en-US", Record<TabType, string>> = {
+const tabLabels: Record<"pt-BR" | "it-IT" | "en-US", Record<TabType, string>> = {
   "pt-BR": { guto: "GUTO", caminho: "PERCURSO", evolucoes: "EVOLUIR", missao: "MISSÃO", arena: "ARENA", dieta: "DIETA" },
   "it-IT": { guto: "GUTO", caminho: "PERCORSO", evolucoes: "EVOLUZIONE", missao: "MISSIONE", arena: "ARENA", dieta: "DIETA" },
-  "es-ES": { guto: "GUTO", caminho: "RECORRIDO", evolucoes: "EVOLUCIÓN", missao: "MISIÓN", arena: "ARENA", dieta: "DIETA" },
   "en-US": { guto: "GUTO", caminho: "JOURNEY", evolucoes: "EVOLVE", missao: "MISSION", arena: "ARENA", dieta: "DIET" },
 }
 

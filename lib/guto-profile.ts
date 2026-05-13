@@ -1,7 +1,7 @@
 import type { AuthUser } from "@/lib/api/auth"
 import type { GutoMemory } from "@/lib/api/guto"
 
-export type GutoLanguage = "pt-BR" | "it-IT" | "es-ES" | "en-US"
+export type GutoLanguage = "pt-BR" | "it-IT" | "en-US"
 export type GutoLanguageScope = "onboarding" | "private"
 
 export type StoredGutoProfile = {
@@ -21,7 +21,7 @@ export type ResolvedGutoProfile = {
 }
 
 const GENERIC_NAMES = new Set(["", "operador", "operator", "usuário", "usuario", "user", "guto"])
-const SUPPORTED_GUTO_LANGUAGES: GutoLanguage[] = ["pt-BR", "it-IT", "es-ES", "en-US"]
+const SUPPORTED_GUTO_LANGUAGES: GutoLanguage[] = ["pt-BR", "it-IT", "en-US"]
 
 export function isSupportedGutoLanguage(value?: string | null): value is GutoLanguage {
   return SUPPORTED_GUTO_LANGUAGES.includes(value as GutoLanguage)

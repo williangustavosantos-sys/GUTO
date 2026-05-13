@@ -10,7 +10,7 @@ import { gutoAudio } from "@/lib/audio-haptics"
 import { resolveGutoLanguage } from "@/lib/guto-profile"
 import { Loader2 } from "lucide-react"
 
-type Lang = "pt-BR" | "it-IT" | "en-US" | "es-ES"
+type Lang = "pt-BR" | "it-IT" | "en-US"
 
 const T = {
   "pt-BR": {
@@ -40,19 +40,10 @@ const T = {
     cta: "ENTER",
     hint: "Restricted access. You need an invite to activate GUTO.",
   },
-  "es-ES": {
-    subtitle: "Acceso Restringido",
-    userLabel: "Usuario o E-mail",
-    userPlaceholder: "IDENTIDAD",
-    passLabel: "Contraseña",
-    passPH: "••••••••",
-    cta: "ENTRAR",
-    hint: "Acceso restringido. Necesitas una invitación para activar GUTO.",
-  },
 } as const
 
 function isSupportedLang(v: string): v is Lang {
-  return ["pt-BR", "it-IT", "en-US", "es-ES"].includes(v)
+  return ["pt-BR", "it-IT", "en-US"].includes(v)
 }
 
 function LoginPageContent() {

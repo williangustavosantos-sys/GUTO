@@ -58,7 +58,6 @@ function normalizeLanguage(raw: string): SupportedLanguage | null {
   const map: Record<string, SupportedLanguage> = {
     portugues: "pt-BR", brasil: "pt-BR", brasileira: "pt-BR", "pt-br": "pt-BR",
     english: "en-US", ingles: "en-US", "en-us": "en-US", en: "en-US",
-    espanol: "es-ES", espanhol: "es-ES", spanish: "es-ES", "es-es": "es-ES",
     italiano: "it-IT", italian: "it-IT", "it-it": "it-IT", it: "it-IT",
   }
   return map[key] ?? null
@@ -94,7 +93,6 @@ function normalizeLocation(raw: string): { key: LocationKey; label: string } | n
 const langLabels: Record<SupportedLanguage, string> = {
   "pt-BR": "Português",
   "en-US": "English",
-  "es-ES": "Español",
   "it-IT": "Italiano",
 }
 
@@ -110,11 +108,6 @@ const fieldHumanLabels: Record<SupportedLanguage, Record<ProfileField, string>> 
     name: "name", language: "language", phone: "phone", country: "country/city",
     age: "age", weight: "weight", height: "height", goal: "goal",
     location: "training location", pathology: "limitation", foodRestrictions: "food restriction",
-  },
-  "es-ES": {
-    name: "nombre", language: "idioma", phone: "teléfono", country: "ciudad/país",
-    age: "edad", weight: "peso", height: "altura", goal: "objetivo",
-    location: "lugar de entrenamiento", pathology: "limitación", foodRestrictions: "restricción alimentaria",
   },
   "it-IT": {
     name: "nome", language: "lingua", phone: "telefono", country: "città/paese",
@@ -149,13 +142,6 @@ export const profileUpdateCopy: Record<
     success: (l, v) => `Done. I updated your ${l} to "${v}".`,
     cancelled: "Ok, cancelled. No data was changed.",
     blocked: "I can't do that through chat. Use the Settings screen or contact support.",
-  },
-  "es-ES": {
-    lightConfirm: (l, v) => `¿Quieres que actualice tu ${l} a "${v}"?`,
-    requiredConfirm: (l, v) => `Esto afecta tus entrenamientos. ¿Confirmo tu ${l} como "${v}"?`,
-    success: (l, v) => `Listo. Actualicé tu ${l} a "${v}".`,
-    cancelled: "Ok, cancelé. No se cambió ningún dato.",
-    blocked: "Eso no lo hago por chat. Usa la pantalla de Ajustes o contacta soporte.",
   },
   "it-IT": {
     lightConfirm: (l, v) => `Vuoi che aggiorni il tuo ${l} a "${v}"?`,

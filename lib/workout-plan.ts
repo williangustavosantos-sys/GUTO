@@ -110,31 +110,26 @@ const WORKOUT_FOCUS_TITLES: Record<WorkoutFocus, Record<GutoLanguage, string>> =
     "pt-BR": "Força total",
     "it-IT": "Forza totale",
     "en-US": "Full-body strength",
-    "es-ES": "Fuerza total",
   },
   legs_core: {
     "pt-BR": "Inferiores e core",
     "it-IT": "Gambe e core",
     "en-US": "Legs and core",
-    "es-ES": "Piernas y core",
   },
   chest_triceps: {
     "pt-BR": "Peito, ombro e tríceps",
     "it-IT": "Petto, spalle e tricipiti",
     "en-US": "Chest, shoulders and triceps",
-    "es-ES": "Pecho, hombros y tríceps",
   },
   back_biceps: {
     "pt-BR": "Costas e bíceps",
     "it-IT": "Schiena e bicipiti",
     "en-US": "Back and biceps",
-    "es-ES": "Espalda y bíceps",
   },
   shoulders_abs: {
     "pt-BR": "Ombros e abdômen",
     "it-IT": "Spalle e addome",
     "en-US": "Shoulders and abs",
-    "es-ES": "Hombros y abdomen",
   },
 }
 
@@ -156,43 +151,36 @@ const EXERCISE_COPY_BY_ID: Record<string, Record<GutoLanguage, ExerciseCopy>> = 
     "pt-BR": { name: "Caminhada na esteira inclinada", cue: "Ritmo firme. Aquece sem gastar a missão.", note: "Aumente a inclinação só se estiver sem dor." },
     "it-IT": { name: "Camminata sul tapis roulant in salita", cue: "Ritmo deciso. Scalda senza bruciare la missione.", note: "Aumenta l'inclinazione solo se non hai dolore." },
     "en-US": { name: "Incline treadmill walk", cue: "Firm pace. Warm up without spending the mission.", note: "Increase the incline only if there is no pain." },
-    "es-ES": { name: "Caminata en cinta inclinada", cue: "Ritmo firme. Calienta sin gastar la misión.", note: "Sube la inclinación solo si no hay dolor." },
   },
   "peito-supino-reto": {
     "pt-BR": { name: "Supino reto", cue: "Controle a descida. Empurra sem perder postura.", note: "Carga forte, execução limpa." },
     "it-IT": { name: "Panca piana", cue: "Controlla la discesa. Spingi senza perdere postura.", note: "Carico serio, esecuzione pulita." },
     "en-US": { name: "Bench press", cue: "Control the way down. Press without losing position.", note: "Strong load, clean execution." },
-    "es-ES": { name: "Press de banca", cue: "Controla la bajada. Empuja sin perder postura.", note: "Carga fuerte, ejecución limpia." },
   },
   "costas-remada-baixa": {
     "pt-BR": { name: "Remada baixa na polia", cue: "Puxa com as costas, não com pressa.", note: "Pausa curta no fim do movimento." },
     "it-IT": { name: "Rematore basso al cavo", cue: "Tira con la schiena, non con la fretta.", note: "Pausa breve alla fine del movimento." },
     "en-US": { name: "Cable row", cue: "Pull with your back, not with haste.", note: "Short pause at the end of the movement." },
-    "es-ES": { name: "Remo en polea baja", cue: "Tira con la espalda, no con prisa.", note: "Pausa corta al final del movimiento." },
   },
   "pernas-legpress-45": {
     "pt-BR": { name: "Leg press 45", cue: "Amplitude segura. Joelho acompanha a ponta do pé.", note: "Se houver dor no joelho, reduza amplitude e carga." },
     "it-IT": { name: "Leg press 45", cue: "Ampiezza sicura. Il ginocchio segue la punta del piede.", note: "Se il ginocchio dà fastidio, riduci ampiezza e carico." },
     "en-US": { name: "Leg press 45", cue: "Safe range. Knee tracks over the toes.", note: "If the knee hurts, reduce range and load." },
-    "es-ES": { name: "Leg press 45", cue: "Rango seguro. La rodilla sigue la punta del pie.", note: "Si duele la rodilla, reduce rango y carga." },
   },
   "ombro-desenvolvimento": {
     "pt-BR": { name: "Desenvolvimento sentado", cue: "Tronco firme. Sobe sem compensar lombar.", note: "Pare antes de transformar técnica em ego." },
     "it-IT": { name: "Military press seduto", cue: "Busto fermo. Sali senza compensare con la lombare.", note: "Fermati prima che la tecnica diventi ego." },
     "en-US": { name: "Seated shoulder press", cue: "Firm torso. Press without arching the low back.", note: "Stop before technique turns into ego." },
-    "es-ES": { name: "Press de hombro sentado", cue: "Torso firme. Sube sin compensar con la lumbar.", note: "Para antes de convertir la técnica en ego." },
   },
   "abdomen-prancha": {
     "pt-BR": { name: "Prancha isométrica", cue: "Quadril firme. Respira e segura.", note: "Missão termina com controle, não com desespero." },
     "it-IT": { name: "Plank isometrico", cue: "Bacino fermo. Respira e tieni.", note: "La missione finisce con controllo, non con disperazione." },
     "en-US": { name: "Plank", cue: "Hips firm. Breathe and hold.", note: "The mission ends with control, not desperation." },
-    "es-ES": { name: "Plancha isométrica", cue: "Cadera firme. Respira y aguanta.", note: "La misión termina con control, no con desesperación." },
   },
   "peito-flexao": {
     "pt-BR": { name: "Flexão", cue: "Corpo em bloco. Desce com controle.", note: "Use apoio no joelho se precisar manter execução." },
     "it-IT": { name: "Flessioni", cue: "Corpo compatto. Scendi con controllo.", note: "Usa le ginocchia se serve per mantenere l'esecuzione." },
     "en-US": { name: "Push-up", cue: "Body as one block. Lower with control.", note: "Use knee support if needed to keep execution clean." },
-    "es-ES": { name: "Flexiones", cue: "Cuerpo en bloque. Baja con control.", note: "Apoya rodillas si hace falta para mantener ejecución." },
   },
 }
 
@@ -285,7 +273,6 @@ export function createLocalWorkoutPlan(memory: GutoMemory, language: string): Gu
     scheduledFor: todayKey(),
     summary: validLang === "en-US" ? "Local plan based on your calibration." :
              validLang === "it-IT" ? "Piano locale basato sulla tua calibrazione." :
-             validLang === "es-ES" ? "Plan local basado en tu calibración." :
              "Plano local gerado a partir da calibragem salva.",
     exercises,
   }

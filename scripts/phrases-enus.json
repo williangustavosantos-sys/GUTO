@@ -1,0 +1,110 @@
+{
+  "_comment": "GUTO phrases in English (en-US) for voicepack generation.",
+  "_note": "4 variations per intent for anti-repetition. GUTO speaks as a best friend — direct, not robotic.",
+  "_generate": "node scripts/generate-voicepack.mjs --lang en-US",
+
+  "session.entry.first_time": [
+    "We're in this together. Let's go — today we don't quit.",
+    "The team is on the floor. I'm right here with you every set.",
+    "Time to work. Workout is ready, presence is active.",
+    "You showed up. That's already half of it. Let's finish the rest together."
+  ],
+
+  "session.entry.returning": [
+    "You're back. We pick up right where we left off.",
+    "Welcome back. The mission is still open.",
+    "You came back and that matters. Let's finish this together.",
+    "Resuming. I kept your progress. We go from here."
+  ],
+
+  "set.done.clean": [
+    "Good. Set logged, we keep moving.",
+    "Done. One more for the team.",
+    "Solid. Next set when you're ready.",
+    "That's it. Set recorded. We're on rhythm."
+  ],
+
+  "set.rest.short": [
+    "Good. Set logged. Rest up and stay with me.",
+    "Done. Breathe. I'll call you back.",
+    "Noted. Good rest, next set.",
+    "Set closed. Rest — don't disappear."
+  ],
+
+  "set.rest.long": [
+    "Good. Set logged. Rest and stay with me.",
+    "Solid. Well-earned rest. I'll get you.",
+    "Noted. You worked clean. Rest now.",
+    "Set closed. I'll count the time. Focus on your breathing."
+  ],
+
+  "set.return.now": [
+    "Come back. Next set now.",
+    "Rest is over. We keep going.",
+    "Time to get back. I'm here.",
+    "Let's go. Next exercise up."
+  ],
+
+  "set.fatigue.adjust": [
+    "We adjust. Drop the ego, hold the technique, keep going with me.",
+    "Got it. Lower the weight and keep the form. You're still here.",
+    "Heavy is different from impossible. Drop 20%, hold the execution.",
+    "Fatigue means you're working. Adjust and keep going."
+  ],
+
+  "set.swap.direct": [
+    "Swap confirmed. Same mission, different movement.",
+    "Alternative activated. The team doesn't stop because of equipment.",
+    "Go with this variation. The mission continues.",
+    "Adapted. We don't break the workout over this."
+  ],
+
+  "set.swap.ask": [
+    "All good. What equipment do you have right now? Tell me and I'll adapt.",
+    "Equipment busy, understood. What's available?",
+    "We'll figure it out. Tell me what you have to work with.",
+    "No problem. Tell me what's available and I'll set it up."
+  ],
+
+  "session.pain.ask": [
+    "Stop. Quick — is it pain, fatigue, or a form question? I need to know before we continue.",
+    "Easy. That's an important signal. Is it real pain or just fatigue? Tell me.",
+    "Pausing here. Where did it hurt? I need to know before we move on.",
+    "Everything stops. Tell me — is it sharp pain or just discomfort? We decide together."
+  ],
+
+  "session.paused.hold": [
+    "Paused. I'm right here. When you're back, talk to me and we'll continue.",
+    "It's okay to stop. I'm not going anywhere. Come back when you're ready.",
+    "Pause on. Rest. The mission continues when you want.",
+    "Okay. Breathe. I'm here when you come back."
+  ],
+
+  "session.unknown.ask": [
+    "Didn't catch that. Tell me — pain, fatigue, exercise swap, or set done?",
+    "I heard you but didn't get the command. Pain, swap, fatigue, or set done?",
+    "Say that again. It can be: pain, swap, fatigue, or set complete.",
+    "Missed it. What is it? Pain, fatigue, swap, or set done? Keep it short."
+  ],
+
+  "session.close.win": [
+    "Workout closed. We showed up today.",
+    "Mission done. This goes on the record.",
+    "Closed. You knew you'd show up and you did. That's what counts.",
+    "The team delivered. Workout logged."
+  ],
+
+  "set.cobranca.distraction": [
+    "I heard you. But the route right now is training. Tell me: pain, swap, fatigue, or set done.",
+    "Understood. Focus is on the set. Pain, swap, fatigue, or set done?",
+    "Stay focused. Tell me what you need: pain, swap, or set done.",
+    "We talk after the workout. Right now it's sets. What do you need?"
+  ],
+
+  "set.cobranca.slow_pace": [
+    "We adjust. Drop the ego, hold the technique, keep moving.",
+    "Pace dropped, that's fine. Reduce and keep clean execution.",
+    "No rush. Quality beats speed every time here.",
+    "Breathe. Reduce the weight and close this set with technique."
+  ]
+}

@@ -10,9 +10,8 @@ interface LanguageScreenProps {
 
 const languages = [
   { code: "pt-BR", name: "Português", flag: "🇧🇷" },
-  { code: "it-IT", name: "Italiano", flag: "🇮🇹" },
-  { code: "es-ES", name: "Español", flag: "🇪🇸" },
   { code: "en-US", name: "English", flag: "🇺🇸" },
+  { code: "it-IT", name: "Italiano", flag: "🇮🇹" },
 ] as const
 
 export function LanguageScreen({ onSelect, selectedLanguage }: LanguageScreenProps) {

@@ -102,33 +102,6 @@ const copy = {
     missingLocation: "Il luogo dell'allenamento non è definito. Torna indietro e impostalo prima di validare.",
     incompleteWorkout: "Questo allenamento è incompleto. GUTO deve correggere gli esercizi prima di validare.",
   },
-  "es-ES": {
-    title: "Validar entrenamiento",
-    badge: "GUTO VALIDATION",
-    instructions: [
-      "Autoriza la cámara cuando se solicite",
-      "Coloca el rostro en el círculo",
-      "Espera la cuenta 3, 2, 1",
-      "Di la frase en voz alta",
-    ],
-    cta: "EMPEZAR",
-    readyTitle: "Coloca el rostro",
-    faceHint: "Ajusta el rostro en el círculo",
-    ready: "ESTOY LISTO",
-    phrase: "ENTRENAMIENTO HECHO, GUTO",
-    phraseHint: "Dilo en voz alta",
-    uploading: "Validando misión...",
-    validated: "VALIDADO",
-    xpLabel: "XP ganado",
-    seeInJourney: "VER EN RECORRIDO",
-    faceStable: "Mantén firme...",
-    noCamera: "Cámara no autorizada. Permite el acceso en la configuración del dispositivo.",
-    retry: "INTENTAR DE NUEVO",
-    cameraError: "No se pudo acceder a la cámara.",
-    errorTitle: "Algo salió mal",
-    missingLocation: "El lugar del entrenamiento no está cerrado. Vuelve y ajusta el lugar antes de validar.",
-    incompleteWorkout: "Este entrenamiento está incompleto. GUTO debe corregir los ejercicios antes de validar.",
-  },
 } as const
 
 function hasLocalWorkoutVideos(plan?: GutoWorkoutPlan | null): boolean {

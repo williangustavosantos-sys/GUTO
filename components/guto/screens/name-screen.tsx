@@ -13,7 +13,6 @@ interface NameScreenProps {
 const localeTexts: Record<string, { complete: string; placeholder: string }> = {
   "pt-BR": { complete: "Complete.", placeholder: "Seu nome" },
   "it-IT": { complete: "Completa.", placeholder: "Il tuo nome" },
-  "es-ES": { complete: "Completa.", placeholder: "Tu nombre" },
   "en-US": { complete: "Complete.", placeholder: "Your name" },
 }
 

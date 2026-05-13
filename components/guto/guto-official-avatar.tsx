@@ -13,6 +13,7 @@ interface GutoOfficialAvatarProps {
   evolution?: EvolutionStage
   emotion?: GutoAvatarEmotion
   className?: string
+  onTap?: () => void
 }
 
 type AvatarVideoSources = {

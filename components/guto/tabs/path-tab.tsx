@@ -6,7 +6,7 @@ import { AlertCircle, Check, Flame, Lock, Quote, Zap } from "lucide-react"
 
 import type { GutoMemory, GutoWorkoutPlan, WorkoutValidationRecord } from "@/lib/api/guto"
 import { API_URL } from "@/lib/api/client"
-import { GutoOfficialAvatar } from "../guto-official-avatar"
+import { GutoAvatarController } from "../guto-avatar-controller"
 import { getLanguage, translations } from "../translations"
 import type { EvolutionStage } from "@/types/contract"
 import type { PathDay, PathDayStatus } from "../view-models"
@@ -39,15 +39,6 @@ const pathCopy = {
     waitingMissionBody: "GUTO needs to close the workout in chat before carving execution into the path.",
     noXp: "0 XP today",
     noStreak: "Streak still at zero",
-  },
-  "es-ES": {
-    active: "Recorrido activo",
-    unlocked: "Desbloqueado",
-    adapted: "Ruta reducida aceptada",
-    waitingMission: "Misión todavía no definida",
-    waitingMissionBody: "GUTO necesita cerrar el entreno en el chat antes de marcar ejecución en el camino.",
-    noXp: "0 XP hoy",
-    noStreak: "Racha todavía en cero",
   },
   "it-IT": {
     active: "Percorso attivo",
@@ -124,7 +115,6 @@ export function PathTab({ language, memory, workoutPlan, currentEvolution, valid
     "pt-BR": "Últimos treinos validados",
     "en-US": "Last validated workouts",
     "it-IT": "Ultimi allenamenti validati",
-    "es-ES": "Últimos entrenamientos validados",
   }[validLang]
 
   return (
@@ -202,11 +192,10 @@ export function PathTab({ language, memory, workoutPlan, currentEvolution, valid
           style={{ opacity: vitalState.opacity }}
         >
           <div className="absolute h-44 w-44 rounded-full border border-[rgba(82,231,255,0.18)] bg-[radial-gradient(circle,rgba(82,231,255,0.12)_0%,transparent_64%)]" />
-          <GutoOfficialAvatar
+          <GutoAvatarController
+            stage={currentEvolution}
             size="lg"
             showPlatform
-            evolution={currentEvolution}
-            emotion={avatarEmotion}
             className="relative z-10"
           />
           <div className="guto-slot relative z-10 mt-[-0.4rem] rounded-full px-4 py-1.5 font-mono text-[10px] uppercase tracking-[0.18em] text-[rgba(13,35,65,0.58)]">

@@ -18,7 +18,7 @@ import {
   type ProfileUpdateIntent,
 } from "@/lib/profile-update-detector"
 
-import { GutoOfficialAvatar } from "../guto-official-avatar"
+import { GutoAvatarController } from "../guto-avatar-controller"
 import { getLanguage, translations } from "../translations"
 import type { MissionExercise } from "../view-models"
 import { gutoAudio } from "@/lib/audio-haptics"
@@ -134,15 +134,6 @@ const chatCopy: Record<
     unmute: "Enable GUTO voice",
     mute: "Mute GUTO voice",
     opening: (name) => `Finally${name ? `, ${name}` : ""}. I was waiting for you. In the meantime, I already organized our plan from here. I'm with you — ready to start?`,
-  },
-  "es-ES": {
-    channel: "Canal del oráculo",
-    speaking: "hablando",
-    micUnavailable: "Este navegador no expuso reconocimiento de voz aquí. Escribe una frase corta y seguimos.",
-    micNoSpeech: "No entró suficiente voz. Mantén el micrófono y di una frase directa.",
-    unmute: "Activar voz de GUTO",
-    mute: "Silenciar voz de GUTO",
-    opening: (name) => `Por fin${name ? `, ${name}` : ""}. Te estaba esperando. Mientras tanto, ya organicé nuestro plan desde aquí. Estoy contigo — ¿empezamos?`,
   },
   "it-IT": {
     channel: "Canale dell'oracolo",
@@ -715,7 +706,7 @@ export function ChatTab({
       }
       if (data.acao === "changeLanguage" && data.memoryPatch?.language) {
         const nextLang = data.memoryPatch.language as SupportedLanguage
-        if (["pt-BR", "en-US", "it-IT", "es-ES"].includes(nextLang)) {
+        if (["pt-BR", "en-US", "it-IT"].includes(nextLang)) {
           onChangeLanguage?.(nextLang)
         }
       }
@@ -938,7 +929,6 @@ export function ChatTab({
               const testPhrases: Record<SupportedLanguage, string> = {
                 "pt-BR": "Voz ativada. Agora eu estou contigo.",
                 "en-US": "Voice enabled. I am with you now.",
-                "es-ES": "Voz activada. Ahora estoy contigo.",
                 "it-IT": "Voce attivata. Ora sono con te."
               }
               const phrase = testPhrases[validLang as SupportedLanguage] || testPhrases["pt-BR"]
@@ -956,16 +946,15 @@ export function ChatTab({
       </button>
 
       {/* Avatar — ancorado na base. Opacidade reduz conforme dias de ausência (Tamagotchi). */}
-      <div className="guto-chat-avatar-stage pointer-events-none absolute z-10 flex flex-col items-center justify-end pb-[clamp(16px,4vh,32px)]">
+      <div className="guto-chat-avatar-stage absolute z-10 flex flex-col items-center justify-end pb-[clamp(16px,4vh,32px)]">
         <div
           className="relative flex w-[clamp(320px,96vw,440px)] flex-col items-center justify-end transition-opacity duration-1000"
           style={{ opacity: vitalState?.opacity ?? 1 }}
         >
-          <GutoOfficialAvatar
+          <GutoAvatarController
+            stage={evolution}
             size="xl"
             showPlatform={false}
-            evolution={evolution}
-            emotion={vitalState?.isCritical ? "critical" : latestGuto.avatarEmotion || vitalState?.emotion || "default"}
           />
         </div>
       </div>

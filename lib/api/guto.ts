@@ -1,6 +1,6 @@
 import { apiRequest, ApiError } from "./client"
 
-export type SupportedLanguage = "pt-BR" | "it-IT" | "es-ES" | "en-US"
+export type SupportedLanguage = "pt-BR" | "it-IT" | "en-US"
 export type WorkoutLocationMode = "gym" | "home" | "park"
 
 export interface WorkoutValidationRecord {

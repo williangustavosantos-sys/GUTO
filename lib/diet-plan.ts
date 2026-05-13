@@ -26,13 +26,6 @@ const mealCopy: Record<SupportedLanguage, Array<{ id: string; name: string; time
     { id: "lanche2", name: "Spuntino del pomeriggio", time: "16:30", gutoNote: "Niente improvvisazione. Questo spuntino protegge l'allenamento." },
     { id: "jantar", name: "Cena", time: "20:00", gutoNote: "Chiudi la giornata senza mollare l'obiettivo." },
   ],
-  "es-ES": [
-    { id: "cafe", name: "Desayuno", time: "07:30", gutoNote: "Empieza fuerte, sin cargar demasiado el plato." },
-    { id: "lanche1", name: "Snack de la mañana", time: "10:30", gutoNote: "Mantiene el motor encendido hasta el almuerzo." },
-    { id: "almoco", name: "Almuerzo", time: "13:00", gutoNote: "Aquí entra la base: proteína, carbohidrato y control." },
-    { id: "lanche2", name: "Snack de la tarde", time: "16:30", gutoNote: "Sin improvisar. Este snack protege el entrenamiento." },
-    { id: "jantar", name: "Cena", time: "20:00", gutoNote: "Cierra el día sin abandonar la meta." },
-  ],
 }
 
 type FoodTemplate = {
@@ -48,15 +41,15 @@ type FoodTemplate = {
 }
 
 const foodNames: Record<string, Record<SupportedLanguage, string>> = {
-  oats: { "pt-BR": "Aveia", "en-US": "Oats", "it-IT": "Avena", "es-ES": "Avena" },
-  banana: { "pt-BR": "Banana", "en-US": "Banana", "it-IT": "Banana", "es-ES": "Banana" },
-  yogurt: { "pt-BR": "Iogurte natural", "en-US": "Plain yogurt", "it-IT": "Yogurt naturale", "es-ES": "Yogur natural" },
-  eggs: { "pt-BR": "Ovos", "en-US": "Eggs", "it-IT": "Uova", "es-ES": "Huevos" },
-  rice: { "pt-BR": "Arroz cozido", "en-US": "Cooked rice", "it-IT": "Riso cotto", "es-ES": "Arroz cocido" },
-  chicken: { "pt-BR": "Frango grelhado", "en-US": "Grilled chicken", "it-IT": "Pollo grigliato", "es-ES": "Pollo a la plancha" },
-  oliveOil: { "pt-BR": "Azeite", "en-US": "Olive oil", "it-IT": "Olio d'oliva", "es-ES": "Aceite de oliva" },
-  pasta: { "pt-BR": "Macarrão cozido", "en-US": "Cooked pasta", "it-IT": "Pasta cotta", "es-ES": "Pasta cocida" },
-  parmesan: { "pt-BR": "Queijo parmesão", "en-US": "Parmesan cheese", "it-IT": "Parmigiano", "es-ES": "Queso parmesano" },
+  oats: { "pt-BR": "Aveia", "en-US": "Oats", "it-IT": "Avena" },
+  banana: { "pt-BR": "Banana", "en-US": "Banana", "it-IT": "Banana" },
+  yogurt: { "pt-BR": "Iogurte natural", "en-US": "Plain yogurt", "it-IT": "Yogurt naturale" },
+  eggs: { "pt-BR": "Ovos", "en-US": "Eggs", "it-IT": "Uova" },
+  rice: { "pt-BR": "Arroz cozido", "en-US": "Cooked rice", "it-IT": "Riso cotto" },
+  chicken: { "pt-BR": "Frango grelhado", "en-US": "Grilled chicken", "it-IT": "Pollo grigliato" },
+  oliveOil: { "pt-BR": "Azeite", "en-US": "Olive oil", "it-IT": "Olio d'oliva" },
+  pasta: { "pt-BR": "Macarrão cozido", "en-US": "Cooked pasta", "it-IT": "Pasta cotta" },
+  parmesan: { "pt-BR": "Queijo parmesão", "en-US": "Parmesan cheese", "it-IT": "Parmigiano" },
 }
 
 const foods: Record<string, FoodTemplate> = {

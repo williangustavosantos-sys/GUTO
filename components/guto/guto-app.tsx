@@ -90,7 +90,6 @@ const languages = [
   { id: "pt-BR" as const, label: "Português", asset: "/assets/guto/idioma-portugues.svg" },
   { id: "en-US" as const, label: "English", asset: "/assets/guto/idioma-english.svg" },
   { id: "it-IT" as const, label: "Italiano", asset: "/assets/guto/idioma-italiano.svg" },
-  { id: "es-ES" as const, label: "Español", asset: "/assets/guto/idioma-espanol.svg" },
 ]
 
 const pactVeins = [0.16, 0.31, 0.5, 0.7, 0.84]
@@ -278,64 +277,6 @@ const stageCopy: Record<
     billingManage: "Manage subscription",
     billingNoSubscription: "You don't have an active subscription yet.",
   },
-  "es-ES": {
-    namingTitle: "GUTO & ________",
-    namingPlaceholder: "TU NOMBRE",
-    complete: "Completa.",
-    noReturn: "¿Estás seguro? Cuando toques, esto se pone serio.",
-    hold: "Mantén pulsado",
-    status: "Estado: Activo",
-    connection: "Conexión: Estable",
-    settingsTitle: "Ajustes",
-    settingsLanguage: "Idioma",
-    settingsName: "Nombre",
-    settingsNamePlaceholder: "TU NOMBRE",
-    settingsSaveName: "Guardar nombre",
-    settingsClose: "Cerrar ajustes",
-    settingsBack: "Volver",
-    settingsProfile: "Perfil",
-    settingsGoal: "Objetivo",
-    settingsLocation: "Local",
-    settingsPathology: "Limitaciones",
-    settingsPhysicalData: "Peso / Altura",
-    settingsResidence: "Dónde Vives",
-    settingsFoodRestrictions: "Restricciones",
-    settingsPhoneLabel: "Teléfono",
-    settingsSave: "Guardar",
-    settingsSavedMsg: "Configuración guardada.",
-    settingsFoodIntolerances: "Intolerancias",
-    settingsPrivacy: "Privacidad y datos",
-    settingsPrivacySubtext: "Descarga, corrige o elimina tus datos.",
-    privacyHealthConsentLabel: "Datos de salud/fitness",
-    privacyTermsConsentLabel: "Términos y privacidad",
-    privacyAccepted: "Aceptado",
-    privacyNotAccepted: "No aceptado",
-    privacyAcceptedAt: "Fecha de aceptación",
-    privacyDownload: "Descargar mis datos",
-    privacyCorrect: "Corregir mis datos personales",
-    privacyRevoke: "Revocar consentimientos",
-    privacyDelete: "Eliminar mi cuenta y mis datos",
-    privacyCancel: "Cancelar",
-    privacyRevokeWarning: "Si revocas, GUTO no podrá usar tus datos de salud/fitness para generar entrenamientos, dieta y seguimiento.",
-    privacyRevokeConfirm: "Revocar consentimientos",
-    privacyRevokedMsg: "Consentimientos revocados.",
-    privacyCorrectToast: "Puedes corregir tus datos en las secciones de abajo.",
-    privacyDeleteStep1: "Esta acción elimina tus datos personales, historial, entrenamientos, dieta y progreso de GUTO, excepto los datos que deban conservarse por obligación legal.",
-    privacyDeleteStep2Label: "Escribe ELIMINAR para confirmar",
-    privacyDeleteConfirmWord: "ELIMINAR",
-    privacyDeleteBtn: "Eliminar definitivamente",
-    privacyDeleteBetaTitle: "Solicitud registrada",
-    privacyDeleteBetaMsg: "En beta, tu solicitud de eliminación ha sido registrada. Para eliminación inmediata del servidor, contacta con el soporte de GUTO.",
-    pushTitle: "Notificaciones de GUTO",
-    pushSubtitle: "GUTO te recuerda a tiempo y te llama la atención cuando desapareces. Sin spam.",
-    pushEnable: "Activar notificaciones",
-    pushDisable: "Desactivar notificaciones",
-    pushDenied: "Permiso bloqueado. Habilítalo en la configuración del navegador.",
-    pushUnsupported: "Este dispositivo no admite notificaciones push.",
-    billingTitle: "Suscripción",
-    billingManage: "Gestionar suscripción",
-    billingNoSubscription: "Aún no tienes una suscripción activa.",
-  },
   "it-IT": {
     namingTitle: "GUTO & ________",
     namingPlaceholder: "IL TUO NOME",
@@ -417,14 +358,6 @@ const inviteClaimCopy: Record<SupportedLanguage, {
     cta: "ACTIVATE MY GUTO", activated: "ACCOUNT ACTIVATED SUCCESSFULLY.", starting: "Starting system...", back: "Back to Start",
     invalid: "Invalid, expired, or already used invite.", activationFailed: "Could not activate invite. Try again.",
   },
-  "es-ES": {
-    title: "Activar acceso",
-    greetingPrefix: "Hola,", invited: "Has sido invitado a unirte a GUTO.",
-    createPass: "Crear Contrase\u00f1a", confirmPass: "Confirmar Contrase\u00f1a",
-    mismatch: "Las contrase\u00f1as no coinciden.", tooShort: "La contrase\u00f1a debe tener al menos 6 caracteres.",
-    cta: "ACTIVAR MI GUTO", activated: "CUENTA ACTIVADA CON \u00c9XITO.", starting: "Iniciando sistema...", back: "Volver al Inicio",
-    invalid: "Invitaci\u00f3n inv\u00e1lida, expirada o ya utilizada.", activationFailed: "No se pudo activar la invitaci\u00f3n. Int\u00e9ntalo de nuevo.",
-  },
   "it-IT": {
     title: "Attiva accesso",
     greetingPrefix: "Ciao,", invited: "Sei stato invitato a entrare in GUTO.",
@@ -436,7 +369,7 @@ const inviteClaimCopy: Record<SupportedLanguage, {
 }
 
 function isSupportedLanguage(value: string): value is SupportedLanguage {
-  return ["pt-BR", "en-US", "es-ES", "it-IT"].includes(value)
+  return ["pt-BR", "en-US", "it-IT"].includes(value)
 }
 
 function formatGutoName(value: string) {
@@ -1738,7 +1671,7 @@ export function GutoApp({
           break
         case "language": {
           const lang = value as SupportedLanguage
-          if (!["pt-BR", "en-US", "es-ES", "it-IT"].includes(lang)) break
+          if (!["pt-BR", "en-US", "it-IT"].includes(lang)) break
           setSelectedLanguage(lang)
           writeConfirmedLanguageStorage(lang)
           persistProfile({ language: lang, onboardingComplete: true })
@@ -2149,7 +2082,7 @@ export function GutoApp({
             transition={{ duration: 0.56, ease: [0.66, 0, 0.18, 1] }}
             style={{ transformStyle: "preserve-3d" }}
           >
-            <div className="guto-language-grid grid grid-cols-2">
+            <div className="guto-language-grid grid grid-cols-3">
               {languages.map((lang) => (
                 <motion.button
                   key={lang.id}
@@ -2751,7 +2684,7 @@ export function GutoApp({
             })()}
 
             {settingsMode === "language" && (
-              <div className="guto-language-grid grid grid-cols-2">
+              <div className="guto-language-grid grid grid-cols-3">
                 {languages.map((lang) => (
                   <motion.button
                     key={lang.id}

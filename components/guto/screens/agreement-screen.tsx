@@ -27,12 +27,6 @@ const commitmentTexts: Record<
     instruction: "Tieni premuto per confermare l'accordo",
     complete: "Patto suggellato.",
   },
-  "es-ES": {
-    title: "Sin vuelta atrás.",
-    subtitle: "Nosotros ejecutamos.",
-    instruction: "Mantén presionado para confirmar el acuerdo",
-    complete: "Pacto sellado.",
-  },
   "en-US": {
     title: "No turning back.",
     subtitle: "We execute.",

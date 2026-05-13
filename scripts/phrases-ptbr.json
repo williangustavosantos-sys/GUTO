@@ -1,0 +1,111 @@
+{
+  "_comment": "Frases do GUTO em PT-BR para geração do voicepack estático.",
+  "_note": "Cada intent tem 4 variações para o anti-repetition do voice-resolver não esgotar o pool.",
+  "_format": "{ intentKey: string[] }",
+  "_generate": "node scripts/generate-voicepack.mjs --lang pt-BR",
+
+  "session.entry.first_time": [
+    "Estamos juntos nessa. Bora iniciar, hoje a gente não falha.",
+    "A dupla está em campo. Eu tô do seu lado em cada série.",
+    "Chegou a hora. Treino montado, presença ativa.",
+    "Você apareceu. Isso já é metade. A gente fecha o resto junto."
+  ],
+
+  "session.entry.returning": [
+    "Voltou. A gente continua de onde parou.",
+    "Bem vindo de volta. A missão ainda está em aberto.",
+    "Você voltou e isso importa. Vamos terminar isso juntos.",
+    "Retomando. Eu guardei o que você fez. A gente segue daqui."
+  ],
+
+  "set.done.clean": [
+    "Boa. Série anotada, seguimos juntos.",
+    "Feito. Anota mais uma pra dupla.",
+    "Sólido. Próxima série quando você estiver pronto.",
+    "Isso. Série registrada. A gente tá em ritmo."
+  ],
+
+  "set.rest.short": [
+    "Boa. Série anotada. Descansa e fica comigo.",
+    "Feito. Respira. Eu aviso quando voltar.",
+    "Anotado. Descansou bem, próxima série.",
+    "Série fechada. Descansa, não some."
+  ],
+
+  "set.rest.long": [
+    "Boa. Série anotada. Descansa e fica comigo.",
+    "Sólido. Descanso merecido. Eu te chamo.",
+    "Anotado. Você trabalhou direito. Descansa agora.",
+    "Série fechada. Eu conto o tempo. Foca na respiração."
+  ],
+
+  "set.return.now": [
+    "Volta comigo. Próxima série agora.",
+    "Descanso acabou. A gente segue junto.",
+    "Hora de voltar. Eu tô aqui.",
+    "Bora. Próximo exercício em cena."
+  ],
+
+  "set.fatigue.adjust": [
+    "A gente ajusta. Baixa o ego, segura a técnica e continua comigo.",
+    "Entendido. Reduz a carga e mantém a forma. Você ainda tá aqui.",
+    "Pesado é diferente de impossível. Baixa 20%, mantém a execução.",
+    "Cansaço é sinal de que você está trabalhando. Ajusta e segue."
+  ],
+
+  "set.swap.direct": [
+    "Troca confirmada. Mesma missão, movimento diferente.",
+    "Alternativa ativada. A dupla não para por causa de equipamento.",
+    "Vai nessa variação. A missão continua.",
+    "Adaptado. A gente não quebra o treino por causa disso."
+  ],
+
+  "set.swap.ask": [
+    "Tudo bem. Qual equipamento você tem agora? Me fala e eu adapto.",
+    "Equipamento ocupado, entendido. O que você tem disponível?",
+    "A gente resolve isso. Me diz o que tem pra trabalhar.",
+    "Sem problema. Me fala o recurso disponível e eu monto na hora."
+  ],
+
+  "session.pain.ask": [
+    "Para. Me fala curto: é dor, cansaço ou dúvida de execução? Quero entender antes de seguir.",
+    "Calma. Isso é sinal importante. É dor real ou cansaço? Me fala.",
+    "Pausei aqui. Onde doeu? Preciso saber antes de seguir.",
+    "Parou tudo. Me diz: é dor aguda ou só desconforto? A gente decide juntos."
+  ],
+
+  "session.paused.hold": [
+    "Pausado. Eu fico aqui. Quando voltar, fala comigo e a gente segue.",
+    "Tudo bem parar. Eu não vou a lugar nenhum. Volta quando estiver pronto.",
+    "Pausa ativada. Descansa. A missão continua quando você quiser.",
+    "Ok. Respira. Eu tô aqui quando você voltar."
+  ],
+
+  "session.unknown.ask": [
+    "Não entendi bem. Me diz: é dor, cansaço, troca de exercício ou a série fechou?",
+    "Ouvi você, mas não identifiquei o comando. Dor, troca, cansaço ou série feita?",
+    "Me fala de novo. Pode ser: dor, trocar exercício, cansaço ou série concluída.",
+    "Não captei. Qual é? Dor, cansaço, troca ou série feita? Me fala curto."
+  ],
+
+  "session.close.win": [
+    "Treino fechado. A gente apareceu hoje.",
+    "Missão cumprida. Isso fica no percurso.",
+    "Fechado. Você sabia que ia aparecer e apareceu. Isso é o que importa.",
+    "A dupla entregou. Treino registrado."
+  ],
+
+  "set.cobranca.distraction": [
+    "Eu ouvi. Mas agora a rota é treino. Me fala dor, troca, cansaço ou série feita.",
+    "Entendido. O foco agora é a série. Dor, troca, cansaço ou série feita?",
+    "Mantém o foco. Me fala o que precisa: dor, troca ou série feita.",
+    "A gente conversa depois do treino. Agora é série. O que você precisa?"
+  ],
+
+  "set.cobranca.slow_pace": [
+    "A gente ajusta. Baixa o ego, segura a técnica e continua comigo.",
+    "Ritmo caiu, tudo bem. Reduz e mantém a execução limpa.",
+    "Sem pressa. Qualidade vale mais que velocidade aqui.",
+    "Respira. Reduz a carga e fecha essa série com técnica."
+  ]
+}

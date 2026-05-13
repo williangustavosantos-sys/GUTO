@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import '../styles/eliteHud.css';
 
-import { GutoOfficialAvatar } from './guto/guto-official-avatar';
+import { GutoAvatarController } from './guto/guto-avatar-controller';
 import type { EvolutionStage } from '@/types/contract';
 import type { GutoAvatarEmotion } from './guto/guto-official-avatar';
 
@@ -84,13 +84,12 @@ const EliteHudExperience: React.FC = () => {
         <div className="glass-ring top" />
         <div className="glass-ring bottom" />
 
-        <GutoOfficialAvatar
+        <GutoAvatarController
           key={`${currentStage.id}-${mood}`}
-          className="guto-video"
+          stage={currentEvolution}
           size="xl"
           showPlatform={false}
-          evolution={currentEvolution}
-          emotion={mood}
+          className="guto-video"
         />
 
         <div className="hud-overlay">

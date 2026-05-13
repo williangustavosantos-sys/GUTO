@@ -3,7 +3,7 @@
 import { motion } from "framer-motion"
 import { Lock } from "lucide-react"
 
-import { GutoOfficialAvatar } from "../guto-official-avatar"
+import { GutoAvatarController } from "../guto-avatar-controller"
 import { getLanguage, translations } from "../translations"
 import { evolutionCardsFixture } from "../view-models"
 import { getNextGutoEvolutionXp } from "@/lib/guto-evolution"
@@ -20,7 +20,6 @@ interface EvolutionsTabProps {
 const evolutionCopy = {
   "pt-BR": { desire: "Desejo em camadas", active: "Ativo", released: "Forma liberada. Nitidez total no presente.", blocked: "Bloqueado até" },
   "en-US": { desire: "Desire in layers", active: "Active", released: "Form unlocked. Full sharpness in the present.", blocked: "Locked until" },
-  "es-ES": { desire: "Deseo en capas", active: "Activo", released: "Forma liberada. Nitidez total en el presente.", blocked: "Bloqueado hasta" },
   "it-IT": { desire: "Desiderio a strati", active: "Attivo", released: "Forma sbloccata. Nitidezza totale nel presente.", blocked: "Bloccato fino a" },
 } as const
 
@@ -64,10 +63,10 @@ export function EvolutionsTab({ language, currentEvolution, memory }: Evolutions
               <div className="relative flex items-center gap-4">
                 <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-[1.6rem]">
                   {isCurrent ? (
-                    <GutoOfficialAvatar
+                    <GutoAvatarController
+                      stage={card.stage}
                       size="md"
                       showPlatform={false}
-                      evolution={card.stage}
                       className="w-full"
                     />
                   ) : (
