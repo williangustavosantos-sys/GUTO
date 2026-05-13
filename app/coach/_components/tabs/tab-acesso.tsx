@@ -15,7 +15,7 @@ import { Panel, ActionButton } from "../ui"
 export function TabAcesso() {
   const {
     selectedDetail, setSelectedDetail,
-    coaches, teams, isSuperAdmin, isAdmin,
+    coaches, isSuperAdmin, isAdmin,
     acting, act, setLastSecret, lastSecret,
     setStudents,
   } = useCockpit()

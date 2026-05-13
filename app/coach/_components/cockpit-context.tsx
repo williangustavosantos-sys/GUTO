@@ -52,7 +52,7 @@ export function CockpitProvider({
 
   const filters = useCoachFilters()
   const data = useCoachData(user, isAdmin, isSuperAdmin, filters)
-  const detail = useStudentDetail(data.exerciseCatalog)
+  const detail = useStudentDetail()
   const actions = useStudentActions({
     selectedDetail: detail.selectedDetail,
     fetchStudents: data.fetchStudents,

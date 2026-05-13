@@ -9,7 +9,6 @@ import {
   getAdminStudentWorkoutHistory,
   getAdminStudentDietHistory,
   type AdminStudent,
-  type AdminCatalogExercise,
   type AdminWeeklyWorkoutPlan,
   type AdminWeeklyDietPlan,
 } from "@/lib/api/admin"
@@ -27,7 +26,7 @@ import {
   type CalibrationDraft,
 } from "../_components/utils"
 
-export function useStudentDetail(_exerciseCatalog: AdminCatalogExercise[]) {
+export function useStudentDetail() {
   const [selectedDetail, setSelectedDetail] = useState<StudentDetail | null>(null)
   const [detailTab, setDetailTab] = useState<DetailTab>("resumo")
   const [workoutEditor, setWorkoutEditor] = useState<GutoWorkoutPlan | null>(null)

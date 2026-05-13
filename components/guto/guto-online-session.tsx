@@ -1,33 +1,47 @@
 "use client"
 
+/**
+ * GUTO Online — Cockpit
+ * --------------------------------------------------------------------------
+ * Esta tela é a UI. Toda regra mora em lib/guto-online/*. Aqui:
+ *
+ *   - Lê estado via useGutoOnlineEngine (state machine, dispatchLock,
+ *     idempotência por eventId, dedupe semântico, action history, undo,
+ *     storage versionado e retomada de sessão).
+ *   - Apresenta os botões corretos por fase (GutoOnlineControls).
+ *   - Mostra Rest Mode quando em descanso.
+ *   - Abre Quick Talk quando "Falar com GUTO".
+ *   - Persiste e respeita o toggle de voz (GUTO fala / GUTO em texto).
+ *   - Dispara fala via GutoVoiceQueue (uma fala por vez, abort no
+ *     push-to-talk).
+ *   - Telemetria leve via gutoOnlineTelemetry.
+ */
+
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { Mic, MicOff, Pause, Play, RotateCcw, ShieldAlert, Shuffle, X } from "lucide-react"
+import { Clock, RotateCcw, Undo2, X } from "lucide-react"
 
-import type { GutoWorkoutExercise, GutoWorkoutPlan } from "@/lib/api/guto"
+import type { GutoWorkoutPlan } from "@/lib/api/guto"
 import { GutoAvatar } from "@/components/guto/guto-avatar"
-import { gutoVoice } from "@/lib/guto-voice/guto-voice-service"
-import { API_URL } from "@/lib/api/client"
 
-type OnlinePhase = "briefing" | "executing" | "resting" | "paused" | "finished"
-type AudioState = "idle" | "listening" | "speaking" | "unsupported"
+import { useGutoOnlineEngine } from "@/lib/guto-online/use-guto-online-engine"
+import { makeEventId, type GutoOnlineEvent } from "@/lib/guto-online/guto-online-events"
+import type { GutoOnlineSessionState } from "@/lib/guto-online/guto-online-types"
+import {
+  voiceFailureText,
+  type ContextClassification,
+} from "@/lib/guto-online/guto-online-context-guard"
+import { GutoVoiceQueue } from "@/lib/guto-online/guto-voice-queue"
+import { gutoOnlineTelemetry } from "@/lib/guto-online/guto-online-telemetry"
+import { gutoAudio } from "@/lib/audio-haptics"
 
-type RecognitionLike = {
-  lang: string
-  continuous: boolean
-  interimResults: boolean
-  start: () => void
-  stop: () => void
-  onresult: ((event: SpeechRecognitionEventLike) => void) | null
-  onend: (() => void) | null
-  onerror: (() => void) | null
-}
-
-type SpeechRecognitionEventLike = {
-  results: ArrayLike<{
-    isFinal: boolean
-    0: { transcript: string }
-  }>
-}
+import {
+  GutoOnlineControls,
+  GutoOnlineMoreOptions,
+} from "@/components/guto/online/guto-online-controls"
+import { GutoOnlineRestMode } from "@/components/guto/online/guto-online-rest-mode"
+import { GutoOnlineVoiceToggle } from "@/components/guto/online/guto-online-voice-toggle"
+import { GutoOnlineQuickTalk } from "@/components/guto/online/guto-online-quick-talk"
+import { GutoOnlineChecklist } from "@/components/guto/online/guto-online-checklist"
 
 interface GutoOnlineSessionProps {
   open: boolean
@@ -38,195 +52,130 @@ interface GutoOnlineSessionProps {
   onFinish?: () => void
 }
 
-// ─── Session persistence ──────────────────────────────────────────────────────
-// GUTO nunca descarta memória sem validar.
-// Estado é salvo no localStorage e restaurado se menos de 2h passaram.
+const PT_LIKE = ["pt-BR", "pt"]
+const IT_LIKE = ["it-IT", "it"]
 
-interface PersistedSession {
-  phase: OnlinePhase
-  exerciseIndex: number
-  currentSet: number
-  workoutKey: string
-  savedAt: number
+function pickLine(language: string, lines: { pt: string; en: string; it: string }) {
+  if (PT_LIKE.some((l) => language.startsWith(l))) return lines.pt
+  if (IT_LIKE.some((l) => language.startsWith(l))) return lines.it
+  return lines.en
 }
 
-const SESSION_PERSIST_PREFIX = "guto-online-session:"
-const SESSION_MAX_AGE_MS = 2 * 60 * 60 * 1000 // 2 horas
-
-function makeSessionKey(plan: GutoWorkoutPlan): string {
-  return `${SESSION_PERSIST_PREFIX}${plan.focus}:${plan.scheduledFor}`
+function defaultName(language: string): string {
+  if (PT_LIKE.some((l) => language.startsWith(l))) return "parceiro"
+  if (IT_LIKE.some((l) => language.startsWith(l))) return "amico"
+  return "buddy"
 }
 
-function saveSessionState(key: string, state: Omit<PersistedSession, "savedAt">): void {
-  try {
-    const data: PersistedSession = { ...state, savedAt: Date.now() }
-    localStorage.setItem(key, JSON.stringify(data))
-  } catch {
-    // localStorage pode estar cheio ou bloqueado — não quebra o treino
+function formatElapsed(startedAt: number, now: number) {
+  const diff = Math.max(0, Math.floor((now - startedAt) / 1000))
+  const mm = Math.floor(diff / 60)
+  const ss = diff % 60
+  return `${String(mm).padStart(2, "0")}:${String(ss).padStart(2, "0")}`
+}
+
+// Frases por intent — primeira linha que o GUTO fala/escreve.
+function intentLine(
+  intentKey: string,
+  language: string,
+  vars: { name?: string; exerciseName?: string; nextExercise?: string; restSeconds?: number } = {},
+) {
+  const name = (vars.name || defaultName(language)).trim()
+  switch (intentKey) {
+    case "session.entry.first":
+      // PT-BR: "bora", contração "tô" — fala de academia brasileira.
+      // EN-US: "locked in", "I've got you" — gym-buddy americano.
+      // IT-IT: "ci siamo", "non si molla" — italiano nativo de palestra.
+      return pickLine(language, {
+        pt: `${name}, bora junto. Hoje a gente não falha — eu tô aqui contigo.`,
+        en: `${name}, we're locked in. No skipping today — I've got you.`,
+        it: `${name}, ci siamo. Oggi non si molla — sono qui con te.`,
+      })
+    case "session.entry.resume":
+      return pickLine(language, {
+        pt: `Voltou. A gente continua de onde parou${vars.exerciseName ? `, em ${vars.exerciseName}` : ""}.`,
+        en: `You're back. Picking up right where we stopped${vars.exerciseName ? `, on ${vars.exerciseName}` : ""}.`,
+        it: `Sei tornato. Riprendiamo da dove avevamo lasciato${vars.exerciseName ? `, su ${vars.exerciseName}` : ""}.`,
+      })
+    case "session.warmup.ready":
+      return pickLine(language, {
+        pt: "Começa pelo aquecimento. Quando terminar, toca em Aquecimento feito.",
+        en: "Kick off with the warm-up. When you're done, tap Warm-up done.",
+        it: "Parti dal riscaldamento. Quando hai finito, tocca Riscaldamento fatto.",
+      })
+    case "session.warmup.done":
+      return pickLine(language, {
+        pt: `Aquecimento fechado. Bora pra ${vars.exerciseName || "o primeiro exercício"}.`,
+        en: `Warm-up done. Heading into ${vars.exerciseName || "the first exercise"}.`,
+        it: `Riscaldamento fatto. Si va su ${vars.exerciseName || "il primo esercizio"}.`,
+      })
+    case "set.done.rest":
+      return pickLine(language, {
+        pt: `Boa. Série anotada. Descansa ${vars.restSeconds ?? 60} segundos e fica comigo.`,
+        en: `Nice. Set logged. Take ${vars.restSeconds ?? 60} seconds — I'm right here.`,
+        it: `Bene. Serie registrata. Riposa ${vars.restSeconds ?? 60} secondi, io resto qui.`,
+      })
+    case "set.return.now":
+      return pickLine(language, {
+        pt: "Volta comigo. Próxima série agora.",
+        en: "Back to it. Next set, right now.",
+        it: "Si torna. Prossima serie, dai.",
+      })
+    case "exercise.done.next":
+      return pickLine(language, {
+        pt: `Exercício fechado. Agora ${vars.nextExercise || "o próximo"}.`,
+        en: `Exercise done. Now on to ${vars.nextExercise || "the next one"}.`,
+        it: `Esercizio fatto. Ora si passa a ${vars.nextExercise || "il prossimo"}.`,
+      })
+    case "session.finished":
+      return pickLine(language, {
+        pt: `Treino fechado, ${name}. Agora valida e guarda isso no percurso.`,
+        en: `Workout done, ${name}. Validate it now and lock it in your path.`,
+        it: `Allenamento finito, ${name}. Ora valida e mettilo nel percorso.`,
+      })
+    case "online.exception.pain":
+      // GUTO não diagnostica — pergunta antes de seguir.
+      return pickLine(language, {
+        pt: "Para. Me fala curto: é dor, cansaço ou dúvida de execução?",
+        en: "Hold up. Quick answer: pain, fatigue, or unsure about the form?",
+        it: "Fermati. Veloce: dolore, stanchezza o dubbio sulla tecnica?",
+      })
+    case "online.exception.swap":
+      return pickLine(language, {
+        pt: "Tranquilo. Qual equipamento você tem aí? Me diz e a gente adapta.",
+        en: "No worries. What gear do you have right now? Tell me and we adapt.",
+        it: "Tranquillo. Che attrezzo hai adesso? Dimmi e adattiamo.",
+      })
+    case "online.exception.fatigue":
+      return pickLine(language, {
+        pt: "A gente ajusta. Baixa o ego, segura a técnica e continua comigo.",
+        en: "We dial it back. Drop the ego, hold the form, stay with me.",
+        it: "Aggiustiamo. Metti via l'ego, tieni la tecnica, vai con me.",
+      })
+    case "online.voice.noisy":
+      return voiceFailureText(language, vars.name)
+    case "session.resume.prompt":
+      return pickLine(language, {
+        pt: "Você tinha uma sessão aberta. Continua daqui ou começa do zero?",
+        en: "You have an open session. Pick up here or start over?",
+        it: "Hai una sessione aperta. Riprendi da qui o ricominci?",
+      })
+    default:
+      return ""
   }
 }
 
-function loadSessionState(key: string): PersistedSession | null {
-  try {
-    const raw = localStorage.getItem(key)
-    if (!raw) return null
-    const data = JSON.parse(raw) as PersistedSession
-    if (Date.now() - data.savedAt > SESSION_MAX_AGE_MS) {
-      localStorage.removeItem(key)
-      return null
-    }
-    return data
-  } catch {
-    return null
-  }
+const RESUME_BUTTONS: Record<string, { keep: string; reset: string }> = {
+  "pt-BR": { keep: "Continuar daqui", reset: "Começar do zero" },
+  "en-US": { keep: "Pick up here", reset: "Start over" },
+  "it-IT": { keep: "Riprendi da qui", reset: "Ricomincia" },
 }
 
-function clearSessionState(key: string): void {
-  try {
-    localStorage.removeItem(key)
-  } catch {
-    // silencioso — irrelevante para o fluxo
-  }
-}
-
-// ─── AI exception call ────────────────────────────────────────────────────────
-// GUTO pergunta como amigo. Quando não entende, ele pede clareza.
-// Quando entende (dor, troca, fadiga), ele responde com contexto real.
-// Timeout de 4s — se demorar, usa fallback local sem avisar de erro.
-
-type ExceptionType = "pain" | "substitute" | "fatigue" | "unknown_command"
-
-const EXCEPTION_FALLBACKS: Record<ExceptionType, string> = {
-  pain:            "Para. Me fala curto: é dor, cansaço ou dúvida de execução? Quero entender antes de seguir.",
-  substitute:      "Tudo bem. Qual equipamento você tem agora? Me fala e eu adapto na hora.",
-  fatigue:         "Entendido. Quanto você aguenta nessa carga? Baixa 20%, mantém a técnica e me fala quando a série fechar.",
-  unknown_command: "Não entendi bem o que você falou. Me diz: é dor, cansaço, troca de exercício ou a série fechou?",
-}
-
-async function askGutoOnline(
-  type: ExceptionType,
-  context: {
-    exerciseName?: string
-    exerciseMuscle?: string
-    currentSet?: number
-    totalSets?: number
-    userMessage?: string
-    alternatives?: string[]
-  }
-): Promise<string | null> {
-  const token = typeof window !== "undefined"
-    ? window.localStorage.getItem("guto-auth-token")
-    : null
-
-  if (!API_URL) return null
-
-  try {
-    const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 4000)
-
-    const res = await fetch(`${API_URL}/guto/online/exception`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      body: JSON.stringify({ type, context }),
-      signal: controller.signal,
-    })
-
-    clearTimeout(timeout)
-
-    if (!res.ok) return null
-    const data = (await res.json()) as { text?: string }
-    return data.text ?? null
-  } catch {
-    // Timeout, rede offline, etc — GUTO usa fallback local sem expor erro técnico
-    return null
-  }
-}
-
-// ─── Padrões de comando por idioma ───────────────────────────────────────────
-// GUTO ouve como amigo: entende variações naturais em PT, EN e IT.
-// Se o usuário falar de forma ligeiramente diferente, ainda é reconhecido.
-
-interface CommandPatterns {
-  pain: RegExp
-  setDone: RegExp
-  swap: RegExp
-  fatigue: RegExp
-  pause: RegExp
-  resume: RegExp
-  finish: RegExp
-  wake: RegExp
-}
-
-const COMMAND_PATTERNS: Record<string, CommandPatterns> = {
-  "pt-BR": {
-    wake:     /^(guto|gudo|gutoo|gutu|ei guto|oi guto)\b/,
-    pain:     /(doeu|dor|fisgada|pontada|travou|incomod)/,
-    setDone:  /(serie feita|série feita|feito|fiz|terminei|acabei|aquecimento finalizado)/,
-    swap:     /(ocupad|troca|substitui|sem maquina|sem máquina)/,
-    fatigue:  /(pesad|cansad|sem ar|falhei)/,
-    pause:    /(pausa|para|espera)/,
-    resume:   /(continua|voltei|segue|bora)/,
-    finish:   /(finaliza|encerra|acabou)/,
-  },
-  "en-US": {
-    wake:     /^(guto|hey guto|hi guto)\b/,
-    pain:     /(hurt|pain|ache|twinge|pulled|strain|sore)/,
-    setDone:  /(set done|done|finished|completed|i did it|that.s it|all done)/,
-    swap:     /(busy|swap|substitute|no machine|no equipment|occupied)/,
-    fatigue:  /(heavy|tired|out of breath|failed|exhausted|can.t)/,
-    pause:    /(pause|stop|wait|hold on)/,
-    resume:   /(continue|i.m back|let.s go|resume|keep going)/,
-    finish:   /(finish|end|done for today|wrap up)/,
-  },
-  "it-IT": {
-    wake:     /^(guto|ehi guto|ciao guto)\b/,
-    pain:     /(fa male|dolore|fitta|fitto|stirato|distorto|fastidio)/,
-    setDone:  /(serie fatta|finito|ho finito|completato|fatto|l.ho fatto)/,
-    swap:     /(occupato|cambio|sostituisci|senza macchina|non c.è)/,
-    fatigue:  /(pesante|stanco|senza fiato|ho fallito|non ce la faccio)/,
-    pause:    /(pausa|fermati|aspetta)/,
-    resume:   /(continua|sono tornato|dai|riprendi)/,
-    finish:   /(finisci|chiudi|basta per oggi)/,
-  },
-}
-
-function getPatterns(language: string): CommandPatterns {
-  if (language in COMMAND_PATTERNS) return COMMAND_PATTERNS[language]
-  // Fallback: tenta pelo prefixo (pt-BR → pt)
+function pickResumeCopy(language: string) {
+  if (language in RESUME_BUTTONS) return RESUME_BUTTONS[language]
   const prefix = language.split("-")[0]
-  const found = Object.keys(COMMAND_PATTERNS).find((k) => k.startsWith(prefix))
-  return found ? COMMAND_PATTERNS[found] : COMMAND_PATTERNS["pt-BR"]
-}
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function normalize(text: string) {
-  return text
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .replace(/[^\w\s]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-}
-
-function parseRestSeconds(rest?: string | null, restSeconds?: number) {
-  if (typeof restSeconds === "number" && Number.isFinite(restSeconds) && restSeconds > 0) {
-    return Math.round(restSeconds)
-  }
-  const match = String(rest || "").match(/\d+/)
-  const parsed = match ? Number.parseInt(match[0], 10) : 60
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : 60
-}
-
-function formatRest(seconds: number) {
-  const minutes = Math.floor(seconds / 60)
-  const rest = seconds % 60
-  if (minutes <= 0) return `${rest}s`
-  return `${minutes}:${String(rest).padStart(2, "0")}`
+  const found = Object.keys(RESUME_BUTTONS).find((key) => key.startsWith(prefix))
+  return found ? RESUME_BUTTONS[found] : RESUME_BUTTONS["pt-BR"]
 }
 
 // ─── Componente ───────────────────────────────────────────────────────────────
@@ -239,569 +188,657 @@ export function GutoOnlineSession({
   userName,
   onFinish,
 }: GutoOnlineSessionProps) {
-  const exercises = useMemo(() => workoutPlan.exercises || [], [workoutPlan.exercises])
-  const sessionKey = useMemo(() => makeSessionKey(workoutPlan), [workoutPlan])
+  // ─── Engine ──────────────────────────────────────────────────────────────
+  // O plano traz aquecimento como exercício(s) com muscleGroup === "aquecimento".
+  // No GUTO Online, aquecimento é UMA fase só com um botão "Aquecimento feito",
+  // então separamos antes de mandar para o engine.
+  const enginePlan = useMemo(() => {
+    const allExercises = workoutPlan.exercises || []
+    const realExercises = allExercises.filter((ex) => ex.muscleGroup !== "aquecimento")
+    return { ...workoutPlan, exercises: realExercises }
+  }, [workoutPlan])
 
-  const [phase, setPhase] = useState<OnlinePhase>("briefing")
-  const [audioState, setAudioState] = useState<AudioState>("idle")
-  const [exerciseIndex, setExerciseIndex] = useState(0)
-  const [currentSet, setCurrentSet] = useState(1)
-  const [restEndsAt, setRestEndsAt] = useState<number | null>(null)
-  const [now, setNow] = useState(() => Date.now())
-  const [lastGutoLine, setLastGutoLine] = useState("Estou contigo. O treino não fica sozinho agora.")
-  const [lastTranscript, setLastTranscript] = useState("")
-  const [lastAction, setLastAction] = useState("")
+  const sideEffect = useCallback((event: GutoOnlineEvent, sessionState: GutoOnlineSessionState) => {
+    gutoOnlineTelemetry.track(event, sessionState)
+  }, [])
 
-  const recognitionRef = useRef<RecognitionLike | null>(null)
-  const listeningEnabledRef = useRef(false)
-  const speakingRef = useRef(false)
-  // Permite que respostas IA assíncronas atualizem a linha só se o contexto não mudou
-  const currentContextRef = useRef<string>("")
+  const {
+    ready,
+    state,
+    actionHistory,
+    pendingResume,
+    acceptResume,
+    declineResume,
+    dispatch,
+    toggleVoiceMode,
+    undo,
+  } = useGutoOnlineEngine({
+    plan: enginePlan,
+    language,
+    userName,
+    enabled: open,
+    onSideEffect: sideEffect,
+  })
 
-  const currentExercise: GutoWorkoutExercise | undefined = exercises[exerciseIndex]
-  const displayName = userName?.trim()
-  const totalExercises = exercises.length
+  const exercises = enginePlan.exercises
+  const currentExercise = exercises[state.exerciseIndex]
   const totalSets = currentExercise?.sets || 1
-  const restRemaining = restEndsAt ? Math.max(0, Math.ceil((restEndsAt - now) / 1000)) : 0
-  const progressLabel = totalExercises
-    ? `${Math.min(exerciseIndex + 1, totalExercises)}/${totalExercises}`
-    : "0/0"
+  const isLastSet = state.currentSet >= totalSets
+  const isPlanFinished = state.phase === "finished"
+  const totalExercises = exercises.length
 
-  // ─── Persistência de sessão ──────────────────────────────────────────────────
-
-  // Salva estado sempre que muda — menos quando está briefing ou finished
+  // ─── Voice Queue ─────────────────────────────────────────────────────────
+  // Padrão lazy-init aceito pelo react-hooks/refs: comparar com null explícito.
+  const voiceQueueRef = useRef<GutoVoiceQueue | null>(null)
+  if (voiceQueueRef.current === null) {
+    voiceQueueRef.current = new GutoVoiceQueue()
+  }
   useEffect(() => {
-    if (!open || phase === "briefing") return
-    saveSessionState(sessionKey, {
-      phase,
-      exerciseIndex,
-      currentSet,
-      workoutKey: sessionKey,
-    })
-  }, [open, phase, exerciseIndex, currentSet, sessionKey])
-
-  // ─── Reconhecimento de voz ────────────────────────────────────────────────────
-
-  const stopRecognition = useCallback(() => {
-    listeningEnabledRef.current = false
-    try {
-      recognitionRef.current?.stop()
-    } catch {
-      // Browser recognition pode jogar exceção quando já parado.
+    voiceQueueRef.current?.setMode(state.voiceMode)
+  }, [state.voiceMode])
+  useEffect(() => {
+    if (!open) {
+      voiceQueueRef.current?.abort()
+    }
+  }, [open])
+  useEffect(() => {
+    return () => {
+      voiceQueueRef.current?.destroy()
+      voiceQueueRef.current = null
     }
   }, [])
 
   const speak = useCallback(
-    async (intentKey: string, fallbackText: string) => {
-      setLastGutoLine(fallbackText)
-      try {
-        recognitionRef.current?.stop()
-      } catch {
-        // Evita eco enquanto GUTO fala.
-      }
-
-      await gutoVoice.speak({
+    (intentKey: string, text: string, opts: { priority?: "interrupt" | "normal" | "low" } = {}) => {
+      if (!text) return
+      voiceQueueRef.current?.enqueue({
         intentKey,
-        text: fallbackText,
+        text,
         language,
-        source: "online",
-        preferStatic: false,
-        onStart: () => {
-          setAudioState("speaking")
-          speakingRef.current = true
-        },
-        onEnd: () => {
-          speakingRef.current = false
-          setAudioState(listeningEnabledRef.current ? "listening" : "idle")
-          setTimeout(() => {
-            if (listeningEnabledRef.current && !speakingRef.current) {
-              try {
-                recognitionRef.current?.start()
-              } catch {
-                // SpeechRecognition já iniciado ou browser negou o mic.
-              }
-            }
-          }, 350)
-        },
+        priority: opts.priority ?? "normal",
+        preferStatic: true,
+      })
+      // Persiste a linha no engine para a UI mostrar.
+      dispatch({
+        type: "GUTO_SAID",
+        eventId: makeEventId("said"),
+        at: Date.now(),
+        intentKey,
+        text,
+        source: "system",
       })
     },
-    [language],
+    [dispatch, language],
   )
 
-  // ─── Lógica de sessão ─────────────────────────────────────────────────────────
-
-  const startRest = useCallback(
-    (exercise: GutoWorkoutExercise) => {
-      const restSeconds = parseRestSeconds(exercise.rest, exercise.restSeconds)
-      setPhase("resting")
-      setRestEndsAt(Date.now() + restSeconds * 1000)
-      const intent = restSeconds <= 45 ? "set.rest.short" : "set.rest.long"
-      void speak(intent, `Boa. Série anotada. Descansa ${restSeconds} segundos e fica comigo.`)
-    },
-    [speak],
-  )
-
-  const finishSession = useCallback(() => {
-    setPhase("finished")
-    setRestEndsAt(null)
-    stopRecognition()
-    // Apaga persistência só quando o treino realmente fechou
-    clearSessionState(sessionKey)
-    void speak("session.close.win", "Treino fechado. A gente apareceu hoje.")
-    onFinish?.()
-  }, [onFinish, sessionKey, speak, stopRecognition])
-
-  const handleSetDone = useCallback(() => {
-    if (!currentExercise || phase === "finished") return
-    setLastAction("Série registrada")
-    void speak("set.done.clean", "Boa. Série anotada, seguimos juntos.")
-
-    if (currentSet < totalSets) {
-      setCurrentSet((value) => value + 1)
-      startRest(currentExercise)
-      return
-    }
-
-    const nextIndex = exerciseIndex + 1
-    if (nextIndex >= totalExercises) {
-      finishSession()
-      return
-    }
-
-    setExerciseIndex(nextIndex)
-    setCurrentSet(1)
-    setPhase("executing")
-    setRestEndsAt(null)
-    const nextExercise = exercises[nextIndex]
-    void speak(
-      "set.return.now",
-      `${nextExercise.name} agora. A gente segue junto, execução limpa.`,
-    )
-  }, [
-    currentExercise,
-    currentSet,
-    exerciseIndex,
-    exercises,
-    finishSession,
-    phase,
-    speak,
-    startRest,
-    totalExercises,
-    totalSets,
-  ])
-
-  // GUTO não chuta. Se o usuário disse que doeu, ele pergunta o que doeu.
-  const handlePain = useCallback(() => {
-    setPhase("paused")
-    setRestEndsAt(null)
-    setLastAction("Pausado por dor")
-    const contextKey = `pain:${exerciseIndex}:${currentSet}`
-    currentContextRef.current = contextKey
-
-    // Responde imediatamente como amigo — não fica em silêncio esperando a IA
-    void speak("session.pain.ask", "Para. Me fala curto: é dor, cansaço ou dúvida de execução? Quero entender antes de seguir.")
-
-    // Chama IA em paralelo para resposta mais contextual
-    void askGutoOnline("pain", {
-      exerciseName: currentExercise?.name,
-      exerciseMuscle: currentExercise?.muscleGroup,
-      currentSet,
-      totalSets,
-    }).then((aiText) => {
-      if (aiText && currentContextRef.current === contextKey) {
-        setLastGutoLine(aiText)
-      }
-    })
-  }, [currentExercise, currentSet, exerciseIndex, speak, totalSets])
-
-  // GUTO não descarta a troca sem entender o contexto
-  const handleSwap = useCallback(() => {
-    const alternative = currentExercise?.alternatives?.[0]
-    const contextKey = `swap:${exerciseIndex}:${currentSet}`
-    currentContextRef.current = contextKey
-
-    if (alternative) {
-      const line = `Vai de ${alternative}. Mesma missão, sem quebrar o treino.`
-      setLastAction("Troca orientada")
-      void speak("set.swap.direct", line)
-    } else {
-      // Sem alternativa definida — GUTO pergunta o que tem disponível
-      setLastAction("Aguardando contexto de troca")
-      void speak("set.swap.ask", "Tudo bem. Qual equipamento você tem agora? Me fala e eu adapto.")
-
-      // Chama IA para sugestão inteligente de substituição
-      void askGutoOnline("substitute", {
-        exerciseName: currentExercise?.name,
-        exerciseMuscle: currentExercise?.muscleGroup,
-      }).then((aiText) => {
-        if (aiText && currentContextRef.current === contextKey) {
-          setLastGutoLine(aiText)
-        }
-      })
-    }
-  }, [currentExercise, currentSet, exerciseIndex, speak])
-
-  const handlePauseToggle = useCallback(() => {
-    if (phase === "paused") {
-      setPhase("executing")
-      setLastAction("Sessão retomada")
-      void speak("set.return.now", "Volta comigo. A missão continua daqui.")
-      return
-    }
-    setPhase("paused")
-    setRestEndsAt(null)
-    setLastAction("Sessão pausada")
-    void speak("session.paused.hold", "Pausado. Eu fico aqui. Quando voltar, fala comigo e a gente segue.")
-  }, [phase, speak])
-
-  const handleTranscript = useCallback(
-    (rawText: string) => {
-      const text = normalize(rawText)
-      if (!text || speakingRef.current) return
-
-      setLastTranscript(rawText)
-      const shortCommand = text.split(" ").length <= 6
-      const p = getPatterns(language)
-      const hasWake = p.wake.test(text)
-      const command = text.replace(/^(ei|oi|ehi|oye|hey|hi|ciao|hola)?\s*guto+\s*/, "").trim()
-      const canActWithoutWake = phase === "executing" || phase === "resting"
-      if (!hasWake && !canActWithoutWake && !shortCommand) return
-
-      if (p.pain.test(command)) {
-        handlePain()
-      } else if (p.setDone.test(command)) {
-        handleSetDone()
-      } else if (p.swap.test(command)) {
-        handleSwap()
-      } else if (p.fatigue.test(command)) {
-        const contextKey = `fatigue:${exerciseIndex}:${currentSet}`
-        currentContextRef.current = contextKey
-        setLastAction("Carga/ritmo ajustado")
-
-        // Resposta imediata — não deixa o usuário sem resposta
-        void speak("set.fatigue.adjust", "A gente ajusta. Baixa o ego, segura a técnica e continua comigo.")
-
-        // IA para resposta mais contextual se disponível
-        void askGutoOnline("fatigue", {
-          exerciseName: currentExercise?.name,
-          currentSet,
-          totalSets,
-          userMessage: rawText,
-        }).then((aiText) => {
-          if (aiText && currentContextRef.current === contextKey) {
-            setLastGutoLine(aiText)
-          }
-        })
-      } else if (p.pause.test(command)) {
-        handlePauseToggle()
-      } else if (p.resume.test(command)) {
-        if (phase === "paused") handlePauseToggle()
-      } else if (p.finish.test(command)) {
-        finishSession()
-      } else {
-        // GUTO não entendeu. Ele pede clareza como amigo, não joga erro.
-        const contextKey = `unknown:${Date.now()}`
-        currentContextRef.current = contextKey
-        setLastAction("Aguardando clareza")
-
-        // Resposta imediata que orienta sem ser robótica
-        const fallback = EXCEPTION_FALLBACKS.unknown_command
-        void speak("session.unknown.ask", fallback)
-
-        // Tenta IA para resposta contextual ao que o usuário disse
-        void askGutoOnline("unknown_command", {
-          exerciseName: currentExercise?.name,
-          userMessage: rawText,
-          currentSet,
-        }).then((aiText) => {
-          if (aiText && currentContextRef.current === contextKey) {
-            setLastGutoLine(aiText)
-          }
-        })
-      }
-    },
-    [
-      currentExercise,
-      currentSet,
-      exerciseIndex,
-      finishSession,
-      handlePain,
-      handlePauseToggle,
-      handleSetDone,
-      handleSwap,
-      language,
-      phase,
-      speak,
-      totalSets,
-    ],
-  )
-
-  const startListening = useCallback(() => {
-    if (typeof window === "undefined") return
-    const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition
-    if (!Recognition) {
-      setAudioState("unsupported")
-      return
-    }
-
-    if (!recognitionRef.current) {
-      const recognition = new Recognition()
-      recognition.lang = language
-      recognition.continuous = true
-      recognition.interimResults = true
-      recognition.onresult = (event) => {
-        const last = event.results[event.results.length - 1]
-        if (last?.isFinal) handleTranscript(last[0].transcript)
-      }
-      recognition.onerror = () => {
-        setAudioState("idle")
-      }
-      recognition.onend = () => {
-        if (listeningEnabledRef.current && !speakingRef.current) {
-          setTimeout(() => {
-            try {
-              recognition.start()
-              setAudioState("listening")
-            } catch {
-              // Já iniciado ou browser negou.
-            }
-          }, 300)
-        }
-      }
-      recognitionRef.current = recognition as RecognitionLike
-    }
-
-    listeningEnabledRef.current = true
-    try {
-      const recognition = recognitionRef.current
-      if (!recognition) return
-      recognition.lang = language
-      recognition.start()
-      setAudioState("listening")
-    } catch {
-      setAudioState("listening")
-    }
-  }, [handleTranscript, language])
-
-  // ─── Efeitos ──────────────────────────────────────────────────────────────────
-
+  // ─── Telemetry lifecycle ─────────────────────────────────────────────────
   useEffect(() => {
     if (!open) return
-
-    // Tenta restaurar sessão salva antes de iniciar do zero
-    const saved = loadSessionState(sessionKey)
-
-    if (saved && saved.phase !== "finished" && saved.phase !== "briefing") {
-      // GUTO retoma de onde parou — não descarta progresso sem perguntar
-      setExerciseIndex(saved.exerciseIndex)
-      setCurrentSet(saved.currentSet)
-      // Se estava em descanso, volta em pausa para o usuário confirmar
-      setPhase(saved.phase === "resting" ? "paused" : saved.phase)
-      setRestEndsAt(null) // descanso vencido — não conta tempo que passou com app fechado
-
-      const resumeExercise = exercises[saved.exerciseIndex]
-      const resumeLine = resumeExercise
-        ? `Voltou. Estávamos em ${resumeExercise.name}, série ${saved.currentSet}. Quer continuar daqui?`
-        : "Voltou. A gente continua de onde parou."
-
-      void speak("session.entry.returning", resumeLine)
-    } else {
-      // Sessão nova
-      setPhase("briefing")
-      setExerciseIndex(0)
-      setCurrentSet(1)
-      setRestEndsAt(null)
-      void speak(
-        "session.entry.first_time",
-        displayName
-          ? `${displayName}, estamos juntos nessa. Bora iniciar, hoje a gente não falha.`
-          : "Estamos juntos nessa. Bora iniciar, hoje a gente não falha.",
-      )
-      setTimeout(() => {
-        setPhase("executing")
-        if (exercises[0]) {
-          void speak("set.return.now", `${exercises[0].name} agora. Primeira série. Eu tô contigo.`)
-        }
-      }, 2200)
-    }
-
-    startListening()
-
+    gutoOnlineTelemetry.start()
     return () => {
-      stopRecognition()
-      gutoVoice.stop()
+      void gutoOnlineTelemetry.flush()
+      gutoOnlineTelemetry.stop()
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]) // Só re-executa quando o modal abre — não em cada mudança de estado
-
-  useEffect(() => {
-    if (!open) return
-    const timer = window.setInterval(() => setNow(Date.now()), 500)
-    return () => window.clearInterval(timer)
   }, [open])
 
+  // ─── Tick (mantém timer e detecta fim de descanso) ───────────────────────
+  const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
-    if (!open || phase !== "resting" || !restEndsAt || restEndsAt > now) return
-    setRestEndsAt(null)
-    setPhase("executing")
-    void speak("set.return.now", "Volta comigo. Próxima série agora.")
-  }, [now, open, phase, restEndsAt, speak])
+    if (!open) return
+    const timer = window.setInterval(() => {
+      const t = Date.now()
+      setNow(t)
+      // Dispara TICK para o engine sair de descanso quando vencer.
+      dispatch({
+        type: "TICK",
+        eventId: makeEventId("tick"),
+        at: t,
+        source: "system",
+      })
+    }, 500)
+    return () => window.clearInterval(timer)
+  }, [open, dispatch])
+
+  // ─── Greeting na entrada (precisa fluir antes da fala de fase) ──────────
+  const greetedRef = useRef(false)
+  useEffect(() => {
+    if (!open || !ready) {
+      greetedRef.current = false
+      return
+    }
+    if (greetedRef.current) return
+    greetedRef.current = true
+
+    // "interrupt" porque é o primeiro discurso ao abrir — limpa qualquer
+    // resíduo de sessão anterior na fila.
+    if (state.phase === "warmup" && !state.warmupCompleted && actionHistory.length === 0) {
+      speak("session.entry.first", intentLine("session.entry.first", language, { name: userName }), {
+        priority: "interrupt",
+      })
+    } else if (state.phase !== "briefing" && state.phase !== "finished") {
+      speak(
+        "session.entry.resume",
+        intentLine("session.entry.resume", language, { name: userName, exerciseName: currentExercise?.name }),
+        { priority: "interrupt" },
+      )
+    }
+  }, [open, ready, state.phase, state.warmupCompleted, actionHistory.length, language, userName, currentExercise, speak])
+
+  // ─── Fala automática quando muda de fase / exercício / série ────────────
+  const lastPhaseRef = useRef<{ phase: string; exerciseIndex: number; currentSet: number; warmupCompleted: boolean }>({
+    phase: "",
+    exerciseIndex: -1,
+    currentSet: 0,
+    warmupCompleted: false,
+  })
+
+  useEffect(() => {
+    if (!open || !ready) return
+    const previous = lastPhaseRef.current
+
+    const phaseChanged = previous.phase !== state.phase
+    const exerciseChanged = previous.exerciseIndex !== state.exerciseIndex
+    const warmupChanged = previous.warmupCompleted !== state.warmupCompleted
+
+    // Todas as transições normais ficam em prioridade "normal" — entram na
+    // fila atrás da greeting, mas não atropelam falas que estejam tocando.
+
+    if (state.phase === "warmup" && phaseChanged) {
+      speak("session.warmup.ready", intentLine("session.warmup.ready", language, { name: userName }))
+    }
+
+    // Só celebra aquecimento concluído se previous.phase era "warmup".
+    // Em retomada de sessão (previous.phase==="" inicialmente), não anunciamos.
+    if (state.phase === "executing_set" && warmupChanged && state.warmupCompleted && previous.phase === "warmup") {
+      speak(
+        "session.warmup.done",
+        intentLine("session.warmup.done", language, { name: userName, exerciseName: currentExercise?.name }),
+      )
+    }
+
+    // Só anuncia descanso quando veio de executing_set — não anunciar em
+    // retomada de sessão ou em mudanças de fase artificiais.
+    if (state.phase === "resting" && phaseChanged && previous.phase === "executing_set") {
+      const restSeconds = state.restPlannedSeconds ?? 60
+      speak("set.done.rest", intentLine("set.done.rest", language, { restSeconds }))
+    }
+
+    if (state.phase === "executing_set" && previous.phase === "resting") {
+      // Vibra/som no fim do descanso — funciona mesmo com voz desligada.
+      gutoAudio.playGutoFeedback("transition")
+      speak("set.return.now", intentLine("set.return.now", language))
+    }
+
+    if (exerciseChanged && state.warmupCompleted && state.phase === "executing_set" && previous.exerciseIndex >= 0) {
+      const next = exercises[state.exerciseIndex]
+      speak(
+        "exercise.done.next",
+        intentLine("exercise.done.next", language, { name: userName, nextExercise: next?.name }),
+      )
+    }
+
+    if (state.phase === "finished" && phaseChanged) {
+      gutoAudio.playGutoFeedback("success")
+      speak("session.finished", intentLine("session.finished", language, { name: userName }))
+      onFinish?.()
+    }
+
+    lastPhaseRef.current = {
+      phase: state.phase,
+      exerciseIndex: state.exerciseIndex,
+      currentSet: state.currentSet,
+      warmupCompleted: state.warmupCompleted,
+    }
+  }, [open, ready, state, exercises, currentExercise, language, userName, speak, onFinish])
+
+  // ─── Handlers ────────────────────────────────────────────────────────────
+  const handleWarmupDone = useCallback(() => {
+    dispatch({
+      type: "WARMUP_COMPLETED",
+      eventId: makeEventId("warmup"),
+      at: Date.now(),
+      source: "button",
+    })
+  }, [dispatch])
+
+  const handleSetDone = useCallback(() => {
+    dispatch({
+      type: "SET_COMPLETED",
+      eventId: makeEventId("set"),
+      at: Date.now(),
+      source: "button",
+    })
+  }, [dispatch])
+
+  const handleExerciseDone = useCallback(() => {
+    // O engine emite EXERCISE_COMPLETED automaticamente após a última série.
+    // Aqui chamamos SET_COMPLETED para fechar a última série + promover o exercício.
+    dispatch({
+      type: "SET_COMPLETED",
+      eventId: makeEventId("set"),
+      at: Date.now(),
+      source: "button",
+    })
+  }, [dispatch])
+
+  const handleExtendRest = useCallback(
+    (seconds: number) => {
+      dispatch({
+        type: "REST_EXTENDED",
+        eventId: makeEventId("rest_ext"),
+        at: Date.now(),
+        seconds,
+        restEndsAt: (state.restEndsAt ?? Date.now()) + seconds * 1000,
+        source: "button",
+      })
+    },
+    [dispatch, state.restEndsAt],
+  )
+
+  const handleSkipRest = useCallback(() => {
+    dispatch({
+      type: "REST_SKIPPED",
+      eventId: makeEventId("rest_skip"),
+      at: Date.now(),
+      source: "button",
+    })
+  }, [dispatch])
+
+  // ─── Quick Talk ──────────────────────────────────────────────────────────
+  const [quickTalkResponse, setQuickTalkResponse] = useState<string>("")
+
+  const handleOpenQuickTalk = useCallback(() => {
+    voiceQueueRef.current?.abort()
+    setQuickTalkResponse("")
+    dispatch({
+      type: "QUICK_TALK_OPENED",
+      eventId: makeEventId("qt_open"),
+      at: Date.now(),
+      source: "button",
+    })
+  }, [dispatch])
+
+  const handleCloseQuickTalk = useCallback(() => {
+    dispatch({
+      type: "QUICK_TALK_CLOSED",
+      eventId: makeEventId("qt_close"),
+      at: Date.now(),
+      source: "button",
+    })
+    setQuickTalkResponse("")
+  }, [dispatch])
+
+  const handleQuickTalkSubmit = useCallback(
+    ({ text, mode, classification }: { text: string; mode: "voice" | "text"; classification: ContextClassification }) => {
+      dispatch({
+        type: "QUICK_TALK_SUBMITTED",
+        eventId: makeEventId("qt_submit"),
+        at: Date.now(),
+        text,
+        inputMode: mode,
+        source: mode === "voice" ? "voice" : "button",
+      })
+
+      // Despacha o evento de domínio se for o caso (pain/swap/fatigue).
+      const now = Date.now()
+      if (classification.intent === "pain") {
+        dispatch({
+          type: "PAIN_REPORTED",
+          eventId: makeEventId("pain"),
+          at: now,
+          message: text,
+          source: mode === "voice" ? "voice" : "button",
+        })
+      } else if (classification.intent === "swap_equipment") {
+        dispatch({
+          type: "SWAP_REQUESTED",
+          eventId: makeEventId("swap"),
+          at: now,
+          message: text,
+          source: mode === "voice" ? "voice" : "button",
+        })
+      } else if (classification.intent === "fatigue") {
+        dispatch({
+          type: "FATIGUE_REPORTED",
+          eventId: makeEventId("fatigue"),
+          at: now,
+          message: text,
+          source: mode === "voice" ? "voice" : "button",
+        })
+      } else if (classification.intent === "off_topic" || classification.intent === "emotional") {
+        dispatch({
+          type: "OFF_TOPIC_REDIRECTED",
+          eventId: makeEventId("offtopic"),
+          at: now,
+          source: mode === "voice" ? "voice" : "button",
+        })
+      } else if (classification.intent === "command_set_done") {
+        // Comando: fecha a Quick Talk e dispara série feita
+        handleCloseQuickTalk()
+        handleSetDone()
+        return
+      } else if (classification.intent === "command_finish") {
+        handleCloseQuickTalk()
+        dispatch({
+          type: "SESSION_FINISHED",
+          eventId: makeEventId("finish"),
+          at: now,
+          source: "button",
+        })
+        return
+      } else if (classification.intent === "command_pause") {
+        handleCloseQuickTalk()
+        dispatch({
+          type: "PAUSED",
+          eventId: makeEventId("pause"),
+          at: now,
+          source: mode === "voice" ? "voice" : "button",
+        })
+        return
+      } else if (classification.intent === "command_resume") {
+        // Resume volta para fase anterior; mesmo trabalho do botão "Entendi".
+        handleCloseQuickTalk()
+        dispatch({
+          type: "RESUMED",
+          eventId: makeEventId("resume"),
+          at: now,
+          source: mode === "voice" ? "voice" : "button",
+        })
+        return
+      }
+
+      // Resposta padrão da classificação. Se vier vazia (intenção tratada
+      // por evento de domínio), usamos a linha intent.
+      const reply = classification.reply || intentLine(classification.intentKey, language, { name: userName, exerciseName: currentExercise?.name })
+
+      setQuickTalkResponse(reply)
+      speak(classification.intentKey, reply, { priority: "interrupt" })
+
+      dispatch({
+        type: "QUICK_TALK_RESPONDED",
+        eventId: makeEventId("qt_resp"),
+        at: now,
+        text: reply,
+        intent: classification.intent,
+        source: "ai",
+      })
+    },
+    [currentExercise, dispatch, handleCloseQuickTalk, handleSetDone, language, speak, userName],
+  )
+
+  const handleQuickTalkResume = useCallback(() => {
+    handleCloseQuickTalk()
+    dispatch({
+      type: "RESUMED",
+      eventId: makeEventId("resume"),
+      at: Date.now(),
+      source: "button",
+    })
+  }, [dispatch, handleCloseQuickTalk])
+
+  const handleVoiceFailed = useCallback(() => {
+    dispatch({
+      type: "VOICE_FAILED_NOISY",
+      eventId: makeEventId("noisy"),
+      at: Date.now(),
+      source: "system",
+    })
+  }, [dispatch])
+
+  // ─── More options ────────────────────────────────────────────────────────
+  const [moreOpen, setMoreOpen] = useState(false)
+  const handlePauseFromMore = useCallback(() => {
+    setMoreOpen(false)
+    dispatch({
+      type: "PAUSED",
+      eventId: makeEventId("pause"),
+      at: Date.now(),
+      source: "button",
+    })
+  }, [dispatch])
+  const handleUndoFromMore = useCallback(() => {
+    setMoreOpen(false)
+    undo()
+  }, [undo])
+  const handleSkipExerciseFromMore = useCallback(() => {
+    setMoreOpen(false)
+    dispatch({
+      type: "EXERCISE_COMPLETED",
+      eventId: makeEventId("skip_ex"),
+      at: Date.now(),
+      source: "button",
+    })
+  }, [dispatch])
+
+  // ─── Validar (libera a tela de validação do treino) ─────────────────────
+  const handleValidate = useCallback(() => {
+    onFinish?.()
+    onClose()
+  }, [onClose, onFinish])
+
+  // ─── Texto da resposta de Quick Talk em casos especiais ─────────────────
+  const resumeCopy = pickResumeCopy(language)
 
   if (!open) return null
+
+  const showRestMode = state.phase === "resting"
+  const showQuickTalk =
+    state.phase === "quick_talk" ||
+    state.phase === "thinking" ||
+    state.phase === "pain_check" ||
+    state.phase === "substitution" ||
+    state.phase === "fatigue_adjustment"
+
+  const remainingSets = currentExercise ? Math.max(0, totalSets - state.currentSet + 1) : 0
+  const isVoiceEnabled = state.voiceMode === "enabled"
 
   return (
     <div className="fixed inset-0 z-[80] flex bg-[radial-gradient(circle_at_top,rgba(82,231,255,0.18),transparent_34%),linear-gradient(180deg,#f8fcff_0%,#eaf4fb_54%,#dbe8f2_100%)] text-[var(--guto-navy)]">
       <div className="mx-auto flex h-full w-full max-w-md flex-col px-4 pb-5 pt-[max(1rem,env(safe-area-inset-top))]">
-        <header className="flex items-center justify-between">
-          <div>
+        {/* ─── Header ──────────────────────────────────────────────── */}
+        <header className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
             <p className="font-mono text-[9px] font-black uppercase tracking-[0.24em] text-[var(--guto-cyan)]">
-              GUTO PERSONAL ONLINE
+              GUTO ONLINE
             </p>
-            <h1 className="mt-1 text-[1rem] font-black uppercase tracking-[0.08em]">
-              {phase === "finished" ? "Treino fechado" : "Presença ativa"}
+            <h1 className="mt-1 truncate text-[1rem] font-black uppercase tracking-[0.08em]">
+              {state.phase === "finished"
+                ? pickLine(language, { pt: "Treino fechado", en: "Workout done", it: "Allenamento finito" })
+                : pickLine(language, { pt: "Presença ativa", en: "Active presence", it: "Presenza attiva" })}
             </h1>
+            <p className="mt-1 flex items-center gap-1.5 font-mono text-[9px] font-black uppercase tracking-[0.18em] text-[rgba(13,35,65,0.5)]">
+              <Clock className="h-3 w-3" />
+              {formatElapsed(state.startedAt, now)}
+            </p>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="grid h-10 w-10 place-items-center rounded-full border border-white/70 bg-white/48 text-[var(--guto-navy)] shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]"
-            aria-label="Fechar GUTO Online"
-          >
-            <X className="h-4 w-4" />
-          </button>
+
+          <div className="flex items-center gap-2">
+            <GutoOnlineVoiceToggle
+              mode={state.voiceMode}
+              onToggle={toggleVoiceMode}
+              language={language}
+            />
+            <button
+              type="button"
+              onClick={onClose}
+              className="grid h-10 w-10 place-items-center rounded-full border border-white/70 bg-white/48 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]"
+              aria-label="Fechar GUTO Online"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
         </header>
 
-        <main className="flex min-h-0 flex-1 flex-col items-center justify-between gap-4 py-4">
+        {/* ─── Resume prompt (15min–12h) ───────────────────────────── */}
+        {pendingResume && (
+          <section className="mt-3 rounded-[1.2rem] border border-[rgba(82,231,255,0.45)] bg-[rgba(82,231,255,0.12)] p-3">
+            <p className="text-[12px] font-bold leading-snug text-[rgba(13,35,65,0.84)]">
+              {intentLine("session.resume.prompt", language)}{" "}
+              {pendingResume.ageMinutes >= 60
+                ? `${Math.floor(pendingResume.ageMinutes / 60)}h${pendingResume.ageMinutes % 60 ? ` ${pendingResume.ageMinutes % 60}min` : ""}`
+                : `${pendingResume.ageMinutes} min`}
+              .
+            </p>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={acceptResume}
+                className="h-10 rounded-[0.9rem] border border-[rgba(82,231,255,0.55)] bg-[rgba(82,231,255,0.18)] font-mono text-[10px] font-black uppercase tracking-[0.14em] text-[var(--guto-navy)]"
+              >
+                {resumeCopy.keep}
+              </button>
+              <button
+                type="button"
+                onClick={declineResume}
+                className="h-10 rounded-[0.9rem] border border-white/70 bg-white/55 font-mono text-[10px] font-black uppercase tracking-[0.14em]"
+              >
+                {resumeCopy.reset}
+              </button>
+            </div>
+          </section>
+        )}
+
+        {/* ─── Corpo ──────────────────────────────────────────────── */}
+        <main className="flex min-h-0 flex-1 flex-col gap-3 py-3">
+          {/* GUTO avatar + linha atual */}
           <section className="flex w-full flex-col items-center">
             <div className="relative">
-              <div className="absolute inset-8 rounded-full bg-[rgba(82,231,255,0.2)] blur-2xl" />
+              <div className="absolute inset-8 rounded-full bg-[rgba(82,231,255,0.18)] blur-2xl" />
               <GutoAvatar size="xl" showPlatform={false} className="relative" />
             </div>
-            <div className="mt-2 flex items-center gap-2 rounded-full border border-white/70 bg-white/50 px-3 py-1.5">
-              <span
-                className={`h-2 w-2 rounded-full ${
-                  audioState === "listening"
-                    ? "bg-emerald-400"
-                    : audioState === "speaking"
-                      ? "bg-[var(--guto-cyan)]"
-                      : "bg-slate-300"
-                }`}
-              />
-              <span className="font-mono text-[9px] font-black uppercase tracking-[0.16em] text-[rgba(13,35,65,0.54)]">
-                {audioState === "listening"
-                  ? "escutando"
-                  : audioState === "speaking"
-                    ? "falando"
-                    : audioState === "unsupported"
-                      ? "voz indisponível"
-                      : "online"}
-              </span>
-            </div>
-          </section>
-
-          <section className="w-full rounded-[1.35rem] border border-white/75 bg-white/52 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.92),0_18px_60px_rgba(13,35,65,0.08)]">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="font-mono text-[8px] font-black uppercase tracking-[0.18em] text-[rgba(13,35,65,0.42)]">
-                  Exercício {progressLabel}
-                </p>
-                <h2 className="mt-1 text-[1.1rem] font-black uppercase leading-tight tracking-[0.04em]">
-                  {currentExercise?.name || workoutPlan.focus}
-                </h2>
-                <p className="mt-1 text-[12px] font-semibold text-[rgba(13,35,65,0.58)]">
-                  Série {Math.min(currentSet, totalSets)} de {totalSets} · {currentExercise?.reps || "reps"} · {currentExercise?.rest || "descanso"}
-                </p>
-              </div>
-              <div className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl border border-[rgba(82,231,255,0.34)] bg-[rgba(82,231,255,0.1)]">
-                <span className="font-mono text-[1.1rem] font-black text-[var(--guto-cyan)]">
-                  {phase === "resting" ? formatRest(restRemaining) : phase === "paused" ? "PA" : "ON"}
-                </span>
-              </div>
-            </div>
-
-            <div className="mt-4 rounded-[1rem] border border-[rgba(13,35,65,0.07)] bg-white/48 p-3">
-              <p className="text-[13px] font-bold leading-snug text-[rgba(13,35,65,0.78)]">
-                {lastGutoLine}
+            {state.lastGutoLine && (
+              <p className="mt-2 max-w-sm text-center text-[13px] font-bold leading-snug text-[rgba(13,35,65,0.84)]">
+                {state.lastGutoLine}
               </p>
-              {lastTranscript && (
-                <p className="mt-2 font-mono text-[8px] uppercase tracking-[0.14em] text-[rgba(13,35,65,0.36)]">
-                  ouvi: {lastTranscript}
-                </p>
-              )}
-              {lastAction && (
-                <p className="mt-1 font-mono text-[8px] uppercase tracking-[0.14em] text-[var(--guto-cyan)]">
-                  {lastAction}
-                </p>
-              )}
-            </div>
+            )}
+            {!isVoiceEnabled && (
+              <p className="mt-1 font-mono text-[8px] font-black uppercase tracking-[0.18em] text-[rgba(13,35,65,0.42)]">
+                {pickLine(language, {
+                  pt: "Modo texto · vibra no fim do descanso",
+                  en: "Text mode · vibrates at rest end",
+                  it: "Modo testo · vibra a fine riposo",
+                })}
+              </p>
+            )}
           </section>
 
-          <section className="grid w-full grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={handleSetDone}
-              disabled={phase === "finished"}
-              className="h-14 rounded-[1.1rem] border border-[rgba(82,231,255,0.5)] bg-[rgba(82,231,255,0.13)] font-mono text-[10px] font-black uppercase tracking-[0.14em] text-[var(--guto-navy)] disabled:opacity-40"
-            >
-              Série feita
-            </button>
-            <button
-              type="button"
-              onClick={handlePauseToggle}
-              disabled={phase === "finished"}
-              className="flex h-14 items-center justify-center gap-2 rounded-[1.1rem] border border-white/70 bg-white/48 font-mono text-[10px] font-black uppercase tracking-[0.14em] disabled:opacity-40"
-            >
-              {phase === "paused" ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
-              {phase === "paused" ? "Continua" : "Pausa"}
-            </button>
-            <button
-              type="button"
-              onClick={handleSwap}
-              disabled={phase === "finished"}
-              className="flex h-12 items-center justify-center gap-2 rounded-[1rem] border border-white/70 bg-white/36 font-mono text-[9px] font-black uppercase tracking-[0.12em] disabled:opacity-40"
-            >
-              <Shuffle className="h-4 w-4" />
-              Trocar
-            </button>
-            <button
-              type="button"
-              onClick={handlePain}
-              disabled={phase === "finished"}
-              className="flex h-12 items-center justify-center gap-2 rounded-[1rem] border border-[rgba(157,43,43,0.22)] bg-[rgba(157,43,43,0.06)] font-mono text-[9px] font-black uppercase tracking-[0.12em] text-[var(--destructive)] disabled:opacity-40"
-            >
-              <ShieldAlert className="h-4 w-4" />
-              Doeu
-            </button>
-          </section>
+          {/* Rest Mode | Exercício atual */}
+          {showRestMode ? (
+            <GutoOnlineRestMode
+              restEndsAt={state.restEndsAt}
+              restPlannedSeconds={state.restPlannedSeconds}
+              currentExercise={currentExercise}
+              nextSetNumber={state.currentSet}
+              totalSets={totalSets}
+              remainingSetsInExercise={remainingSets}
+              language={language}
+              onExtend={handleExtendRest}
+              onSkip={handleSkipRest}
+              onTalk={handleOpenQuickTalk}
+            />
+          ) : (
+            <section className="w-full rounded-[1.35rem] border border-white/75 bg-white/52 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.92),0_18px_60px_rgba(13,35,65,0.08)]">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="font-mono text-[8px] font-black uppercase tracking-[0.18em] text-[rgba(13,35,65,0.42)]">
+                    {pickLine(language, { pt: "Exercício", en: "Exercise", it: "Esercizio" })}{" "}
+                    {state.phase === "warmup"
+                      ? pickLine(language, { pt: "aquecimento", en: "warm-up", it: "riscaldamento" })
+                      : `${Math.min(state.exerciseIndex + 1, totalExercises)}/${totalExercises}`}
+                  </p>
+                  <h2 className="mt-1 text-[1.1rem] font-black uppercase leading-tight tracking-[0.04em]">
+                    {state.phase === "warmup"
+                      ? pickLine(language, { pt: "Aquecimento", en: "Warm-up", it: "Riscaldamento" })
+                      : currentExercise?.name || workoutPlan.focus}
+                  </h2>
+                  {state.phase !== "warmup" && currentExercise && (
+                    <p className="mt-1 text-[12px] font-semibold text-[rgba(13,35,65,0.58)]">
+                      {pickLine(language, { pt: "Série", en: "Set", it: "Serie" })}{" "}
+                      {Math.min(state.currentSet, totalSets)} {pickLine(language, { pt: "de", en: "of", it: "di" })}{" "}
+                      {totalSets} · {currentExercise.reps || ""} · {currentExercise.load || ""}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </section>
+          )}
+
+          {/* Checklist compacto */}
+          <GutoOnlineChecklist items={state.checklist} language={language} expanded={false} />
+
+          {/* Controles principais */}
+          <div className="mt-auto">
+            <GutoOnlineControls
+              phase={state.phase}
+              isLastSet={isLastSet}
+              isPlanFinished={isPlanFinished}
+              language={language}
+              onWarmupDone={handleWarmupDone}
+              onSetDone={handleSetDone}
+              onExerciseDone={handleExerciseDone}
+              onTalk={handleOpenQuickTalk}
+              onValidate={handleValidate}
+              onMoreOptions={() => setMoreOpen(true)}
+            />
+          </div>
         </main>
 
-        <footer className="grid grid-cols-[1fr_auto] items-center gap-2">
+        {/* ─── Footer ────────────────────────────────────────────── */}
+        <footer className="grid grid-cols-2 gap-2">
           <button
             type="button"
-            onClick={audioState === "listening" ? stopRecognition : startListening}
-            className="flex h-11 items-center justify-center gap-2 rounded-[1rem] border border-white/70 bg-white/44 font-mono text-[9px] font-black uppercase tracking-[0.14em]"
+            onClick={undo}
+            disabled={actionHistory.length === 0}
+            className="flex h-10 items-center justify-center gap-2 rounded-[0.9rem] border border-white/70 bg-white/40 font-mono text-[9px] font-black uppercase tracking-[0.14em] disabled:opacity-30"
           >
-            {audioState === "listening" ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-            {audioState === "listening" ? "Desativar escuta" : "Ativar escuta"}
+            <Undo2 className="h-3.5 w-3.5" />
+            {pickLine(language, { pt: "Desfazer", en: "Undo", it: "Annulla" })}
           </button>
           <button
             type="button"
             onClick={() => {
-              setExerciseIndex(0)
-              setCurrentSet(1)
-              setPhase("executing")
-              setRestEndsAt(null)
-              clearSessionState(sessionKey)
-              void speak("session.entry.returning", "Reiniciando. A gente começa do início.")
+              if (window.confirm(
+                pickLine(language, {
+                  pt: "Reiniciar do zero? Você perde o progresso desta sessão.",
+                  en: "Restart from scratch? You will lose this session's progress.",
+                  it: "Ricominciare da capo? Perdi i progressi della sessione.",
+                }),
+              )) {
+                declineResume()
+              }
             }}
-            className="grid h-11 w-11 place-items-center rounded-[1rem] border border-white/70 bg-white/44"
-            aria-label="Reiniciar sessão online"
+            className="flex h-10 items-center justify-center gap-2 rounded-[0.9rem] border border-white/70 bg-white/40 font-mono text-[9px] font-black uppercase tracking-[0.14em]"
+            aria-label="Reiniciar sessão"
           >
-            <RotateCcw className="h-4 w-4" />
+            <RotateCcw className="h-3.5 w-3.5" />
+            {pickLine(language, { pt: "Reiniciar", en: "Restart", it: "Ricomincia" })}
           </button>
         </footer>
       </div>
-      <span className="sr-only">GUTO Online carregado</span>
+
+      {/* ─── Quick Talk overlay ───────────────────────────────────── */}
+      <GutoOnlineQuickTalk
+        open={showQuickTalk}
+        language={language}
+        userName={userName}
+        responseLine={quickTalkResponse}
+        onSubmit={handleQuickTalkSubmit}
+        onResume={handleQuickTalkResume}
+        onCancel={handleCloseQuickTalk}
+        onVoiceFailed={handleVoiceFailed}
+      />
+
+      {/* ─── More options ─────────────────────────────────────────── */}
+      <GutoOnlineMoreOptions
+        open={moreOpen}
+        onClose={() => setMoreOpen(false)}
+        onSkipExercise={handleSkipExerciseFromMore}
+        onPauseSession={handlePauseFromMore}
+        onUndoLast={handleUndoFromMore}
+        language={language}
+      />
+
+      <span className="sr-only">GUTO Online ativo</span>
     </div>
   )
 }

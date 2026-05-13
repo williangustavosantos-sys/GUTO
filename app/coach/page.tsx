@@ -9,6 +9,7 @@ import {
   Copy,
   Dumbbell,
   FileVideo,
+  Globe2,
   History,
   KeyRound,
   Lock,
@@ -101,7 +102,6 @@ import {
   type WeekDayKey,
 } from "@/lib/api/admin";
 import type { DietPlan, GutoMemory, GutoWorkoutExercise, GutoWorkoutPlan } from "@/lib/api/guto";
-import { formatCode, TRAINING_LOCATION_LABELS, BIOLOGICAL_SEX_LABELS, SUBSCRIPTION_STATUS_LABELS } from "@/lib/format-codes";
 
 type AvatarStage = "baby" | "teen" | "adult" | "elite";
 type DashboardTab = "students" | "coaches" | "arena" | "logs" | "teams";
@@ -198,41 +198,553 @@ type DashboardNavItem = {
   badge?: ReactNode;
 };
 
-const SOURCE_LABEL: Record<string, string> = {
-  guto_generated: "Gerado pelo GUTO",
-  coach_manual: "Manual do Coach",
-  mixed: "Editado pelo Coach",
-};
+type AdminPanelLanguage = "pt-BR" | "it-IT" | "en-US";
 
-function getDetailTabs(isAdmin: boolean): Array<{ id: DetailTab; label: string }> {
+const ADMIN_PANEL_LANGUAGE_KEY = "guto-admin-language";
+const ADMIN_PANEL_LANGUAGES: Array<{ code: AdminPanelLanguage; short: string; label: string }> = [
+  { code: "pt-BR", short: "PT", label: "Português" },
+  { code: "it-IT", short: "IT", label: "Italiano" },
+  { code: "en-US", short: "EN", label: "English" },
+];
+
+function isAdminPanelLanguage(value: string | null): value is AdminPanelLanguage {
+  return value === "pt-BR" || value === "it-IT" || value === "en-US";
+}
+
+const ADMIN_PANEL_COPY = {
+  "pt-BR": {
+    loading: "Sincronizando painel",
+    controlRoom: "Sala de controle",
+    hierarchy: "Hierarquia",
+    teamNotSelected: "Time não selecionado",
+    activeStudents: "alunos ativos",
+    selectTeam: "Selecione um time",
+    clearSelectedTeam: "Limpar time selecionado",
+    nav: { students: "ALUNOS", coaches: "COACHES", arena: "ARENA", logs: "HISTÓRICO", teams: "TIMES" },
+    detailTabs: { resumo: "Resumo", acesso: "Acesso", calibragem: "Calibragem", treino: "Treino", dieta: "Dieta", arena: "Arena/XP", seguranca: "Senha" },
+    meta: {
+      students: ["SALA DE CONTROLE / ALUNOS", "Alunos", "Base operacional · {scope} · ação rápida"],
+      coaches: ["SALA DE CONTROLE / COACHES", "Coaches", "Operadores limitados · permissões e vínculo com alunos"],
+      arena: ["SALA DE CONTROLE / ARENA", "Arena", "XP semanal e mensal por time · ranking individual global"],
+      logs: ["SALA DE CONTROLE / HISTÓRICO", "Histórico", "Auditoria das ações críticas do painel"],
+      teams: ["SALA DE CONTROLE / TIMES", "Times", "Empresas, planos e limites B2B"],
+      scopeSuper: "super admin",
+      scopeOperation: "operação",
+    },
+    telemetry: { sys: "SYS", students: "ALUNOS", active: "ATIVOS", filters: "FILTROS" },
+    status: { archived: "ARQUIVADO", paused: "PAUSADO", hiddenArena: "OCULTO ARENA", active: "ATIVO" },
+    source: { guto_generated: "Gerado pelo GUTO", coach_manual: "Manual do Coach", mixed: "Editado pelo Coach", none: "Sem origem" },
+    common: {
+      student: "Aluno", students: "Alunos", coach: "Coach", coaches: "Coaches", team: "Time", teams: "Times",
+      status: "Status", email: "Email", phone: "Telefone", subscription: "Assinatura", expiresAt: "Expira em",
+      arena: "Arena", visible: "Visível", hidden: "Oculto", workout: "Treino", diet: "Dieta", password: "Senha",
+      cancel: "Cancelar", create: "Criar", save: "Salvar", saving: "Salvando...", edit: "Editar",
+      select: "Selecionar", deselect: "Desselecionar", selected: "SELECIONADO", reactivate: "Reativar", archive: "Arquivar",
+      delete: "Excluir", open: "Abrir", invite: "Convite", clear: "Limpar", search: "Buscar", clean: "limpo",
+      plan: "Plano", role: "Role", archived: "Arquivados", unlimited: "Ilimitado", none: "-", today: "hoje",
+      updatedAt: "Última atualização", by: "por", noRanking: "Sem ranking.", action: "ação",
+    },
+    filters: {
+      title: "Filtros", foundSingular: "aluno encontrado", foundPlural: "alunos encontrados",
+      active: "ativos", paused: "pausados", archived: "arquivados", all: "todos",
+      searchPlaceholder: "Buscar nome, email, telefone ou ID", allCoaches: "Todos os coaches",
+      sexAll: "Sexo: todos", paymentAll: "Pagamento: todos", minAge: "Idade mín.", maxAge: "Idade máx.",
+      activeCount: "filtros ativos", resultSingular: "resultado na visão atual", resultPlural: "resultados na visão atual",
+    },
+    mural: {
+      kicker: "Mural operacional", title: "Painel de alunos e accountability", unavailable: "Resumo do Time indisponível.",
+      limitReached: "Limite do plano atingido. Atualize o plano GUTO Time para cadastrar mais {target}.",
+    },
+    table: {
+      empty: "Nenhum aluno encontrado.", student: "Aluno", status: "Status", coach: "Coach", phone: "Telefone",
+      week: "Semana", month: "Mês", lastAccess: "Último acesso", subscription: "Assinatura", invite: "Convite", open: "Abrir",
+      seen: "Visto",
+    },
+    relative: { today: "hoje", oneDay: "há 1 dia", manyDays: "há {days} dias" },
+    human: {
+      active: "Ativo", paused: "Pausado", archived: "Arquivado", paid: "Pago", unpaid: "Pendente",
+      pending_payment: "Pagamento pendente", trial: "Teste", expired: "Expirado", cancelled: "Cancelado",
+      muscle_gain: "Ganho de massa", fat_loss: "Perda de gordura", conditioning: "Condicionamento",
+      mobility_health: "Saúde e mobilidade", consistency: "Consistência", maintenance: "Manutenção",
+      endurance: "Resistência", flexibility: "Flexibilidade", general_fitness: "Condicionamento geral", rehabilitation: "Reabilitação",
+      gym: "Academia", home: "Em casa", park: "Ao ar livre", mixed: "Variado",
+      start: "GUTO Time Start", pro: "GUTO Time Pro", elite: "GUTO Time Elite", custom: "Custom",
+      male: "Masculino", female: "Feminino", other: "Outro", prefer_not_to_say: "Prefiro não dizer",
+    },
+    errors: {
+      planLimit: "Limite do plano GUTO Time atingido.", forbidden: "Você não tem acesso a este aluno.",
+      backendRejected: "Backend recusou a ação.", name: "Informe o nome.", lastName: "Informe o sobrenome.",
+      email: "Informe um email válido.", phone: "Informe um telefone válido.", team: "Selecione um Time.",
+      videoName: "Informe o nome do exercício.", videoRequired: "Vídeo obrigatório: informe sourceFileName e videoUrl.",
+      videoPath: "Use caminho interno /exercise/visuals/custom/.", videoSafeName: "Use nome seguro: lowercase, sem acento, sem espaço e com hífen.",
+      videoMeta: "Preencha todos os metadados técnicos do vídeo.", videoPositive: "Metadados técnicos precisam ser positivos.",
+      videoLimit: "Esse vídeo está pesado demais para o app. Use MP4 até 30 segundos, máximo 12MB e 720p.",
+      videoMin: "Use vídeo com pelo menos 3 segundos.",
+    },
+    actions: {
+      credentialGenerated: "Credencial gerada", hide: "Ocultar", linkCopied: "Link copiado.",
+      inviteCopyFailed: "Não foi possível copiar o convite.", coachPaused: "Coach pausado.", coachActive: "Coach ativo.",
+      deleteCoachConfirm: "Excluir coach? Reatribua alunos antes.", coachDeleted: "Coach excluído.",
+      teamUpdated: "Time atualizado.", teamReactivated: "Time reativado.", teamArchived: "Time arquivado.",
+      studentCreated: "Aluno criado.", coachCreated: "Coach criado.", teamCreated: "Time criado.",
+    },
+    sheet: {
+      system: "Sistema", evolution: "Evolução", officialPlan: "Plano oficial", accessControl: "Controle de acesso",
+      accessInvite: "Convite de acesso", pauseAccess: "Pausar acesso", reactivateAccess: "Reativar acesso",
+      renew30: "Renovar 30 dias", hideArena: "Ocultar na Arena", showArena: "Mostrar na Arena",
+      assignCoach: "Atribuir coach", viewInvite: "Ver convite atual", regenerateInvite: "Regenerar convite",
+      inviteUnavailable: "Link não disponível. Use regenerar para criar um novo convite.",
+      regenerateInviteConfirm: "Regenerar convite? O link anterior deixa de funcionar.",
+      accessPaused: "Acesso pausado.", accessReactivated: "Acesso reativado.", accessRenewed: "Acesso renovado por 30 dias.",
+      hiddenFromArena: "Aluno ocultado da Arena.", visibleInArena: "Aluno visível na Arena.", inviteLoaded: "Convite carregado.",
+      newInvite: "Novo convite gerado.", calibration: "Calibragem do aluno", saveCalibration: "Salvar calibragem",
+      calibrationSaved: "Calibragem atualizada.", officialWorkout: "Treino oficial", weeklyPlan: "Plano semanal",
+      officialDiet: "Dieta oficial", weeklyDiet: "Plano semanal", catalogRequired: "Escolha um exercício do catálogo oficial antes de salvar.",
+      workoutSaved: "Treino oficial salvo.", workoutGenerated: "Treino gerado pelo GUTO.", gutoCanUpdateWorkout: "GUTO liberado para atualizar treino.",
+      workoutLocked: "Treino bloqueado contra sobrescrita.", resetWorkoutConfirm: "Resetar treino oficial deste aluno?", workoutReset: "Treino resetado.",
+      dietSaved: "Dieta oficial salva.", dietGenerated: "Dieta do GUTO carregada.", gutoCanUpdateDiet: "GUTO liberado para atualizar dieta.",
+      dietLocked: "Dieta bloqueada contra sobrescrita.", resetDietConfirm: "Resetar dieta oficial deste aluno?", dietReset: "Dieta resetada.",
+      arenaXp: "Arena e XP", resetWeek: "Resetar semana", resetMonth: "Resetar mês", resetXp: "Resetar XP",
+      resetHistory: "Resetar histórico", resetDone: "Reset executado.", tempPassword: "Senha temporária",
+      generateTempPassword: "Gerar senha temporária", tempPasswordGenerated: "Senha temporária gerada.",
+      criticalZone: "Zona crítica", permanentDelete: "Excluir permanentemente",
+      permanentDeleteConfirm: "Excluir permanentemente este aluno e todos os dados vinculados?",
+      permanentDeleted: "Aluno excluído permanentemente.",
+      permanentDeleteHelp: "A exclusão permanente apaga dados vinculados do aluno. Use somente quando a empresa pedir remoção definitiva.",
+    },
+    calibration: {
+      age: "Idade", sex: "Sexo biológico", level: "Nível", goal: "Objetivo", location: "Local preferido",
+      country: "País", height: "Altura cm", weight: "Peso kg", pathology: "Dor ou limitação", foodRestrictions: "Restrições alimentares",
+    },
+    workout: {
+      weeklySaved: "Plano semanal salvo.", weeklySaveError: "Erro ao salvar plano semanal.", weeklyTitle: "Plano semanal",
+      weeklyHelp: "Monte o treino de cada dia. O aluno verá apenas o treino do dia atual no app.",
+      dayWorkout: "Treino do dia", todayLabel: "Hoje", mainBlock: "Principal", restDay: "Descanso / sem treino",
+      focus: "Foco do dia", coachNotes: "Notas do coach", focusPlaceholder: "Ex: Peito + tríceps", notesPlaceholder: "Observações opcionais",
+      sets: "Séries", reps: "Reps", load: "Carga", rest: "Descanso", technique: "Técnica", movementNote: "Observação do movimento",
+      substitutions: "Substituições", searchCatalog: "Buscar exercício no catálogo...", catalog: "Catálogo", addWorkout: "Adicionar treino",
+      removeDay: "Remover dia", saveWeekly: "Salvar plano semanal", title: "Título", muscleFocus: "Grupo muscular / foco",
+      day: "Dia", location: "Local", select: "Selecionar", duration: "Duração estimada", difficulty: "Dificuldade",
+      saveChanges: "Salvar alterações", createManual: "Criar treino manual", generateGuto: "Gerar com GUTO",
+      history: "Histórico", allowGuto: "Permitir GUTO atualizar", lockGuto: "Bloquear alterações automáticas",
+      reset: "Resetar treino", addNewExercise: "Adicionar novo exercício", officialName: "Nome oficial", optionalId: "ID opcional",
+      group: "Grupo", equipment: "Equipamento", safeMp4: "Arquivo MP4 seguro", internalPath: "Caminho interno",
+      durationSeconds: "Duração s", hasAudio: "Vídeo tem áudio", sendApproval: "Enviar para aprovação",
+      approvalSent: "Exercício enviado para aprovação técnica.", studentExercises: "Exercícios de {name}",
+      officialExercise: "Exercício oficial", searchOfficial: "Pesquisar no catálogo oficial", notChosen: "Não escolhido",
+      notFound: "Exercício não encontrado no catálogo. Para usar este exercício, ele precisa ser adicionado ao catálogo oficial com vídeo local validado.",
+      chooseBeforeSave: "Escolha um exercício do catálogo oficial antes de salvar.", noEquipment: "sem equipamento",
+      interval: "Intervalo", addExercise: "Adicionar exercício", workoutHistory: "Histórico do treino", noWorkoutHistory: "Sem histórico de treino.",
+      videoLimitCopy: "Vídeo obrigatório: MP4, até 30s, até 12MB, máximo 720p, sem áudio, caminho interno /exercise/visuals/custom/.",
+      videoNoUpload: "Não há upload real aqui: o vídeo precisa estar previamente otimizado e disponível no caminho interno controlado.",
+    },
+    diet: {
+      weeklySaved: "Plano semanal de dieta salvo.", weeklySaveError: "Erro ao salvar plano semanal de dieta.",
+      weeklyTitle: "Plano semanal de dieta", weeklyHelp: "Monte a dieta de cada dia. Campos em branco não serão salvos. O aluno verá a dieta do dia atual via integração futura.",
+      noDiet: "Sem dieta programada", filled: "preenchido", breakfast: "Café da manhã", lunch: "Almoço", dinner: "Jantar", snacks: "Lanches",
+      hydration: "Hidratação", notes: "Observações", caloriesEstimate: "Estimativa calórica (kcal)", proteinEstimate: "Estimativa proteína (g)",
+      clearDay: "Limpar dia", saveWeekly: "Salvar plano semanal", breakfastPlaceholder: "Ex: Aveia com banana, ovo mexido...",
+      lunchPlaceholder: "Ex: Frango grelhado, arroz, legumes...", dinnerPlaceholder: "Ex: Sopa de legumes, peixe grelhado...",
+      snacksPlaceholder: "Ex: Iogurte, fruta, castanhas...", hydrationPlaceholder: "Ex: 2,5 litros de água",
+      notesPlaceholder: "Ex: Evitar açúcar refinado após as 18h...", caloriesPlaceholder: "Ex: 2200", proteinPlaceholder: "Ex: 160",
+      officialDiet: "Dieta oficial", title: "Título", country: "País", calories: "Calorias", protein: "Proteína g",
+      carbs: "Carbo g", fat: "Gordura g", restrictions: "Restrições", coachNotes: "Notas do coach",
+      bmr: "BMR calculado", tdee: "TDEE estimado", target: "Meta da dieta", foodsTotal: "Total dos alimentos",
+      missing: "Faltam", exceeded: "Excedeu", matched: "Fechado com a meta",
+      mismatchToast: "A dieta precisa fechar em {target} kcal. Ajuste {delta} kcal antes de salvar.",
+      mismatchHelp: "O backend também vai recusar esta dieta enquanto o total dos alimentos não bater exatamente com a meta calórica.",
+      saveChanges: "Salvar alterações", createManual: "Criar dieta manual", generateGuto: "Gerar com GUTO", history: "Histórico",
+      allowGuto: "Permitir GUTO atualizar", lockGuto: "Bloquear alterações automáticas", reset: "Resetar dieta",
+      mealsOf: "Refeições de {name}", meal: "Refeição", time: "Horário", calculatedKcal: "Kcal calculadas",
+      substitutions: "Substituições", food: "Alimento", quantity: "Quantidade", observation: "Observação",
+      addFood: "Adicionar alimento", addMeal: "Adicionar refeição", newMeal: "Nova refeição",
+      dietHistory: "Histórico da dieta", noDietHistory: "Sem histórico de dieta.",
+    },
+    planStatus: { locked: "Bloqueado contra GUTO", unlocked: "GUTO pode atualizar" },
+    rankings: { weekly: "Ranking Semanal", monthly: "Ranking Mensal", general: "Ranking Geral" },
+    dialogs: {
+      createStudent: "Criar aluno", studentDesc: "Cria acesso real no backend. Sem senha, o backend gera convite.",
+      firstName: "Nome", lastName: "Sobrenome", validEmail: "Use um email real. Exemplo: aluno@email.com.",
+      validPhone: "Use um telefone real com DDD. Sequências como 111 não entram.", sex: "Sexo", male: "Masculino",
+      female: "Feminino", preferNot: "Prefiro não dizer", age: "Idade", optionalPassword: "Senha inicial opcional",
+      selectTeam: "Selecione um Time *", responsibleCoach: "Coach responsável", activateNow: "Ativar acesso agora",
+      createCoach: "Criar coach", coachDesc: "Somente super admin/admin pode criar coach.", name: "Nome", optionalCoachPassword: "Senha opcional",
+      createTeam: "Criar Time", teamDesc: "Cria um novo GUTO Time. Somente super admin.", teamName: "Nome do Time",
+      maxStudents: "Máx. alunos (vazio = ilimitado)", maxCoaches: "Máx. coaches (vazio = ilimitado)",
+    },
+    days: {
+      monday: ["Segunda-feira", "Seg"], tuesday: ["Terça-feira", "Ter"], wednesday: ["Quarta-feira", "Qua"],
+      thursday: ["Quinta-feira", "Qui"], friday: ["Sexta-feira", "Sex"], saturday: ["Sábado", "Sáb"], sunday: ["Domingo", "Dom"],
+      today: ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"],
+    },
+  },
+  "it-IT": {
+    loading: "Sincronizzazione pannello",
+    controlRoom: "Sala controllo",
+    hierarchy: "Gerarchia",
+    teamNotSelected: "Team non selezionato",
+    activeStudents: "studenti attivi",
+    selectTeam: "Seleziona un team",
+    clearSelectedTeam: "Rimuovi team selezionato",
+    nav: { students: "STUDENTI", coaches: "COACH", arena: "ARENA", logs: "STORICO", teams: "TEAM" },
+    detailTabs: { resumo: "Riepilogo", acesso: "Accesso", calibragem: "Calibrazione", treino: "Allenamento", dieta: "Dieta", arena: "Arena/XP", seguranca: "Sicurezza" },
+    meta: {
+      students: ["SALA CONTROLLO / STUDENTI", "Studenti", "Base operativa · {scope} · azione rapida"],
+      coaches: ["SALA CONTROLLO / COACH", "Coach", "Operatori limitati · permessi e assegnazioni studenti"],
+      arena: ["SALA CONTROLLO / ARENA", "Arena", "XP settimanale e mensile per team · classifica individuale globale"],
+      logs: ["SALA CONTROLLO / STORICO", "Storico", "Audit delle azioni critiche del pannello"],
+      teams: ["SALA CONTROLLO / TEAM", "Team", "Aziende, piani e limiti B2B"],
+      scopeSuper: "super admin",
+      scopeOperation: "operatività",
+    },
+    telemetry: { sys: "SYS", students: "STUDENTI", active: "ATTIVI", filters: "FILTRI" },
+    status: { archived: "ARCHIVIATO", paused: "IN PAUSA", hiddenArena: "NASCOSTO ARENA", active: "ATTIVO" },
+    source: { guto_generated: "Generato da GUTO", coach_manual: "Manuale del coach", mixed: "Modificato dal coach", none: "Origine assente" },
+    common: {
+      student: "Studente", students: "Studenti", coach: "Coach", coaches: "Coach", team: "Team", teams: "Team",
+      status: "Stato", email: "Email", phone: "Telefono", subscription: "Abbonamento", expiresAt: "Scade il",
+      arena: "Arena", visible: "Visibile", hidden: "Nascosto", workout: "Allenamento", diet: "Dieta", password: "Password",
+      cancel: "Annulla", create: "Crea", save: "Salva", saving: "Salvataggio...", edit: "Modifica",
+      select: "Seleziona", deselect: "Deseleziona", selected: "SELEZIONATO", reactivate: "Riattiva", archive: "Archivia",
+      delete: "Elimina", open: "Apri", invite: "Invito", clear: "Pulisci", search: "Cerca", clean: "pulito",
+      plan: "Piano", role: "Ruolo", archived: "Archiviati", unlimited: "Illimitato", none: "-", today: "oggi",
+      updatedAt: "Ultimo aggiornamento", by: "da", noRanking: "Nessuna classifica.", action: "azione",
+    },
+    filters: {
+      title: "Filtri", foundSingular: "studente trovato", foundPlural: "studenti trovati",
+      active: "attivi", paused: "in pausa", archived: "archiviati", all: "tutti",
+      searchPlaceholder: "Cerca nome, email, telefono o ID", allCoaches: "Tutti i coach",
+      sexAll: "Sesso: tutti", paymentAll: "Pagamento: tutti", minAge: "Età min.", maxAge: "Età max",
+      activeCount: "filtri attivi", resultSingular: "risultato nella vista attuale", resultPlural: "risultati nella vista attuale",
+    },
+    mural: {
+      kicker: "Muro operativo", title: "Pannello studenti e accountability", unavailable: "Riepilogo team non disponibile.",
+      limitReached: "Limite del piano raggiunto. Aggiorna il piano GUTO Time per registrare altri {target}.",
+    },
+    table: {
+      empty: "Nessuno studente trovato.", student: "Studente", status: "Stato", coach: "Coach", phone: "Telefono",
+      week: "Settimana", month: "Mese", lastAccess: "Ultimo accesso", subscription: "Abbonamento", invite: "Invito", open: "Apri",
+      seen: "Visto",
+    },
+    relative: { today: "oggi", oneDay: "1 giorno fa", manyDays: "{days} giorni fa" },
+    human: {
+      active: "Attivo", paused: "In pausa", archived: "Archiviato", paid: "Pagato", unpaid: "In sospeso",
+      pending_payment: "Pagamento in sospeso", trial: "Prova", expired: "Scaduto", cancelled: "Annullato",
+      muscle_gain: "Aumento massa", fat_loss: "Dimagrimento", conditioning: "Condizionamento",
+      mobility_health: "Mobilità e salute", consistency: "Costanza", maintenance: "Mantenimento",
+      endurance: "Resistenza", flexibility: "Flessibilità", general_fitness: "Fitness generale", rehabilitation: "Riabilitazione",
+      gym: "Palestra", home: "Casa", park: "All'aperto", mixed: "Misto",
+      start: "GUTO Time Start", pro: "GUTO Time Pro", elite: "GUTO Time Elite", custom: "Personalizzato",
+      male: "Maschile", female: "Femminile", other: "Altro", prefer_not_to_say: "Preferisco non dirlo",
+    },
+    errors: {
+      planLimit: "Limite del piano GUTO Time raggiunto.", forbidden: "Non hai accesso a questo studente.",
+      backendRejected: "Il backend ha rifiutato l'azione.", name: "Inserisci il nome.", lastName: "Inserisci il cognome.",
+      email: "Inserisci un'email valida.", phone: "Inserisci un numero di telefono valido.", team: "Seleziona un Team.",
+      videoName: "Inserisci il nome dell'esercizio.", videoRequired: "Video obbligatorio: inserisci sourceFileName e videoUrl.",
+      videoPath: "Usa il percorso interno /exercise/visuals/custom/.", videoSafeName: "Usa un nome sicuro: minuscolo, senza accenti, senza spazi e con trattini.",
+      videoMeta: "Compila tutti i metadati tecnici del video.", videoPositive: "I metadati tecnici devono essere positivi.",
+      videoLimit: "Questo video è troppo pesante per l'app. Usa MP4 fino a 30 secondi, massimo 12MB e 720p.",
+      videoMin: "Usa un video di almeno 3 secondi.",
+    },
+    actions: {
+      credentialGenerated: "Credenziale generata", hide: "Nascondi", linkCopied: "Link copiato.",
+      inviteCopyFailed: "Impossibile copiare l'invito.", coachPaused: "Coach messo in pausa.", coachActive: "Coach attivato.",
+      deleteCoachConfirm: "Eliminare il coach? Riassegna prima gli studenti.", coachDeleted: "Coach eliminato.",
+      teamUpdated: "Team aggiornato.", teamReactivated: "Team riattivato.", teamArchived: "Team archiviato.",
+      studentCreated: "Studente creato.", coachCreated: "Coach creato.", teamCreated: "Team creato.",
+    },
+    sheet: {
+      system: "Sistema", evolution: "Evoluzione", officialPlan: "Piano ufficiale", accessControl: "Controllo accesso",
+      accessInvite: "Invito di accesso", pauseAccess: "Metti accesso in pausa", reactivateAccess: "Riattiva accesso",
+      renew30: "Rinnova 30 giorni", hideArena: "Nascondi in Arena", showArena: "Mostra in Arena",
+      assignCoach: "Assegna coach", viewInvite: "Vedi invito attuale", regenerateInvite: "Rigenera invito",
+      inviteUnavailable: "Link non disponibile. Usa rigenera per creare un nuovo invito.",
+      regenerateInviteConfirm: "Rigenerare l'invito? Il link precedente smetterà di funzionare.",
+      accessPaused: "Accesso messo in pausa.", accessReactivated: "Accesso riattivato.", accessRenewed: "Accesso rinnovato per 30 giorni.",
+      hiddenFromArena: "Studente nascosto dall'Arena.", visibleInArena: "Studente visibile in Arena.", inviteLoaded: "Invito caricato.",
+      newInvite: "Nuovo invito generato.", calibration: "Calibrazione studente", saveCalibration: "Salva calibrazione",
+      calibrationSaved: "Calibrazione aggiornata.", officialWorkout: "Allenamento ufficiale", weeklyPlan: "Piano settimanale",
+      officialDiet: "Dieta ufficiale", weeklyDiet: "Piano settimanale", catalogRequired: "Scegli un esercizio dal catalogo ufficiale prima di salvare.",
+      workoutSaved: "Allenamento ufficiale salvato.", workoutGenerated: "Allenamento generato da GUTO.", gutoCanUpdateWorkout: "GUTO può aggiornare l'allenamento.",
+      workoutLocked: "Allenamento protetto da sovrascrittura.", resetWorkoutConfirm: "Resettare l'allenamento ufficiale di questo studente?", workoutReset: "Allenamento resettato.",
+      dietSaved: "Dieta ufficiale salvata.", dietGenerated: "Dieta GUTO caricata.", gutoCanUpdateDiet: "GUTO può aggiornare la dieta.",
+      dietLocked: "Dieta protetta da sovrascrittura.", resetDietConfirm: "Resettare la dieta ufficiale di questo studente?", dietReset: "Dieta resettata.",
+      arenaXp: "Arena e XP", resetWeek: "Reset settimana", resetMonth: "Reset mese", resetXp: "Reset XP",
+      resetHistory: "Reset storico", resetDone: "Reset eseguito.", tempPassword: "Password temporanea",
+      generateTempPassword: "Genera password temporanea", tempPasswordGenerated: "Password temporanea generata.",
+      criticalZone: "Zona critica", permanentDelete: "Elimina definitivamente",
+      permanentDeleteConfirm: "Eliminare definitivamente questo studente e tutti i dati collegati?",
+      permanentDeleted: "Studente eliminato definitivamente.",
+      permanentDeleteHelp: "L'eliminazione permanente cancella i dati collegati dello studente. Usala solo quando l'azienda richiede la rimozione definitiva.",
+    },
+    calibration: {
+      age: "Età", sex: "Sesso biologico", level: "Livello", goal: "Obiettivo", location: "Luogo preferito",
+      country: "Paese", height: "Altezza cm", weight: "Peso kg", pathology: "Dolore o limitazione", foodRestrictions: "Restrizioni alimentari",
+    },
+    workout: {
+      weeklySaved: "Piano settimanale salvato.", weeklySaveError: "Errore durante il salvataggio del piano settimanale.", weeklyTitle: "Piano settimanale",
+      weeklyHelp: "Costruisci l'allenamento di ogni giorno. Lo studente vedrà nell'app solo l'allenamento del giorno corrente.",
+      dayWorkout: "Allenamento del giorno", todayLabel: "Oggi", mainBlock: "Principale", restDay: "Riposo / nessun allenamento",
+      focus: "Focus del giorno", coachNotes: "Note del coach", focusPlaceholder: "Es: Petto + tricipiti", notesPlaceholder: "Note opzionali",
+      sets: "Serie", reps: "Ripetizioni", load: "Carico", rest: "Recupero", technique: "Tecnica", movementNote: "Nota sul movimento",
+      substitutions: "Sostituzioni", searchCatalog: "Cerca esercizio nel catalogo...", catalog: "Catalogo", addWorkout: "Aggiungi allenamento",
+      removeDay: "Rimuovi giorno", saveWeekly: "Salva piano settimanale", title: "Titolo", muscleFocus: "Gruppo muscolare / focus",
+      day: "Giorno", location: "Luogo", select: "Seleziona", duration: "Durata stimata", difficulty: "Difficoltà",
+      saveChanges: "Salva modifiche", createManual: "Crea allenamento manuale", generateGuto: "Genera con GUTO",
+      history: "Storico", allowGuto: "Permetti a GUTO di aggiornare", lockGuto: "Blocca modifiche automatiche",
+      reset: "Reset allenamento", addNewExercise: "Aggiungi nuovo esercizio", officialName: "Nome ufficiale", optionalId: "ID opzionale",
+      group: "Gruppo", equipment: "Attrezzatura", safeMp4: "File MP4 sicuro", internalPath: "Percorso interno",
+      durationSeconds: "Durata s", hasAudio: "Il video ha audio", sendApproval: "Invia per approvazione",
+      approvalSent: "Esercizio inviato per approvazione tecnica.", studentExercises: "Esercizi di {name}",
+      officialExercise: "Esercizio ufficiale", searchOfficial: "Cerca nel catalogo ufficiale", notChosen: "Non scelto",
+      notFound: "Esercizio non trovato nel catalogo. Per usarlo, deve essere aggiunto al catalogo ufficiale con video locale validato.",
+      chooseBeforeSave: "Scegli un esercizio dal catalogo ufficiale prima di salvare.", noEquipment: "senza attrezzatura",
+      interval: "Intervallo", addExercise: "Aggiungi esercizio", workoutHistory: "Storico allenamento", noWorkoutHistory: "Nessuno storico allenamento.",
+      videoLimitCopy: "Video obbligatorio: MP4, fino a 30s, fino a 12MB, massimo 720p, senza audio, percorso interno /exercise/visuals/custom/.",
+      videoNoUpload: "Qui non c'è upload reale: il video deve essere già ottimizzato e disponibile nel percorso interno controllato.",
+    },
+    diet: {
+      weeklySaved: "Piano settimanale dieta salvato.", weeklySaveError: "Errore durante il salvataggio del piano settimanale dieta.",
+      weeklyTitle: "Piano settimanale dieta", weeklyHelp: "Costruisci la dieta di ogni giorno. I campi vuoti non saranno salvati. Lo studente vedrà la dieta del giorno tramite integrazione futura.",
+      noDiet: "Nessuna dieta programmata", filled: "compilato", breakfast: "Colazione", lunch: "Pranzo", dinner: "Cena", snacks: "Spuntini",
+      hydration: "Idratazione", notes: "Note", caloriesEstimate: "Stima calorie (kcal)", proteinEstimate: "Stima proteine (g)",
+      clearDay: "Pulisci giorno", saveWeekly: "Salva piano settimanale", breakfastPlaceholder: "Es: Avena con banana, uova strapazzate...",
+      lunchPlaceholder: "Es: Pollo alla griglia, riso, verdure...", dinnerPlaceholder: "Es: Zuppa di verdure, pesce alla griglia...",
+      snacksPlaceholder: "Es: Yogurt, frutta, frutta secca...", hydrationPlaceholder: "Es: 2,5 litri d'acqua",
+      notesPlaceholder: "Es: Evitare zucchero raffinato dopo le 18...", caloriesPlaceholder: "Es: 2200", proteinPlaceholder: "Es: 160",
+      officialDiet: "Dieta ufficiale", title: "Titolo", country: "Paese", calories: "Calorie", protein: "Proteine g",
+      carbs: "Carboidrati g", fat: "Grassi g", restrictions: "Restrizioni", coachNotes: "Note del coach",
+      bmr: "BMR calcolato", tdee: "TDEE stimato", target: "Obiettivo dieta", foodsTotal: "Totale alimenti",
+      missing: "Mancano", exceeded: "Superato di", matched: "Allineato all'obiettivo",
+      mismatchToast: "La dieta deve chiudere a {target} kcal. Correggi {delta} kcal prima di salvare.",
+      mismatchHelp: "Anche il backend rifiuterà questa dieta finché il totale degli alimenti non corrisponde esattamente all'obiettivo calorico.",
+      saveChanges: "Salva modifiche", createManual: "Crea dieta manuale", generateGuto: "Genera con GUTO", history: "Storico",
+      allowGuto: "Permetti a GUTO di aggiornare", lockGuto: "Blocca modifiche automatiche", reset: "Reset dieta",
+      mealsOf: "Pasti di {name}", meal: "Pasto", time: "Orario", calculatedKcal: "Kcal calcolate",
+      substitutions: "Sostituzioni", food: "Alimento", quantity: "Quantità", observation: "Nota",
+      addFood: "Aggiungi alimento", addMeal: "Aggiungi pasto", newMeal: "Nuovo pasto",
+      dietHistory: "Storico dieta", noDietHistory: "Nessuno storico dieta.",
+    },
+    planStatus: { locked: "Bloccato contro GUTO", unlocked: "GUTO può aggiornare" },
+    rankings: { weekly: "Classifica settimanale", monthly: "Classifica mensile", general: "Classifica generale" },
+    dialogs: {
+      createStudent: "Crea studente", studentDesc: "Crea accesso reale nel backend. Senza password, il backend genera un invito.",
+      firstName: "Nome", lastName: "Cognome", validEmail: "Usa un'email reale. Esempio: studente@email.com.",
+      validPhone: "Usa un numero reale con prefisso. Sequenze come 111 non entrano.", sex: "Sesso", male: "Maschile",
+      female: "Femminile", preferNot: "Preferisco non dirlo", age: "Età", optionalPassword: "Password iniziale opzionale",
+      selectTeam: "Seleziona un Team *", responsibleCoach: "Coach responsabile", activateNow: "Attiva accesso ora",
+      createCoach: "Crea coach", coachDesc: "Solo super admin/admin può creare coach.", name: "Nome", optionalCoachPassword: "Password opzionale",
+      createTeam: "Crea Team", teamDesc: "Crea un nuovo GUTO Time. Solo super admin.", teamName: "Nome del Team",
+      maxStudents: "Max studenti (vuoto = illimitato)", maxCoaches: "Max coach (vuoto = illimitato)",
+    },
+    days: {
+      monday: ["Lunedì", "Lun"], tuesday: ["Martedì", "Mar"], wednesday: ["Mercoledì", "Mer"],
+      thursday: ["Giovedì", "Gio"], friday: ["Venerdì", "Ven"], saturday: ["Sabato", "Sab"], sunday: ["Domenica", "Dom"],
+      today: ["Domenica", "Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato"],
+    },
+  },
+  "en-US": {
+    loading: "Syncing panel",
+    controlRoom: "Control room",
+    hierarchy: "Hierarchy",
+    teamNotSelected: "No team selected",
+    activeStudents: "active students",
+    selectTeam: "Select a team",
+    clearSelectedTeam: "Clear selected team",
+    nav: { students: "STUDENTS", coaches: "COACHES", arena: "ARENA", logs: "HISTORY", teams: "TEAMS" },
+    detailTabs: { resumo: "Summary", acesso: "Access", calibragem: "Calibration", treino: "Workout", dieta: "Diet", arena: "Arena/XP", seguranca: "Security" },
+    meta: {
+      students: ["CONTROL ROOM / STUDENTS", "Students", "Operational base · {scope} · fast action"],
+      coaches: ["CONTROL ROOM / COACHES", "Coaches", "Limited operators · permissions and student assignments"],
+      arena: ["CONTROL ROOM / ARENA", "Arena", "Weekly and monthly XP by team · global individual ranking"],
+      logs: ["CONTROL ROOM / HISTORY", "History", "Audit trail for critical panel actions"],
+      teams: ["CONTROL ROOM / TEAMS", "Teams", "Companies, plans and B2B limits"],
+      scopeSuper: "super admin",
+      scopeOperation: "operation",
+    },
+    telemetry: { sys: "SYS", students: "STUDENTS", active: "ACTIVE", filters: "FILTERS" },
+    status: { archived: "ARCHIVED", paused: "PAUSED", hiddenArena: "HIDDEN ARENA", active: "ACTIVE" },
+    source: { guto_generated: "Generated by GUTO", coach_manual: "Coach manual", mixed: "Edited by coach", none: "No source" },
+    common: {
+      student: "Student", students: "Students", coach: "Coach", coaches: "Coaches", team: "Team", teams: "Teams",
+      status: "Status", email: "Email", phone: "Phone", subscription: "Subscription", expiresAt: "Expires on",
+      arena: "Arena", visible: "Visible", hidden: "Hidden", workout: "Workout", diet: "Diet", password: "Password",
+      cancel: "Cancel", create: "Create", save: "Save", saving: "Saving...", edit: "Edit",
+      select: "Select", deselect: "Deselect", selected: "SELECTED", reactivate: "Reactivate", archive: "Archive",
+      delete: "Delete", open: "Open", invite: "Invite", clear: "Clear", search: "Search", clean: "clean",
+      plan: "Plan", role: "Role", archived: "Archived", unlimited: "Unlimited", none: "-", today: "today",
+      updatedAt: "Last update", by: "by", noRanking: "No ranking yet.", action: "action",
+    },
+    filters: {
+      title: "Filters", foundSingular: "student found", foundPlural: "students found",
+      active: "active", paused: "paused", archived: "archived", all: "all",
+      searchPlaceholder: "Search name, email, phone or ID", allCoaches: "All coaches",
+      sexAll: "Sex: all", paymentAll: "Payment: all", minAge: "Min. age", maxAge: "Max. age",
+      activeCount: "active filters", resultSingular: "result in current view", resultPlural: "results in current view",
+    },
+    mural: {
+      kicker: "Operations board", title: "Student and accountability panel", unavailable: "Team summary unavailable.",
+      limitReached: "Plan limit reached. Upgrade the GUTO Time plan to register more {target}.",
+    },
+    table: {
+      empty: "No students found.", student: "Student", status: "Status", coach: "Coach", phone: "Phone",
+      week: "Week", month: "Month", lastAccess: "Last access", subscription: "Subscription", invite: "Invite", open: "Open",
+      seen: "Seen",
+    },
+    relative: { today: "today", oneDay: "1 day ago", manyDays: "{days} days ago" },
+    human: {
+      active: "Active", paused: "Paused", archived: "Archived", paid: "Paid", unpaid: "Pending",
+      pending_payment: "Payment pending", trial: "Trial", expired: "Expired", cancelled: "Cancelled",
+      muscle_gain: "Muscle gain", fat_loss: "Fat loss", conditioning: "Conditioning",
+      mobility_health: "Mobility and health", consistency: "Consistency", maintenance: "Maintenance",
+      endurance: "Endurance", flexibility: "Flexibility", general_fitness: "General fitness", rehabilitation: "Rehabilitation",
+      gym: "Gym", home: "Home", park: "Outdoors", mixed: "Mixed",
+      start: "GUTO Time Start", pro: "GUTO Time Pro", elite: "GUTO Time Elite", custom: "Custom",
+      male: "Male", female: "Female", other: "Other", prefer_not_to_say: "Prefer not to say",
+    },
+    errors: {
+      planLimit: "GUTO Time plan limit reached.", forbidden: "You do not have access to this student.",
+      backendRejected: "The backend rejected the action.", name: "Enter the first name.", lastName: "Enter the last name.",
+      email: "Enter a valid email.", phone: "Enter a valid phone number.", team: "Select a Team.",
+      videoName: "Enter the exercise name.", videoRequired: "Video required: enter sourceFileName and videoUrl.",
+      videoPath: "Use the internal path /exercise/visuals/custom/.", videoSafeName: "Use a safe name: lowercase, no accents, no spaces, with hyphens.",
+      videoMeta: "Fill in all technical video metadata.", videoPositive: "Technical metadata must be positive.",
+      videoLimit: "This video is too heavy for the app. Use MP4 up to 30 seconds, maximum 12MB and 720p.",
+      videoMin: "Use a video of at least 3 seconds.",
+    },
+    actions: {
+      credentialGenerated: "Credential generated", hide: "Hide", linkCopied: "Link copied.",
+      inviteCopyFailed: "Could not copy the invite.", coachPaused: "Coach paused.", coachActive: "Coach active.",
+      deleteCoachConfirm: "Delete coach? Reassign students first.", coachDeleted: "Coach deleted.",
+      teamUpdated: "Team updated.", teamReactivated: "Team reactivated.", teamArchived: "Team archived.",
+      studentCreated: "Student created.", coachCreated: "Coach created.", teamCreated: "Team created.",
+    },
+    sheet: {
+      system: "System", evolution: "Evolution", officialPlan: "Official plan", accessControl: "Access control",
+      accessInvite: "Access invite", pauseAccess: "Pause access", reactivateAccess: "Reactivate access",
+      renew30: "Renew 30 days", hideArena: "Hide in Arena", showArena: "Show in Arena",
+      assignCoach: "Assign coach", viewInvite: "View current invite", regenerateInvite: "Regenerate invite",
+      inviteUnavailable: "Link unavailable. Use regenerate to create a new invite.",
+      regenerateInviteConfirm: "Regenerate invite? The previous link will stop working.",
+      accessPaused: "Access paused.", accessReactivated: "Access reactivated.", accessRenewed: "Access renewed for 30 days.",
+      hiddenFromArena: "Student hidden from Arena.", visibleInArena: "Student visible in Arena.", inviteLoaded: "Invite loaded.",
+      newInvite: "New invite generated.", calibration: "Student calibration", saveCalibration: "Save calibration",
+      calibrationSaved: "Calibration updated.", officialWorkout: "Official workout", weeklyPlan: "Weekly plan",
+      officialDiet: "Official diet", weeklyDiet: "Weekly plan", catalogRequired: "Choose an exercise from the official catalog before saving.",
+      workoutSaved: "Official workout saved.", workoutGenerated: "Workout generated by GUTO.", gutoCanUpdateWorkout: "GUTO can update the workout.",
+      workoutLocked: "Workout protected from overwrites.", resetWorkoutConfirm: "Reset this student's official workout?", workoutReset: "Workout reset.",
+      dietSaved: "Official diet saved.", dietGenerated: "GUTO diet loaded.", gutoCanUpdateDiet: "GUTO can update the diet.",
+      dietLocked: "Diet protected from overwrites.", resetDietConfirm: "Reset this student's official diet?", dietReset: "Diet reset.",
+      arenaXp: "Arena and XP", resetWeek: "Reset week", resetMonth: "Reset month", resetXp: "Reset XP",
+      resetHistory: "Reset history", resetDone: "Reset completed.", tempPassword: "Temporary password",
+      generateTempPassword: "Generate temporary password", tempPasswordGenerated: "Temporary password generated.",
+      criticalZone: "Critical zone", permanentDelete: "Delete permanently",
+      permanentDeleteConfirm: "Permanently delete this student and all linked data?",
+      permanentDeleted: "Student permanently deleted.",
+      permanentDeleteHelp: "Permanent deletion erases linked student data. Use it only when the company requests definitive removal.",
+    },
+    calibration: {
+      age: "Age", sex: "Biological sex", level: "Level", goal: "Goal", location: "Preferred location",
+      country: "Country", height: "Height cm", weight: "Weight kg", pathology: "Pain or limitation", foodRestrictions: "Food restrictions",
+    },
+    workout: {
+      weeklySaved: "Weekly plan saved.", weeklySaveError: "Error saving weekly plan.", weeklyTitle: "Weekly plan",
+      weeklyHelp: "Build each day's workout. The student will only see the current day's workout in the app.",
+      dayWorkout: "Day workout", todayLabel: "Today", mainBlock: "Main", restDay: "Rest / no workout",
+      focus: "Day focus", coachNotes: "Coach notes", focusPlaceholder: "Ex: Chest + triceps", notesPlaceholder: "Optional notes",
+      sets: "Sets", reps: "Reps", load: "Load", rest: "Rest", technique: "Technique", movementNote: "Movement note",
+      substitutions: "Substitutions", searchCatalog: "Search exercise catalog...", catalog: "Catalog", addWorkout: "Add workout",
+      removeDay: "Remove day", saveWeekly: "Save weekly plan", title: "Title", muscleFocus: "Muscle group / focus",
+      day: "Day", location: "Location", select: "Select", duration: "Estimated duration", difficulty: "Difficulty",
+      saveChanges: "Save changes", createManual: "Create manual workout", generateGuto: "Generate with GUTO",
+      history: "History", allowGuto: "Allow GUTO to update", lockGuto: "Lock automatic changes",
+      reset: "Reset workout", addNewExercise: "Add new exercise", officialName: "Official name", optionalId: "Optional ID",
+      group: "Group", equipment: "Equipment", safeMp4: "Safe MP4 file", internalPath: "Internal path",
+      durationSeconds: "Duration s", hasAudio: "Video has audio", sendApproval: "Send for approval",
+      approvalSent: "Exercise sent for technical approval.", studentExercises: "{name}'s exercises",
+      officialExercise: "Official exercise", searchOfficial: "Search the official catalog", notChosen: "Not selected",
+      notFound: "Exercise not found in the catalog. To use it, it must be added to the official catalog with a validated local video.",
+      chooseBeforeSave: "Choose an exercise from the official catalog before saving.", noEquipment: "no equipment",
+      interval: "Rest interval", addExercise: "Add exercise", workoutHistory: "Workout history", noWorkoutHistory: "No workout history.",
+      videoLimitCopy: "Video required: MP4, up to 30s, up to 12MB, maximum 720p, no audio, internal path /exercise/visuals/custom/.",
+      videoNoUpload: "There is no real upload here: the video must already be optimized and available in the controlled internal path.",
+    },
+    diet: {
+      weeklySaved: "Weekly diet plan saved.", weeklySaveError: "Error saving weekly diet plan.",
+      weeklyTitle: "Weekly diet plan", weeklyHelp: "Build each day's diet. Blank fields will not be saved. The student will see the daily diet through a future integration.",
+      noDiet: "No diet scheduled", filled: "filled", breakfast: "Breakfast", lunch: "Lunch", dinner: "Dinner", snacks: "Snacks",
+      hydration: "Hydration", notes: "Notes", caloriesEstimate: "Calorie estimate (kcal)", proteinEstimate: "Protein estimate (g)",
+      clearDay: "Clear day", saveWeekly: "Save weekly plan", breakfastPlaceholder: "Ex: Oats with banana, scrambled eggs...",
+      lunchPlaceholder: "Ex: Grilled chicken, rice, vegetables...", dinnerPlaceholder: "Ex: Vegetable soup, grilled fish...",
+      snacksPlaceholder: "Ex: Yogurt, fruit, nuts...", hydrationPlaceholder: "Ex: 2.5 liters of water",
+      notesPlaceholder: "Ex: Avoid refined sugar after 6 PM...", caloriesPlaceholder: "Ex: 2200", proteinPlaceholder: "Ex: 160",
+      officialDiet: "Official diet", title: "Title", country: "Country", calories: "Calories", protein: "Protein g",
+      carbs: "Carbs g", fat: "Fat g", restrictions: "Restrictions", coachNotes: "Coach notes",
+      bmr: "Calculated BMR", tdee: "Estimated TDEE", target: "Diet target", foodsTotal: "Food total",
+      missing: "Missing", exceeded: "Exceeded by", matched: "Matched to target",
+      mismatchToast: "The diet must close at {target} kcal. Adjust {delta} kcal before saving.",
+      mismatchHelp: "The backend will also reject this diet while the food total does not exactly match the calorie target.",
+      saveChanges: "Save changes", createManual: "Create manual diet", generateGuto: "Generate with GUTO", history: "History",
+      allowGuto: "Allow GUTO to update", lockGuto: "Lock automatic changes", reset: "Reset diet",
+      mealsOf: "{name}'s meals", meal: "Meal", time: "Time", calculatedKcal: "Calculated kcal",
+      substitutions: "Substitutions", food: "Food", quantity: "Quantity", observation: "Note",
+      addFood: "Add food", addMeal: "Add meal", newMeal: "New meal",
+      dietHistory: "Diet history", noDietHistory: "No diet history.",
+    },
+    planStatus: { locked: "Locked against GUTO", unlocked: "GUTO can update" },
+    rankings: { weekly: "Weekly ranking", monthly: "Monthly ranking", general: "Overall ranking" },
+    dialogs: {
+      createStudent: "Create student", studentDesc: "Creates real backend access. Without a password, the backend generates an invite.",
+      firstName: "First name", lastName: "Last name", validEmail: "Use a real email. Example: student@email.com.",
+      validPhone: "Use a real phone number with area code. Sequences like 111 are not accepted.", sex: "Sex", male: "Male",
+      female: "Female", preferNot: "Prefer not to say", age: "Age", optionalPassword: "Optional initial password",
+      selectTeam: "Select a Team *", responsibleCoach: "Responsible coach", activateNow: "Activate access now",
+      createCoach: "Create coach", coachDesc: "Only super admin/admin can create a coach.", name: "Name", optionalCoachPassword: "Optional password",
+      createTeam: "Create Team", teamDesc: "Creates a new GUTO Time. Super admin only.", teamName: "Team name",
+      maxStudents: "Max students (blank = unlimited)", maxCoaches: "Max coaches (blank = unlimited)",
+    },
+    days: {
+      monday: ["Monday", "Mon"], tuesday: ["Tuesday", "Tue"], wednesday: ["Wednesday", "Wed"],
+      thursday: ["Thursday", "Thu"], friday: ["Friday", "Fri"], saturday: ["Saturday", "Sat"], sunday: ["Sunday", "Sun"],
+      today: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+    },
+  },
+} as const;
+
+type AdminPanelCopy = (typeof ADMIN_PANEL_COPY)[AdminPanelLanguage];
+
+function copyText(template: string, values: Record<string, string | number>): string {
+  return Object.entries(values).reduce((text, [key, value]) => text.replaceAll(`{${key}}`, String(value)), template);
+}
+
+function getDetailTabs(isAdmin: boolean, copy: AdminPanelCopy): Array<{ id: DetailTab; label: string }> {
   const allTabs: Array<{ id: DetailTab; label: string }> = [
-    { id: "resumo", label: "Resumo" },
-    { id: "calibragem", label: "Calibragem" },
-    { id: "treino", label: "Treino" },
-    { id: "dieta", label: "Dieta" },
+    { id: "resumo", label: copy.detailTabs.resumo },
+    { id: "calibragem", label: copy.detailTabs.calibragem },
+    { id: "treino", label: copy.detailTabs.treino },
+    { id: "dieta", label: copy.detailTabs.dieta },
   ];
   if (isAdmin) {
-    allTabs.splice(1, 0, { id: "acesso", label: "Acesso" });
-    allTabs.push({ id: "arena", label: "Arena/XP" });
-    allTabs.push({ id: "seguranca", label: "Senha" });
+    allTabs.splice(1, 0, { id: "acesso", label: copy.detailTabs.acesso });
+    allTabs.push({ id: "arena", label: copy.detailTabs.arena });
+    allTabs.push({ id: "seguranca", label: copy.detailTabs.seguranca });
   }
   return allTabs;
 }
 
-function dashboardScreenMeta(tab: DashboardTab, isSuperAdmin: boolean): { kicker: string; title: string; subtitle: string } {
-  const scope = isSuperAdmin ? "super admin" : "operação";
-  const map: Record<DashboardTab, { kicker: string; title: string; subtitle: string }> = {
-    students: { kicker: "SALA DE CONTROLE / ALUNOS", title: "Alunos", subtitle: `Base operacional · ${scope} · ação rápida` },
-    coaches: { kicker: "SALA DE CONTROLE / COACHES", title: "Coaches", subtitle: "Operadores limitados · permissões e vínculo com alunos" },
-    arena: { kicker: "SALA DE CONTROLE / ARENA", title: "Arena", subtitle: "XP semanal e mensal por time · ranking individual global" },
-    logs: { kicker: "SALA DE CONTROLE / HISTÓRICO", title: "Histórico", subtitle: "Auditoria das ações críticas do painel" },
-    teams: { kicker: "SALA DE CONTROLE / TIMES", title: "Times", subtitle: "Empresas, planos e limites B2B" },
+function dashboardScreenMeta(tab: DashboardTab, isSuperAdmin: boolean, copy: AdminPanelCopy): { kicker: string; title: string; subtitle: string } {
+  const scope = isSuperAdmin ? copy.meta.scopeSuper : copy.meta.scopeOperation;
+  const map = {
+    students: copy.meta.students,
+    coaches: copy.meta.coaches,
+    arena: copy.meta.arena,
+    logs: copy.meta.logs,
+    teams: copy.meta.teams,
   };
-  return map[tab];
+  const [kicker, title, subtitle] = map[tab];
+  return { kicker, title, subtitle: subtitle.replace("{scope}", scope) };
 }
-
-const EXERCISE_VIDEO_LIMIT_COPY = "Vídeo obrigatório: MP4, até 30s, até 12MB, máximo 720p, sem áudio, caminho interno /exercise/visuals/custom/.";
-const EXERCISE_VIDEO_ERROR_COPY = "Esse vídeo está pesado demais para o app. Use MP4 até 30 segundos, máximo 12MB e 720p.";
 
 function blankCustomExerciseDraft(): CustomExerciseDraft {
   return {
@@ -251,44 +763,44 @@ function blankCustomExerciseDraft(): CustomExerciseDraft {
   };
 }
 
-function getStatusInfo(s: AdminStudent): { text: string; variant: "default" | "secondary" | "destructive" | "outline" } {
-  if (s.archived) return { text: "ARQUIVADO", variant: "destructive" };
-  if (!s.active) return { text: "PAUSADO", variant: "secondary" };
-  if (!s.visibleInArena) return { text: "OCULTO ARENA", variant: "outline" };
-  return { text: "ATIVO", variant: "default" };
+function getStatusInfo(s: AdminStudent, copy: AdminPanelCopy): { text: string; variant: "default" | "secondary" | "destructive" | "outline" } {
+  if (s.archived) return { text: copy.status.archived, variant: "destructive" };
+  if (!s.active) return { text: copy.status.paused, variant: "secondary" };
+  if (!s.visibleInArena) return { text: copy.status.hiddenArena, variant: "outline" };
+  return { text: copy.status.active, variant: "default" };
 }
 
-function relativeTime(iso: string | null): string {
-  if (!iso) return "-";
+function relativeTime(iso: string | null, copy: AdminPanelCopy): string {
+  if (!iso) return copy.common.none;
   const diff = Date.now() - new Date(iso).getTime();
   const days = Math.floor(diff / 86400000);
-  if (days <= 0) return "hoje";
-  if (days === 1) return "há 1 dia";
-  return `há ${days} dias`;
+  if (days <= 0) return copy.relative.today;
+  if (days === 1) return copy.relative.oneDay;
+  return copyText(copy.relative.manyDays, { days });
 }
 
 function avatarStageLabel(stage: AvatarStage): string {
   return ({ baby: "Baby", teen: "Teen", adult: "Adult", elite: "Elite" } as Record<AvatarStage, string>)[stage] ?? stage;
 }
 
-function adminErrorMessage(error: unknown): string {
+function adminErrorMessage(error: unknown, copy: AdminPanelCopy = ADMIN_PANEL_COPY["pt-BR"]): string {
   if (error instanceof ApiError) {
     const code = error.details && typeof error.details === "object" && "code" in error.details ? String(error.details.code) : "";
-    if (code === "GUTO_TEAM_PLAN_LIMIT_REACHED") return "Limite do plano GUTO Time atingido.";
-    if (error.status === 403) return "Você não tem acesso a este aluno.";
+    if (code === "GUTO_TEAM_PLAN_LIMIT_REACHED") return copy.errors.planLimit;
+    if (error.status === 403) return copy.errors.forbidden;
     const suffix = error.status ? ` (${error.status})` : "";
-    return `${error.message || "Backend recusou a ação"}${suffix}`;
+    return `${error.message || copy.errors.backendRejected}${suffix}`;
   }
   if (error instanceof Error) return error.message;
-  return "Backend recusou a ação.";
+  return copy.errors.backendRejected;
 }
 
-function sourceLabel(source?: string): string {
-  return source ? SOURCE_LABEL[source] || source : "Sem origem";
+function sourceLabel(source: string | undefined, copy: AdminPanelCopy): string {
+  return source ? copy.source[source as keyof typeof copy.source] || source : copy.source.none;
 }
 
-function formatDate(value?: string | null): string {
-  return value ? new Date(value).toLocaleDateString() : "-";
+function formatDate(value: string | null | undefined, language: AdminPanelLanguage): string {
+  return value ? new Date(value).toLocaleDateString(language) : ADMIN_PANEL_COPY[language].common.none;
 }
 
 function coachLabel(student: AdminStudent, coaches: AdminCoach[]): string {
@@ -318,15 +830,15 @@ function blankExercise(index = 0): GutoWorkoutExercise {
   };
 }
 
-function blankWorkout(student: AdminStudent): GutoWorkoutPlan {
+function blankWorkout(student: AdminStudent, copy: AdminPanelCopy = ADMIN_PANEL_COPY["pt-BR"]): GutoWorkoutPlan {
   return {
     studentId: student.userId,
-    title: "Treino manual",
-    focus: "Treino manual",
+    title: copy.workout.createManual,
+    focus: copy.workout.createManual,
     weekDay: "today",
     goal: student.plan || "",
     location: "gym",
-    dateLabel: "Hoje",
+    dateLabel: copy.workout.todayLabel,
     scheduledFor: new Date().toISOString(),
     summary: "",
     source: "coach_manual",
@@ -336,7 +848,7 @@ function blankWorkout(student: AdminStudent): GutoWorkoutPlan {
     difficulty: "",
     coachNotes: "",
     exercises: [blankExercise()],
-    blocks: [{ name: "Principal", exercises: [blankExercise()] }],
+    blocks: [{ name: copy.workout.mainBlock, exercises: [blankExercise()] }],
   };
 }
 
@@ -362,7 +874,7 @@ function isSafeExerciseVideoFileName(value: string): boolean {
   return /^[a-z0-9]+(?:-[a-z0-9]+)*\.mp4$/.test(value);
 }
 
-function validateCustomExerciseDraft(draft: CustomExerciseDraft): string | null {
+function validateCustomExerciseDraft(draft: CustomExerciseDraft, copy: AdminPanelCopy): string | null {
   const fileSizeBytes = Number(draft.fileSizeBytes);
   const durationSeconds = Number(draft.durationSeconds);
   const width = Number(draft.width);
@@ -373,14 +885,14 @@ function validateCustomExerciseDraft(draft: CustomExerciseDraft): string | null 
   const longSide = Math.max(width, height);
   const shortSide = Math.min(width, height);
 
-  if (!draft.canonicalNamePt.trim()) return "Informe o nome do exercício.";
-  if (!sourceFileName || !videoUrl) return "Vídeo obrigatório: informe sourceFileName e videoUrl.";
-  if (!videoUrl.startsWith("/exercise/visuals/custom/") || videoUrl.includes("..") || /\s/.test(videoUrl)) return "Use caminho interno /exercise/visuals/custom/.";
-  if (!isSafeExerciseVideoFileName(sourceFileName) || !videoUrl.endsWith(`/${sourceFileName}`)) return "Use nome seguro: lowercase, sem acento, sem espaço e com hífen.";
-  if (!Number.isFinite(fileSizeBytes) || !Number.isFinite(durationSeconds) || !Number.isFinite(width) || !Number.isFinite(height) || !Number.isFinite(fps)) return "Preencha todos os metadados técnicos do vídeo.";
-  if (fileSizeBytes <= 0 || durationSeconds <= 0 || width <= 0 || height <= 0 || fps <= 0) return "Metadados técnicos precisam ser positivos.";
-  if (fileSizeBytes > 12 * 1024 * 1024 || durationSeconds > 30 || longSide > 1280 || shortSide > 720 || fps > 30 || draft.hasAudio) return EXERCISE_VIDEO_ERROR_COPY;
-  if (durationSeconds < 3) return "Use vídeo com pelo menos 3 segundos.";
+  if (!draft.canonicalNamePt.trim()) return copy.errors.videoName;
+  if (!sourceFileName || !videoUrl) return copy.errors.videoRequired;
+  if (!videoUrl.startsWith("/exercise/visuals/custom/") || videoUrl.includes("..") || /\s/.test(videoUrl)) return copy.errors.videoPath;
+  if (!isSafeExerciseVideoFileName(sourceFileName) || !videoUrl.endsWith(`/${sourceFileName}`)) return copy.errors.videoSafeName;
+  if (!Number.isFinite(fileSizeBytes) || !Number.isFinite(durationSeconds) || !Number.isFinite(width) || !Number.isFinite(height) || !Number.isFinite(fps)) return copy.errors.videoMeta;
+  if (fileSizeBytes <= 0 || durationSeconds <= 0 || width <= 0 || height <= 0 || fps <= 0) return copy.errors.videoPositive;
+  if (fileSizeBytes > 12 * 1024 * 1024 || durationSeconds > 30 || longSide > 1280 || shortSide > 720 || fps > 30 || draft.hasAudio) return copy.errors.videoLimit;
+  if (durationSeconds < 3) return copy.errors.videoMin;
   return null;
 }
 
@@ -398,12 +910,14 @@ function catalogSearchText(exercise: AdminCatalogExercise): string {
 function workoutExerciseFromCatalog(
   catalogExercise: AdminCatalogExercise,
   current: GutoWorkoutExercise,
-  index: number
+  index: number,
+  language: AdminPanelLanguage = "pt-BR"
 ): GutoWorkoutExercise {
+  const localizedName = catalogExercise.namesByLanguage?.[language] || catalogExercise.canonicalNamePt;
   return {
     ...current,
     id: catalogExercise.id,
-    name: catalogExercise.canonicalNamePt,
+    name: localizedName,
     canonicalNamePt: catalogExercise.canonicalNamePt,
     muscleGroup: catalogExercise.muscleGroup,
     order: current.order ?? index + 1,
@@ -413,8 +927,8 @@ function workoutExerciseFromCatalog(
   };
 }
 
-function normalizeWorkoutForEditor(plan: GutoWorkoutPlan | null, student: AdminStudent): GutoWorkoutPlan {
-  if (!plan) return blankWorkout(student);
+function normalizeWorkoutForEditor(plan: GutoWorkoutPlan | null, student: AdminStudent, copy: AdminPanelCopy = ADMIN_PANEL_COPY["pt-BR"]): GutoWorkoutPlan {
+  if (!plan) return blankWorkout(student, copy);
   const exercises = (plan.exercises?.length ? plan.exercises : []).map((exercise, index) => ({
     ...blankExercise(index),
     ...exercise,
@@ -423,7 +937,7 @@ function normalizeWorkoutForEditor(plan: GutoWorkoutPlan | null, student: AdminS
     alternatives: exercise.alternatives ?? [],
   }));
   return {
-    ...blankWorkout(student),
+    ...blankWorkout(student, copy),
     ...plan,
     studentId: student.userId,
     source: plan.source || (plan.manualOverride ? "coach_manual" : "guto_generated"),
@@ -431,10 +945,10 @@ function normalizeWorkoutForEditor(plan: GutoWorkoutPlan | null, student: AdminS
   };
 }
 
-function blankDiet(student: AdminStudent): DietPlan {
+function blankDiet(student: AdminStudent, copy: AdminPanelCopy = ADMIN_PANEL_COPY["pt-BR"]): DietPlan {
   return {
     userId: student.userId,
-    title: "Dieta manual",
+    title: copy.diet.createManual,
     generatedAt: new Date().toISOString(),
     country: "",
     goal: "fat_loss",
@@ -452,31 +966,44 @@ function blankDiet(student: AdminStudent): DietPlan {
     },
     meals: [
       {
-        id: "breakfast",
-        name: "Café da manhã",
-        time: "07:30",
-        totalKcal: 400,
-        gutoNote: "",
-        foods: [{ name: "Ovos", quantity: "2 unidades", kcal: 160, notes: "" }],
-        alternatives: [],
+	        id: "breakfast",
+	        name: copy.diet.breakfast,
+	        time: "07:30",
+	        totalKcal: 160,
+	        gutoNote: "",
+	        foods: [{ name: copy.diet.food, quantity: "2", kcal: 160, notes: "" }],
+	        alternatives: [],
       },
     ],
     foodRestrictions: "",
     coachNotes: "",
-  };
+	  };
+	}
+
+function mealFoodKcalTotal(meal: DietPlan["meals"][number]): number {
+  return Math.round((meal.foods || []).reduce((sum, food) => sum + (Number(food.kcal) || 0), 0));
 }
 
-function normalizeDietForEditor(plan: DietPlan | null, student: AdminStudent): DietPlan {
-  if (!plan) return blankDiet(student);
-  return {
-    ...blankDiet(student),
+function syncMealKcal(meal: DietPlan["meals"][number]): DietPlan["meals"][number] {
+  const totalKcal = mealFoodKcalTotal(meal);
+  return { ...meal, totalKcal };
+}
+
+function dietFoodKcalTotal(plan: DietPlan): number {
+  return plan.meals.reduce((sum, meal) => sum + mealFoodKcalTotal(meal), 0);
+}
+
+function normalizeDietForEditor(plan: DietPlan | null, student: AdminStudent, copy: AdminPanelCopy = ADMIN_PANEL_COPY["pt-BR"]): DietPlan {
+	  if (!plan) return blankDiet(student, copy);
+	  return {
+    ...blankDiet(student, copy),
     ...plan,
     userId: student.userId,
     source: plan.source || (plan.manualOverride ? "coach_manual" : "guto_generated"),
-    macros: { ...blankDiet(student).macros, ...plan.macros },
-    meals: plan.meals?.length ? plan.meals : blankDiet(student).meals,
-  };
-}
+    macros: { ...blankDiet(student, copy).macros, ...plan.macros },
+	    meals: (plan.meals?.length ? plan.meals : blankDiet(student, copy).meals).map(syncMealKcal),
+	  };
+	}
 
 function calibrationFromMemory(memory: GutoMemory | null): CalibrationDraft {
   return {
@@ -493,34 +1020,9 @@ function calibrationFromMemory(memory: GutoMemory | null): CalibrationDraft {
   };
 }
 
-function formatHuman(val: string | null | undefined): string {
-  if (!val) return "-";
-  const m: Record<string, string> = {
-    active: "Ativo",
-    paused: "Pausado",
-    archived: "Arquivado",
-    paid: "Pago",
-    unpaid: "Pendente",
-    pending_payment: "Pagamento pendente",
-    trial: "Teste",
-    expired: "Expirado",
-    cancelled: "Cancelado",
-    muscle_gain: "Ganho de massa",
-    fat_loss: "Perda de gordura",
-    conditioning: "Condicionamento",
-    mobility_health: "Saúde e mobilidade",
-    consistency: "Consistência",
-    maintenance: "Manutenção",
-    gym: "Academia",
-    home: "Casa",
-    park: "Parque",
-    mixed: "Misto",
-    start: "GUTO Time Start",
-    pro: "GUTO Time Pro",
-    elite: "GUTO Time Elite",
-    custom: "Custom",
-  };
-  return m[val] ?? val.replace(/_/g, " ");
+function formatHuman(val: string | null | undefined, copy: AdminPanelCopy): string {
+  if (!val) return copy.common.none;
+  return copy.human[val as keyof typeof copy.human] ?? val.replace(/_/g, " ");
 }
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i;
@@ -538,12 +1040,12 @@ function isValidPhone(value: string): boolean {
   return digits.length >= 8 && digits.length <= 15 && !/^(\d)\1+$/.test(digits);
 }
 
-function studentDraftError(draft: StudentDraft, isSuperAdmin: boolean): string | null {
-  if (!draft.firstName.trim()) return "Informe o nome.";
-  if (!draft.lastName.trim()) return "Informe o sobrenome.";
-  if (!isValidEmail(draft.email)) return "Informe um email válido.";
-  if (!isValidPhone(draft.phone)) return "Informe um telefone válido.";
-  if (isSuperAdmin && !draft.teamId) return "Selecione um Time.";
+function studentDraftError(draft: StudentDraft, isSuperAdmin: boolean, copy: AdminPanelCopy): string | null {
+  if (!draft.firstName.trim()) return copy.errors.name;
+  if (!draft.lastName.trim()) return copy.errors.lastName;
+  if (!isValidEmail(draft.email)) return copy.errors.email;
+  if (!isValidPhone(draft.phone)) return copy.errors.phone;
+  if (isSuperAdmin && !draft.teamId) return copy.errors.team;
   return null;
 }
 
@@ -551,6 +1053,7 @@ function CoachInner() {
   const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
 
+  const [adminLanguage, setAdminLanguage] = useState<AdminPanelLanguage>("pt-BR");
   const [activeDashboardTab, setActiveDashboardTab] = useState<DashboardTab>("students");
   const [students, setStudents] = useState<AdminStudent[]>([]);
   const [coaches, setCoaches] = useState<AdminCoach[]>([]);
@@ -591,11 +1094,12 @@ function CoachInner() {
 
   const isAdmin = user?.role === "admin" || user?.role === "super_admin";
   const isSuperAdmin = user?.role === "super_admin";
+  const copy = ADMIN_PANEL_COPY[adminLanguage];
   const studentLimitReached = Boolean(teamSummary && teamSummary.limits.maxStudents !== null && teamSummary.usage.students >= teamSummary.limits.maxStudents);
   const coachLimitReached = Boolean(teamSummary && teamSummary.limits.maxCoaches !== null && teamSummary.usage.coaches >= teamSummary.limits.maxCoaches);
   const superAdminNeedsTeam = isSuperAdmin && !selectedTeamId;
   const selectedTeam = teams.find((t) => t.id === selectedTeamId) ?? null;
-  const detailTabs = useMemo(() => getDetailTabs(isAdmin), [isAdmin]);
+  const detailTabs = useMemo(() => getDetailTabs(isAdmin, copy), [copy, isAdmin]);
   const activeFilterCount = [
     search,
     filter !== "ativos" ? filter : "",
@@ -613,19 +1117,29 @@ function CoachInner() {
   }), [students]);
   const dashboardNavItems = useMemo<DashboardNavItem[]>(() => {
     const items: DashboardNavItem[] = [
-      { id: "students", label: "ALUNOS", icon: <Users className="h-4 w-4" />, badge: studentSnapshot.active },
-      { id: "arena", label: "ARENA", icon: <Activity className="h-4 w-4" /> },
+      { id: "students", label: copy.nav.students, icon: <Users className="h-4 w-4" />, badge: studentSnapshot.active },
+      { id: "arena", label: copy.nav.arena, icon: <Activity className="h-4 w-4" /> },
     ];
     if (isAdmin) {
-      items.splice(1, 0, { id: "coaches", label: "COACHES", icon: <Shield className="h-4 w-4" />, badge: coaches.length || undefined });
-      items.push({ id: "logs", label: "HISTÓRICO", icon: <History className="h-4 w-4" /> });
+      items.splice(1, 0, { id: "coaches", label: copy.nav.coaches, icon: <Shield className="h-4 w-4" />, badge: coaches.length || undefined });
+      items.push({ id: "logs", label: copy.nav.logs, icon: <History className="h-4 w-4" /> });
     }
     if (isSuperAdmin) {
-      items.push({ id: "teams", label: "TIMES", icon: <Building2 className="h-4 w-4" />, badge: teams.length || undefined });
+      items.push({ id: "teams", label: copy.nav.teams, icon: <Building2 className="h-4 w-4" />, badge: teams.length || undefined });
     }
     return items;
-  }, [coaches.length, isAdmin, isSuperAdmin, studentSnapshot.active, teams.length]);
-  const screenMeta = dashboardScreenMeta(activeDashboardTab, isSuperAdmin);
+  }, [coaches.length, copy, isAdmin, isSuperAdmin, studentSnapshot.active, teams.length]);
+  const screenMeta = dashboardScreenMeta(activeDashboardTab, isSuperAdmin, copy);
+
+  useEffect(() => {
+    const saved = typeof window !== "undefined" ? window.localStorage.getItem(ADMIN_PANEL_LANGUAGE_KEY) : null;
+    if (isAdminPanelLanguage(saved)) setAdminLanguage(saved);
+  }, [copy]);
+
+  const changeAdminLanguage = useCallback((language: AdminPanelLanguage) => {
+    setAdminLanguage(language);
+    window.localStorage.setItem(ADMIN_PANEL_LANGUAGE_KEY, language);
+  }, []);
 
   useEffect(() => {
     if (!authLoading && (!user || (user.role !== "coach" && user.role !== "admin" && user.role !== "super_admin"))) {
@@ -656,9 +1170,9 @@ function CoachInner() {
       setTeamSummary(data);
       setTeamSummaryError(null);
     } catch (error) {
-      setTeamSummaryError(adminErrorMessage(error));
+      setTeamSummaryError(adminErrorMessage(error, copy));
     }
-  }, []);
+  }, [copy]);
 
   const fetchCoaches = useCallback(async () => {
     if (!isAdmin) return;
@@ -695,11 +1209,11 @@ function CoachInner() {
     try {
       await Promise.all([fetchCoaches(), fetchExerciseCatalog(), fetchTeamSummary(), fetchTeams()]);
     } catch (error) {
-      toast.error(adminErrorMessage(error));
+      toast.error(adminErrorMessage(error, copy));
     } finally {
       setLoading(false);
     }
-  }, [fetchCoaches, fetchExerciseCatalog, fetchTeamSummary, fetchTeams, user]);
+  }, [copy, fetchCoaches, fetchExerciseCatalog, fetchTeamSummary, fetchTeams, user]);
 
   useEffect(() => {
     void loadBase();
@@ -707,13 +1221,13 @@ function CoachInner() {
 
   useEffect(() => {
     if (!user) return;
-    void fetchStudents().catch((error) => toast.error(adminErrorMessage(error)));
-  }, [fetchStudents, user]);
+    void fetchStudents().catch((error) => toast.error(adminErrorMessage(error, copy)));
+  }, [copy, fetchStudents, user]);
 
   useEffect(() => {
-    if (activeDashboardTab === "arena") void fetchRankings().catch((error) => toast.error(adminErrorMessage(error)));
-    if (activeDashboardTab === "logs") void fetchGlobalLogs().catch((error) => toast.error(adminErrorMessage(error)));
-  }, [activeDashboardTab, fetchGlobalLogs, fetchRankings]);
+    if (activeDashboardTab === "arena") void fetchRankings().catch((error) => toast.error(adminErrorMessage(error, copy)));
+    if (activeDashboardTab === "logs") void fetchGlobalLogs().catch((error) => toast.error(adminErrorMessage(error, copy)));
+  }, [activeDashboardTab, copy, fetchGlobalLogs, fetchRankings]);
 
   useEffect(() => {
     if (detailTabs.some((tab) => tab.id === detailTab)) return;
@@ -756,13 +1270,13 @@ function CoachInner() {
       dietHistory: dietHistory.history,
     };
     setSelectedDetail(nextDetail);
-    setWorkoutEditor(normalizeWorkoutForEditor(workout.workout, detail.student));
+    setWorkoutEditor(normalizeWorkoutForEditor(workout.workout, detail.student, copy));
     setWeeklyWorkoutPlan(weeklyWorkout.weeklyWorkout);
     setWeeklyDietPlan(weeklyDiet.weeklyDiet);
-    setDietEditor(normalizeDietForEditor(diet.diet, detail.student));
+    setDietEditor(normalizeDietForEditor(diet.diet, detail.student, copy));
     setCalibrationDraft(calibrationFromMemory(detail.memory));
     setStudents((current) => current.map((student) => student.userId === detail.student.userId ? detail.student : student));
-  }, []);
+  }, [copy]);
 
   const openStudent = useCallback(async (student: AdminStudent, tab: DetailTab = "resumo") => {
     setDetailTab(tab);
@@ -778,20 +1292,20 @@ function CoachInner() {
     try {
       await refreshSelected(student.userId);
     } catch (error) {
-      toast.error(adminErrorMessage(error));
+      toast.error(adminErrorMessage(error, copy));
     }
-  }, [refreshSelected]);
+  }, [copy, refreshSelected]);
 
   const copyStudentInvite = useCallback(async (student: AdminStudent) => {
     try {
       const result = await getAdminStudentInvite(student.userId);
       const link = result.inviteLink ?? (await regenerateAdminStudentInvite(student.userId)).inviteLink;
       await navigator.clipboard.writeText(link);
-      toast.success("Link copiado.");
+      toast.success(copy.actions.linkCopied);
     } catch {
-      toast.error("Não foi possível copiar o convite.");
+      toast.error(copy.actions.inviteCopyFailed);
     }
-  }, []);
+  }, [copy]);
 
   const act = useCallback(async (fn: () => Promise<void>, successMsg: string) => {
     setActing(true);
@@ -801,18 +1315,18 @@ function CoachInner() {
       await Promise.all([fetchStudents(), fetchTeamSummary()]);
       if (selectedDetail) await refreshSelected(selectedDetail.student.userId);
     } catch (error) {
-      toast.error(adminErrorMessage(error));
+      toast.error(adminErrorMessage(error, copy));
     } finally {
       setActing(false);
     }
-  }, [fetchStudents, fetchTeamSummary, refreshSelected, selectedDetail]);
+  }, [copy, fetchStudents, fetchTeamSummary, refreshSelected, selectedDetail]);
 
   const filtered = useMemo(() => students, [students]);
 
   if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-[#0a0f1e] flex items-center justify-center">
-        <p className="text-[#00e5ff] text-xs tracking-widest uppercase animate-pulse">Sincronizando painel</p>
+        <p className="text-[#00e5ff] text-xs tracking-widest uppercase animate-pulse">{copy.loading}</p>
       </div>
     );
   }
@@ -839,6 +1353,7 @@ function CoachInner() {
           userId={user.userId}
           teamName={selectedTeam?.name || teamSummary?.team.name}
           studentCount={studentSnapshot.active}
+          copy={copy}
         />
 
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
@@ -861,6 +1376,9 @@ function CoachInner() {
               setStudentDraft({ firstName: "", lastName: "", email: "", phone: "", password: "", active: false, coachId: "", teamId: selectedTeamId || "", sex: "", age: "" });
               setShowCreateStudent(true);
             }}
+            language={adminLanguage}
+            copy={copy}
+            onLanguageChange={changeAdminLanguage}
             telemetry={{
               sys: "ONLINE",
               students: String(students.length),
@@ -874,11 +1392,11 @@ function CoachInner() {
           <div className="mb-5 rounded-xl border border-[#00e5ff]/30 bg-[#00e5ff]/10 p-4">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div className="min-w-0">
-                <p className="mb-1 text-[10px] font-black uppercase tracking-widest text-[#00e5ff]">Credencial gerada</p>
+                <p className="mb-1 text-[10px] font-black uppercase tracking-widest text-[#00e5ff]">{copy.actions.credentialGenerated}</p>
                 <p className="break-all font-mono text-sm font-black text-white">{lastSecret}</p>
               </div>
               <Button variant="outline" className="border-white/10 bg-white/5 text-white" onClick={() => setLastSecret(null)}>
-                Ocultar
+                {copy.actions.hide}
               </Button>
             </div>
           </div>
@@ -888,37 +1406,37 @@ function CoachInner() {
           <section className="rounded-lg border border-white/8 bg-white/[0.035] p-4">
             <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
               <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.28em] text-[#00e5ff]">Mural operacional</p>
-                <h1 className="mt-1 text-xl font-black text-white">Painel de alunos e accountability</h1>
+                <p className="text-[10px] font-black uppercase tracking-[0.28em] text-[#00e5ff]">{copy.mural.kicker}</p>
+                <h1 className="mt-1 text-xl font-black text-white">{copy.mural.title}</h1>
               </div>
-              <p className="font-mono text-[10px] text-white/35">{filtered.length} resultado{filtered.length === 1 ? "" : "s"} na visão atual</p>
+              <p className="font-mono text-[10px] text-white/35">{filtered.length} {filtered.length === 1 ? copy.filters.resultSingular : copy.filters.resultPlural}</p>
             </div>
             {teamSummary ? (
               <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
-                <MetricCard label="Time" value={teamSummary.team.name} cyan className="lg:col-span-2" />
-                <MetricCard label="Plano" value={formatHuman(teamSummary.team.planLabel)} />
-                <MetricCard label="Alunos" value={`${teamSummary.usage.students} / ${teamSummary.limits.maxStudents ?? "∞"}`} />
-                <MetricCard label="Ativos" value={studentSnapshot.active} />
-                <MetricCard label="Pausados" value={studentSnapshot.paused} />
-                <MetricCard label="Arena" value={studentSnapshot.visibleArena} />
+                <MetricCard label={copy.common.team} value={teamSummary.team.name} cyan className="lg:col-span-2" />
+                <MetricCard label={copy.common.plan} value={formatHuman(teamSummary.team.planLabel, copy)} />
+                <MetricCard label={copy.common.students} value={`${teamSummary.usage.students} / ${teamSummary.limits.maxStudents ?? "∞"}`} />
+                <MetricCard label={copy.status.active} value={studentSnapshot.active} />
+                <MetricCard label={copy.status.paused} value={studentSnapshot.paused} />
+                <MetricCard label={copy.common.arena} value={studentSnapshot.visibleArena} />
               </div>
             ) : (
-              <p className="text-xs text-white/35">{teamSummaryError || "Resumo do Time indisponível."}</p>
+              <p className="text-xs text-white/35">{teamSummaryError || copy.mural.unavailable}</p>
             )}
             {(studentLimitReached || coachLimitReached) && (
               <p className="mt-3 text-xs font-bold text-[#00e5ff]">
-                Limite do plano atingido. Atualize o plano GUTO Time para cadastrar mais {studentLimitReached ? "alunos" : "coaches"}.
+                {copyText(copy.mural.limitReached, { target: studentLimitReached ? copy.common.students.toLowerCase() : copy.common.coaches.toLowerCase() })}
               </p>
             )}
           </section>
 
           <section className="rounded-lg border border-white/8 bg-white/[0.035] p-4">
-            <p className="text-[10px] font-black uppercase tracking-[0.28em] text-white/30">Escopo</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.28em] text-white/30">{adminLanguage === "pt-BR" ? "Escopo" : adminLanguage === "it-IT" ? "Ambito" : "Scope"}</p>
             <div className="mt-3 grid grid-cols-2 gap-3">
-              <Metric label="Role" value={user.role.toUpperCase()} cyan />
-              <Metric label="Coaches" value={`${teamSummary?.usage.coaches ?? "-"} / ${teamSummary?.limits.maxCoaches ?? "∞"}`} />
-              <Metric label="Arquivados" value={studentSnapshot.archived} />
-              <Metric label="Filtros" value={activeFilterCount || "limpo"} />
+              <Metric label={copy.common.role} value={user.role.toUpperCase()} cyan />
+              <Metric label={copy.common.coaches} value={`${teamSummary?.usage.coaches ?? "-"} / ${teamSummary?.limits.maxCoaches ?? "∞"}`} />
+              <Metric label={copy.common.archived} value={studentSnapshot.archived} />
+              <Metric label={copy.telemetry.filters} value={activeFilterCount || copy.common.clean} />
             </div>
           </section>
         </div>
@@ -940,8 +1458,8 @@ function CoachInner() {
             <div className="mb-4 rounded-lg border border-white/8 bg-white/[0.035] p-4">
               <div className="mb-3 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
                 <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.25em] text-white/30">Filtros</p>
-                  <p className="mt-1 text-sm font-bold text-white">{filtered.length} aluno{filtered.length === 1 ? "" : "s"} encontrado{filtered.length === 1 ? "" : "s"}</p>
+                  <p className="text-[10px] font-black uppercase tracking-[0.25em] text-white/30">{copy.filters.title}</p>
+                  <p className="mt-1 text-sm font-bold text-white">{filtered.length} {filtered.length === 1 ? copy.filters.foundSingular : copy.filters.foundPlural}</p>
                 </div>
                 <div className="flex flex-row flex-wrap gap-2">
                   {(["ativos", "pausados", "arquivados", "todos"] as FilterTab[]).map((tab) => (
@@ -952,7 +1470,7 @@ function CoachInner() {
                         filter === tab ? "border-[#00e5ff] bg-[#00e5ff] text-[#0a0f1e]" : "border-white/10 bg-white/5 text-white/45 hover:text-white"
                       }`}
                     >
-                      {tab}
+                      {tab === "ativos" ? copy.filters.active : tab === "pausados" ? copy.filters.paused : tab === "arquivados" ? copy.filters.archived : copy.filters.all}
                     </button>
                   ))}
                   {activeFilterCount > 0 && (
@@ -962,7 +1480,7 @@ function CoachInner() {
                       className="flex items-center gap-1 rounded-md border border-white/10 bg-white/5 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-white/55 hover:text-white"
                     >
                       <X className="h-3 w-3" />
-                      Limpar
+                      {copy.common.clear}
                     </button>
                   )}
                 </div>
@@ -971,7 +1489,7 @@ function CoachInner() {
                 <label className="relative block">
                   <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/25" />
                   <Input
-                    placeholder="Buscar nome, email, telefone ou ID"
+                    placeholder={copy.filters.searchPlaceholder}
                     value={search}
                     onChange={(event) => setSearch(event.target.value)}
                     className="h-10 border-white/10 bg-white/5 pl-9 text-white placeholder:text-white/25"
@@ -979,32 +1497,32 @@ function CoachInner() {
                 </label>
                 {isAdmin && (
                   <select value={coachFilter} onChange={(event) => setCoachFilter(event.target.value)} className="h-10 rounded-md border border-white/10 bg-white/5 px-3 text-sm text-white">
-                    <option value="" className="bg-[#0d1426]">Todos os coaches</option>
+                    <option value="" className="bg-[#0d1426]">{copy.filters.allCoaches}</option>
                     {coaches.map((coach) => <option key={coach.userId} value={coach.userId} className="bg-[#0d1426]">{coach.name || coach.email || coach.userId}</option>)}
                   </select>
                 )}
                 <select value={genderFilter} onChange={(event) => setGenderFilter(event.target.value)} className="h-10 rounded-md border border-white/10 bg-white/5 px-3 text-sm text-white">
-                  <option value="" className="bg-[#0d1426]">Sexo: todos</option>
-                  {Object.entries(BIOLOGICAL_SEX_LABELS).map(([code, label]) => (
-                    <option key={code} value={code} className="bg-[#0d1426]">{label}</option>
+                  <option value="" className="bg-[#0d1426]">{copy.filters.sexAll}</option>
+                  {["male", "female", "other", "prefer_not_to_say"].map((code) => (
+                    <option key={code} value={code} className="bg-[#0d1426]">{formatHuman(code, copy)}</option>
                   ))}
                 </select>
                 <select value={subscriptionStatusFilter} onChange={(event) => setSubscriptionStatusFilter(event.target.value)} className="h-10 rounded-md border border-white/10 bg-white/5 px-3 text-sm text-white">
-                  <option value="" className="bg-[#0d1426]">Pagamento: todos</option>
-                  {Object.entries(SUBSCRIPTION_STATUS_LABELS).map(([code, label]) => (
-                    <option key={code} value={code} className="bg-[#0d1426]">{label}</option>
+                  <option value="" className="bg-[#0d1426]">{copy.filters.paymentAll}</option>
+                  {["active", "pending_payment", "cancelled", "paused", "trial", "expired"].map((code) => (
+                    <option key={code} value={code} className="bg-[#0d1426]">{formatHuman(code, copy)}</option>
                   ))}
                 </select>
-                <Input type="number" inputMode="numeric" placeholder="Idade mín." value={minAgeFilter} onChange={(event) => setMinAgeFilter(event.target.value)} className="h-10 border-white/10 bg-white/5 text-white placeholder:text-white/25" />
-                <Input type="number" inputMode="numeric" placeholder="Idade máx." value={maxAgeFilter} onChange={(event) => setMaxAgeFilter(event.target.value)} className="h-10 border-white/10 bg-white/5 text-white placeholder:text-white/25" />
+                <Input type="number" inputMode="numeric" placeholder={copy.filters.minAge} value={minAgeFilter} onChange={(event) => setMinAgeFilter(event.target.value)} className="h-10 border-white/10 bg-white/5 text-white placeholder:text-white/25" />
+                <Input type="number" inputMode="numeric" placeholder={copy.filters.maxAge} value={maxAgeFilter} onChange={(event) => setMaxAgeFilter(event.target.value)} className="h-10 border-white/10 bg-white/5 text-white placeholder:text-white/25" />
               </div>
             </div>
 
             <div className="hidden lg:block">
-              <StudentDesktopTable students={filtered} coaches={coaches} onOpen={(student) => void openStudent(student)} onCopyInvite={(student) => void copyStudentInvite(student)} />
+              <StudentDesktopTable students={filtered} coaches={coaches} copy={copy} onOpen={(student) => void openStudent(student)} onCopyInvite={(student) => void copyStudentInvite(student)} />
             </div>
             <div className="grid gap-3 lg:hidden">
-              <StudentMobileCards students={filtered} coaches={coaches} onOpen={(student) => void openStudent(student)} onCopyInvite={(student) => void copyStudentInvite(student)} />
+              <StudentMobileCards students={filtered} coaches={coaches} copy={copy} onOpen={(student) => void openStudent(student)} onCopyInvite={(student) => void copyStudentInvite(student)} />
             </div>
           </>
         )}
@@ -1022,15 +1540,15 @@ function CoachInner() {
                     <Button size="sm" variant="outline" className="border-white/10 bg-white/5 text-white" disabled={acting} onClick={() => void act(async () => {
                       const next = await updateAdminCoach(coach.userId, { active: !coach.active });
                       setCoaches((current) => current.map((item) => item.userId === coach.userId ? next.coach : item));
-                    }, coach.active ? "Coach pausado." : "Coach ativo.")}>
-                      {coach.active ? "Pausar" : "Ativar"}
+                    }, coach.active ? copy.actions.coachPaused : copy.actions.coachActive)}>
+                      {coach.active ? copy.status.paused : copy.status.active}
                     </Button>
                     <Button size="sm" variant="outline" className="border-red-500/30 bg-transparent text-red-300 hover:bg-red-500 hover:text-white" disabled={acting} onClick={() => {
-                      if (!window.confirm("Excluir coach? Reatribua alunos antes.")) return;
+                      if (!window.confirm(copy.actions.deleteCoachConfirm)) return;
                       void act(async () => {
                         await deleteAdminCoach(coach.userId);
                         setCoaches((current) => current.filter((item) => item.userId !== coach.userId));
-                      }, "Coach excluído.");
+                      }, copy.actions.coachDeleted);
                     }}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -1043,21 +1561,21 @@ function CoachInner() {
 
         {activeDashboardTab === "arena" && (
           <div className="grid gap-6 lg:grid-cols-3">
-            <RankingSection title="Ranking Semanal" items={rankings?.weekly.items || []} />
-            <RankingSection title="Ranking Mensal" items={rankings?.monthly.items || []} />
-            <RankingSection title="Ranking Geral" items={rankings?.individual.items || []} showStreak />
+            <RankingSection title={copy.rankings.weekly} items={rankings?.weekly.items || []} copy={copy} />
+            <RankingSection title={copy.rankings.monthly} items={rankings?.monthly.items || []} copy={copy} />
+            <RankingSection title={copy.rankings.general} items={rankings?.individual.items || []} copy={copy} showStreak />
           </div>
         )}
 
         {isAdmin && activeDashboardTab === "logs" && (
-          <LogList logs={globalLogs} empty="Sem logs globais." />
+          <LogList logs={globalLogs} empty={adminLanguage === "pt-BR" ? "Sem logs globais." : adminLanguage === "it-IT" ? "Nessun log globale." : "No global logs."} copy={copy} language={adminLanguage} />
         )}
 
         {activeDashboardTab === "teams" && isSuperAdmin && (
           <div className="grid gap-3">
             {!selectedTeamId && (
               <div className="rounded-xl border border-[#00e5ff]/20 bg-[#00e5ff]/5 p-3 text-center text-[10px] font-bold text-[#00e5ff]/70">
-                Selecione um Time abaixo para criar coaches e alunos nele.
+                {adminLanguage === "pt-BR" ? "Selecione um Time abaixo para criar coaches e alunos nele." : adminLanguage === "it-IT" ? "Seleziona un Team qui sotto per creare coach e studenti al suo interno." : "Select a Team below before creating coaches and students in it."}
               </div>
             )}
             {teams.map((team) => {
@@ -1070,9 +1588,9 @@ function CoachInner() {
                 >
                   {isEditing ? (
                     <div className="grid gap-3">
-                      <Field label="Nome" value={editTeamDraft.name} onChange={(name) => setEditTeamDraft((d) => ({ ...d, name }))} />
+                      <Field label={copy.dialogs.name} value={editTeamDraft.name} onChange={(name) => setEditTeamDraft((d) => ({ ...d, name }))} />
                       <label className="block">
-                        <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-white/30">Plano</span>
+                        <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-white/30">{copy.common.plan}</span>
                         <select
                           value={editTeamDraft.plan}
                           onChange={(e) => setEditTeamDraft((d) => ({ ...d, plan: e.target.value as TeamDraft["plan"] }))}
@@ -1081,13 +1599,13 @@ function CoachInner() {
                           <option value="start" className="bg-[#0d1426]">GUTO Time Start</option>
                           <option value="pro" className="bg-[#0d1426]">GUTO Time Pro</option>
                           <option value="elite" className="bg-[#0d1426]">GUTO Time Elite</option>
-                          <option value="custom" className="bg-[#0d1426]">Custom</option>
+                          <option value="custom" className="bg-[#0d1426]">{formatHuman("custom", copy)}</option>
                         </select>
                       </label>
                       {editTeamDraft.plan === "custom" && (
                         <>
-                          <Field label="Máx. alunos (vazio = ilimitado)" value={editTeamDraft.maxStudents} onChange={(v) => setEditTeamDraft((d) => ({ ...d, maxStudents: v }))} />
-                          <Field label="Máx. coaches (vazio = ilimitado)" value={editTeamDraft.maxCoaches} onChange={(v) => setEditTeamDraft((d) => ({ ...d, maxCoaches: v }))} />
+                          <Field label={copy.dialogs.maxStudents} value={editTeamDraft.maxStudents} onChange={(v) => setEditTeamDraft((d) => ({ ...d, maxStudents: v }))} />
+                          <Field label={copy.dialogs.maxCoaches} value={editTeamDraft.maxCoaches} onChange={(v) => setEditTeamDraft((d) => ({ ...d, maxCoaches: v }))} />
                         </>
                       )}
                       <div className="flex gap-2">
@@ -1099,19 +1617,19 @@ function CoachInner() {
                           const result = await updateAdminTeam(team.id, { name: editTeamDraft.name, plan: editTeamDraft.plan, customLimits });
                           setTeams((current) => current.map((t) => t.id === team.id ? result.team : t));
                           setEditingTeamId(null);
-                        }, "Time atualizado.")} className="bg-[#00e5ff] text-[#0a0f1e] hover:bg-white">
-                          <Save className="mr-1 h-3 w-3" /> Salvar
+                        }, copy.actions.teamUpdated)} className="bg-[#00e5ff] text-[#0a0f1e] hover:bg-white">
+                          <Save className="mr-1 h-3 w-3" /> {copy.common.save}
                         </Button>
                         <Button size="sm" variant="outline" className="border-white/10 bg-white/5 text-white" onClick={() => setEditingTeamId(null)}>
-                          Cancelar
+                          {copy.common.cancel}
                         </Button>
                         <Button size="sm" variant="outline" className="border-white/10 bg-white/5 text-white/50 hover:text-white" disabled={acting} onClick={() => void act(async () => {
                           const next = team.status === "archived" ? "active" : "archived";
                           const result = await updateAdminTeam(team.id, { status: next });
                           setTeams((current) => current.map((t) => t.id === team.id ? result.team : t));
                           setEditingTeamId(null);
-                        }, team.status === "archived" ? "Time reativado." : "Time arquivado.")}>
-                          {team.status === "archived" ? "Reativar" : "Arquivar"}
+                        }, team.status === "archived" ? copy.actions.teamReactivated : copy.actions.teamArchived)}>
+                          {team.status === "archived" ? copy.common.reactivate : copy.common.archive}
                         </Button>
                       </div>
                     </div>
@@ -1120,24 +1638,24 @@ function CoachInner() {
                       <div>
                         <div className="mb-1 flex items-center gap-2">
                           <p className={`font-black ${isSelected ? "text-[#00e5ff]" : "text-white"}`}>{team.name}</p>
-                          {isSelected && <Badge className="bg-[#00e5ff] text-[#0a0f1e] text-[9px] font-black">SELECIONADO</Badge>}
+                          {isSelected && <Badge className="bg-[#00e5ff] text-[#0a0f1e] text-[9px] font-black">{copy.common.selected}</Badge>}
                         </div>
-                        <p className="font-mono text-[10px] text-white/35">{team.id} · {formatHuman(team.plan)}</p>
+                        <p className="font-mono text-[10px] text-white/35">{team.id} · {formatHuman(team.plan, copy)}</p>
                         {team.customLimits && (
                           <p className="mt-1 font-mono text-[10px] text-white/25">
-                            Alunos: {team.customLimits.maxStudents ?? "Ilimitado"} · Coaches: {team.customLimits.maxCoaches ?? "Ilimitado"}
+                            {copy.common.students}: {team.customLimits.maxStudents ?? copy.common.unlimited} · {copy.common.coaches}: {team.customLimits.maxCoaches ?? copy.common.unlimited}
                           </p>
                         )}
                       </div>
                       <div className="flex items-center gap-2">
                         <Badge variant={team.status === "active" ? "default" : "secondary"} className="text-[10px] font-black uppercase">
-                          {formatHuman(team.status)}
+                          {formatHuman(team.status, copy)}
                         </Badge>
                         <Button size="sm" variant="outline" className="border-white/10 bg-white/5 text-white" onClick={() => {
                           setEditingTeamId(team.id);
                           setEditTeamDraft({ name: team.name, plan: team.plan, maxStudents: String(team.customLimits?.maxStudents ?? ""), maxCoaches: String(team.customLimits?.maxCoaches ?? "") });
                         }}>
-                          Editar
+                          {copy.common.edit}
                         </Button>
                         <Button size="sm" className={isSelected ? "bg-white/10 text-white" : "bg-[#00e5ff] text-[#0a0f1e] hover:bg-white"} onClick={() => {
                           setSelectedTeamId(isSelected ? null : team.id);
@@ -1146,7 +1664,7 @@ function CoachInner() {
                             setCoachDraft((d) => ({ ...d, teamId: team.id }));
                           }
                         }}>
-                          {isSelected ? "Desselecionar" : "Selecionar"}
+                          {isSelected ? copy.common.deselect : copy.common.select}
                         </Button>
                       </div>
                     </div>
@@ -1156,7 +1674,7 @@ function CoachInner() {
             })}
             {!teams.length && (
               <div className="rounded-xl border border-dashed border-white/10 p-12 text-center text-sm text-white/35">
-                Nenhum Time cadastrado. Clique em "Criar Time" para começar.
+                {adminLanguage === "pt-BR" ? "Nenhum Time cadastrado. Clique em \"Criar Time\" para começar." : adminLanguage === "it-IT" ? "Nessun Team registrato. Clicca su \"Crea Team\" per iniziare." : "No Team registered. Click \"Create Team\" to start."}
               </div>
             )}
           </div>
@@ -1173,12 +1691,12 @@ function CoachInner() {
                 <div className="flex items-center justify-between gap-4">
                   <div className="min-w-0">
                     <div className="mb-1 flex items-center gap-2">
-                      <Badge className="bg-[#00e5ff] text-[#0a0f1e] text-[9px] font-black">STUDENT</Badge>
+                      <Badge className="bg-[#00e5ff] text-[#0a0f1e] text-[9px] font-black">{copy.common.student}</Badge>
                       <span className="truncate font-mono text-[10px] text-white/30">{selected.userId}</span>
                     </div>
                     <SheetTitle className="truncate text-2xl font-black text-white">{selected.name}</SheetTitle>
                   </div>
-                  <Badge variant={getStatusInfo(selected).variant} className="text-[10px] font-black uppercase">{getStatusInfo(selected).text}</Badge>
+                  <Badge variant={getStatusInfo(selected, copy).variant} className="text-[10px] font-black uppercase">{getStatusInfo(selected, copy).text}</Badge>
                 </div>
               </SheetHeader>
 
@@ -1201,50 +1719,50 @@ function CoachInner() {
               <div className="p-6">
                 {detailTab === "resumo" && (
                   <div className="grid gap-4 md:grid-cols-2">
-                    <Panel title="Sistema">
-                      <DataRow label="Status" value={<Badge variant={getStatusInfo(selected).variant}>{getStatusInfo(selected).text}</Badge>} />
-                      <DataRow label="Email" value={selected.email || "-"} />
-                      <DataRow label="Telefone" value={selected.phone || "-"} />
-                      <DataRow label="Assinatura" value={formatHuman(selected.subscriptionStatus)} />
-                      <DataRow label="Expira em" value={formatDate(selected.subscriptionEndsAt)} />
-                      <DataRow label="Coach" value={coachLabel(selected, coaches)} />
-                      {user.role === "super_admin" && <DataRow label="Time" value={teams.find((t) => t.id === selected.teamId)?.name || selected.teamId || "-"} />}
-                      <DataRow label="Arena" value={selected.visibleInArena ? "Visível" : "Oculto"} />
+                    <Panel title={copy.sheet.system}>
+                      <DataRow label={copy.common.status} value={<Badge variant={getStatusInfo(selected, copy).variant}>{getStatusInfo(selected, copy).text}</Badge>} />
+                      <DataRow label={copy.common.email} value={selected.email || copy.common.none} />
+                      <DataRow label={copy.common.phone} value={selected.phone || copy.common.none} />
+                      <DataRow label={copy.common.subscription} value={formatHuman(selected.subscriptionStatus, copy)} />
+                      <DataRow label={copy.common.expiresAt} value={formatDate(selected.subscriptionEndsAt, adminLanguage)} />
+                      <DataRow label={copy.common.coach} value={coachLabel(selected, coaches)} />
+                      {user.role === "super_admin" && <DataRow label={copy.common.team} value={teams.find((t) => t.id === selected.teamId)?.name || selected.teamId || copy.common.none} />}
+                      <DataRow label={copy.common.arena} value={selected.visibleInArena ? copy.common.visible : copy.common.hidden} />
                     </Panel>
-                    <Panel title="Evolução">
-                      <DataRow label="XP semanal" value={`${selected.weeklyXp} XP`} />
-                      <DataRow label="XP mensal" value={`${selected.monthlyXp} XP`} />
+                    <Panel title={copy.sheet.evolution}>
+                      <DataRow label={`${copy.table.week} XP`} value={`${selected.weeklyXp} XP`} />
+                      <DataRow label={`${copy.table.month} XP`} value={`${selected.monthlyXp} XP`} />
                       <DataRow label="XP total" value={`${selected.totalXp} XP`} />
-                      <DataRow label="Sequência" value={`${selected.currentStreak} dias`} />
+                      <DataRow label={adminLanguage === "pt-BR" ? "Sequência" : adminLanguage === "it-IT" ? "Serie" : "Streak"} value={`${selected.currentStreak}d`} />
                       <DataRow label="Avatar" value={avatarStageLabel(selected.avatarStage)} />
                     </Panel>
-                    <Panel title="Plano oficial" className="md:col-span-2">
-                      <DataRow label="Treino" value={`${sourceLabel(selectedDetail.workout?.source)}${selectedDetail.workout?.lockedByCoach ? " · bloqueado" : ""}`} />
-                      <DataRow label="Dieta" value={`${sourceLabel(selectedDetail.diet?.source)}${selectedDetail.diet?.lockedByCoach ? " · bloqueada" : ""}`} />
+                    <Panel title={copy.sheet.officialPlan} className="md:col-span-2">
+                      <DataRow label={copy.common.workout} value={`${sourceLabel(selectedDetail.workout?.source, copy)}${selectedDetail.workout?.lockedByCoach ? ` · ${copy.planStatus.locked}` : ""}`} />
+                      <DataRow label={copy.common.diet} value={`${sourceLabel(selectedDetail.diet?.source, copy)}${selectedDetail.diet?.lockedByCoach ? ` · ${copy.planStatus.locked}` : ""}`} />
                     </Panel>
                   </div>
                 )}
 
                 {isAdmin && detailTab === "acesso" && (
-                  <Panel title="Controle de acesso">
+                  <Panel title={copy.sheet.accessControl}>
                     <div className="grid gap-2 sm:grid-cols-2">
                       <ActionButton disabled={acting} onClick={() => void act(async () => {
                         const result = selected.active ? await pauseAdminStudent(selected.userId) : await reactivateAdminStudent(selected.userId);
                         setSelectedDetail((current) => current ? { ...current, student: result.student } : current);
-                      }, selected.active ? "Acesso pausado." : "Acesso reativado.")}>
-                        {selected.active ? "Pausar acesso" : "Reativar acesso"}
+                      }, selected.active ? copy.sheet.accessPaused : copy.sheet.accessReactivated)}>
+                        {selected.active ? copy.sheet.pauseAccess : copy.sheet.reactivateAccess}
                       </ActionButton>
                       <ActionButton disabled={acting} onClick={() => void act(async () => {
                         const result = await renewAdminStudent(selected.userId, 30);
                         setSelectedDetail((current) => current ? { ...current, student: result.student } : current);
-                      }, "Acesso renovado por 30 dias.")}>
-                        Renovar 30 dias
+                      }, copy.sheet.accessRenewed)}>
+                        {copy.sheet.renew30}
                       </ActionButton>
                       <ActionButton disabled={acting} onClick={() => void act(async () => {
                         const result = await updateAdminStudent(selected.userId, { visibleInArena: !selected.visibleInArena });
                         setSelectedDetail((current) => current ? { ...current, student: result.student } : current);
-                      }, selected.visibleInArena ? "Aluno ocultado da Arena." : "Aluno visível na Arena.")}>
-                        {selected.visibleInArena ? "Ocultar na Arena" : "Mostrar na Arena"}
+                      }, selected.visibleInArena ? copy.sheet.hiddenFromArena : copy.sheet.visibleInArena)}>
+                        {selected.visibleInArena ? copy.sheet.hideArena : copy.sheet.showArena}
                       </ActionButton>
                       {isAdmin && (
                         <select
@@ -1255,11 +1773,11 @@ function CoachInner() {
                             void act(async () => {
                               const result = await assignStudentToCoach(coachId, selected.userId);
                               setSelectedDetail((current) => current ? { ...current, student: result.student } : current);
-                            }, "Aluno atribuído ao coach.");
+                            }, adminLanguage === "pt-BR" ? "Aluno atribuído ao coach." : adminLanguage === "it-IT" ? "Studente assegnato al coach." : "Student assigned to coach.");
                           }}
                           className="h-11 rounded-md border border-white/10 bg-white/5 px-3 text-center text-xs font-bold text-white hover:bg-white/10"
                         >
-                          <option value="" className="bg-[#0d1426]">Atribuir coach</option>
+                          <option value="" className="bg-[#0d1426]">{copy.sheet.assignCoach}</option>
                           {coaches.map((coach) => (
                             <option key={coach.userId} value={coach.userId} className="bg-[#0d1426]">{coach.name || coach.userId}</option>
                           ))}
@@ -1268,33 +1786,33 @@ function CoachInner() {
                     </div>
 
                     <div className="mt-4 border-t border-white/8 pt-4">
-                      <p className="mb-3 text-[10px] font-black uppercase tracking-widest text-white/30">Convite de acesso</p>
+                      <p className="mb-3 text-[10px] font-black uppercase tracking-widest text-white/30">{copy.sheet.accessInvite}</p>
                       <div className="grid gap-2 sm:grid-cols-2">
                         <ActionButton disabled={acting} onClick={() => void act(async () => {
                           const result = await getAdminStudentInvite(selected.userId);
                           if (result.inviteLink) {
                             setLastSecret(result.inviteLink);
                           } else {
-                            toast.info(result.message || "Link não disponível. Use regenerar para criar um novo convite.");
+                            toast.info(result.message || copy.sheet.inviteUnavailable);
                           }
-                        }, "Convite carregado.")}>
-                          Ver convite atual
+                        }, copy.sheet.inviteLoaded)}>
+                          {copy.sheet.viewInvite}
                         </ActionButton>
                         <ActionButton disabled={acting} onClick={() => {
-                          if (!window.confirm("Regenerar convite? O link anterior deixa de funcionar.")) return;
+                          if (!window.confirm(copy.sheet.regenerateInviteConfirm)) return;
                           void act(async () => {
                             const result = await regenerateAdminStudentInvite(selected.userId);
                             setLastSecret(result.inviteLink);
-                          }, "Novo convite gerado.");
+                          }, copy.sheet.newInvite);
                         }}>
                           <RefreshCw className="mr-2 h-4 w-4" />
-                          Regenerar convite
+                          {copy.sheet.regenerateInvite}
                         </ActionButton>
                       </div>
                       {lastSecret?.startsWith("http") && (
                         <div className="mt-3 flex items-center gap-2 rounded-lg border border-[#00e5ff]/30 bg-[#00e5ff]/10 p-3">
                           <p className="min-w-0 flex-1 break-all font-mono text-xs text-white">{lastSecret}</p>
-                          <Button size="sm" variant="outline" className="shrink-0 border-white/10 bg-white/5 text-white" onClick={() => { void navigator.clipboard.writeText(lastSecret); toast.success("Link copiado!"); }}>
+                          <Button size="sm" variant="outline" className="shrink-0 border-white/10 bg-white/5 text-white" onClick={() => { void navigator.clipboard.writeText(lastSecret); toast.success(copy.actions.linkCopied); }}>
                             <Copy className="h-3.5 w-3.5" />
                           </Button>
                         </div>
@@ -1304,18 +1822,18 @@ function CoachInner() {
                 )}
 
                 {detailTab === "calibragem" && (
-                  <Panel title="Calibragem do aluno">
+                  <Panel title={copy.sheet.calibration}>
                     <div className="grid gap-3 md:grid-cols-2">
-                      <Field label="Idade" value={calibrationDraft.userAge} onChange={(value) => setCalibrationDraft((draft) => ({ ...draft, userAge: value }))} />
-                      <Field label="Sexo biológico" value={calibrationDraft.biologicalSex} onChange={(value) => setCalibrationDraft((draft) => ({ ...draft, biologicalSex: value }))} />
-                      <Field label="Nível" value={calibrationDraft.trainingLevel} onChange={(value) => setCalibrationDraft((draft) => ({ ...draft, trainingLevel: value }))} />
-                      <Field label="Objetivo" value={calibrationDraft.trainingGoal} onChange={(value) => setCalibrationDraft((draft) => ({ ...draft, trainingGoal: value }))} />
-                      <Field label="Local preferido" value={calibrationDraft.preferredTrainingLocation} onChange={(value) => setCalibrationDraft((draft) => ({ ...draft, preferredTrainingLocation: value }))} />
-                      <Field label="País" value={calibrationDraft.country} onChange={(value) => setCalibrationDraft((draft) => ({ ...draft, country: value }))} />
-                      <Field label="Altura cm" value={calibrationDraft.heightCm} onChange={(value) => setCalibrationDraft((draft) => ({ ...draft, heightCm: value }))} />
-                      <Field label="Peso kg" value={calibrationDraft.weightKg} onChange={(value) => setCalibrationDraft((draft) => ({ ...draft, weightKg: value }))} />
-                      <Field label="Dor ou limitação" value={calibrationDraft.trainingPathology} onChange={(value) => setCalibrationDraft((draft) => ({ ...draft, trainingPathology: value }))} className="md:col-span-2" />
-                      <Field label="Restrições alimentares" value={calibrationDraft.foodRestrictions} onChange={(value) => setCalibrationDraft((draft) => ({ ...draft, foodRestrictions: value }))} className="md:col-span-2" />
+                      <Field label={copy.calibration.age} value={calibrationDraft.userAge} onChange={(value) => setCalibrationDraft((draft) => ({ ...draft, userAge: value }))} />
+                      <Field label={copy.calibration.sex} value={calibrationDraft.biologicalSex} onChange={(value) => setCalibrationDraft((draft) => ({ ...draft, biologicalSex: value }))} />
+                      <Field label={copy.calibration.level} value={calibrationDraft.trainingLevel} onChange={(value) => setCalibrationDraft((draft) => ({ ...draft, trainingLevel: value }))} />
+                      <Field label={copy.calibration.goal} value={calibrationDraft.trainingGoal} onChange={(value) => setCalibrationDraft((draft) => ({ ...draft, trainingGoal: value }))} />
+                      <Field label={copy.calibration.location} value={calibrationDraft.preferredTrainingLocation} onChange={(value) => setCalibrationDraft((draft) => ({ ...draft, preferredTrainingLocation: value }))} />
+                      <Field label={copy.calibration.country} value={calibrationDraft.country} onChange={(value) => setCalibrationDraft((draft) => ({ ...draft, country: value }))} />
+                      <Field label={copy.calibration.height} value={calibrationDraft.heightCm} onChange={(value) => setCalibrationDraft((draft) => ({ ...draft, heightCm: value }))} />
+                      <Field label={copy.calibration.weight} value={calibrationDraft.weightKg} onChange={(value) => setCalibrationDraft((draft) => ({ ...draft, weightKg: value }))} />
+                      <Field label={copy.calibration.pathology} value={calibrationDraft.trainingPathology} onChange={(value) => setCalibrationDraft((draft) => ({ ...draft, trainingPathology: value }))} className="md:col-span-2" />
+                      <Field label={copy.calibration.foodRestrictions} value={calibrationDraft.foodRestrictions} onChange={(value) => setCalibrationDraft((draft) => ({ ...draft, foodRestrictions: value }))} className="md:col-span-2" />
                     </div>
                     <Button className="mt-4 bg-[#00e5ff] text-[#0a0f1e] hover:bg-white" disabled={acting} onClick={() => void act(async () => {
                       await updateAdminStudent(selected.userId, {
@@ -1326,9 +1844,9 @@ function CoachInner() {
                           weightKg: calibrationDraft.weightKg ? Number(calibrationDraft.weightKg) : undefined,
                         },
                       });
-                    }, "Calibragem atualizada.")}>
+                    }, copy.sheet.calibrationSaved)}>
                       <Save className="mr-2 h-4 w-4" />
-                      Salvar calibragem
+                      {copy.sheet.saveCalibration}
                     </Button>
                   </Panel>
                 )}
@@ -1342,7 +1860,7 @@ function CoachInner() {
                           onClick={() => setTreinoSubTab(tab)}
                           className={`flex-1 rounded-md py-1.5 text-xs font-bold uppercase tracking-widest transition-colors ${treinoSubTab === tab ? "bg-[#00e5ff] text-[#0a0f1e]" : "text-white/50 hover:text-white"}`}
                         >
-                          {tab === "oficial" ? "Treino oficial" : "Plano semanal"}
+                          {tab === "oficial" ? copy.sheet.officialWorkout : copy.sheet.weeklyPlan}
                         </button>
                       ))}
                     </div>
@@ -1357,29 +1875,31 @@ function CoachInner() {
                         onChange={setWorkoutEditor}
                         onSave={() => void act(async () => {
                           if (hasInvalidWorkoutExerciseContract(workoutEditor)) {
-                            toast.error("Escolha um exercício do catálogo oficial antes de salvar.");
+                            toast.error(copy.sheet.catalogRequired);
                             return;
                           }
                           const source = selectedDetail.workout?.source === "guto_generated" ? "mixed" : workoutEditor.source || "coach_manual";
-                          const result = await updateAdminStudentWorkout(selected.userId, { ...workoutEditor, source, blocks: [{ name: "Principal", exercises: workoutEditor.exercises }] }, "Coach/admin manual edit");
-                          setWorkoutEditor(normalizeWorkoutForEditor(result.workout, selected));
-                        }, "Treino oficial salvo.")}
-                        onCreateManual={() => setWorkoutEditor(blankWorkout(selected))}
+                          const result = await updateAdminStudentWorkout(selected.userId, { ...workoutEditor, source, blocks: [{ name: copy.workout.mainBlock, exercises: workoutEditor.exercises }] }, "Coach/admin manual edit");
+                          setWorkoutEditor(normalizeWorkoutForEditor(result.workout, selected, copy));
+                        }, copy.sheet.workoutSaved)}
+                        onCreateManual={() => setWorkoutEditor(blankWorkout(selected, copy))}
                         onGenerate={() => void act(async () => {
                           const result = await generateAdminStudentWorkout(selected.userId);
-                          setWorkoutEditor(normalizeWorkoutForEditor(result.workout, selected));
-                        }, "Treino gerado pelo GUTO.")}
+                          setWorkoutEditor(normalizeWorkoutForEditor(result.workout, selected, copy));
+                        }, copy.sheet.workoutGenerated)}
                         onLock={() => void act(async () => {
                           const result = workoutEditor.lockedByCoach ? await unlockAdminStudentWorkout(selected.userId) : await lockAdminStudentWorkout(selected.userId);
-                          setWorkoutEditor(normalizeWorkoutForEditor(result.workout, selected));
-                        }, workoutEditor.lockedByCoach ? "GUTO liberado para atualizar treino." : "Treino bloqueado contra sobrescrita.")}
+                          setWorkoutEditor(normalizeWorkoutForEditor(result.workout, selected, copy));
+                        }, workoutEditor.lockedByCoach ? copy.sheet.gutoCanUpdateWorkout : copy.sheet.workoutLocked)}
                         onReset={() => {
-                          if (!window.confirm("Resetar treino oficial deste aluno?")) return;
+                          if (!window.confirm(copy.sheet.resetWorkoutConfirm)) return;
                           void act(async () => {
                             await resetAdminStudentWorkout(selected.userId);
-                            setWorkoutEditor(blankWorkout(selected));
-                          }, "Treino resetado.");
+                            setWorkoutEditor(blankWorkout(selected, copy));
+                          }, copy.sheet.workoutReset);
                         }}
+                        copy={copy}
+                        language={adminLanguage}
                       />
                     )}
 
@@ -1393,6 +1913,8 @@ function CoachInner() {
                           const result = await updateAdminStudentWeeklyWorkout(selected.userId, days);
                           setWeeklyWorkoutPlan(result.weeklyWorkout);
                         }}
+                        copy={copy}
+                        language={adminLanguage}
                       />
                     )}
                   </div>
@@ -1407,7 +1929,7 @@ function CoachInner() {
                           onClick={() => setDietaSubTab(tab)}
                           className={`flex-1 rounded-md py-1.5 text-xs font-bold uppercase tracking-widest transition-colors ${dietaSubTab === tab ? "bg-[#00e5ff] text-[#0a0f1e]" : "text-white/50 hover:text-white"}`}
                         >
-                          {tab === "oficial" ? "Dieta oficial" : "Plano semanal"}
+                          {tab === "oficial" ? copy.sheet.officialDiet : copy.sheet.weeklyDiet}
                         </button>
                       ))}
                     </div>
@@ -1422,56 +1944,59 @@ function CoachInner() {
                         onSave={() => void act(async () => {
                           const source = selectedDetail.diet?.source === "guto_generated" ? "mixed" : dietEditor.source || "coach_manual";
                           const result = await updateAdminStudentDiet(selected.userId, { ...dietEditor, source }, "Coach/admin manual edit");
-                          setDietEditor(normalizeDietForEditor(result.diet, selected));
-                        }, "Dieta oficial salva.")}
-                        onCreateManual={() => setDietEditor(blankDiet(selected))}
+                          setDietEditor(normalizeDietForEditor(result.diet, selected, copy));
+                        }, copy.sheet.dietSaved)}
+                        onCreateManual={() => setDietEditor(blankDiet(selected, copy))}
                         onGenerate={() => void act(async () => {
                           const result = await generateAdminStudentDiet(selected.userId);
-                          setDietEditor(normalizeDietForEditor(result.diet, selected));
-                        }, "Dieta do GUTO carregada.")}
+                          setDietEditor(normalizeDietForEditor(result.diet, selected, copy));
+                        }, copy.sheet.dietGenerated)}
                         onLock={() => void act(async () => {
                           const result = dietEditor.lockedByCoach ? await unlockAdminStudentDiet(selected.userId) : await lockAdminStudentDiet(selected.userId);
-                          setDietEditor(normalizeDietForEditor(result.diet, selected));
-                        }, dietEditor.lockedByCoach ? "GUTO liberado para atualizar dieta." : "Dieta bloqueada contra sobrescrita.")}
+                          setDietEditor(normalizeDietForEditor(result.diet, selected, copy));
+                        }, dietEditor.lockedByCoach ? copy.sheet.gutoCanUpdateDiet : copy.sheet.dietLocked)}
                         onReset={() => {
-                          if (!window.confirm("Resetar dieta oficial deste aluno?")) return;
+                          if (!window.confirm(copy.sheet.resetDietConfirm)) return;
                           void act(async () => {
                             await resetAdminStudentDiet(selected.userId);
-                            setDietEditor(blankDiet(selected));
-                          }, "Dieta resetada.");
+                            setDietEditor(blankDiet(selected, copy));
+                          }, copy.sheet.dietReset);
                         }}
+                        copy={copy}
+                        language={adminLanguage}
                       />
                     )}
 
                     {dietaSubTab === "semanal" && (
                       <WeeklyDietEditor
-                        student={selected}
                         weeklyPlan={weeklyDietPlan}
                         acting={acting}
                         onSave={async (days) => {
                           const result = await saveStudentWeeklyDiet(selected.userId, days);
                           setWeeklyDietPlan(result.weeklyDiet);
                         }}
+                        copy={copy}
+                        language={adminLanguage}
                       />
                     )}
                   </div>
                 )}
 
                 {isAdmin && detailTab === "arena" && (
-                  <Panel title="Arena e XP">
+                  <Panel title={copy.sheet.arenaXp}>
                     <div className="grid gap-2 md:grid-cols-2">
                       {[
-                        ["Resetar semana", "weekly"],
-                        ["Resetar mês", "monthly"],
-                        ["Resetar XP", "individual"],
-                        ["Resetar histórico", "validationHistory"],
+                        [copy.sheet.resetWeek, "weekly"],
+                        [copy.sheet.resetMonth, "monthly"],
+                        [copy.sheet.resetXp, "individual"],
+                        [copy.sheet.resetHistory, "validationHistory"],
                       ].map(([label, scope]) => (
                         <ActionButton key={scope} disabled={acting} onClick={() => {
                           if (!window.confirm(`${label}?`)) return;
                           void act(async () => {
                             const result = await resetAdminStudent(selected.userId, scope as ResetScope);
                             setSelectedDetail((current) => current ? { ...current, student: result.student } : current);
-                          }, "Reset executado.");
+                          }, copy.sheet.resetDone);
                         }}>
                           {label}
                         </ActionButton>
@@ -1482,37 +2007,37 @@ function CoachInner() {
 
                 {isAdmin && detailTab === "seguranca" && (
                   <div className="grid gap-4 lg:grid-cols-2">
-                    <Panel title="Senha temporária">
+                    <Panel title={copy.sheet.tempPassword}>
                       <div className="grid gap-3">
                         <ActionButton disabled={acting} onClick={() => void act(async () => {
                           const result = await resetAdminStudentPassword(selected.userId);
                           setLastSecret(result.temporaryPassword || null);
-                        }, "Senha temporária gerada.")}>
+                        }, copy.sheet.tempPasswordGenerated)}>
                           <KeyRound className="mr-2 h-4 w-4" />
-                          Gerar senha temporária
+                          {copy.sheet.generateTempPassword}
                         </ActionButton>
                         {lastSecret && (
                           <div className="rounded-lg border border-[#00e5ff]/30 bg-[#00e5ff]/10 p-4">
-                            <p className="mb-1 text-[10px] font-black uppercase tracking-widest text-[#00e5ff]">Senha temporária</p>
+                            <p className="mb-1 text-[10px] font-black uppercase tracking-widest text-[#00e5ff]">{copy.sheet.tempPassword}</p>
                             <p className="font-mono text-lg font-black text-white">{lastSecret}</p>
                           </div>
                         )}
                       </div>
                     </Panel>
-                    <Panel title="Zona crítica">
+                    <Panel title={copy.sheet.criticalZone}>
                       <div className="grid gap-3">
                         <ActionButton danger disabled={acting} onClick={() => {
-                          if (!window.confirm("Excluir permanentemente este aluno e todos os dados vinculados?")) return;
+                          if (!window.confirm(copy.sheet.permanentDeleteConfirm)) return;
                           void act(async () => {
                             await deleteAdminStudent(selected.userId);
                             setSelectedDetail(null);
                             setStudents((current) => current.filter((student) => student.userId !== selected.userId));
-                          }, "Aluno excluído permanentemente.");
+                          }, copy.sheet.permanentDeleted);
                         }}>
                           <Trash2 className="mr-2 h-4 w-4" />
-                          Excluir permanentemente
+                          {copy.sheet.permanentDelete}
                         </ActionButton>
-                        <p className="text-xs font-bold leading-relaxed text-white/35">A exclusão permanente apaga dados vinculados do aluno. Use somente quando a empresa pedir remoção definitiva.</p>
+                        <p className="text-xs font-bold leading-relaxed text-white/35">{copy.sheet.permanentDeleteHelp}</p>
                       </div>
                     </Panel>
                   </div>
@@ -1534,6 +2059,7 @@ function CoachInner() {
         acting={acting}
         limitReached={studentLimitReached}
         onDraftChange={setStudentDraft}
+        copy={copy}
         onCreate={() => void act(async () => {
           const result = await createAdminStudent({
             firstName: studentDraft.firstName,
@@ -1551,7 +2077,7 @@ function CoachInner() {
           if (result.inviteLink) setLastSecret(result.inviteLink);
           setStudentDraft({ firstName: "", lastName: "", email: "", phone: "", password: "", active: false, coachId: "", teamId: "", sex: "", age: "" });
           setShowCreateStudent(false);
-        }, "Aluno criado.")}
+        }, copy.actions.studentCreated)}
       />
 
       <CreateCoachDialog
@@ -1563,6 +2089,7 @@ function CoachInner() {
         acting={acting}
         limitReached={coachLimitReached}
         onDraftChange={setCoachDraft}
+        copy={copy}
         onCreate={() => void act(async () => {
           const result = await createAdminCoach({
             name: coachDraft.name,
@@ -1574,7 +2101,7 @@ function CoachInner() {
           if (result.temporaryPassword) setLastSecret(result.temporaryPassword);
           setCoachDraft({ name: "", email: "", password: "", teamId: "" });
           setShowCreateCoach(false);
-        }, "Coach criado.")}
+        }, copy.actions.coachCreated)}
       />
 
       <CreateTeamDialog
@@ -1583,6 +2110,7 @@ function CoachInner() {
         draft={teamDraft}
         acting={acting}
         onDraftChange={setTeamDraft}
+        copy={copy}
         onCreate={() => void act(async () => {
           const customLimits = teamDraft.plan === "custom" ? {
             maxStudents: teamDraft.maxStudents ? Number(teamDraft.maxStudents) || null : null,
@@ -1595,7 +2123,7 @@ function CoachInner() {
           setCoachDraft((d) => ({ ...d, teamId: result.team.id }));
           setTeamDraft({ name: "", plan: "pro", maxStudents: "", maxCoaches: "" });
           setShowCreateTeam(false);
-        }, "Time criado.")}
+        }, copy.actions.teamCreated)}
       />
     </div>
   );
@@ -1609,6 +2137,7 @@ function AdminSidebar({
   userId,
   teamName,
   studentCount,
+  copy,
 }: {
   items: DashboardNavItem[];
   activeTab: DashboardTab;
@@ -1617,21 +2146,21 @@ function AdminSidebar({
   userId: string;
   teamName?: string;
   studentCount: number;
+  copy: AdminPanelCopy;
 }) {
-  const validationError = studentDraftError(draft, isSuperAdmin);
   return (
     <aside className="hidden h-screen w-[232px] shrink-0 flex-col overflow-hidden border-r border-[#52e7ff]/10 bg-[#040710]/95 lg:flex">
       <div className="h-[72px] shrink-0 border-b border-[#52e7ff]/10 bg-[radial-gradient(120%_100%_at_50%_0%,rgba(82,231,255,0.08)_0%,rgba(82,231,255,0)_70%)] px-4 py-3">
         <div className="text-[18px] font-black leading-none tracking-[0.34em] text-[#52e7ff] drop-shadow-[0_0_8px_rgba(82,231,255,0.45)]">GUTO</div>
-        <div className="mt-2 text-[8px] font-black uppercase tracking-[0.30em] text-[#52e7ff]/85">Sala de controle</div>
+        <div className="mt-2 text-[8px] font-black uppercase tracking-[0.30em] text-[#52e7ff]/85">{copy.controlRoom}</div>
       </div>
 
       <div className="shrink-0 border-b border-[#52e7ff]/10 px-4 py-3">
-        <div className="mb-2 text-[8px] font-black uppercase tracking-[0.30em] text-white/20">Hierarquia</div>
+        <div className="mb-2 text-[8px] font-black uppercase tracking-[0.30em] text-white/20">{copy.hierarchy}</div>
         <div className="space-y-1 text-[9px] font-bold uppercase tracking-[0.12em] text-white/32">
           <div className="text-[#52e7ff]">{role.replace("_", " ")}</div>
-          <div>{teamName || "Time não selecionado"}</div>
-          <div className="text-white/22">{studentCount} alunos ativos</div>
+          <div>{teamName || copy.teamNotSelected}</div>
+          <div className="text-white/22">{studentCount} {copy.activeStudents}</div>
         </div>
       </div>
 
@@ -1688,6 +2217,9 @@ function AdminShellHeader({
   onCreateTeam,
   onCreateCoach,
   onCreateStudent,
+  language,
+  copy,
+  onLanguageChange,
 }: {
   meta: { kicker: string; title: string; subtitle: string };
   role: string;
@@ -1702,6 +2234,9 @@ function AdminShellHeader({
   onCreateTeam: () => void;
   onCreateCoach: () => void;
   onCreateStudent: () => void;
+  language: AdminPanelLanguage;
+  copy: AdminPanelCopy;
+  onLanguageChange: (language: AdminPanelLanguage) => void;
 }) {
   return (
     <header className="h-auto shrink-0 border-b border-[#52e7ff]/10 bg-[#080e1c]/90 backdrop-blur-md lg:h-16">
@@ -1721,15 +2256,16 @@ function AdminShellHeader({
         </div>
 
         <div className="flex min-w-0 items-center gap-2 overflow-x-auto pb-1 lg:pb-0">
-          <TelemetryStamp icon={<Signal className="h-3 w-3" />} label="SYS" value={telemetry.sys} tone="ok" />
+          <AdminLanguageSelector language={language} onChange={onLanguageChange} />
+          <TelemetryStamp icon={<Signal className="h-3 w-3" />} label={copy.telemetry.sys} value={telemetry.sys} tone="ok" />
           <div className="hidden 2xl:block">
-            <TelemetryStamp icon={<Users className="h-3 w-3" />} label="ALUNOS" value={telemetry.students} />
+            <TelemetryStamp icon={<Users className="h-3 w-3" />} label={copy.telemetry.students} value={telemetry.students} />
           </div>
           <div className="hidden 2xl:block">
-            <TelemetryStamp icon={<Zap className="h-3 w-3" />} label="ATIVOS" value={telemetry.active} />
+            <TelemetryStamp icon={<Zap className="h-3 w-3" />} label={copy.telemetry.active} value={telemetry.active} />
           </div>
           <div className="hidden 2xl:block">
-            <TelemetryStamp icon={<Search className="h-3 w-3" />} label="FILTROS" value={telemetry.filters} />
+            <TelemetryStamp icon={<Search className="h-3 w-3" />} label={copy.telemetry.filters} value={telemetry.filters} />
           </div>
 
           {(isSuperAdmin || isAdmin) && <div className="mx-1 h-6 w-px shrink-0 bg-[#52e7ff]/10" />}
@@ -1738,7 +2274,7 @@ function AdminShellHeader({
             <div className="flex h-9 shrink-0 items-center gap-2 rounded-lg border border-[#52e7ff]/25 bg-[#52e7ff]/10 px-3">
               <Building2 className="h-3.5 w-3.5 text-[#52e7ff]" />
               <span className="max-w-[180px] truncate text-[10px] font-black text-[#52e7ff]">{selectedTeam.name}</span>
-              <button type="button" onClick={onClearTeam} className="text-[#52e7ff]/55 hover:text-[#52e7ff]" aria-label="Limpar time selecionado">
+              <button type="button" onClick={onClearTeam} className="text-[#52e7ff]/55 hover:text-[#52e7ff]" aria-label={copy.clearSelectedTeam}>
                 <X className="h-3 w-3" />
               </button>
             </div>
@@ -1746,14 +2282,14 @@ function AdminShellHeader({
 
           {isSuperAdmin && !selectedTeam && (
             <span className="shrink-0 rounded-lg border border-white/10 bg-black/25 px-3 py-2 text-[9px] font-black uppercase tracking-[0.18em] text-white/30">
-              Selecione um time
+              {copy.selectTeam}
             </span>
           )}
 
           {isSuperAdmin && (
             <Button size="sm" variant="outline" className="h-9 shrink-0 rounded-full border-white/10 bg-white/5 px-3 text-[10px] font-black uppercase tracking-[0.16em] text-white hover:bg-white/10" onClick={onCreateTeam}>
               <Building2 className="mr-2 h-3.5 w-3.5" />
-              Time
+              {copy.common.team}
             </Button>
           )}
 
@@ -1763,7 +2299,7 @@ function AdminShellHeader({
               variant="outline"
               className="h-9 shrink-0 rounded-full border-white/10 bg-white/5 px-3 text-[10px] font-black uppercase tracking-[0.16em] text-white hover:bg-white/10 disabled:opacity-30"
               disabled={coachLimitReached || needsTeam}
-              title={needsTeam ? "Selecione um Time antes de criar coach." : undefined}
+              title={needsTeam ? copy.selectTeam : undefined}
               onClick={onCreateCoach}
             >
               <UserPlus className="mr-2 h-3.5 w-3.5" />
@@ -1775,11 +2311,11 @@ function AdminShellHeader({
             size="sm"
             className="h-9 shrink-0 rounded-full bg-[#52e7ff] px-4 text-[10px] font-black uppercase tracking-[0.16em] text-[#04131e] shadow-[0_0_18px_rgba(82,231,255,0.28)] hover:bg-white disabled:opacity-30"
             disabled={studentLimitReached || needsTeam}
-            title={needsTeam ? "Selecione um Time antes de criar aluno." : undefined}
+            title={needsTeam ? copy.selectTeam : undefined}
             onClick={onCreateStudent}
           >
             <Plus className="mr-2 h-3.5 w-3.5" />
-            Aluno
+            {copy.common.student}
           </Button>
         </div>
       </div>
@@ -1794,6 +2330,27 @@ function TelemetryStamp({ icon, label, value, tone = "cyan" }: { icon: ReactNode
       <span className={color}>{icon}</span>
       <span className="text-[8px] font-black uppercase tracking-[0.22em] text-white/22">{label}</span>
       <span className={`text-[10px] font-black ${color}`}>{value}</span>
+    </div>
+  );
+}
+
+function AdminLanguageSelector({ language, onChange }: { language: AdminPanelLanguage; onChange: (language: AdminPanelLanguage) => void }) {
+  return (
+    <div className="flex h-9 shrink-0 items-center gap-1 rounded-lg border border-[#52e7ff]/10 bg-black/30 px-1.5">
+      <Globe2 className="h-3.5 w-3.5 text-[#52e7ff]" />
+      {ADMIN_PANEL_LANGUAGES.map((item) => (
+        <button
+          key={item.code}
+          type="button"
+          title={item.label}
+          onClick={() => onChange(item.code)}
+          className={`rounded-md px-2 py-1 text-[9px] font-black tracking-[0.12em] transition ${
+            language === item.code ? "bg-[#52e7ff] text-[#04131e]" : "text-white/35 hover:bg-white/5 hover:text-white"
+          }`}
+        >
+          {item.short}
+        </button>
+      ))}
     </div>
   );
 }
@@ -1826,18 +2383,20 @@ function MetricCard({ label, value, cyan, className = "" }: { label: string; val
 function StudentDesktopTable({
   students,
   coaches,
+  copy,
   onOpen,
   onCopyInvite,
 }: {
   students: AdminStudent[];
   coaches: AdminCoach[];
+  copy: AdminPanelCopy;
   onOpen: (student: AdminStudent) => void;
   onCopyInvite: (student: AdminStudent) => void;
 }) {
   if (!students.length) {
     return (
       <div className="rounded-lg border border-dashed border-white/10 p-12 text-center text-sm text-white/35">
-        Nenhum aluno encontrado.
+        {copy.table.empty}
       </div>
     );
   }
@@ -1847,21 +2406,21 @@ function StudentDesktopTable({
       <Table className="min-w-[1120px]">
         <TableHeader>
           <TableRow className="border-[#52e7ff]/10 hover:bg-transparent">
-            <TableHead className="h-10 pl-4 text-[9px] font-black uppercase tracking-[0.24em] text-white/28">Aluno</TableHead>
-            <TableHead className="h-10 text-[9px] font-black uppercase tracking-[0.24em] text-white/28">Status</TableHead>
-            <TableHead className="h-10 text-[9px] font-black uppercase tracking-[0.24em] text-white/28">Coach</TableHead>
-            <TableHead className="h-10 text-[9px] font-black uppercase tracking-[0.24em] text-white/28">Telefone</TableHead>
-            <TableHead className="h-10 text-[9px] font-black uppercase tracking-[0.24em] text-white/28">Semana</TableHead>
-            <TableHead className="h-10 text-[9px] font-black uppercase tracking-[0.24em] text-white/28">Mês</TableHead>
-            <TableHead className="h-10 text-[9px] font-black uppercase tracking-[0.24em] text-white/28">Último acesso</TableHead>
-            <TableHead className="h-10 text-[9px] font-black uppercase tracking-[0.24em] text-white/28">Assinatura</TableHead>
-            <TableHead className="h-10 text-right text-[9px] font-black uppercase tracking-[0.24em] text-white/28">Convite</TableHead>
-            <TableHead className="h-10 pr-4 text-right text-[9px] font-black uppercase tracking-[0.24em] text-white/28">Abrir</TableHead>
+            <TableHead className="h-10 pl-4 text-[9px] font-black uppercase tracking-[0.24em] text-white/28">{copy.table.student}</TableHead>
+            <TableHead className="h-10 text-[9px] font-black uppercase tracking-[0.24em] text-white/28">{copy.table.status}</TableHead>
+            <TableHead className="h-10 text-[9px] font-black uppercase tracking-[0.24em] text-white/28">{copy.table.coach}</TableHead>
+            <TableHead className="h-10 text-[9px] font-black uppercase tracking-[0.24em] text-white/28">{copy.table.phone}</TableHead>
+            <TableHead className="h-10 text-[9px] font-black uppercase tracking-[0.24em] text-white/28">{copy.table.week}</TableHead>
+            <TableHead className="h-10 text-[9px] font-black uppercase tracking-[0.24em] text-white/28">{copy.table.month}</TableHead>
+            <TableHead className="h-10 text-[9px] font-black uppercase tracking-[0.24em] text-white/28">{copy.table.lastAccess}</TableHead>
+            <TableHead className="h-10 text-[9px] font-black uppercase tracking-[0.24em] text-white/28">{copy.table.subscription}</TableHead>
+            <TableHead className="h-10 text-right text-[9px] font-black uppercase tracking-[0.24em] text-white/28">{copy.table.invite}</TableHead>
+            <TableHead className="h-10 pr-4 text-right text-[9px] font-black uppercase tracking-[0.24em] text-white/28">{copy.table.open}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {students.map((student) => {
-            const status = getStatusInfo(student);
+            const status = getStatusInfo(student, copy);
             return (
               <TableRow key={student.userId} className="border-[#52e7ff]/[0.08] hover:bg-[#52e7ff]/[0.045]">
                 <TableCell className="max-w-[280px] pl-4">
@@ -1872,11 +2431,11 @@ function StudentDesktopTable({
                 </TableCell>
                 <TableCell><Badge variant={status.variant} className="text-[9px] font-black uppercase">{status.text}</Badge></TableCell>
                 <TableCell className="max-w-[160px] truncate text-xs font-bold text-white/65">{coachLabel(student, coaches)}</TableCell>
-                <TableCell className="font-mono text-xs text-white/55">{student.phone || "-"}</TableCell>
+                <TableCell className="font-mono text-xs text-white/55">{student.phone || copy.common.none}</TableCell>
                 <TableCell className="font-mono text-xs font-black text-[#00e5ff]">{student.weeklyXp} XP</TableCell>
                 <TableCell className="font-mono text-xs text-white/65">{student.monthlyXp} XP</TableCell>
-                <TableCell className="font-mono text-xs text-white/55">{relativeTime(student.lastActiveAt)}</TableCell>
-                <TableCell className="max-w-[140px] truncate text-xs text-white/65">{formatHuman(student.subscriptionStatus)}</TableCell>
+                <TableCell className="font-mono text-xs text-white/55">{relativeTime(student.lastActiveAt, copy)}</TableCell>
+                <TableCell className="max-w-[140px] truncate text-xs text-white/65">{formatHuman(student.subscriptionStatus, copy)}</TableCell>
                 <TableCell className="text-right">
                   <Button size="sm" variant="outline" className="h-8 rounded-lg border-white/10 bg-white/5 px-2 text-white/60 hover:text-[#52e7ff]" onClick={() => onCopyInvite(student)}>
                     <Copy className="h-3.5 w-3.5" />
@@ -1899,18 +2458,20 @@ function StudentDesktopTable({
 function StudentMobileCards({
   students,
   coaches,
+  copy,
   onOpen,
   onCopyInvite,
 }: {
   students: AdminStudent[];
   coaches: AdminCoach[];
+  copy: AdminPanelCopy;
   onOpen: (student: AdminStudent) => void;
   onCopyInvite: (student: AdminStudent) => void;
 }) {
   if (!students.length) {
     return (
       <div className="rounded-lg border border-dashed border-white/10 p-10 text-center text-sm text-white/35">
-        Nenhum aluno encontrado.
+        {copy.table.empty}
       </div>
     );
   }
@@ -1918,7 +2479,7 @@ function StudentMobileCards({
   return (
     <>
       {students.map((student) => {
-        const status = getStatusInfo(student);
+        const status = getStatusInfo(student, copy);
         return (
           <div key={student.userId} className="rounded-lg border border-white/8 bg-white/[0.035] p-4">
             <div className="mb-3 flex items-start justify-between gap-3">
@@ -1929,20 +2490,20 @@ function StudentMobileCards({
               <Badge variant={status.variant} className="shrink-0 text-[9px] font-black uppercase">{status.text}</Badge>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <Metric label="Coach" value={coachLabel(student, coaches)} />
-              <Metric label="Telefone" value={student.phone || "-"} />
-              <Metric label="Semana" value={`${student.weeklyXp} XP`} cyan />
-              <Metric label="Mês" value={`${student.monthlyXp} XP`} />
-              <Metric label="Visto" value={relativeTime(student.lastActiveAt)} />
-              <Metric label="Plano" value={formatHuman(student.subscriptionStatus)} />
+              <Metric label={copy.table.coach} value={coachLabel(student, coaches)} />
+              <Metric label={copy.table.phone} value={student.phone || copy.common.none} />
+              <Metric label={copy.table.week} value={`${student.weeklyXp} XP`} cyan />
+              <Metric label={copy.table.month} value={`${student.monthlyXp} XP`} />
+              <Metric label={copy.table.seen} value={relativeTime(student.lastActiveAt, copy)} />
+              <Metric label={copy.common.plan} value={formatHuman(student.subscriptionStatus, copy)} />
             </div>
             <div className="mt-4 grid grid-cols-2 gap-2">
               <Button variant="outline" className="border-white/10 bg-white/5 text-white/65" onClick={() => onCopyInvite(student)}>
                 <Copy className="mr-2 h-4 w-4" />
-                Convite
+                {copy.common.invite}
               </Button>
               <Button className="bg-[#00e5ff] text-[#0a0f1e] hover:bg-white" onClick={() => onOpen(student)}>
-                Abrir
+                {copy.common.open}
                 <ChevronRight className="ml-2 h-4 w-4" />
               </Button>
             </div>
@@ -2003,15 +2564,7 @@ function Field({ label, value, onChange, className = "" }: { label: string; valu
   );
 }
 
-const WEEK_DAYS: { key: WeekDayKey; label: string; short: string }[] = [
-  { key: "monday",    label: "Segunda-feira", short: "Seg" },
-  { key: "tuesday",  label: "Terça-feira",   short: "Ter" },
-  { key: "wednesday",label: "Quarta-feira",  short: "Qua" },
-  { key: "thursday", label: "Quinta-feira",  short: "Qui" },
-  { key: "friday",   label: "Sexta-feira",   short: "Sex" },
-  { key: "saturday", label: "Sábado",        short: "Sáb" },
-  { key: "sunday",   label: "Domingo",       short: "Dom" },
-];
+const WEEK_DAY_KEYS: WeekDayKey[] = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
 
 function WeeklyWorkoutEditor({
   student,
@@ -2019,12 +2572,16 @@ function WeeklyWorkoutEditor({
   exerciseCatalog,
   acting,
   onSave,
+  copy,
+  language,
 }: {
   student: AdminStudent;
   weeklyPlan: AdminWeeklyWorkoutPlan | null;
   exerciseCatalog: AdminCatalogExercise[];
   acting: boolean;
   onSave: (days: AdminWeeklyWorkoutDays) => Promise<void>;
+  copy: AdminPanelCopy;
+  language: AdminPanelLanguage;
 }) {
   const [days, setDays] = useState<AdminWeeklyWorkoutDays>(() => weeklyPlan?.days ?? {});
   const [expandedDay, setExpandedDay] = useState<WeekDayKey | null>(null);
@@ -2038,9 +2595,9 @@ function WeeklyWorkoutEditor({
   function blankDayPlan(): GutoWorkoutPlan {
     return {
       studentId: student.userId,
-      title: "Treino do dia",
-      focus: "Treino do dia",
-      dateLabel: "Hoje",
+      title: copy.workout.dayWorkout,
+      focus: copy.workout.dayWorkout,
+      dateLabel: copy.workout.todayLabel,
       scheduledFor: new Date().toISOString(),
       summary: "",
       source: "coach_manual",
@@ -2063,16 +2620,16 @@ function WeeklyWorkoutEditor({
 	    });
 	  }
 
-	  function planWithExercises(plan: GutoWorkoutPlan, exercises: GutoWorkoutExercise[]): GutoWorkoutPlan {
+  function planWithExercises(plan: GutoWorkoutPlan, exercises: GutoWorkoutExercise[]): GutoWorkoutPlan {
 	    const orderedExercises = exercises.map((exercise, index) => ({ ...exercise, order: index + 1 }));
-	    return { ...plan, exercises: orderedExercises, blocks: [{ name: "Principal", exercises: orderedExercises }] };
+	    return { ...plan, exercises: orderedExercises, blocks: [{ name: copy.workout.mainBlock, exercises: orderedExercises }] };
 	  }
 
   function addExerciseToDayFromCatalog(day: WeekDayKey, catalog: AdminCatalogExercise) {
     const current = days[day] ?? blankDayPlan();
     const index = current.exercises.length;
-    const exercise = workoutExerciseFromCatalog(catalog, blankExercise(index), index);
-    setDayPlan(day, { ...current, exercises: [...current.exercises, exercise], blocks: [{ name: "Principal", exercises: [...current.exercises, exercise] }] });
+    const exercise = workoutExerciseFromCatalog(catalog, blankExercise(index), index, language);
+    setDayPlan(day, { ...current, exercises: [...current.exercises, exercise], blocks: [{ name: copy.workout.mainBlock, exercises: [...current.exercises, exercise] }] });
     setDaySearch((s) => ({ ...s, [day]: "" }));
   }
 
@@ -2094,9 +2651,9 @@ function WeeklyWorkoutEditor({
     setSaving(true);
     try {
       await onSave(days);
-      toast.success("Plano semanal salvo.");
+      toast.success(copy.workout.weeklySaved);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Erro ao salvar plano semanal.");
+      toast.error(error instanceof Error ? error.message : copy.workout.weeklySaveError);
     } finally {
       setSaving(false);
     }
@@ -2105,11 +2662,12 @@ function WeeklyWorkoutEditor({
   const searchFor = (day: WeekDayKey) => normalizeCatalogSearch(daySearch[day] ?? "");
 
   return (
-    <Panel title="Plano semanal">
-      <p className="mb-4 text-[11px] text-white/40">Monte o treino de cada dia. O aluno verá apenas o treino do dia atual no app.</p>
+    <Panel title={copy.workout.weeklyTitle}>
+      <p className="mb-4 text-[11px] text-white/40">{copy.workout.weeklyHelp}</p>
 
       <div className="space-y-2">
-        {WEEK_DAYS.map(({ key, label, short }) => {
+        {WEEK_DAY_KEYS.map((key) => {
+          const [label, short] = copy.days[key];
           const plan = days[key];
           const isExpanded = expandedDay === key;
           const exerciseCount = plan?.exercises?.length ?? 0;
@@ -2137,7 +2695,7 @@ function WeeklyWorkoutEditor({
                     <span className="hidden truncate text-xs text-white/40 sm:block">{focusLabel}</span>
                   )}
                   {!plan && (
-                    <span className="text-xs text-white/25">Descanso / sem treino</span>
+                    <span className="text-xs text-white/25">{copy.workout.restDay}</span>
                   )}
                 </div>
                 <span className="text-white/30">{isExpanded ? "▲" : "▼"}</span>
@@ -2149,20 +2707,20 @@ function WeeklyWorkoutEditor({
                     <>
                       <div className="grid gap-2 sm:grid-cols-2">
                         <label className="block">
-                          <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-white/30">Foco do dia</span>
+                          <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-white/30">{copy.workout.focus}</span>
                           <Input
                             value={plan.focus || ""}
                             onChange={(e) => setDayPlan(key, { ...plan, focus: e.target.value, title: e.target.value })}
-                            placeholder="Ex: Peito + tríceps"
+                            placeholder={copy.workout.focusPlaceholder}
                             className="h-9 border-white/10 bg-white/5 text-sm text-white"
                           />
                         </label>
                         <label className="block">
-                          <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-white/30">Notas do coach</span>
+                          <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-white/30">{copy.workout.coachNotes}</span>
                           <Input
                             value={plan.coachNotes || ""}
                             onChange={(e) => setDayPlan(key, { ...plan, coachNotes: e.target.value })}
-                            placeholder="Observações opcionais"
+                            placeholder={copy.workout.notesPlaceholder}
                             className="h-9 border-white/10 bg-white/5 text-sm text-white"
                           />
                         </label>
@@ -2175,7 +2733,7 @@ function WeeklyWorkoutEditor({
 	                              <div className="mb-3 flex items-start justify-between gap-3">
 	                                <div className="min-w-0">
 	                                  <p className="truncate text-sm font-black text-white">{ex.name || ex.canonicalNamePt || ex.id}</p>
-	                                  <p className="mt-1 truncate font-mono text-[9px] uppercase tracking-widest text-white/30">{ex.muscleGroup || "catalogo"} · {ex.id}</p>
+	                                  <p className="mt-1 truncate font-mono text-[9px] uppercase tracking-widest text-white/30">{ex.muscleGroup || copy.workout.catalog} · {ex.id}</p>
 	                                </div>
 	                                <button
 	                                  onClick={() => removeExerciseFromDay(key, i)}
@@ -2186,13 +2744,13 @@ function WeeklyWorkoutEditor({
 	                                </button>
 	                              </div>
 	                              <div className="grid gap-2 md:grid-cols-4">
-	                                <Field label="Séries" value={String(ex.sets || "")} onChange={(sets) => updateExerciseInDay(key, i, { sets: Number(sets) || 0 })} />
-	                                <Field label="Reps" value={String(ex.reps || "")} onChange={(reps) => updateExerciseInDay(key, i, { reps })} />
-	                                <Field label="Carga" value={String(ex.load || "")} onChange={(load) => updateExerciseInDay(key, i, { load })} />
-	                                <Field label="Descanso" value={ex.rest || ""} onChange={(rest) => updateExerciseInDay(key, i, { rest })} />
-	                                <Field label="Técnica" value={ex.cue || ""} onChange={(cue) => updateExerciseInDay(key, i, { cue })} className="md:col-span-2" />
-	                                <Field label="Observação do movimento" value={ex.note || ""} onChange={(note) => updateExerciseInDay(key, i, { note })} className="md:col-span-2" />
-	                                <Field label="Substituições" value={(ex.alternatives || []).join(", ")} onChange={(alternatives) => updateExerciseInDay(key, i, { alternatives: alternatives.split(",").map((item) => item.trim()).filter(Boolean) })} className="md:col-span-4" />
+	                                <Field label={copy.workout.sets} value={String(ex.sets || "")} onChange={(sets) => updateExerciseInDay(key, i, { sets: Number(sets) || 0 })} />
+	                                <Field label={copy.workout.reps} value={String(ex.reps || "")} onChange={(reps) => updateExerciseInDay(key, i, { reps })} />
+	                                <Field label={copy.workout.load} value={String(ex.load || "")} onChange={(load) => updateExerciseInDay(key, i, { load })} />
+	                                <Field label={copy.workout.rest} value={ex.rest || ""} onChange={(rest) => updateExerciseInDay(key, i, { rest })} />
+	                                <Field label={copy.workout.technique} value={ex.cue || ""} onChange={(cue) => updateExerciseInDay(key, i, { cue })} className="md:col-span-2" />
+	                                <Field label={copy.workout.movementNote} value={ex.note || ""} onChange={(note) => updateExerciseInDay(key, i, { note })} className="md:col-span-2" />
+	                                <Field label={copy.workout.substitutions} value={(ex.alternatives || []).join(", ")} onChange={(alternatives) => updateExerciseInDay(key, i, { alternatives: alternatives.split(",").map((item) => item.trim()).filter(Boolean) })} className="md:col-span-4" />
 	                              </div>
 	                            </div>
 	                          ))}
@@ -2205,7 +2763,7 @@ function WeeklyWorkoutEditor({
                     <Input
                       value={daySearch[key] ?? ""}
                       onChange={(e) => setDaySearch((s) => ({ ...s, [key]: e.target.value }))}
-                      placeholder="Buscar exercício no catálogo…"
+                      placeholder={copy.workout.searchCatalog}
                       className="h-9 border-white/10 bg-white/5 text-sm text-white"
                     />
                     {catalogResults.length > 0 && (
@@ -2216,7 +2774,7 @@ function WeeklyWorkoutEditor({
 	                            className="flex w-full min-w-0 items-center gap-2 px-3 py-2 text-left text-xs hover:bg-white/5"
 	                            onClick={() => addExerciseToDayFromCatalog(key, catalog)}
 	                          >
-	                            <span className="min-w-0 flex-1 truncate font-medium text-white">{catalog.canonicalNamePt}</span>
+	                            <span className="min-w-0 flex-1 truncate font-medium text-white">{catalog.namesByLanguage?.[language] || catalog.canonicalNamePt}</span>
 	                            <span className="shrink-0 text-white/35">{catalog.muscleGroup}</span>
 	                          </button>
                         ))}
@@ -2227,12 +2785,12 @@ function WeeklyWorkoutEditor({
                   <div className="flex gap-2">
                     {!plan && (
 	                      <Button size="sm" variant="outline" className="border-[#00e5ff]/30 bg-[#00e5ff]/10 text-[#00e5ff] hover:bg-[#00e5ff]/20" onClick={() => setDayPlan(key, blankDayPlan())}>
-	                        <Plus className="mr-1 h-3.5 w-3.5" /> Adicionar treino
+	                        <Plus className="mr-1 h-3.5 w-3.5" /> {copy.workout.addWorkout}
 	                      </Button>
 	                    )}
 	                    {plan && (
 	                      <Button size="sm" variant="outline" className="border-red-500/25 bg-red-500/10 text-red-300 hover:bg-red-500 hover:text-white" onClick={() => setDayPlan(key, undefined)}>
-	                        <Trash2 className="mr-1 h-3.5 w-3.5" /> Remover dia
+	                        <Trash2 className="mr-1 h-3.5 w-3.5" /> {copy.workout.removeDay}
 	                      </Button>
                     )}
                   </div>
@@ -2250,11 +2808,11 @@ function WeeklyWorkoutEditor({
           onClick={() => void handleSave()}
         >
           <Save className="mr-2 h-4 w-4" />
-          {saving ? "Salvando…" : "Salvar plano semanal"}
+          {saving ? copy.common.saving : copy.workout.saveWeekly}
         </Button>
         {weeklyPlan?.updatedAt && (
           <p className="mt-2 text-[10px] text-white/30">
-            Última atualização: {new Date(weeklyPlan.updatedAt).toLocaleString("pt-BR")}
+            {copy.common.updatedAt}: {new Date(weeklyPlan.updatedAt).toLocaleString(language)}
           </p>
         )}
       </div>
@@ -2274,6 +2832,8 @@ function WorkoutEditor({
   onGenerate,
   onLock,
   onReset,
+  copy,
+  language,
 }: {
   student: AdminStudent;
   value: GutoWorkoutPlan;
@@ -2286,6 +2846,8 @@ function WorkoutEditor({
   onGenerate: () => void;
   onLock: () => void;
   onReset: () => void;
+  copy: AdminPanelCopy;
+  language: AdminPanelLanguage;
 	}) {
 	  const [exerciseSearch, setExerciseSearch] = useState<Record<number, string>>({});
 	  const [customExerciseDraft, setCustomExerciseDraft] = useState<CustomExerciseDraft>(blankCustomExerciseDraft());
@@ -2300,7 +2862,7 @@ function WorkoutEditor({
     onChange({
       ...value,
       exercises: value.exercises.map((exercise, i) =>
-        i === index ? workoutExerciseFromCatalog(catalogExercise, exercise, index) : exercise
+        i === index ? workoutExerciseFromCatalog(catalogExercise, exercise, index, language) : exercise
       ),
     });
     setExerciseSearch((current) => ({ ...current, [index]: "" }));
@@ -2323,7 +2885,7 @@ function WorkoutEditor({
   };
 
   const submitCustomExercise = async () => {
-    const validationError = validateCustomExerciseDraft(customExerciseDraft);
+    const validationError = validateCustomExerciseDraft(customExerciseDraft, copy);
     if (validationError) {
       toast.error(validationError);
       return;
@@ -2345,10 +2907,10 @@ function WorkoutEditor({
         mimeType: "video/mp4",
         hasAudio: customExerciseDraft.hasAudio,
       });
-      toast.success("Exercício enviado para aprovação técnica.");
+      toast.success(copy.workout.approvalSent);
       setCustomExerciseDraft(blankCustomExerciseDraft());
     } catch (error) {
-      toast.error(error instanceof ApiError ? error.message || EXERCISE_VIDEO_ERROR_COPY : adminErrorMessage(error));
+      toast.error(error instanceof ApiError ? error.message || copy.errors.videoLimit : adminErrorMessage(error, copy));
     } finally {
       setCreatingCustomExercise(false);
     }
@@ -2356,50 +2918,50 @@ function WorkoutEditor({
 
   return (
     <div className="grid gap-4">
-      <Panel title="Treino oficial">
-        <PlanStatus source={value.source} locked={value.lockedByCoach} />
+      <Panel title={copy.workout.weeklyTitle === copy.sheet.weeklyPlan ? copy.sheet.officialWorkout : copy.sheet.officialWorkout}>
+        <PlanStatus source={value.source} locked={value.lockedByCoach} copy={copy} />
         <div className="mt-4 grid gap-3 md:grid-cols-2">
-          <Field label="Título" value={value.title || ""} onChange={(title) => onChange({ ...value, title, focus: title || value.focus })} />
-          <Field label="Grupo muscular / foco" value={value.focus || ""} onChange={(focus) => onChange({ ...value, focus })} />
+          <Field label={copy.workout.title} value={value.title || ""} onChange={(title) => onChange({ ...value, title, focus: title || value.focus })} />
+          <Field label={copy.workout.muscleFocus} value={value.focus || ""} onChange={(focus) => onChange({ ...value, focus })} />
           <label className="block">
-            <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-white/30">Dia</span>
+            <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-white/30">{copy.workout.day}</span>
             <select value={value.weekDay || "today"} onChange={(e) => onChange({ ...value, weekDay: e.target.value })} className="h-10 w-full rounded-md border border-white/10 bg-white/5 px-3 text-sm text-white">
-              {[["Domingo","Domingo"],["Segunda-feira","Segunda-feira"],["Terça-feira","Terça-feira"],["Quarta-feira","Quarta-feira"],["Quinta-feira","Quinta-feira"],["Sexta-feira","Sexta-feira"],["Sábado","Sábado"]].map(([val, label]) => <option key={val} value={val} className="bg-[#0d1426]">{label}</option>)}
-              <option value="today" className="bg-[#0d1426]">Hoje ({["Domingo","Segunda","Terça","Quarta","Quinta","Sexta","Sábado"][new Date().getDay()]})</option>
+              {WEEK_DAY_KEYS.map((day) => <option key={day} value={copy.days[day][0]} className="bg-[#0d1426]">{copy.days[day][0]}</option>)}
+              <option value="today" className="bg-[#0d1426]">{copy.workout.todayLabel} ({copy.days.today[new Date().getDay()]})</option>
             </select>
           </label>
           <label className="block">
-            <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-white/30">Local</span>
+            <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-white/30">{copy.workout.location}</span>
             <select value={value.location || ""} onChange={(e) => onChange({ ...value, location: e.target.value })} className="h-10 w-full rounded-md border border-white/10 bg-white/5 px-3 text-sm text-white">
-              <option value="" className="bg-[#0d1426]">Selecionar</option>
-              {Object.entries(TRAINING_LOCATION_LABELS).map(([code, label]) => <option key={code} value={code} className="bg-[#0d1426]">{label}</option>)}
+              <option value="" className="bg-[#0d1426]">{copy.workout.select}</option>
+              {["gym", "home", "park", "mixed"].map((code) => <option key={code} value={code} className="bg-[#0d1426]">{formatHuman(code, copy)}</option>)}
             </select>
           </label>
-          <Field label="Duração estimada" value={String(value.estimatedDurationMinutes || "")} onChange={(estimatedDurationMinutes) => onChange({ ...value, estimatedDurationMinutes: Number(estimatedDurationMinutes) || undefined })} />
-          <Field label="Dificuldade" value={value.difficulty || ""} onChange={(difficulty) => onChange({ ...value, difficulty })} />
-          <Field label="Observações do coach" value={value.coachNotes || ""} onChange={(coachNotes) => onChange({ ...value, coachNotes, summary: coachNotes || value.summary })} className="md:col-span-2" />
+          <Field label={copy.workout.duration} value={String(value.estimatedDurationMinutes || "")} onChange={(estimatedDurationMinutes) => onChange({ ...value, estimatedDurationMinutes: Number(estimatedDurationMinutes) || undefined })} />
+          <Field label={copy.workout.difficulty} value={value.difficulty || ""} onChange={(difficulty) => onChange({ ...value, difficulty })} />
+          <Field label={copy.workout.coachNotes} value={value.coachNotes || ""} onChange={(coachNotes) => onChange({ ...value, coachNotes, summary: coachNotes || value.summary })} className="md:col-span-2" />
         </div>
 
 	        <div className="mt-4 flex flex-wrap gap-2">
-	          <Button className="bg-[#00e5ff] text-[#0a0f1e] hover:bg-white" disabled={acting} onClick={onSave}><Save className="mr-2 h-4 w-4" />Salvar alterações</Button>
-	          <Button variant="outline" className="border-white/10 bg-white/5 text-white" disabled={acting} onClick={onCreateManual}><Dumbbell className="mr-2 h-4 w-4" />Criar treino manual</Button>
-	          <Button variant="outline" className="border-white/10 bg-white/5 text-white" disabled={acting} onClick={onGenerate}><RefreshCw className="mr-2 h-4 w-4" />Gerar com GUTO</Button>
-	          <Button variant="outline" className="border-white/10 bg-white/5 text-white" onClick={() => setShowHistory((current) => !current)}><History className="mr-2 h-4 w-4" />Histórico</Button>
-	          <Button variant="outline" className="border-white/10 bg-white/5 text-white" disabled={acting} onClick={onLock}>{value.lockedByCoach ? <Unlock className="mr-2 h-4 w-4" /> : <Lock className="mr-2 h-4 w-4" />}{value.lockedByCoach ? "Permitir GUTO atualizar" : "Bloquear alterações automáticas"}</Button>
-	          <Button variant="outline" className="border-red-500/30 bg-transparent text-red-300" disabled={acting} onClick={onReset}><Trash2 className="mr-2 h-4 w-4" />Resetar treino</Button>
+	          <Button className="bg-[#00e5ff] text-[#0a0f1e] hover:bg-white" disabled={acting} onClick={onSave}><Save className="mr-2 h-4 w-4" />{copy.workout.saveChanges}</Button>
+	          <Button variant="outline" className="border-white/10 bg-white/5 text-white" disabled={acting} onClick={onCreateManual}><Dumbbell className="mr-2 h-4 w-4" />{copy.workout.createManual}</Button>
+	          <Button variant="outline" className="border-white/10 bg-white/5 text-white" disabled={acting} onClick={onGenerate}><RefreshCw className="mr-2 h-4 w-4" />{copy.workout.generateGuto}</Button>
+	          <Button variant="outline" className="border-white/10 bg-white/5 text-white" onClick={() => setShowHistory((current) => !current)}><History className="mr-2 h-4 w-4" />{copy.workout.history}</Button>
+	          <Button variant="outline" className="border-white/10 bg-white/5 text-white" disabled={acting} onClick={onLock}>{value.lockedByCoach ? <Unlock className="mr-2 h-4 w-4" /> : <Lock className="mr-2 h-4 w-4" />}{value.lockedByCoach ? copy.workout.allowGuto : copy.workout.lockGuto}</Button>
+	          <Button variant="outline" className="border-red-500/30 bg-transparent text-red-300" disabled={acting} onClick={onReset}><Trash2 className="mr-2 h-4 w-4" />{copy.workout.reset}</Button>
 	        </div>
       </Panel>
 
-      <Panel title="Adicionar novo exercício">
+      <Panel title={copy.workout.addNewExercise}>
         <div className="mb-4 rounded-md border border-[#00e5ff]/25 bg-[#00e5ff]/10 px-3 py-2">
-          <p className="text-xs font-bold text-[#baf7ff]">{EXERCISE_VIDEO_LIMIT_COPY}</p>
-          <p className="mt-1 text-[11px] text-white/40">Não há upload real aqui: o vídeo precisa estar previamente otimizado e disponível no caminho interno controlado.</p>
+          <p className="text-xs font-bold text-[#baf7ff]">{copy.workout.videoLimitCopy}</p>
+          <p className="mt-1 text-[11px] text-white/40">{copy.workout.videoNoUpload}</p>
         </div>
         <div className="grid gap-3 md:grid-cols-4">
-          <Field label="Nome oficial" value={customExerciseDraft.canonicalNamePt} onChange={(canonicalNamePt) => updateCustomExerciseDraft({ canonicalNamePt })} className="md:col-span-2" />
-          <Field label="ID opcional" value={customExerciseDraft.id} onChange={(id) => updateCustomExerciseDraft({ id })} />
+          <Field label={copy.workout.officialName} value={customExerciseDraft.canonicalNamePt} onChange={(canonicalNamePt) => updateCustomExerciseDraft({ canonicalNamePt })} className="md:col-span-2" />
+          <Field label={copy.workout.optionalId} value={customExerciseDraft.id} onChange={(id) => updateCustomExerciseDraft({ id })} />
           <label className="block">
-            <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-white/30">Grupo</span>
+            <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-white/30">{copy.workout.group}</span>
             <select
               value={customExerciseDraft.muscleGroup}
               onChange={(event) => updateCustomExerciseDraft({ muscleGroup: event.target.value })}
@@ -2410,26 +2972,26 @@ function WorkoutEditor({
               ))}
             </select>
           </label>
-          <Field label="Equipamento" value={customExerciseDraft.equipment} onChange={(equipment) => updateCustomExerciseDraft({ equipment })} />
-          <Field label="Arquivo MP4 seguro" value={customExerciseDraft.sourceFileName} onChange={(sourceFileName) => updateCustomExerciseDraft({ sourceFileName })} />
-          <Field label="Caminho interno" value={customExerciseDraft.videoUrl} onChange={(videoUrl) => updateCustomExerciseDraft({ videoUrl })} className="md:col-span-2" />
+          <Field label={copy.workout.equipment} value={customExerciseDraft.equipment} onChange={(equipment) => updateCustomExerciseDraft({ equipment })} />
+          <Field label={copy.workout.safeMp4} value={customExerciseDraft.sourceFileName} onChange={(sourceFileName) => updateCustomExerciseDraft({ sourceFileName })} />
+          <Field label={copy.workout.internalPath} value={customExerciseDraft.videoUrl} onChange={(videoUrl) => updateCustomExerciseDraft({ videoUrl })} className="md:col-span-2" />
           <Field label="Bytes" value={customExerciseDraft.fileSizeBytes} onChange={(fileSizeBytes) => updateCustomExerciseDraft({ fileSizeBytes })} />
-          <Field label="Duração s" value={customExerciseDraft.durationSeconds} onChange={(durationSeconds) => updateCustomExerciseDraft({ durationSeconds })} />
+          <Field label={copy.workout.durationSeconds} value={customExerciseDraft.durationSeconds} onChange={(durationSeconds) => updateCustomExerciseDraft({ durationSeconds })} />
           <Field label="Width" value={customExerciseDraft.width} onChange={(width) => updateCustomExerciseDraft({ width })} />
           <Field label="Height" value={customExerciseDraft.height} onChange={(height) => updateCustomExerciseDraft({ height })} />
           <Field label="FPS" value={customExerciseDraft.fps} onChange={(fps) => updateCustomExerciseDraft({ fps })} />
         </div>
         <label className="mt-3 flex items-center gap-2 text-sm text-white/55">
           <input type="checkbox" checked={customExerciseDraft.hasAudio} onChange={(event) => updateCustomExerciseDraft({ hasAudio: event.target.checked })} />
-          Vídeo tem áudio
+          {copy.workout.hasAudio}
         </label>
         <Button className="mt-4 bg-[#00e5ff] text-[#0a0f1e] hover:bg-white" disabled={acting || creatingCustomExercise} onClick={() => void submitCustomExercise()}>
           <FileVideo className="mr-2 h-4 w-4" />
-          Enviar para aprovação
+          {copy.workout.sendApproval}
         </Button>
       </Panel>
 
-      <Panel title={`Exercícios de ${student.name}`}>
+      <Panel title={copyText(copy.workout.studentExercises, { name: student.name })}>
         <div className="grid gap-3">
           {value.exercises.map((exercise, index) => (
             <div key={`${exercise.id}-${index}`} className="rounded-lg border border-white/8 bg-black/15 p-3">
@@ -2456,18 +3018,18 @@ function WorkoutEditor({
               </div>
               <div className="mb-3 grid gap-2 md:grid-cols-[1fr_7rem]">
                 <label className="block">
-                  <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-white/30">Exercício oficial</span>
+                  <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-white/30">{copy.workout.officialExercise}</span>
                   <Input
                     value={searchTerm}
                     onChange={(event) => setExerciseSearch((current) => ({ ...current, [index]: event.target.value }))}
-                    placeholder={selectedCatalogExercise ? selectedCatalogExercise.canonicalNamePt : "Pesquisar no catálogo oficial"}
+                    placeholder={selectedCatalogExercise ? selectedCatalogExercise.namesByLanguage?.[language] || selectedCatalogExercise.canonicalNamePt : copy.workout.searchOfficial}
                     className="h-10 border-white/10 bg-white/5 text-white placeholder:text-white/30"
                   />
                 </label>
                 <div className="rounded-md border border-white/10 bg-white/5 px-3 py-2">
-                  <span className="block text-[10px] font-black uppercase tracking-widest text-white/30">Catálogo</span>
+                  <span className="block text-[10px] font-black uppercase tracking-widest text-white/30">{copy.workout.catalog}</span>
                   <span className={selectedCatalogExercise ? "text-xs font-black text-[#00e5ff]" : "text-xs font-black text-red-300"}>
-                    {selectedCatalogExercise ? selectedCatalogExercise.id : "Não escolhido"}
+                    {selectedCatalogExercise ? selectedCatalogExercise.id : copy.workout.notChosen}
                   </span>
                 </div>
               </div>
@@ -2480,7 +3042,7 @@ function WorkoutEditor({
                       onClick={() => selectCatalogExercise(index, item)}
 	                      className="min-w-0 rounded-md border border-white/10 bg-white/[0.04] px-3 py-2 text-left hover:border-[#00e5ff]/45"
 	                    >
-	                      <span className="block truncate text-xs font-black text-white">{item.canonicalNamePt}</span>
+	                      <span className="block truncate text-xs font-black text-white">{item.namesByLanguage?.[language] || item.canonicalNamePt}</span>
 	                      <span className="block truncate font-mono text-[9px] uppercase tracking-widest text-white/35">{item.muscleGroup} · {item.id}</span>
 	                    </button>
 	                  ))}
@@ -2488,12 +3050,12 @@ function WorkoutEditor({
               )}
               {normalizedSearch && matches.length === 0 && (
                 <p className="mb-3 rounded-md border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-red-200">
-                  Exercício não encontrado no catálogo. Para usar este exercício, ele precisa ser adicionado ao catálogo oficial com vídeo local validado.
+                  {copy.workout.notFound}
                 </p>
               )}
               {needsCatalogSelection && !normalizedSearch && (
                 <p className="mb-3 rounded-md border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-red-200">
-                  Escolha um exercício do catálogo oficial antes de salvar.
+                  {copy.workout.chooseBeforeSave}
                 </p>
               )}
               {selectedCatalogExercise && (
@@ -2502,22 +3064,22 @@ function WorkoutEditor({
 	                    <video src={selectedCatalogExercise.videoUrl} muted loop playsInline controls preload="metadata" className="h-full w-full object-contain" />
 	                  </div>
                   <div className="rounded-md border border-white/10 bg-white/[0.035] px-3 py-2">
-                    <p className="text-sm font-black text-white">{selectedCatalogExercise.canonicalNamePt}</p>
+                    <p className="text-sm font-black text-white">{selectedCatalogExercise.namesByLanguage?.[language] || selectedCatalogExercise.canonicalNamePt}</p>
                     <p className="mt-1 font-mono text-[9px] uppercase tracking-widest text-white/35">
-                      {selectedCatalogExercise.muscleGroup} · {selectedCatalogExercise.equipment || "sem equipamento"}
+                      {selectedCatalogExercise.muscleGroup} · {selectedCatalogExercise.equipment || copy.workout.noEquipment}
                     </p>
                     <p className="mt-1 break-all font-mono text-[9px] text-white/25">{selectedCatalogExercise.videoUrl}</p>
                   </div>
                 </div>
               )}
               <div className="grid gap-3 md:grid-cols-4">
-                <Field label="Séries" value={String(exercise.sets)} onChange={(sets) => updateExercise(index, { sets: Number(sets) || 0 })} />
-                <Field label="Reps" value={String(exercise.reps)} onChange={(reps) => updateExercise(index, { reps })} />
-                <Field label="Carga" value={String(exercise.load || "")} onChange={(load) => updateExercise(index, { load })} />
-                <Field label="Intervalo" value={exercise.rest} onChange={(rest) => updateExercise(index, { rest })} />
-                <Field label="Técnica" value={exercise.cue || ""} onChange={(cue) => updateExercise(index, { cue })} className="md:col-span-2" />
-	                <Field label="Observação do movimento" value={exercise.note || ""} onChange={(note) => updateExercise(index, { note })} className="md:col-span-2" />
-                <Field label="Substituições" value={(exercise.alternatives || []).join(", ")} onChange={(alternatives) => updateExercise(index, { alternatives: alternatives.split(",").map((item) => item.trim()).filter(Boolean) })} className="md:col-span-4" />
+                <Field label={copy.workout.sets} value={String(exercise.sets)} onChange={(sets) => updateExercise(index, { sets: Number(sets) || 0 })} />
+                <Field label={copy.workout.reps} value={String(exercise.reps)} onChange={(reps) => updateExercise(index, { reps })} />
+                <Field label={copy.workout.load} value={String(exercise.load || "")} onChange={(load) => updateExercise(index, { load })} />
+                <Field label={copy.workout.interval} value={exercise.rest} onChange={(rest) => updateExercise(index, { rest })} />
+                <Field label={copy.workout.technique} value={exercise.cue || ""} onChange={(cue) => updateExercise(index, { cue })} className="md:col-span-2" />
+	                <Field label={copy.workout.movementNote} value={exercise.note || ""} onChange={(note) => updateExercise(index, { note })} className="md:col-span-2" />
+                <Field label={copy.workout.substitutions} value={(exercise.alternatives || []).join(", ")} onChange={(alternatives) => updateExercise(index, { alternatives: alternatives.split(",").map((item) => item.trim()).filter(Boolean) })} className="md:col-span-4" />
               </div>
                   </>
                 );
@@ -2527,13 +3089,13 @@ function WorkoutEditor({
         </div>
         <Button variant="outline" className="mt-4 border-white/10 bg-white/5 text-white" onClick={() => onChange({ ...value, exercises: [...value.exercises, blankExercise(value.exercises.length)] })}>
           <Plus className="mr-2 h-4 w-4" />
-          Adicionar exercício
+          {copy.workout.addExercise}
         </Button>
       </Panel>
 
 	      {showHistory && (
-	        <Panel title="Histórico do treino">
-	          <LogList logs={history} empty="Sem histórico de treino." />
+	        <Panel title={copy.workout.workoutHistory}>
+	          <LogList logs={history} empty={copy.workout.noWorkoutHistory} copy={copy} language={language} />
 	        </Panel>
 	      )}
 	    </div>
@@ -2542,24 +3104,14 @@ function WorkoutEditor({
 
 // ─── Weekly Diet Editor ────────────────────────────────────────────────────────
 
-const DIET_WEEK_DAYS: Array<{ key: WeekDayKey; label: string }> = [
-  { key: "monday", label: "Segunda-feira" },
-  { key: "tuesday", label: "Terça-feira" },
-  { key: "wednesday", label: "Quarta-feira" },
-  { key: "thursday", label: "Quinta-feira" },
-  { key: "friday", label: "Sexta-feira" },
-  { key: "saturday", label: "Sábado" },
-  { key: "sunday", label: "Domingo" },
-];
-
-function dietDaySummary(day?: AdminWeeklyDietDay): string {
-  if (!day) return "Sem dieta programada";
-  const meals = [day.breakfast && "café", day.lunch && "almoço", day.dinner && "jantar", day.snacks && "lanches"].filter(Boolean);
+function dietDaySummary(day: AdminWeeklyDietDay | undefined, copy: AdminPanelCopy): string {
+  if (!day) return copy.diet.noDiet;
+  const meals = [day.breakfast && copy.diet.breakfast, day.lunch && copy.diet.lunch, day.dinner && copy.diet.dinner, day.snacks && copy.diet.snacks].filter(Boolean);
   const parts: string[] = [];
   if (meals.length) parts.push(meals.join(", "));
   if (day.caloriesEstimate) parts.push(`${day.caloriesEstimate} kcal`);
-  if (day.notes) parts.push("obs.");
-  return parts.length ? parts.join(" · ") : "Preenchido";
+  if (day.notes) parts.push(copy.diet.notes);
+  return parts.length ? parts.join(" · ") : copy.diet.filled;
 }
 
 function blankDietDay(): AdminWeeklyDietDay {
@@ -2567,15 +3119,17 @@ function blankDietDay(): AdminWeeklyDietDay {
 }
 
 function WeeklyDietEditor({
-  student,
   weeklyPlan,
   acting,
   onSave,
+  copy,
+  language,
 }: {
-  student: AdminStudent;
   weeklyPlan: AdminWeeklyDietPlan | null;
   acting: boolean;
   onSave: (days: AdminWeeklyDietDays) => Promise<void>;
+  copy: AdminPanelCopy;
+  language: AdminPanelLanguage;
 }) {
   const [days, setDays] = useState<AdminWeeklyDietDays>(() => weeklyPlan?.days ?? {});
   const [expandedDay, setExpandedDay] = useState<WeekDayKey | null>(null);
@@ -2604,22 +3158,23 @@ function WeeklyDietEditor({
     setSaving(true);
     try {
       await onSave(days);
-      toast.success("Plano semanal de dieta salvo.");
+      toast.success(copy.diet.weeklySaved);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Erro ao salvar plano semanal de dieta.");
+      toast.error(error instanceof Error ? error.message : copy.diet.weeklySaveError);
     } finally {
       setSaving(false);
     }
   }
 
   return (
-    <Panel title="Plano semanal de dieta">
-      <p className="mb-4 text-[11px] text-white/40">Monte a dieta de cada dia. Campos em branco não serão salvos. O aluno verá a dieta do dia atual via integração futura.</p>
+    <Panel title={copy.diet.weeklyTitle}>
+      <p className="mb-4 text-[11px] text-white/40">{copy.diet.weeklyHelp}</p>
       <div className="space-y-2">
-        {DIET_WEEK_DAYS.map(({ key, label }) => {
+        {WEEK_DAY_KEYS.map((key) => {
+          const [label] = copy.days[key];
           const dayData = days[key];
           const isExpanded = expandedDay === key;
-          const summary = dietDaySummary(dayData);
+          const summary = dietDaySummary(dayData, copy);
 
           return (
             <div key={key} className="rounded-lg border border-white/10 bg-white/5">
@@ -2629,7 +3184,7 @@ function WeeklyDietEditor({
               >
                 <div>
                   <span className="text-sm font-bold text-white">{label}</span>
-                  {dayData && <span className="ml-2 text-[11px] text-[#00e5ff]">preenchido</span>}
+                  {dayData && <span className="ml-2 text-[11px] text-[#00e5ff]">{copy.diet.filled}</span>}
                 </div>
                 <span className="text-[11px] text-white/40">{isExpanded ? "▲" : "▼"}</span>
               </button>
@@ -2640,83 +3195,83 @@ function WeeklyDietEditor({
                 <div className="border-t border-white/10 px-4 pb-4 pt-3">
                   <div className="grid gap-3 md:grid-cols-2">
                     <div>
-                      <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-white/40">Café da manhã</label>
+                      <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-white/40">{copy.diet.breakfast}</label>
                       <textarea
                         value={dayData?.breakfast ?? ""}
                         onChange={(e) => setDayField(key, "breakfast", e.target.value)}
                         rows={2}
-                        placeholder="Ex: Aveia com banana, ovo mexido..."
+                        placeholder={copy.diet.breakfastPlaceholder}
                         className="w-full resize-none rounded-md border border-white/10 bg-black/20 px-3 py-2 text-sm text-white placeholder-white/20 focus:border-[#00e5ff]/50 focus:outline-none"
                       />
                     </div>
                     <div>
-                      <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-white/40">Almoço</label>
+                      <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-white/40">{copy.diet.lunch}</label>
                       <textarea
                         value={dayData?.lunch ?? ""}
                         onChange={(e) => setDayField(key, "lunch", e.target.value)}
                         rows={2}
-                        placeholder="Ex: Frango grelhado, arroz, legumes..."
+                        placeholder={copy.diet.lunchPlaceholder}
                         className="w-full resize-none rounded-md border border-white/10 bg-black/20 px-3 py-2 text-sm text-white placeholder-white/20 focus:border-[#00e5ff]/50 focus:outline-none"
                       />
                     </div>
                     <div>
-                      <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-white/40">Jantar</label>
+                      <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-white/40">{copy.diet.dinner}</label>
                       <textarea
                         value={dayData?.dinner ?? ""}
                         onChange={(e) => setDayField(key, "dinner", e.target.value)}
                         rows={2}
-                        placeholder="Ex: Sopa de legumes, peixe grelhado..."
+                        placeholder={copy.diet.dinnerPlaceholder}
                         className="w-full resize-none rounded-md border border-white/10 bg-black/20 px-3 py-2 text-sm text-white placeholder-white/20 focus:border-[#00e5ff]/50 focus:outline-none"
                       />
                     </div>
                     <div>
-                      <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-white/40">Lanches</label>
+                      <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-white/40">{copy.diet.snacks}</label>
                       <textarea
                         value={dayData?.snacks ?? ""}
                         onChange={(e) => setDayField(key, "snacks", e.target.value)}
                         rows={2}
-                        placeholder="Ex: Iogurte, fruta, castanhas..."
+                        placeholder={copy.diet.snacksPlaceholder}
                         className="w-full resize-none rounded-md border border-white/10 bg-black/20 px-3 py-2 text-sm text-white placeholder-white/20 focus:border-[#00e5ff]/50 focus:outline-none"
                       />
                     </div>
                     <div>
-                      <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-white/40">Hidratação</label>
+                      <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-white/40">{copy.diet.hydration}</label>
                       <input
                         type="text"
                         value={dayData?.hydration ?? ""}
                         onChange={(e) => setDayField(key, "hydration", e.target.value)}
-                        placeholder="Ex: 2,5 litros de água"
+                        placeholder={copy.diet.hydrationPlaceholder}
                         className="w-full rounded-md border border-white/10 bg-black/20 px-3 py-2 text-sm text-white placeholder-white/20 focus:border-[#00e5ff]/50 focus:outline-none"
                       />
                     </div>
                     <div>
-                      <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-white/40">Observações</label>
+                      <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-white/40">{copy.diet.notes}</label>
                       <textarea
                         value={dayData?.notes ?? ""}
                         onChange={(e) => setDayField(key, "notes", e.target.value)}
                         rows={2}
-                        placeholder="Ex: Evitar açúcar refinado após as 18h..."
+                        placeholder={copy.diet.notesPlaceholder}
                         className="w-full resize-none rounded-md border border-white/10 bg-black/20 px-3 py-2 text-sm text-white placeholder-white/20 focus:border-[#00e5ff]/50 focus:outline-none"
                       />
                     </div>
                     <div>
-                      <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-white/40">Estimativa calórica (kcal)</label>
+                      <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-white/40">{copy.diet.caloriesEstimate}</label>
                       <input
                         type="number"
                         value={dayData?.caloriesEstimate ?? ""}
                         onChange={(e) => setDayField(key, "caloriesEstimate", e.target.value ? Number(e.target.value) : undefined)}
-                        placeholder="Ex: 2200"
+                        placeholder={copy.diet.caloriesPlaceholder}
                         min={0}
                         className="w-full rounded-md border border-white/10 bg-black/20 px-3 py-2 text-sm text-white placeholder-white/20 focus:border-[#00e5ff]/50 focus:outline-none"
                       />
                     </div>
                     <div>
-                      <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-white/40">Estimativa proteína (g)</label>
+                      <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-white/40">{copy.diet.proteinEstimate}</label>
                       <input
                         type="number"
                         value={dayData?.proteinEstimate ?? ""}
                         onChange={(e) => setDayField(key, "proteinEstimate", e.target.value ? Number(e.target.value) : undefined)}
-                        placeholder="Ex: 160"
+                        placeholder={copy.diet.proteinPlaceholder}
                         min={0}
                         className="w-full rounded-md border border-white/10 bg-black/20 px-3 py-2 text-sm text-white placeholder-white/20 focus:border-[#00e5ff]/50 focus:outline-none"
                       />
@@ -2729,7 +3284,7 @@ function WeeklyDietEditor({
                       onClick={() => clearDay(key)}
                     >
                       <Trash2 className="mr-1 h-3 w-3" />
-                      Limpar dia
+                      {copy.diet.clearDay}
                     </Button>
                   </div>
                 </div>
@@ -2745,12 +3300,12 @@ function WeeklyDietEditor({
           onClick={() => void handleSave()}
         >
           <Save className="mr-2 h-4 w-4" />
-          Salvar plano semanal
+          {copy.diet.saveWeekly}
         </Button>
       </div>
       {weeklyPlan && (
         <p className="mt-2 text-[10px] text-white/30">
-          Última atualização: {new Date(weeklyPlan.updatedAt).toLocaleString("pt-BR")} por {weeklyPlan.updatedBy}
+          {copy.common.updatedAt}: {new Date(weeklyPlan.updatedAt).toLocaleString(language)} {copy.common.by} {weeklyPlan.updatedBy}
         </p>
       )}
     </Panel>
@@ -2768,6 +3323,8 @@ function DietEditor({
   onGenerate,
   onLock,
   onReset,
+  copy,
+  language,
 }: {
   student: AdminStudent;
   value: DietPlan;
@@ -2779,109 +3336,160 @@ function DietEditor({
   onGenerate: () => void;
   onLock: () => void;
   onReset: () => void;
-}) {
-  const updateMeal = (index: number, patch: Partial<DietPlan["meals"][number]>) => {
-    onChange({ ...value, meals: value.meals.map((meal, i) => i === index ? { ...meal, ...patch } : meal) });
-  };
-  const updateFood = (mealIndex: number, foodIndex: number, patch: Partial<DietPlan["meals"][number]["foods"][number]>) => {
-    onChange({
-      ...value,
-      meals: value.meals.map((meal, i) => i === mealIndex
-        ? { ...meal, foods: meal.foods.map((food, j) => j === foodIndex ? { ...food, ...patch } : food) }
-        : meal),
-    });
-  };
+  copy: AdminPanelCopy;
+  language: AdminPanelLanguage;
+	}) {
+	  const [showHistory, setShowHistory] = useState(false);
+	  const targetKcal = Math.round(Number(value.macros.targetKcal) || 0);
+	  const foodTotalKcal = dietFoodKcalTotal(value);
+	  const calorieDelta = targetKcal - foodTotalKcal;
+	  const calorieMismatch = targetKcal > 0 && calorieDelta !== 0;
+
+	  const updateMeal = (index: number, patch: Partial<DietPlan["meals"][number]>) => {
+	    onChange({ ...value, meals: value.meals.map((meal, i) => i === index ? syncMealKcal({ ...meal, ...patch }) : meal) });
+	  };
+	  const updateFood = (mealIndex: number, foodIndex: number, patch: Partial<DietPlan["meals"][number]["foods"][number]>) => {
+	    onChange({
+	      ...value,
+	      meals: value.meals.map((meal, i) => {
+	        if (i !== mealIndex) return meal;
+	        const foods = meal.foods.map((food, j) => j === foodIndex ? { ...food, ...patch } : food);
+	        return syncMealKcal({ ...meal, foods });
+	      }),
+	    });
+	  };
+
+	  const handleSave = () => {
+	    if (calorieMismatch) {
+	      toast.error(copyText(copy.diet.mismatchToast, { target: targetKcal, delta: Math.abs(calorieDelta) }));
+	      return;
+	    }
+	    onSave();
+	  };
 
   return (
     <div className="grid gap-4">
-      <Panel title="Dieta oficial">
-        <PlanStatus source={value.source} locked={value.lockedByCoach} />
-        <div className="mt-4 grid gap-3 md:grid-cols-3">
-          <Field label="Título" value={value.title || ""} onChange={(title) => onChange({ ...value, title })} className="md:col-span-2" />
-          <Field label="País" value={value.country || ""} onChange={(country) => onChange({ ...value, country })} />
-          <Field label="Calorias" value={String(value.macros.targetKcal)} onChange={(targetKcal) => onChange({ ...value, macros: { ...value.macros, targetKcal: Number(targetKcal) || 0 } })} />
-          <Field label="Proteína g" value={String(value.macros.proteinG)} onChange={(proteinG) => onChange({ ...value, macros: { ...value.macros, proteinG: Number(proteinG) || 0 } })} />
-          <Field label="Carbo g" value={String(value.macros.carbsG)} onChange={(carbsG) => onChange({ ...value, macros: { ...value.macros, carbsG: Number(carbsG) || 0 } })} />
-          <Field label="Gordura g" value={String(value.macros.fatG)} onChange={(fatG) => onChange({ ...value, macros: { ...value.macros, fatG: Number(fatG) || 0 } })} />
-          <Field label="Restrições" value={value.foodRestrictions || ""} onChange={(foodRestrictions) => onChange({ ...value, foodRestrictions })} />
-          <Field label="Notas do coach" value={value.coachNotes || ""} onChange={(coachNotes) => onChange({ ...value, coachNotes })} />
-        </div>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <Button className="bg-[#00e5ff] text-[#0a0f1e] hover:bg-white" disabled={acting} onClick={onSave}><Save className="mr-2 h-4 w-4" />Salvar alterações</Button>
-          <Button variant="outline" className="border-white/10 bg-white/5 text-white" disabled={acting} onClick={onCreateManual}><Utensils className="mr-2 h-4 w-4" />Criar dieta manual</Button>
-          <Button variant="outline" className="border-white/10 bg-white/5 text-white" disabled={acting} onClick={onGenerate}><RefreshCw className="mr-2 h-4 w-4" />Gerar com GUTO</Button>
-          <Button variant="outline" className="border-white/10 bg-white/5 text-white" disabled={acting} onClick={onLock}>{value.lockedByCoach ? <Unlock className="mr-2 h-4 w-4" /> : <Lock className="mr-2 h-4 w-4" />}{value.lockedByCoach ? "Permitir GUTO atualizar" : "Bloquear alterações automáticas"}</Button>
-          <Button variant="outline" className="border-red-500/30 bg-transparent text-red-300" disabled={acting} onClick={onReset}><Trash2 className="mr-2 h-4 w-4" />Resetar dieta</Button>
-        </div>
-      </Panel>
+      <Panel title={copy.diet.officialDiet}>
+        <PlanStatus source={value.source} locked={value.lockedByCoach} copy={copy} />
+	        <div className="mt-4 grid gap-3 md:grid-cols-3">
+	          <Field label={copy.diet.title} value={value.title || ""} onChange={(title) => onChange({ ...value, title })} className="md:col-span-2" />
+	          <Field label={copy.diet.country} value={value.country || ""} onChange={(country) => onChange({ ...value, country })} />
+	          <Field label={copy.diet.calories} value={String(value.macros.targetKcal)} onChange={(targetKcal) => onChange({ ...value, macros: { ...value.macros, targetKcal: Number(targetKcal) || 0 } })} />
+          <Field label={copy.diet.protein} value={String(value.macros.proteinG)} onChange={(proteinG) => onChange({ ...value, macros: { ...value.macros, proteinG: Number(proteinG) || 0 } })} />
+          <Field label={copy.diet.carbs} value={String(value.macros.carbsG)} onChange={(carbsG) => onChange({ ...value, macros: { ...value.macros, carbsG: Number(carbsG) || 0 } })} />
+          <Field label={copy.diet.fat} value={String(value.macros.fatG)} onChange={(fatG) => onChange({ ...value, macros: { ...value.macros, fatG: Number(fatG) || 0 } })} />
+          <Field label={copy.diet.restrictions} value={value.foodRestrictions || ""} onChange={(foodRestrictions) => onChange({ ...value, foodRestrictions })} />
+	          <Field label={copy.diet.coachNotes} value={value.coachNotes || ""} onChange={(coachNotes) => onChange({ ...value, coachNotes })} />
+	        </div>
+	        <div className="mt-4 grid gap-3 md:grid-cols-4">
+	          <div className="rounded-lg border border-white/8 bg-black/15 p-3">
+	            <p className="text-[10px] font-black uppercase tracking-widest text-white/30">{copy.diet.bmr}</p>
+	            <p className="mt-1 font-mono text-xl font-black text-white">{Math.round(Number(value.macros.bmr) || 0)} kcal</p>
+	          </div>
+	          <div className="rounded-lg border border-white/8 bg-black/15 p-3">
+	            <p className="text-[10px] font-black uppercase tracking-widest text-white/30">{copy.diet.tdee}</p>
+	            <p className="mt-1 font-mono text-xl font-black text-white">{Math.round(Number(value.macros.tdee) || 0)} kcal</p>
+	          </div>
+	          <div className="rounded-lg border border-[#00e5ff]/25 bg-[#00e5ff]/10 p-3">
+	            <p className="text-[10px] font-black uppercase tracking-widest text-[#91f4ff]">{copy.diet.target}</p>
+	            <p className="mt-1 font-mono text-xl font-black text-[#00e5ff]">{targetKcal} kcal</p>
+	          </div>
+	          <div className={`rounded-lg border p-3 ${calorieMismatch ? "border-red-500/30 bg-red-500/10" : "border-emerald-400/25 bg-emerald-400/10"}`}>
+	            <p className={`text-[10px] font-black uppercase tracking-widest ${calorieMismatch ? "text-red-200" : "text-emerald-200"}`}>{copy.diet.foodsTotal}</p>
+	            <p className="mt-1 font-mono text-xl font-black text-white">{foodTotalKcal} kcal</p>
+	            <p className={`mt-1 text-[10px] font-bold ${calorieMismatch ? "text-red-200" : "text-emerald-200"}`}>
+	              {calorieMismatch ? `${calorieDelta > 0 ? copy.diet.missing : copy.diet.exceeded} ${Math.abs(calorieDelta)} kcal` : copy.diet.matched}
+	            </p>
+	          </div>
+	        </div>
+	        <div className="mt-4 flex flex-wrap gap-2">
+	          <Button className="bg-[#00e5ff] text-[#0a0f1e] hover:bg-white disabled:opacity-45" disabled={acting || calorieMismatch} onClick={handleSave}><Save className="mr-2 h-4 w-4" />{copy.diet.saveChanges}</Button>
+	          <Button variant="outline" className="border-white/10 bg-white/5 text-white" disabled={acting} onClick={onCreateManual}><Utensils className="mr-2 h-4 w-4" />{copy.diet.createManual}</Button>
+	          <Button variant="outline" className="border-white/10 bg-white/5 text-white" disabled={acting} onClick={onGenerate}><RefreshCw className="mr-2 h-4 w-4" />{copy.diet.generateGuto}</Button>
+	          <Button variant="outline" className="border-white/10 bg-white/5 text-white" onClick={() => setShowHistory((current) => !current)}><History className="mr-2 h-4 w-4" />{copy.diet.history}</Button>
+	          <Button variant="outline" className="border-white/10 bg-white/5 text-white" disabled={acting} onClick={onLock}>{value.lockedByCoach ? <Unlock className="mr-2 h-4 w-4" /> : <Lock className="mr-2 h-4 w-4" />}{value.lockedByCoach ? copy.diet.allowGuto : copy.diet.lockGuto}</Button>
+	          <Button variant="outline" className="border-red-500/30 bg-transparent text-red-300" disabled={acting} onClick={onReset}><Trash2 className="mr-2 h-4 w-4" />{copy.diet.reset}</Button>
+	        </div>
+	        {calorieMismatch && (
+	          <p className="mt-3 rounded-md border border-red-500/25 bg-red-500/10 px-3 py-2 text-xs font-bold text-red-200">
+	            {copy.diet.mismatchHelp}
+	          </p>
+	        )}
+	      </Panel>
 
-      <Panel title={`Refeições de ${student.name}`}>
+      <Panel title={copyText(copy.diet.mealsOf, { name: student.name })}>
         <div className="grid gap-3">
           {value.meals.map((meal, mealIndex) => (
             <div key={`${meal.id}-${mealIndex}`} className="rounded-lg border border-white/8 bg-black/15 p-3">
               <div className="grid gap-3 md:grid-cols-4">
-                <Field label="Refeição" value={meal.name} onChange={(name) => updateMeal(mealIndex, { name })} className="md:col-span-2" />
-                <Field label="Horário" value={meal.time} onChange={(time) => updateMeal(mealIndex, { time })} />
-                <Field label="Kcal" value={String(meal.totalKcal)} onChange={(totalKcal) => updateMeal(mealIndex, { totalKcal: Number(totalKcal) || 0 })} />
-                <Field label="Substituições" value={(meal.alternatives || []).join(", ")} onChange={(alternatives) => updateMeal(mealIndex, { alternatives: alternatives.split(",").map((item) => item.trim()).filter(Boolean) })} className="md:col-span-4" />
-              </div>
-              <div className="mt-3 grid gap-2">
-                {meal.foods.map((food, foodIndex) => (
-                  <div key={`${food.name}-${foodIndex}`} className="grid gap-2 rounded-md bg-white/[0.035] p-2 md:grid-cols-[1fr_1fr_.6fr_auto]">
-                    <Input value={food.name} onChange={(event) => updateFood(mealIndex, foodIndex, { name: event.target.value })} placeholder="Alimento" className="border-white/10 bg-white/5 text-white" />
-                    <Input value={food.quantity} onChange={(event) => updateFood(mealIndex, foodIndex, { quantity: event.target.value })} placeholder="Quantidade" className="border-white/10 bg-white/5 text-white" />
-                    <Input value={String(food.kcal || "")} onChange={(event) => updateFood(mealIndex, foodIndex, { kcal: Number(event.target.value) || 0 })} placeholder="kcal" className="border-white/10 bg-white/5 text-white" />
-                    <Button variant="outline" className="border-red-500/30 bg-transparent text-red-300" onClick={() => updateMeal(mealIndex, { foods: meal.foods.filter((_, index) => index !== foodIndex) })}><Trash2 className="h-4 w-4" /></Button>
-                  </div>
-                ))}
+                <Field label={copy.diet.meal} value={meal.name} onChange={(name) => updateMeal(mealIndex, { name })} className="md:col-span-2" />
+                <Field label={copy.diet.time} value={meal.time} onChange={(time) => updateMeal(mealIndex, { time })} />
+	                <div className="rounded-md border border-white/10 bg-white/[0.035] px-3 py-2">
+	                  <span className="block text-[10px] font-black uppercase tracking-widest text-white/30">{copy.diet.calculatedKcal}</span>
+	                  <span className="font-mono text-sm font-black text-[#00e5ff]">{mealFoodKcalTotal(meal)} kcal</span>
+	                </div>
+	                <Field label={copy.diet.substitutions} value={(meal.alternatives || []).join(", ")} onChange={(alternatives) => updateMeal(mealIndex, { alternatives: alternatives.split(",").map((item) => item.trim()).filter(Boolean) })} className="md:col-span-4" />
+	              </div>
+	              <div className="mt-3 grid gap-2">
+	                {meal.foods.map((food, foodIndex) => (
+	                  <div key={`${food.name}-${foodIndex}`} className="grid gap-2 rounded-md bg-white/[0.035] p-2 md:grid-cols-[1fr_1fr_.6fr_1fr_auto]">
+	                    <Input value={food.name} onChange={(event) => updateFood(mealIndex, foodIndex, { name: event.target.value })} placeholder={copy.diet.food} className="border-white/10 bg-white/5 text-white" />
+	                    <Input value={food.quantity} onChange={(event) => updateFood(mealIndex, foodIndex, { quantity: event.target.value })} placeholder={copy.diet.quantity} className="border-white/10 bg-white/5 text-white" />
+	                    <Input value={String(food.kcal || "")} onChange={(event) => updateFood(mealIndex, foodIndex, { kcal: Number(event.target.value) || 0 })} placeholder="kcal" className="border-white/10 bg-white/5 text-white" />
+	                    <Input value={food.notes || ""} onChange={(event) => updateFood(mealIndex, foodIndex, { notes: event.target.value })} placeholder={copy.diet.observation} className="border-white/10 bg-white/5 text-white" />
+	                    <Button variant="outline" className="border-red-500/30 bg-transparent text-red-300" onClick={() => updateMeal(mealIndex, { foods: meal.foods.filter((_, index) => index !== foodIndex) })}><Trash2 className="h-4 w-4" /></Button>
+	                  </div>
+	                ))}
               </div>
               <Button variant="outline" className="mt-3 border-white/10 bg-white/5 text-white" onClick={() => updateMeal(mealIndex, { foods: [...meal.foods, { name: "", quantity: "", kcal: 0, notes: "" }] })}>
                 <Plus className="mr-2 h-4 w-4" />
-                Adicionar alimento
+                {copy.diet.addFood}
               </Button>
             </div>
           ))}
         </div>
-        <Button variant="outline" className="mt-4 border-white/10 bg-white/5 text-white" onClick={() => onChange({ ...value, meals: [...value.meals, { id: `meal-${Date.now()}`, name: "Nova refeição", time: "", totalKcal: 0, gutoNote: "", foods: [] }] })}>
+        <Button variant="outline" className="mt-4 border-white/10 bg-white/5 text-white" onClick={() => onChange({ ...value, meals: [...value.meals, { id: `meal-${Date.now()}`, name: copy.diet.newMeal, time: "", totalKcal: 0, gutoNote: "", foods: [] }] })}>
           <Plus className="mr-2 h-4 w-4" />
-          Adicionar refeição
+          {copy.diet.addMeal}
         </Button>
       </Panel>
 
-      <Panel title="Histórico da dieta">
-        <LogList logs={history} empty="Sem histórico de dieta." />
-      </Panel>
-    </div>
-  );
-}
+	      {showHistory && (
+	        <Panel title={copy.diet.dietHistory}>
+	          <LogList logs={history} empty={copy.diet.noDietHistory} copy={copy} language={language} />
+	        </Panel>
+	      )}
+	    </div>
+	  );
+	}
 
-function PlanStatus({ source, locked }: { source?: string; locked?: boolean }) {
+function PlanStatus({ source, locked, copy }: { source?: string; locked?: boolean; copy: AdminPanelCopy }) {
   return (
     <div className="flex flex-wrap gap-2">
-      <Badge variant="outline" className="border-[#00e5ff]/35 text-[#00e5ff]">{sourceLabel(source)}</Badge>
-      <Badge variant={locked ? "default" : "secondary"}>{locked ? "Bloqueado contra GUTO" : "GUTO pode atualizar"}</Badge>
+      <Badge variant="outline" className="border-[#00e5ff]/35 text-[#00e5ff]">{sourceLabel(source, copy)}</Badge>
+      <Badge variant={locked ? "default" : "secondary"}>{locked ? copy.planStatus.locked : copy.planStatus.unlocked}</Badge>
     </div>
   );
 }
 
-function LogList({ logs, empty }: { logs: AdminLog[]; empty: string }) {
+function LogList({ logs, empty, copy, language }: { logs: AdminLog[]; empty: string; copy: AdminPanelCopy; language: AdminPanelLanguage }) {
   if (!logs.length) return <p className="text-sm text-white/35">{empty}</p>;
   return (
     <div className="grid gap-2">
       {logs.slice(0, 80).map((log, index) => (
         <div key={log.id || index} className="rounded-lg border border-white/7 bg-black/15 p-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="text-xs font-black uppercase tracking-widest text-white">{log.action || "ação"}</span>
-            <span className="font-mono text-[10px] text-white/35">{log.timestamp ? new Date(log.timestamp).toLocaleString() : "-"}</span>
+            <span className="text-xs font-black uppercase tracking-widest text-white">{log.action || copy.common.action}</span>
+            <span className="font-mono text-[10px] text-white/35">{log.timestamp ? new Date(log.timestamp).toLocaleString(language) : copy.common.none}</span>
           </div>
-          <p className="mt-1 font-mono text-[10px] text-white/35">{log.actorRole || "-"} · {log.actorUserId || "-"}</p>
+          <p className="mt-1 font-mono text-[10px] text-white/35">{log.actorRole || copy.common.none} · {log.actorUserId || copy.common.none}</p>
         </div>
       ))}
     </div>
   );
 }
 
-function RankingSection({ title, items, showStreak }: { title: string; items: RankingItem[]; showStreak?: boolean }) {
+function RankingSection({ title, items, copy, showStreak }: { title: string; items: RankingItem[]; copy: AdminPanelCopy; showStreak?: boolean }) {
   return (
     <Panel title={title}>
       <div className="grid gap-2">
@@ -2894,7 +3502,7 @@ function RankingSection({ title, items, showStreak }: { title: string; items: Ra
             <p className="font-mono text-sm font-black text-[#00e5ff]">{item.xp} XP</p>
           </div>
         ))}
-        {!items.length && <p className="text-sm text-white/35">Sem ranking.</p>}
+        {!items.length && <p className="text-sm text-white/35">{copy.common.noRanking}</p>}
       </div>
     </Panel>
   );
@@ -2911,6 +3519,7 @@ function CreateStudentDialog({
   acting,
   limitReached,
   onDraftChange,
+  copy,
   onCreate,
 }: {
   open: boolean;
@@ -2923,34 +3532,37 @@ function CreateStudentDialog({
   acting: boolean;
   limitReached: boolean;
   onDraftChange: (draft: StudentDraft) => void;
+  copy: AdminPanelCopy;
   onCreate: () => void;
 }) {
+  const validationError = studentDraftError(draft, isSuperAdmin, copy);
+
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent className="border-white/10 bg-[#0d1426] text-white">
         <AlertDialogHeader>
-          <AlertDialogTitle>Criar aluno</AlertDialogTitle>
-          <AlertDialogDescription className="text-white/45">Cria acesso real no backend. Sem senha, o backend gera convite.</AlertDialogDescription>
+          <AlertDialogTitle>{copy.dialogs.createStudent}</AlertDialogTitle>
+          <AlertDialogDescription className="text-white/45">{copy.dialogs.studentDesc}</AlertDialogDescription>
         </AlertDialogHeader>
         <div className="grid gap-3">
           <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="Nome" value={draft.firstName} onChange={(firstName) => onDraftChange({ ...draft, firstName })} />
-            <Field label="Sobrenome" value={draft.lastName} onChange={(lastName) => onDraftChange({ ...draft, lastName })} />
+            <Field label={copy.dialogs.firstName} value={draft.firstName} onChange={(firstName) => onDraftChange({ ...draft, firstName })} />
+            <Field label={copy.dialogs.lastName} value={draft.lastName} onChange={(lastName) => onDraftChange({ ...draft, lastName })} />
           </div>
-          <Field label="Email" value={draft.email} onChange={(email) => onDraftChange({ ...draft, email })} />
-          {draft.email && !isValidEmail(draft.email) && <p className="-mt-2 text-[11px] font-bold text-red-300">Use um email real. Exemplo: aluno@email.com.</p>}
-          <Field label="Telefone" value={draft.phone} onChange={(phone) => onDraftChange({ ...draft, phone })} />
-          {draft.phone && !isValidPhone(draft.phone) && <p className="-mt-2 text-[11px] font-bold text-red-300">Use um telefone real com DDD. Sequências como 111 não entram.</p>}
+          <Field label={copy.common.email} value={draft.email} onChange={(email) => onDraftChange({ ...draft, email })} />
+          {draft.email && !isValidEmail(draft.email) && <p className="-mt-2 text-[11px] font-bold text-red-300">{copy.dialogs.validEmail}</p>}
+          <Field label={copy.common.phone} value={draft.phone} onChange={(phone) => onDraftChange({ ...draft, phone })} />
+          {draft.phone && !isValidPhone(draft.phone) && <p className="-mt-2 text-[11px] font-bold text-red-300">{copy.dialogs.validPhone}</p>}
           <div className="grid grid-cols-2 gap-3">
             <select value={draft.sex} onChange={(e) => onDraftChange({ ...draft, sex: e.target.value })} className="h-10 rounded-md border border-white/10 bg-white/5 px-3 text-sm text-white">
-              <option value="" className="bg-[#0d1426]">Sexo</option>
-              <option value="male" className="bg-[#0d1426]">Masculino</option>
-              <option value="female" className="bg-[#0d1426]">Feminino</option>
-              <option value="prefer_not_to_say" className="bg-[#0d1426]">Prefiro não dizer</option>
+              <option value="" className="bg-[#0d1426]">{copy.dialogs.sex}</option>
+              <option value="male" className="bg-[#0d1426]">{copy.dialogs.male}</option>
+              <option value="female" className="bg-[#0d1426]">{copy.dialogs.female}</option>
+              <option value="prefer_not_to_say" className="bg-[#0d1426]">{copy.dialogs.preferNot}</option>
             </select>
-            <Field label="Idade" value={draft.age} onChange={(age) => onDraftChange({ ...draft, age })} />
+            <Field label={copy.dialogs.age} value={draft.age} onChange={(age) => onDraftChange({ ...draft, age })} />
           </div>
-          <Field label="Senha inicial opcional" value={draft.password} onChange={(password) => onDraftChange({ ...draft, password })} />
+          <Field label={copy.dialogs.optionalPassword} value={draft.password} onChange={(password) => onDraftChange({ ...draft, password })} />
           {isSuperAdmin && (
             draft.teamId && teams.find((t) => t.id === draft.teamId) ? (
               <div className="flex items-center gap-2 rounded-md border border-[#00e5ff]/30 bg-[#00e5ff]/10 px-3 py-2">
@@ -2959,27 +3571,27 @@ function CreateStudentDialog({
               </div>
             ) : (
               <select value={draft.teamId} onChange={(event) => onDraftChange({ ...draft, teamId: event.target.value })} className="h-10 rounded-md border border-white/10 bg-white/5 px-3 text-sm text-white">
-                <option value="" className="bg-[#0d1426]">Selecione um Time *</option>
+                <option value="" className="bg-[#0d1426]">{copy.dialogs.selectTeam}</option>
                 {teams.map((team) => <option key={team.id} value={team.id} className="bg-[#0d1426]">{team.name}</option>)}
               </select>
             )
           )}
           {isAdmin && (
             <select value={draft.coachId} onChange={(event) => onDraftChange({ ...draft, coachId: event.target.value })} className="h-10 rounded-md border border-white/10 bg-white/5 px-3 text-sm text-white">
-              <option value="" className="bg-[#0d1426]">Coach responsável</option>
+              <option value="" className="bg-[#0d1426]">{copy.dialogs.responsibleCoach}</option>
               {coaches.map((coach) => <option key={coach.userId} value={coach.userId} className="bg-[#0d1426]">{coach.name || coach.userId}</option>)}
             </select>
           )}
           <label className="flex items-center gap-2 text-sm text-white/60">
             <input type="checkbox" checked={draft.active} onChange={(event) => onDraftChange({ ...draft, active: event.target.checked })} />
-            Ativar acesso agora
+            {copy.dialogs.activateNow}
           </label>
           {validationError && <p className="text-xs font-bold text-red-300">{validationError}</p>}
-          {limitReached && <p className="text-xs font-bold text-[#00e5ff]">Limite do plano atingido. Atualize o plano GUTO Time para cadastrar mais alunos.</p>}
+          {limitReached && <p className="text-xs font-bold text-[#00e5ff]">{copyText(copy.mural.limitReached, { target: copy.common.students.toLowerCase() })}</p>}
         </div>
         <AlertDialogFooter>
-          <AlertDialogCancel className="border-white/10 bg-white/5 text-white">Cancelar</AlertDialogCancel>
-          <Button disabled={acting || limitReached || Boolean(validationError)} onClick={onCreate} className="bg-[#00e5ff] text-[#0a0f1e] hover:bg-white">Criar</Button>
+          <AlertDialogCancel className="border-white/10 bg-white/5 text-white">{copy.common.cancel}</AlertDialogCancel>
+          <Button disabled={acting || limitReached || Boolean(validationError)} onClick={onCreate} className="bg-[#00e5ff] text-[#0a0f1e] hover:bg-white">{copy.common.create}</Button>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
@@ -2995,6 +3607,7 @@ function CreateCoachDialog({
   acting,
   limitReached,
   onDraftChange,
+  copy,
   onCreate,
 }: {
   open: boolean;
@@ -3005,19 +3618,20 @@ function CreateCoachDialog({
   acting: boolean;
   limitReached: boolean;
   onDraftChange: (draft: CoachDraft) => void;
+  copy: AdminPanelCopy;
   onCreate: () => void;
 }) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent className="border-white/10 bg-[#0d1426] text-white">
         <AlertDialogHeader>
-          <AlertDialogTitle>Criar coach</AlertDialogTitle>
-          <AlertDialogDescription className="text-white/45">Somente super admin/admin pode criar coach.</AlertDialogDescription>
+          <AlertDialogTitle>{copy.dialogs.createCoach}</AlertDialogTitle>
+          <AlertDialogDescription className="text-white/45">{copy.dialogs.coachDesc}</AlertDialogDescription>
         </AlertDialogHeader>
         <div className="grid gap-3">
-          <Field label="Nome" value={draft.name} onChange={(name) => onDraftChange({ ...draft, name })} />
-          <Field label="Email" value={draft.email} onChange={(email) => onDraftChange({ ...draft, email })} />
-          <Field label="Senha opcional" value={draft.password} onChange={(password) => onDraftChange({ ...draft, password })} />
+          <Field label={copy.dialogs.name} value={draft.name} onChange={(name) => onDraftChange({ ...draft, name })} />
+          <Field label={copy.common.email} value={draft.email} onChange={(email) => onDraftChange({ ...draft, email })} />
+          <Field label={copy.dialogs.optionalCoachPassword} value={draft.password} onChange={(password) => onDraftChange({ ...draft, password })} />
           {isSuperAdmin && (
             draft.teamId && teams.find((t) => t.id === draft.teamId) ? (
               <div className="flex items-center gap-2 rounded-md border border-[#00e5ff]/30 bg-[#00e5ff]/10 px-3 py-2">
@@ -3026,16 +3640,16 @@ function CreateCoachDialog({
               </div>
             ) : (
               <select value={draft.teamId} onChange={(event) => onDraftChange({ ...draft, teamId: event.target.value })} className="h-10 rounded-md border border-white/10 bg-white/5 px-3 text-sm text-white">
-                <option value="" className="bg-[#0d1426]">Selecione um Time *</option>
+                <option value="" className="bg-[#0d1426]">{copy.dialogs.selectTeam}</option>
                 {teams.map((team) => <option key={team.id} value={team.id} className="bg-[#0d1426]">{team.name}</option>)}
               </select>
             )
           )}
-          {limitReached && <p className="text-xs font-bold text-[#00e5ff]">Limite do plano atingido. Atualize o plano GUTO Time para cadastrar mais coaches.</p>}
+          {limitReached && <p className="text-xs font-bold text-[#00e5ff]">{copyText(copy.mural.limitReached, { target: copy.common.coaches.toLowerCase() })}</p>}
         </div>
         <AlertDialogFooter>
-          <AlertDialogCancel className="border-white/10 bg-white/5 text-white">Cancelar</AlertDialogCancel>
-          <Button disabled={acting || limitReached || !draft.name.trim() || !draft.email.trim() || (isSuperAdmin && !draft.teamId)} onClick={onCreate} className="bg-[#00e5ff] text-[#0a0f1e] hover:bg-white">Criar coach</Button>
+          <AlertDialogCancel className="border-white/10 bg-white/5 text-white">{copy.common.cancel}</AlertDialogCancel>
+          <Button disabled={acting || limitReached || !draft.name.trim() || !draft.email.trim() || (isSuperAdmin && !draft.teamId)} onClick={onCreate} className="bg-[#00e5ff] text-[#0a0f1e] hover:bg-white">{copy.dialogs.createCoach}</Button>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
@@ -3048,6 +3662,7 @@ function CreateTeamDialog({
   draft,
   acting,
   onDraftChange,
+  copy,
   onCreate,
 }: {
   open: boolean;
@@ -3055,19 +3670,20 @@ function CreateTeamDialog({
   draft: TeamDraft;
   acting: boolean;
   onDraftChange: (draft: TeamDraft) => void;
+  copy: AdminPanelCopy;
   onCreate: () => void;
 }) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent className="border-white/10 bg-[#0d1426] text-white">
         <AlertDialogHeader>
-          <AlertDialogTitle>Criar Time</AlertDialogTitle>
-          <AlertDialogDescription className="text-white/45">Cria um novo GUTO Time. Somente super admin.</AlertDialogDescription>
+          <AlertDialogTitle>{copy.dialogs.createTeam}</AlertDialogTitle>
+          <AlertDialogDescription className="text-white/45">{copy.dialogs.teamDesc}</AlertDialogDescription>
         </AlertDialogHeader>
         <div className="grid gap-3">
-          <Field label="Nome do Time" value={draft.name} onChange={(name) => onDraftChange({ ...draft, name })} />
+          <Field label={copy.dialogs.teamName} value={draft.name} onChange={(name) => onDraftChange({ ...draft, name })} />
           <label className="block">
-            <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-white/30">Plano</span>
+            <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-white/30">{copy.common.plan}</span>
             <select
               value={draft.plan}
               onChange={(event) => onDraftChange({ ...draft, plan: event.target.value as TeamDraft["plan"] })}
@@ -3076,21 +3692,21 @@ function CreateTeamDialog({
               <option value="start" className="bg-[#0d1426]">GUTO Time Start</option>
               <option value="pro" className="bg-[#0d1426]">GUTO Time Pro</option>
               <option value="elite" className="bg-[#0d1426]">GUTO Time Elite</option>
-              <option value="custom" className="bg-[#0d1426]">Custom</option>
+              <option value="custom" className="bg-[#0d1426]">{formatHuman("custom", copy)}</option>
             </select>
           </label>
           {draft.plan === "custom" && (
             <>
-              <Field label="Máx. alunos (vazio = ilimitado)" value={draft.maxStudents} onChange={(maxStudents) => onDraftChange({ ...draft, maxStudents })} />
-              <Field label="Máx. coaches (vazio = ilimitado)" value={draft.maxCoaches} onChange={(maxCoaches) => onDraftChange({ ...draft, maxCoaches })} />
+              <Field label={copy.dialogs.maxStudents} value={draft.maxStudents} onChange={(maxStudents) => onDraftChange({ ...draft, maxStudents })} />
+              <Field label={copy.dialogs.maxCoaches} value={draft.maxCoaches} onChange={(maxCoaches) => onDraftChange({ ...draft, maxCoaches })} />
             </>
           )}
         </div>
         <AlertDialogFooter>
-          <AlertDialogCancel className="border-white/10 bg-white/5 text-white">Cancelar</AlertDialogCancel>
+          <AlertDialogCancel className="border-white/10 bg-white/5 text-white">{copy.common.cancel}</AlertDialogCancel>
           <Button disabled={acting || !draft.name.trim()} onClick={onCreate} className="bg-[#00e5ff] text-[#0a0f1e] hover:bg-white">
             <Building2 className="mr-2 h-4 w-4" />
-            Criar Time
+            {copy.dialogs.createTeam}
           </Button>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -3100,7 +3716,7 @@ function CreateTeamDialog({
 
 export default function CoachPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#0a0f1e] flex items-center justify-center text-[#00e5ff]">Sincronizando GUTO</div>}>
+    <Suspense fallback={<div className="min-h-screen bg-[#0a0f1e] flex items-center justify-center text-[#00e5ff]">GUTO</div>}>
       <CoachInner />
     </Suspense>
   );

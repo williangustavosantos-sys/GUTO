@@ -886,7 +886,6 @@ export function ChatTab({
     }
   }
 
-  const latestGuto = messages[lastGutoIndex] ?? messages[0] ?? { avatarEmotion: "default" as GutoAvatarEmotion }
   const visibleMessages = messages.slice(-8)
 
   return (

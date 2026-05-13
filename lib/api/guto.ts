@@ -420,11 +420,11 @@ export async function getGutoProactive({
 // "will-personal-alpha" mas o backend salvou o profile com o teamId real do
 // usuário (ex: GUTO_CORE_TEAM), o ranking vinha vazio. Sem o query param,
 // o backend resolve o grupo automaticamente via getUserArenaGroup(userId).
-export async function getArenaWeekly(_arenaGroupId?: string) {
+export async function getArenaWeekly() {
   return apiRequest<ArenaRankingResponse>(`/guto/arena/weekly`, { method: "GET" })
 }
 
-export async function getArenaMonthly(_arenaGroupId?: string) {
+export async function getArenaMonthly() {
   return apiRequest<ArenaRankingResponse>(`/guto/arena/monthly`, { method: "GET" })
 }
 
@@ -433,14 +433,14 @@ export async function getArenaMonthly(_arenaGroupId?: string) {
  * independente de Time. arenaGroupId é ignorado pelo servidor; aceito
  * só para compat com chamadas antigas.
  */
-export async function getArenaIndividual(_arenaGroupId?: string) {
+export async function getArenaIndividual() {
   return apiRequest<ArenaRankingResponse>(
     `/guto/arena/individual`,
     { method: "GET" }
   )
 }
 
-export async function getArenaMe(userId: string, _arenaGroupId?: string) {
+export async function getArenaMe(userId: string) {
   // Mesma correção: o backend resolve o arenaGroupId pelo userId autenticado
   return apiRequest<ArenaMyProfile>(
     `/guto/arena/me?userId=${encodeURIComponent(userId)}`,

@@ -14,7 +14,7 @@ import {
 } from "../utils"
 
 export function TabResumo() {
-  const { selectedDetail, coaches, teams, user, isSuperAdmin, acting, act, setSelectedDetail } =
+  const { selectedDetail, coaches, teams, isSuperAdmin, acting, act, setSelectedDetail } =
     useCockpit()
 
   if (!selectedDetail) return null

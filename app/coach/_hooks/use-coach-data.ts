@@ -50,11 +50,7 @@ export function useCoachData(
       subscriptionStatus: subscriptionStatusFilter,
     })
     setStudents(data.students)
-  }, [
-    filters.filter, filters.search, filters.coachFilter, filters.genderFilter,
-    filters.minAgeFilter, filters.maxAgeFilter, filters.subscriptionStatusFilter,
-    isAdmin,
-  ])
+  }, [filters, isAdmin])
 
   const fetchTeamSummary = useCallback(async () => {
     try {
