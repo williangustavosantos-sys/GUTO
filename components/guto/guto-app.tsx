@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Image from "next/image"
-import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { AnimatePresence, motion } from "framer-motion"
 import { Activity, AlertCircle, ArrowLeft, Check, CheckCircle2, Download, Dumbbell, Fingerprint, Globe, Languages, Loader2, MapPin, Phone, Scale, Send, Settings, Shield, Trash2, UserRound, Utensils, Volume2, Zap } from "lucide-react"
