@@ -21,7 +21,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Clock, RotateCcw, Undo2, X } from "lucide-react"
 
 import type { GutoWorkoutPlan } from "@/lib/api/guto"
-import { GutoOfficialAvatar } from "@/components/guto/guto-official-avatar"
+import { GutoOnlineLightAvatar } from "@/components/guto/guto-online-light-avatar"
 
 import { useGutoOnlineEngine } from "@/lib/guto-online/use-guto-online-engine"
 import { makeEventId, type GutoOnlineEvent } from "@/lib/guto-online/guto-online-events"
@@ -715,23 +715,17 @@ export function GutoOnlineSession({
 
         {/* ─── Corpo ──────────────────────────────────────────────── */}
         <main className="flex min-h-0 flex-1 flex-col gap-3 py-3">
-          {/* GUTO avatar + linha atual */}
+          {/* GUTO luz falante — transparente em Safari e Chrome */}
           <section className="flex w-full flex-col items-center">
-            <div className="relative">
-              <div className="absolute inset-8 rounded-full bg-[rgba(82,231,255,0.18)] blur-2xl" />
-              <GutoOfficialAvatar
+            <div className="relative flex items-center justify-center">
+              <GutoOnlineLightAvatar
                 size="xl"
-                showPlatform={false}
-                className="relative"
-                evolution={evolution}
-                emotion={
-                  state.phase === "finished"
-                    ? "reward"
-                    : state.phase === "pain_check" || state.phase === "fatigue_adjustment"
-                    ? "alert"
-                    : state.phase === "quick_talk" || state.phase === "thinking" || state.phase === "substitution"
-                    ? "alert"
-                    : "default"
+                isSpeaking={
+                  state.phase === "thinking" ||
+                  state.phase === "quick_talk" ||
+                  state.phase === "substitution" ||
+                  state.phase === "pain_check" ||
+                  state.phase === "fatigue_adjustment"
                 }
               />
             </div>
