@@ -649,7 +649,15 @@ export function GutoOnlineSession({
   const isVoiceEnabled = state.voiceMode === "enabled"
 
   return (
-    <div className="fixed inset-0 z-[80] flex bg-[radial-gradient(circle_at_top,rgba(82,231,255,0.18),transparent_34%),linear-gradient(180deg,#f8fcff_0%,#eaf4fb_54%,#dbe8f2_100%)] text-[var(--guto-navy)]">
+    <div
+      className="fixed inset-0 z-[80] flex text-[var(--guto-navy)]"
+      style={{
+        background: [
+          "linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.14) 100%)",
+          'url("/assets/guto/FUNDO_APP.JPG") center / cover no-repeat',
+        ].join(", "),
+      }}
+    >
       <div className="mx-auto flex h-full w-full max-w-md flex-col px-4 pb-5 pt-[max(1rem,env(safe-area-inset-top))]">
         {/* ─── Header ──────────────────────────────────────────────── */}
         <header className="flex items-start justify-between gap-3">
@@ -677,7 +685,7 @@ export function GutoOnlineSession({
             <button
               type="button"
               onClick={onClose}
-              className="grid h-10 w-10 place-items-center rounded-full border border-white/70 bg-white/48 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]"
+              className="grid h-10 w-10 place-items-center rounded-full border border-white/70 bg-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] backdrop-blur-sm"
               aria-label={pickCloseLabel(language)}
             >
               <X className="h-4 w-4" />
@@ -687,7 +695,7 @@ export function GutoOnlineSession({
 
         {/* ─── Resume prompt (15min–12h) ───────────────────────────── */}
         {pendingResume && (
-          <section className="mt-3 rounded-[1.2rem] border border-[rgba(82,231,255,0.45)] bg-[rgba(82,231,255,0.12)] p-3">
+          <section className="mt-3 rounded-[1.2rem] border border-[rgba(82,231,255,0.45)] bg-[rgba(82,231,255,0.14)] p-3 backdrop-blur-sm">
             <p className="text-[12px] font-bold leading-snug text-[rgba(13,35,65,0.84)]">
               {intentLine("session.resume.prompt", language)}{" "}
               {pendingResume.ageMinutes >= 60
@@ -719,6 +727,8 @@ export function GutoOnlineSession({
           {/* GUTO luz falante — transparente em Safari e Chrome */}
           <section className="flex w-full flex-col items-center">
             <div className="relative flex items-center justify-center">
+              {/* Glow de ambiente — igual às outras telas */}
+              <div className="pointer-events-none absolute inset-[15%] rounded-full bg-[rgba(82,231,255,0.14)] blur-2xl" />
               <GutoOnlineLightAvatar
                 size="xl"
                 isSpeaking={
@@ -761,7 +771,7 @@ export function GutoOnlineSession({
               onTalk={handleOpenQuickTalk}
             />
           ) : (
-            <section className="w-full rounded-[1.35rem] border border-white/75 bg-white/52 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.92),0_18px_60px_rgba(13,35,65,0.08)]">
+            <section className="w-full rounded-[1.35rem] border border-white/70 bg-white/62 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.92),0_8px_32px_rgba(13,35,65,0.10)] backdrop-blur-sm">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="font-mono text-[8px] font-black uppercase tracking-[0.18em] text-[rgba(13,35,65,0.42)]">
@@ -813,7 +823,7 @@ export function GutoOnlineSession({
             type="button"
             onClick={undo}
             disabled={actionHistory.length === 0}
-            className="flex h-10 items-center justify-center gap-2 rounded-[0.9rem] border border-white/70 bg-white/40 font-mono text-[9px] font-black uppercase tracking-[0.14em] disabled:opacity-30"
+            className="flex h-10 items-center justify-center gap-2 rounded-[0.9rem] border border-white/70 bg-white/55 font-mono text-[9px] font-black uppercase tracking-[0.14em] backdrop-blur-sm disabled:opacity-30"
           >
             <Undo2 className="h-3.5 w-3.5" />
             {pickLine(language, { pt: "Desfazer", en: "Undo", it: "Annulla" })}
@@ -831,7 +841,7 @@ export function GutoOnlineSession({
                 declineResume()
               }
             }}
-            className="flex h-10 items-center justify-center gap-2 rounded-[0.9rem] border border-white/70 bg-white/40 font-mono text-[9px] font-black uppercase tracking-[0.14em]"
+            className="flex h-10 items-center justify-center gap-2 rounded-[0.9rem] border border-white/70 bg-white/55 font-mono text-[9px] font-black uppercase tracking-[0.14em] backdrop-blur-sm"
             aria-label="Reiniciar sessão"
           >
             <RotateCcw className="h-3.5 w-3.5" />
