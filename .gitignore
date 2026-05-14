@@ -41,3 +41,7 @@ coverage/
 *.tsbuildinfo
 node_modules
 .vercel
+
+# logs de upload / arquivos temporários
+*_subindo_arquivos_para_o_git_hub.json
+task_progress.md
