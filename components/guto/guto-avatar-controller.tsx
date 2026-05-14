@@ -1,9 +1,26 @@
 "use client"
 
-import { useCallback, useRef, useState } from "react"
+/**
+ * GutoAvatarController — Avatar interativo com 3D spring tilt + toggle super
+ *
+ * ARQUITETURA:
+ * - GutoOfficialAvatar sempre roda embaixo (qualidade 100% preservada: alpha channel, canvas matte, HEVC)
+ * - Vídeo super em overlay com crossfade suave — toggle manual (tap entra, tap sai)
+ * - Framer Motion spring tilt no toque/drag e giroscópio no mobile
+ * - Squish + glow azul + ripple em ambos os taps
+ *
+ * Three.js NÃO é usado aqui intencionalmente:
+ * O avatar é um render 3D profissional. Qualquer recriação em WebGL seria um downgrade.
+ * O efeito 3D vem de CSS perspective + spring physics — dá sensação de profundidade e massa
+ * sem sacrificar nada da qualidade do render original.
+ */
+
+import { useCallback, useEffect, useRef, useState } from "react"
+import { animate, motion, useMotionValue, useSpring } from "framer-motion"
 
 import { cn } from "@/lib/utils"
 import type { EvolutionStage } from "@/types/contract"
+import { GutoOfficialAvatar } from "./guto-official-avatar"
 
 interface GutoAvatarControllerProps {
   stage: EvolutionStage
@@ -13,27 +30,22 @@ interface GutoAvatarControllerProps {
   onTap?: () => void
 }
 
-const TOUCH_DURATION_MS = 1200
+// Duração do crossfade entrada/saída (ms)
+const FADE_MS = 320
+// Duração do glow/ripple de feedback (ms)
+const REACT_MS = 850
+// Máximo de inclinação 3D em graus (toque manual)
+const MAX_TILT_DEG = 16
+// Máximo de inclinação 3D em graus (giroscópio — mais sutil)
+const MAX_GYRO_DEG = 6
+
+const SPRING_CONFIG = { stiffness: 200, damping: 26, mass: 0.7 }
 
 const sizeClasses = {
   sm: "w-24 h-24",
   md: "w-32 h-32",
   lg: "w-40 h-40",
   xl: "w-[min(96vw,34rem)] h-[min(96vw,34rem)]",
-}
-
-const STAGE_TOUCH_VIDEOS: Record<string, { webm: string; mov: string }> = {
-  baby: { webm: "guto_baby_toque.webm", mov: "guto_baby_toque.mov" },
-  teen: { webm: "guto_teen_toque.webm", mov: "guto_teen_toque.mov" },
-  adult: { webm: "guto_adult_toque.webm", mov: "guto_adult_toque.mov" },
-  elite: { webm: "guto_elit_toque.webm", mov: "guto_elit_toque.mov" },
-}
-
-const STAGE_DEFAULT_VIDEOS: Record<string, { webm: string; mov: string }> = {
-  baby: { webm: "GUTO BABY 2.webm", mov: "GUTO_BABY_2_APPLE.mov" },
-  teen: { webm: "GUTO TEEN 2.webm", mov: "GUTO_TEEN_2_APPLE.mov" },
-  adult: { webm: "GUTO ADULT 2.webm", mov: "GUTO_ADULT_2_APPLE.mov" },
-  elite: { webm: "GUTO ELIT 2.webm", mov: "GUTO_ELIT_2_APPLE.mov" },
 }
 
 export function GutoAvatarController({
@@ -43,102 +55,223 @@ export function GutoAvatarController({
   showPlatform = true,
   onTap,
 }: GutoAvatarControllerProps) {
-  const [isReacting, setIsReacting] = useState(false)
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const videoRef = useRef<HTMLVideoElement | null>(null)
+  const containerRef   = useRef<HTMLDivElement>(null)
+  const glowTimerRef   = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pointerDownRef = useRef<{ x: number; y: number } | null>(null)
 
-  const handleTap = useCallback(() => {
-    if (isReacting) return
-    setIsReacting(true)
-    onTap?.()
+  // Toggle: true = modo super (roupa) ativo
+  const [superOn, setSuperOn]       = useState(false)
+  // Lazy mount: só renderiza o super após o primeiro tap (economia de CPU na abertura)
+  // Permanece montado para que os taps seguintes sejam instantâneos
+  const [superMounted, setSuperMounted] = useState(false)
+  // Glow/ripple de feedback visual (dispara em ambos os taps)
+  const [glowActive, setGlowActive] = useState(false)
+  const [gyroActive, setGyroActive] = useState(false)
 
-    // Restart the touch video from beginning
-    const video = videoRef.current
-    if (video) {
-      video.currentTime = 0
-      void video.play()
+  // ── Motion values para tilt 3D ──────────────────────────────────────────────
+  const rawX  = useMotionValue(0)
+  const rawY  = useMotionValue(0)
+  const scaleV = useMotionValue(1)
+  const tiltX = useSpring(rawX, SPRING_CONFIG)
+  const tiltY = useSpring(rawY, SPRING_CONFIG)
+
+  // ── Giroscópio (DeviceOrientation) ──────────────────────────────────────────
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    if (!("DeviceOrientationEvent" in window)) return
+
+    let active = true
+
+    const onOrientation = (e: DeviceOrientationEvent) => {
+      if (!active) return
+      const gamma = Math.max(-45, Math.min(45, e.gamma ?? 0))
+      const beta  = Math.max(-45, Math.min(45, (e.beta ?? 30) - 30))
+      rawY.set((gamma / 45) * MAX_GYRO_DEG)
+      rawX.set(-(beta  / 45) * MAX_GYRO_DEG)
     }
 
-    if (timeoutRef.current) clearTimeout(timeoutRef.current)
-    timeoutRef.current = setTimeout(() => {
-      setIsReacting(false)
-    }, TOUCH_DURATION_MS)
-  }, [isReacting, onTap])
+    window.addEventListener("deviceorientation", onOrientation, { passive: true })
+    setGyroActive(true)
 
-  const isTouch = isReacting
-  const videos = isTouch
-    ? STAGE_TOUCH_VIDEOS[stage] ?? STAGE_TOUCH_VIDEOS.baby
-    : STAGE_DEFAULT_VIDEOS[stage] ?? STAGE_DEFAULT_VIDEOS.baby
+    return () => {
+      active = false
+      window.removeEventListener("deviceorientation", onOrientation)
+    }
+  }, [rawX, rawY])
+
+  // ── Tilt por pointer (mouse/touch drag) ─────────────────────────────────────
+  const updateTiltFromPointer = useCallback(
+    (clientX: number, clientY: number) => {
+      const rect = containerRef.current?.getBoundingClientRect()
+      if (!rect) return
+      const relX = ((clientX - rect.left) / rect.width  - 0.5) * 2
+      const relY = ((clientY - rect.top)  / rect.height - 0.5) * 2
+      rawY.set(relX *  MAX_TILT_DEG)
+      rawX.set(relY * -MAX_TILT_DEG)
+    },
+    [rawX, rawY]
+  )
+
+  const resetTilt = useCallback(() => {
+    if (!gyroActive) {
+      rawX.set(0)
+      rawY.set(0)
+    }
+  }, [gyroActive, rawX, rawY])
+
+  // ── Toggle super ─────────────────────────────────────────────────────────────
+  // Tap 1 → super entra com crossfade natural
+  // Tap 2 → super sai com crossfade natural
+  // Squish + glow + ripple disparam nos dois taps
+  const triggerToggle = useCallback(() => {
+    onTap?.()
+
+    // Squish spring em ambos os sentidos
+    void animate(scaleV, [1, 0.91, 1.07, 1.0], {
+      duration: 0.42,
+      ease: [0.22, 1, 0.36, 1],
+    })
+
+    // Glow / ripple de feedback — sempre
+    setGlowActive(true)
+    if (glowTimerRef.current) clearTimeout(glowTimerRef.current)
+    glowTimerRef.current = setTimeout(() => setGlowActive(false), REACT_MS)
+
+    setSuperOn(prev => {
+      const next = !prev
+      if (next) {
+        // Entrando em modo super: garante que o overlay está montado
+        setSuperMounted(true)
+      }
+      return next
+    })
+  }, [onTap, scaleV])
+
+  // ── Handlers de pointer ──────────────────────────────────────────────────────
+  const handlePointerDown = useCallback((e: React.PointerEvent) => {
+    pointerDownRef.current = { x: e.clientX, y: e.clientY }
+  }, [])
+
+  const handlePointerMove = useCallback(
+    (e: React.PointerEvent) => { updateTiltFromPointer(e.clientX, e.clientY) },
+    [updateTiltFromPointer]
+  )
+
+  const handlePointerUp = useCallback(
+    (e: React.PointerEvent) => {
+      const down = pointerDownRef.current
+      if (down) {
+        const dx = Math.abs(e.clientX - down.x)
+        const dy = Math.abs(e.clientY - down.y)
+        // Só considera tap se o dedo não se moveu mais de 8px (evita disparar no scroll)
+        if (dx < 8 && dy < 8) triggerToggle()
+      }
+      pointerDownRef.current = null
+      resetTilt()
+    },
+    [triggerToggle, resetTilt]
+  )
+
+  const handlePointerLeave = useCallback(() => {
+    pointerDownRef.current = null
+    resetTilt()
+  }, [resetTilt])
+
+  // ── Cleanup ─────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    return () => {
+      if (glowTimerRef.current) clearTimeout(glowTimerRef.current)
+    }
+  }, [])
 
   return (
-    <div className={cn("relative flex flex-col items-center justify-center", className)}>
-      {/* Glow / ripple overlay when reacting */}
-      <div
-        className={cn(
-          "pointer-events-none absolute inset-0 z-20 rounded-full transition-all duration-500",
-          isReacting
-            ? "scale-110 opacity-100"
-            : "scale-100 opacity-0"
-        )}
-        style={{
-          background: isReacting
-            ? "radial-gradient(circle, rgba(82,231,255,0.35) 0%, rgba(82,231,255,0.12) 40%, transparent 70%)"
-            : "transparent",
-          boxShadow: isReacting
-            ? "0 0 40px rgba(82,231,255,0.4), 0 0 80px rgba(82,231,255,0.2), inset 0 0 30px rgba(82,231,255,0.15)"
-            : "none",
-        }}
-      />
-
-      {/* Pulse ring */}
-      {isReacting && (
-        <div
-          className="pointer-events-none absolute inset-0 z-20 animate-ping rounded-full"
-          style={{
-            border: "2px solid rgba(82,231,255,0.3)",
-            animation: "guto-pulse 1.2s ease-out",
-          }}
-        />
+    <div
+      ref={containerRef}
+      className={cn(
+        "relative flex select-none flex-col items-center justify-center",
+        className
       )}
-
-      {/* Video container */}
-      <div
-        className={cn(
-          "relative flex items-center justify-center overflow-hidden bg-transparent",
-          sizeClasses[size],
-          isReacting && "scale-105",
-        )}
+      style={{ perspective: "900px" }}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerLeave={handlePointerLeave}
+    >
+      {/* ── Bloco 3D: tilt + squish ─────────────────────────────────────────── */}
+      <motion.div
         style={{
-          transition: "transform 0.3s ease-out",
+          rotateX: tiltX,
+          rotateY: tiltY,
+          scale: scaleV,
+          transformStyle: "preserve-3d",
+          cursor: "pointer",
         }}
       >
-        <video
-          ref={videoRef}
-          key={`${stage}-${isTouch ? "toque" : "default"}`}
-          autoPlay
-          muted
-          loop={!isReacting}
-          playsInline
-          disablePictureInPicture
-          controls={false}
-          controlsList="nodownload noplaybackrate nofullscreen"
-          preload="auto"
-          className={cn(
-            "guto-avatar-controller-video relative z-10 h-full w-full object-contain",
-            isReacting ? "cursor-default" : "cursor-pointer",
-          )}
-          onClick={handleTap}
-          onTouchEnd={(e) => {
-            e.preventDefault()
-            handleTap()
-          }}
-        >
-          <source src={`/assets/guto/${videos.webm}`} type="video/webm" />
-          <source src={`/assets/guto/${videos.mov}`} type="video/quicktime" />
-        </video>
-      </div>
+        <div className={cn("relative", sizeClasses[size])}>
 
-      {/* Platform */}
+          {/* Camada 1 — Avatar idle (normal branco/azul, qualidade máxima) */}
+          <GutoOfficialAvatar
+            size={size}
+            evolution={stage}
+            emotion="default"
+            showPlatform={false}
+            className="pointer-events-none h-full w-full"
+          />
+
+          {/* Camada 2 — GUTO de roupa (super) com crossfade natural
+              Lazy mount: só renderiza após o primeiro tap.
+              Permanece montado — taps seguintes são instantâneos.
+              O crossfade é feito apenas com opacity + CSS transition,
+              sem remount → sem flash, parece que o avatar "muda de roupa". */}
+          {superMounted && (
+            <div
+              className="pointer-events-none absolute inset-0 z-20"
+              style={{
+                opacity: superOn ? 1 : 0,
+                transition: `opacity ${FADE_MS}ms cubic-bezier(0.4, 0, 0.2, 1)`,
+              }}
+            >
+              <GutoOfficialAvatar
+                size={size}
+                evolution={stage}
+                emotion="super"
+                showPlatform={false}
+                className="pointer-events-none h-full w-full"
+              />
+            </div>
+          )}
+
+          {/* Camada 3 — Glow azul no tap (entra e sai) */}
+          <motion.div
+            className="pointer-events-none absolute inset-0 z-30 rounded-full"
+            animate={
+              glowActive
+                ? { opacity: [0, 0.8, 0], scale: [0.85, 1.25, 1.55] }
+                : { opacity: 0, scale: 1 }
+            }
+            transition={{ duration: 0.72, ease: "easeOut" }}
+            style={{
+              background:
+                "radial-gradient(circle, rgba(82,231,255,0.55) 0%, rgba(82,231,255,0.2) 40%, transparent 68%)",
+              boxShadow:
+                "0 0 50px rgba(82,231,255,0.55), 0 0 90px rgba(82,231,255,0.25)",
+            }}
+          />
+        </div>
+
+        {/* Anel de ripple — dispara em tap de entrada E de saída */}
+        {glowActive && (
+          <motion.div
+            className="pointer-events-none absolute inset-0 z-30 rounded-full"
+            initial={{ scale: 0.85, opacity: 0.65 }}
+            animate={{ scale: 1.4, opacity: 0 }}
+            transition={{ duration: 0.85, ease: "easeOut" }}
+            style={{ border: "2px solid rgba(82,231,255,0.55)" }}
+          />
+        )}
+      </motion.div>
+
+      {/* ── Plataforma ────────────────────────────────────────────────────────── */}
       {showPlatform && (
         <div className="relative mt-[-0.5rem] flex w-full max-w-[10.5rem] items-center justify-center">
           <div className="absolute h-10 w-[72%] rounded-full bg-[radial-gradient(circle,rgba(82,231,255,0.12)_0%,rgba(82,231,255,0)_76%)] blur-xl" />
@@ -148,20 +281,6 @@ export function GutoAvatarController({
           </div>
         </div>
       )}
-
-      {/* Keyframes for pulse animation */}
-      <style jsx>{`
-        @keyframes guto-pulse {
-          0% {
-            transform: scale(1);
-            opacity: 0.6;
-          }
-          100% {
-            transform: scale(1.3);
-            opacity: 0;
-          }
-        }
-      `}</style>
     </div>
   )
 }

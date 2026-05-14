@@ -5,6 +5,7 @@ import { motion } from "framer-motion"
 import { CheckCircle2, RotateCcw, Play, Radio } from "lucide-react"
 
 import type { GutoWorkoutPlan } from "@/lib/api/guto"
+import type { EvolutionStage } from "@/types/contract"
 import { getLanguage, translations } from "../translations"
 import type { MissionExercise } from "../view-models"
 import { GutoOnlineSession } from "../guto-online-session"
@@ -14,7 +15,7 @@ interface MissionTabProps {
   language: string
   userName?: string
   userId: string
-  evolution?: "baby" | "teen" | "adult" | "master" | "legend"
+  evolution?: EvolutionStage
   workoutFocus?: string
   onAskExercise: (exercise: MissionExercise) => void
   workoutPlan?: GutoWorkoutPlan | null

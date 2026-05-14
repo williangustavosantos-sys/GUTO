@@ -488,6 +488,8 @@ export type GutoProactiveMemoryAction =
   | { type: "confirm"; memoryId: string }
   | { type: "discard"; memoryId: string }
   | { type: "validate"; memoryId: string; outcome: ProactiveValidationOutcome }
+  | { type: "request_discard"; memoryId: string }
+  | { type: "cancel_discard_request"; memoryId: string }
 
 export interface ProactiveMemory {
   id: string
@@ -603,6 +605,30 @@ export async function validateProactiveMemory(
     const result = await apiRequest<{ ok: boolean }>("/guto/proactivity/validate", {
       method: "POST",
       body: JSON.stringify({ memoryId, outcome }),
+    })
+    return result.ok === true
+  } catch {
+    return false
+  }
+}
+
+export async function requestDiscardProactiveMemory(memoryId: string): Promise<boolean> {
+  try {
+    const result = await apiRequest<{ ok: boolean }>("/guto/proactivity/request-discard", {
+      method: "POST",
+      body: JSON.stringify({ memoryId }),
+    })
+    return result.ok === true
+  } catch {
+    return false
+  }
+}
+
+export async function cancelDiscardRequest(memoryId: string): Promise<boolean> {
+  try {
+    const result = await apiRequest<{ ok: boolean }>("/guto/proactivity/cancel-discard-request", {
+      method: "POST",
+      body: JSON.stringify({ memoryId }),
     })
     return result.ok === true
   } catch {

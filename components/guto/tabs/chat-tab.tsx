@@ -7,11 +7,13 @@ import { Loader2, Mic, Send, TrendingUp, Volume2, VolumeX } from "lucide-react"
 
 import { getApiErrorMessage } from "@/lib/api/client"
 import {
+  cancelDiscardRequest,
   confirmProactiveMemory,
   discardProactiveMemory,
   extractProactivityEvents,
   getGutoProactive,
   openWeeklyConversation,
+  requestDiscardProactiveMemory,
   sendGutoMessage,
   trackGutoEvent,
   validateProactiveMemory,
@@ -766,6 +768,10 @@ export function ChatTab({
         ok = await confirmProactiveMemory(action.memoryId)
       } else if (action.type === "discard") {
         ok = await discardProactiveMemory(action.memoryId)
+      } else if (action.type === "request_discard") {
+        ok = await requestDiscardProactiveMemory(action.memoryId)
+      } else if (action.type === "cancel_discard_request") {
+        ok = await cancelDiscardRequest(action.memoryId)
       } else {
         ok = await validateProactiveMemory(action.memoryId, action.outcome)
       }
