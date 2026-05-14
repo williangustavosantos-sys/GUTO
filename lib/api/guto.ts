@@ -126,6 +126,7 @@ export interface SendGutoMessageResponse {
   avatarEmotion?: GutoAvatarEmotion
   workoutPlan?: GutoWorkoutPlan | null
   memoryPatch?: Partial<GutoMemory>
+  proactiveMemoryAction?: GutoProactiveMemoryAction | null
 }
 
 export interface GutoNameValidation {
@@ -467,4 +468,144 @@ export async function generateDietPlan(userId = "local-user", language: Supporte
     timeoutMs: 45000,
     body: JSON.stringify({ userId, language }),
   })
+}
+
+// ─── Proactivity API ──────────────────────────────────────────────────────────
+
+export type ProactiveMemoryStatus =
+  | "pending_confirmation"
+  | "confirmed"
+  | "enriched"
+  | "surfaced"
+  | "pending_validation"
+  | "validated_happened"
+  | "validated_postponed"
+  | "discarded"
+
+export type ProactiveValidationOutcome = "happened" | "postponed" | "discarded"
+
+export type GutoProactiveMemoryAction =
+  | { type: "confirm"; memoryId: string }
+  | { type: "discard"; memoryId: string }
+  | { type: "validate"; memoryId: string; outcome: ProactiveValidationOutcome }
+
+export interface ProactiveMemory {
+  id: string
+  userId: string
+  type: "trip" | "commitment" | "schedule" | "health" | "other"
+  status: ProactiveMemoryStatus
+  rawText: string
+  understood: string
+  dateText?: string
+  dateParsed?: string
+  location?: string
+  weatherEnrichment?: {
+    city: string
+    date: string
+    tempMin: number
+    tempMax: number
+    condition: string
+    conditionEn: string
+    source: "wttr.in"
+  }
+  holidayEnrichment?: Array<{
+    name: string
+    nameLocal: string
+    date: string
+    country: string
+  }>
+  weekKey: string
+  createdAt: string
+  updatedAt: string
+  confirmedAt?: string
+  validatedAt?: string
+  discardedAt?: string
+}
+
+/**
+ * Sends conversation text to the backend for event extraction.
+ * Fires silently — never throws. Returns number of extracted memories.
+ */
+export async function extractProactivityEvents(
+  conversationText: string,
+  language: SupportedLanguage
+): Promise<number> {
+  try {
+    const result = await apiRequest<{ extracted: number; memories: ProactiveMemory[] }>(
+      "/guto/proactivity/extract",
+      {
+        method: "POST",
+        body: JSON.stringify({ conversationText, language }),
+      }
+    )
+    return result.extracted ?? 0
+  } catch {
+    return 0
+  }
+}
+
+/**
+ * Marks the weekly conversation as opened for this week.
+ * Called when the Monday proactive message is delivered.
+ */
+export async function openWeeklyConversation(): Promise<void> {
+  try {
+    await apiRequest("/guto/proactivity/open-weekly", { method: "POST", body: JSON.stringify({}) })
+  } catch {
+    // non-critical
+  }
+}
+
+/**
+ * Returns active proactive memories for the current user.
+ */
+export async function getProactiveMemories(): Promise<ProactiveMemory[]> {
+  try {
+    const result = await apiRequest<{ memories: ProactiveMemory[] }>(
+      "/guto/proactivity/memories",
+      { method: "GET" }
+    )
+    return result.memories ?? []
+  } catch {
+    return []
+  }
+}
+
+export async function confirmProactiveMemory(memoryId: string): Promise<boolean> {
+  try {
+    const result = await apiRequest<{ ok: boolean }>("/guto/proactivity/confirm", {
+      method: "POST",
+      body: JSON.stringify({ memoryId }),
+    })
+    return result.ok === true
+  } catch {
+    return false
+  }
+}
+
+export async function discardProactiveMemory(memoryId: string): Promise<boolean> {
+  try {
+    const result = await apiRequest<{ ok: boolean }>("/guto/proactivity/discard", {
+      method: "POST",
+      body: JSON.stringify({ memoryId }),
+    })
+    return result.ok === true
+  } catch {
+    return false
+  }
+}
+
+export async function validateProactiveMemory(
+  memoryId: string,
+  outcome: ProactiveValidationOutcome
+): Promise<boolean> {
+  try {
+    const result = await apiRequest<{ ok: boolean }>("/guto/proactivity/validate", {
+      method: "POST",
+      body: JSON.stringify({ memoryId, outcome }),
+    })
+    return result.ok === true
+  } catch {
+    return false
+  }
 }

@@ -6,8 +6,17 @@ import { AnimatePresence, motion } from "framer-motion"
 import { Loader2, Mic, Send, TrendingUp, Volume2, VolumeX } from "lucide-react"
 
 import { getApiErrorMessage } from "@/lib/api/client"
-import { getGutoProactive, sendGutoMessage, trackGutoEvent } from "@/lib/api/guto"
-import type { DietMeal, GutoAvatarEmotion, GutoExpectedResponse, GutoMemory, GutoWorkoutPlan } from "@/lib/api/guto"
+import {
+  confirmProactiveMemory,
+  discardProactiveMemory,
+  extractProactivityEvents,
+  getGutoProactive,
+  openWeeklyConversation,
+  sendGutoMessage,
+  trackGutoEvent,
+  validateProactiveMemory,
+} from "@/lib/api/guto"
+import type { DietMeal, GutoAvatarEmotion, GutoExpectedResponse, GutoMemory, GutoProactiveMemoryAction, GutoWorkoutPlan } from "@/lib/api/guto"
 import type { EvolutionStage, SupportedLanguage } from "@/types/contract"
 import type { GutoVitalStateResult } from "@/lib/guto-vital-state"
 import {
@@ -150,7 +159,108 @@ const PROACTIVE_CHECK_INTERVAL_MS = 60_000
 const FIRST_MESSAGE_SENT_KEY_PREFIX = "guto-first-message-sent"
 const CHAT_STATE_KEY_PREFIX = "guto-chat-state"
 const INITIAL_XP_REWARD_SEEN_KEY_PREFIX = "guto-initial-xp-reward-seen"
+const PROACTIVITY_EXTRACTION_KEY_PREFIX = "guto-proactivity-extracted"
+const PROACTIVITY_WEEKLY_OPENED_KEY_PREFIX = "guto-proactivity-weekly-opened"
+const PROACTIVITY_ACTION_KEY_PREFIX = "guto-proactivity-action"
+const GUTO_OPERATIONAL_TIME_ZONE = process.env.NEXT_PUBLIC_GUTO_TIME_ZONE || "Europe/Rome"
 const STALE_AUDIO_FAILURE_TEXT = "O áudio falhou. Sem perder o ritmo: escreve a mesma resposta em uma frase curta."
+// Minimum number of messages in chat (user + GUTO) before triggering extraction
+const PROACTIVITY_MIN_MESSAGES_FOR_EXTRACTION = 6
+
+function getGutoDateKey(date = new Date()): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: GUTO_OPERATIONAL_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date)
+}
+
+/** Returns ISO week key "YYYY-WNN" for the given date */
+function getISOWeekKey(date = new Date()): string {
+  const [year, month, day] = getGutoDateKey(date).split("-").map(Number) as [number, number, number]
+  const tmp = new Date(Date.UTC(year, month - 1, day))
+  const dayOfWeek = tmp.getUTCDay() || 7
+  tmp.setUTCDate(tmp.getUTCDate() + 4 - dayOfWeek)
+  const yearStart = new Date(Date.UTC(tmp.getUTCFullYear(), 0, 1))
+  const week = Math.ceil(((tmp.getTime() - yearStart.getTime()) / 86400000 + 1) / 7)
+  return `${tmp.getUTCFullYear()}-W${String(week).padStart(2, "0")}`
+}
+
+/** True if this week's proactivity extraction has already been triggered from this browser */
+function hasExtractedThisWeek(userId: string): boolean {
+  if (typeof window === "undefined") return false
+  try {
+    const weekKey = getISOWeekKey()
+    return window.localStorage.getItem(`${PROACTIVITY_EXTRACTION_KEY_PREFIX}:${userId}:${weekKey}`) === "1"
+  } catch {
+    return false
+  }
+}
+
+function markExtractedThisWeek(userId: string): void {
+  if (typeof window === "undefined") return
+  try {
+    const weekKey = getISOWeekKey()
+    window.localStorage.setItem(`${PROACTIVITY_EXTRACTION_KEY_PREFIX}:${userId}:${weekKey}`, "1")
+  } catch {}
+}
+
+/** True if the weekly Monday opening has already been fired this week */
+function hasOpenedWeeklyThisWeek(userId: string): boolean {
+  if (typeof window === "undefined") return false
+  try {
+    const weekKey = getISOWeekKey()
+    return window.localStorage.getItem(`${PROACTIVITY_WEEKLY_OPENED_KEY_PREFIX}:${userId}:${weekKey}`) === "1"
+  } catch {
+    return false
+  }
+}
+
+function markOpenedWeeklyThisWeek(userId: string): void {
+  if (typeof window === "undefined") return
+  try {
+    const weekKey = getISOWeekKey()
+    window.localStorage.setItem(`${PROACTIVITY_WEEKLY_OPENED_KEY_PREFIX}:${userId}:${weekKey}`, "1")
+  } catch {}
+}
+
+/** True if today is Monday */
+function isTodayMonday(): boolean {
+  const weekday = new Intl.DateTimeFormat("en-US", {
+    timeZone: GUTO_OPERATIONAL_TIME_ZONE,
+    weekday: "long",
+  }).format(new Date())
+  return weekday.toLowerCase() === "monday"
+}
+
+function getProactivityActionKey(userId: string, action: GutoProactiveMemoryAction): string {
+  const outcome = action.type === "validate" ? action.outcome : "none"
+  return `${PROACTIVITY_ACTION_KEY_PREFIX}:${userId}:${action.type}:${action.memoryId}:${outcome}`
+}
+
+function hasProcessedProactivityAction(storageKey: string): boolean {
+  if (typeof window === "undefined") return false
+  try {
+    return window.localStorage.getItem(storageKey) === "1"
+  } catch {
+    return false
+  }
+}
+
+function markProcessedProactivityAction(storageKey: string): void {
+  if (typeof window === "undefined") return
+  try {
+    window.localStorage.setItem(storageKey, "1")
+  } catch {}
+}
+
+function clearProcessedProactivityAction(storageKey: string): void {
+  if (typeof window === "undefined") return
+  try {
+    window.localStorage.removeItem(storageKey)
+  } catch {}
+}
 
 function formatDisplayName(value: string) {
   return firstRealGutoName(value)
@@ -345,6 +455,7 @@ export function ChatTab({
   const proactiveInFlightRef = useRef(false)
   const sendInFlightRef = useRef(false)
   const lastProactiveKeyRef = useRef<string | null>(null)
+  const processedProactiveActionKeysRef = useRef<Set<string>>(new Set())
   const arrivalBriefingRequestedRef = useRef(false)
   const shouldForceArrivalBriefingRef = useRef((() => {
     if (!storedChatState || storedChatState.messages.length === 0) return false
@@ -637,6 +748,44 @@ export function ChatTab({
     setIsRecording(false)
   }
 
+  const handleProactiveMemoryAction = useCallback(async (action?: GutoProactiveMemoryAction | null) => {
+    if (!action?.memoryId) return
+
+    const storageKey = getProactivityActionKey(userId, action)
+    const memoryKey = storageKey
+
+    if (processedProactiveActionKeysRef.current.has(memoryKey) || hasProcessedProactivityAction(storageKey)) {
+      return
+    }
+    processedProactiveActionKeysRef.current.add(memoryKey)
+    markProcessedProactivityAction(storageKey)
+
+    try {
+      let ok = false
+      if (action.type === "confirm") {
+        ok = await confirmProactiveMemory(action.memoryId)
+      } else if (action.type === "discard") {
+        ok = await discardProactiveMemory(action.memoryId)
+      } else {
+        ok = await validateProactiveMemory(action.memoryId, action.outcome)
+      }
+
+      if (!ok) {
+        processedProactiveActionKeysRef.current.delete(memoryKey)
+        clearProcessedProactivityAction(storageKey)
+        if (process.env.NODE_ENV !== "production") {
+          console.warn("[GUTO][proactivity] action failed", action)
+        }
+      }
+    } catch (error) {
+      processedProactiveActionKeysRef.current.delete(memoryKey)
+      clearProcessedProactivityAction(storageKey)
+      if (process.env.NODE_ENV !== "production") {
+        console.warn("[GUTO][proactivity] action error", { action, error })
+      }
+    }
+  }, [userId])
+
   const sendTextToGuto = useCallback(async (displayText: string, modelInput = displayText) => {
     if (sendInFlightRef.current) return
     sendInFlightRef.current = true
@@ -713,6 +862,32 @@ export function ChatTab({
       if (data.acao === "requestDeleteAccount") {
         onOpenPrivacySettings?.()
       }
+      void handleProactiveMemoryAction(data.proactiveMemoryAction)
+
+      // ── Proactivity: Monday weekly opening signal ──────────────────────────
+      // On Monday, when the proactive briefing arrives, mark weekly as opened
+      // so the backend knows the weekly conversation happened this week.
+      if (isTodayMonday() && !hasOpenedWeeklyThisWeek(userId)) {
+        markOpenedWeeklyThisWeek(userId)
+        void openWeeklyConversation().catch(() => {})
+      }
+
+      // ── Proactivity: background event extraction ───────────────────────────
+      // After enough messages on a Monday (or any day), extract proactive events
+      // from the conversation. Fires once per week, silently in background.
+      const currentMessages = messagesRef.current
+      const shouldExtract =
+        !hasExtractedThisWeek(userId) &&
+        currentMessages.length >= PROACTIVITY_MIN_MESSAGES_FOR_EXTRACTION
+      if (shouldExtract) {
+        markExtractedThisWeek(userId)
+        // Build conversation text from recent messages (last 20)
+        const conversationText = currentMessages
+          .slice(-20)
+          .map((m) => `${m.isGuto ? "GUTO" : "USER"}: ${m.text}`)
+          .join("\n")
+        void extractProactivityEvents(conversationText, safeLanguage).catch(() => {})
+      }
 
       if (!isMuted) {
         await synthesizeAndPlay(fala, safeLanguage)
@@ -734,7 +909,18 @@ export function ChatTab({
       sendInFlightRef.current = false
       setIsSending(false)
     }
-  }, [isMuted, language, onWorkoutPlanUpdated, synthesizeAndPlay, userId, userName])
+  }, [
+    handleProactiveMemoryAction,
+    isMuted,
+    language,
+    onChangeLanguage,
+    onMemoryPatch,
+    onOpenPrivacySettings,
+    onWorkoutPlanUpdated,
+    synthesizeAndPlay,
+    userId,
+    userName,
+  ])
 
   useEffect(() => {
     if (!pendingExerciseQuestion || isSending) return
