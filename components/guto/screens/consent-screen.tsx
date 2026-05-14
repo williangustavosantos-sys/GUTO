@@ -174,7 +174,7 @@ export function ConsentScreen({ language = "pt-BR", onComplete }: ConsentScreenP
         <ConsentCheckbox checked={checkTerms} onChange={setCheckTerms}>
           {t.checkTerms}{" "}
           <Link
-            href="/terms"
+            href={`/terms?lang=${language}`}
             target="_blank"
             rel="noopener"
             className="font-semibold underline"
@@ -185,7 +185,7 @@ export function ConsentScreen({ language = "pt-BR", onComplete }: ConsentScreenP
           </Link>{" "}
           {t.and}{" "}
           <Link
-            href="/privacy"
+            href={`/privacy?lang=${language}`}
             target="_blank"
             rel="noopener"
             className="font-semibold underline"

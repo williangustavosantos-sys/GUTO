@@ -126,6 +126,11 @@ export function GutoAvatarController({
   const triggerToggle = useCallback(() => {
     onTap?.()
 
+    // Haptic feedback — vibra no celular (API Web Vibration, suportado no Android Chrome)
+    if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+      navigator.vibrate(superOn ? [30, 20, 30] : 45)
+    }
+
     // Squish spring em ambos os sentidos
     void animate(scaleV, [1, 0.91, 1.07, 1.0], {
       duration: 0.42,
@@ -145,7 +150,7 @@ export function GutoAvatarController({
       }
       return next
     })
-  }, [onTap, scaleV])
+  }, [onTap, scaleV, superOn])
 
   // ── Handlers de pointer ──────────────────────────────────────────────────────
   const handlePointerDown = useCallback((e: React.PointerEvent) => {

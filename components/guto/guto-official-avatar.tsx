@@ -21,8 +21,9 @@ type AvatarVideoSources = {
   alphaType?: "hvc1" | "quicktime"
   alphaWebm?: string
   preferCanvas?: boolean
-  apple?: string
-  fallback: string
+  apple?: string   // Safari: QuickTime MOV black-bg → stripVideoMatte
+  mp4?: string     // Chrome/Android: MP4 black-bg → stripVideoMatte
+  fallback: string // WebM fallback (last resort)
 }
 
 const legacyEliteAssetToken = ["EL", "IT"].join("")
@@ -30,34 +31,33 @@ const eliteAssetName = (fileName: string) => fileName.replace(/\{elite\}/g, lega
 
 const EVOLUTION_VIDEOS: Record<EvolutionStage, Record<GutoAvatarEmotion, AvatarVideoSources>> = {
   baby: {
-    // default: VP8 alpha webm (Chrome canvas, _ALPHA skip matte) + ios_safe black-bg (Safari matte)
-    default:  { apple: "GUTO_BABY_NEW_ios_safe.mov",   fallback: "GUTO_BABY_NEW_ALPHA.webm" },
+    // default/super: mp4 black-bg para Chrome (stripVideoMatte remove preto), mov para Safari
+    default:  { mp4: "GUTO_BABY_NEW_ios_safe.mp4",   apple: "GUTO_BABY_NEW_ios_safe.mov",   fallback: "GUTO_BABY_NEW_ALPHA.webm" },
     alert:    { alphaApple: "GUTO_AMARELO_BABY_ALPHA.mov", alphaType: "hvc1", alphaWebm: "GUTO_AMARELO_BABY_ALPHA.webm", apple: "GUTO_AMARELO_BABY_ios_safe.mov", fallback: "GUTO_AMARELO_BABY.webm" },
     critical: { alphaApple: "GUTO_VERMELHO_BABY_ALPHA.mov", alphaType: "hvc1", alphaWebm: "GUTO_VERMELHO_BABY_ALPHA.webm", apple: "GUTO_VERMELHO_BABY_ios_safe.mov", fallback: "GUTO_VERMELHO_BABY.webm" },
     reward:   { alphaApple: "GUTO_ROXO_BABY_ALPHA.mov", alphaType: "hvc1", alphaWebm: "GUTO_ROXO_BABY_ALPHA.webm", apple: "GUTO_ROXO_BABY_ios_safe.mov", fallback: "GUTO_ROXO_BABY.webm" },
-    // super: GUTO de roupa — background subtraction → VP8 alpha + ios_safe black-bg
-    super:    { apple: "GUTO_BABY_SUPER_ios_safe.mov",  fallback: "GUTO_BABY_SUPER_ALPHA.webm" },
+    super:    { mp4: "GUTO_BABY_SUPER_ios_safe.mp4",  apple: "GUTO_BABY_SUPER_ios_safe.mov",  fallback: "GUTO_BABY_SUPER_ALPHA.webm" },
   },
   teen: {
-    default:  { apple: "GUTO_TEEN_NEW_ios_safe.mov",   fallback: "GUTO_TEEN_NEW_ALPHA.webm" },
+    default:  { mp4: "GUTO_TEEN_NEW_ios_safe.mp4",   apple: "GUTO_TEEN_NEW_ios_safe.mov",   fallback: "GUTO_TEEN_NEW_ALPHA.webm" },
     alert:    { alphaApple: "GUTO_AMARELO_TEEN_ALPHA.mov", alphaType: "hvc1", alphaWebm: "GUTO_AMARELO_TEEN_ALPHA.webm", apple: "GUTO_AMARELO_TEEN_ios_safe.mov", fallback: "GUTO_AMARELO_TEEN.webm" },
     critical: { alphaApple: "GUTO_VERMELHO_TEEN_ALPHA.mov", alphaType: "hvc1", alphaWebm: "GUTO_VERMELHO_TEEN_ALPHA.webm", apple: "GUTO_VERMELHO_TEEN_ios_safe.mov", fallback: "GUTO_VERMELHO_TEEN.webm" },
     reward:   { alphaApple: "GUTO_ROXO_TEEN_ALPHA.mov", alphaType: "hvc1", alphaWebm: "GUTO_ROXO_TEEN_ALPHA.webm", apple: "GUTO_ROXO_TEEN_ios_safe.mov", fallback: "GUTO_ROXO_TEEN.webm" },
-    super:    { apple: "GUTO_TEEN_SUPER_ios_safe.mov",  fallback: "GUTO_TEEN_SUPER_ALPHA.webm" },
+    super:    { mp4: "GUTO_TEEN_SUPER_ios_safe.mp4",  apple: "GUTO_TEEN_SUPER_ios_safe.mov",  fallback: "GUTO_TEEN_SUPER_ALPHA.webm" },
   },
   adult: {
-    default:  { apple: "GUTO_ADULT_NEW_ios_safe.mov",  fallback: "GUTO_ADULT_NEW_ALPHA.webm" },
+    default:  { mp4: "GUTO_ADULT_NEW_ios_safe.mp4",  apple: "GUTO_ADULT_NEW_ios_safe.mov",  fallback: "GUTO_ADULT_NEW_ALPHA.webm" },
     alert:    { alphaApple: "GUTO_AMARELO_ADULT_ALPHA.mov", alphaType: "hvc1", alphaWebm: "GUTO_AMARELO_ADULT_ALPHA.webm", apple: "GUTO_AMARELO_ADULT_ios_safe.mov", fallback: "GUTO_AMARELO_ADULT.webm" },
     critical: { alphaApple: "GUTO_VERMELHO_ADULT_ALPHA.mov", alphaType: "hvc1", alphaWebm: "GUTO_VERMELHO_ADULT_ALPHA.webm", apple: "GUTO_VERMELHO_ADULT_ios_safe.mov", fallback: "GUTO_VERMELHO_ADULT.webm" },
     reward:   { alphaApple: "GUTO_ROXO_ADULT_ALPHA.mov", alphaType: "hvc1", alphaWebm: "GUTO_ROXO_ADULT_ALPHA.webm", apple: "GUTO_ROXO_ADULT_ios_safe.mov", fallback: "GUTO_ROXO_ADULT.webm" },
-    super:    { apple: "GUTO_ADULT_SUPER_ios_safe.mov", fallback: "GUTO_ADULT_SUPER_ALPHA.webm" },
+    super:    { mp4: "GUTO_ADULT_SUPER_ios_safe.mp4", apple: "GUTO_ADULT_SUPER_ios_safe.mov", fallback: "GUTO_ADULT_SUPER_ALPHA.webm" },
   },
   elite: {
-    default:  { apple: "GUTO_ELIT_NEW_ios_safe.mov",   fallback: "GUTO_ELIT_NEW_ALPHA.webm" },
+    default:  { mp4: "GUTO_ELIT_NEW_ios_safe.mp4",   apple: "GUTO_ELIT_NEW_ios_safe.mov",   fallback: "GUTO_ELIT_NEW_ALPHA.webm" },
     alert:    { alphaApple: eliteAssetName("GUTO_AMARELO_{elite}_ALPHA.mov"), alphaType: "hvc1", alphaWebm: eliteAssetName("GUTO_AMARELO_{elite}_ALPHA.webm"), apple: eliteAssetName("GUTO_AMARELO_{elite}_ios_safe.mov"), fallback: eliteAssetName("GUTO_AMARELO_{elite}.webm") },
     critical: { alphaApple: eliteAssetName("GUTO_VERMELHO_{elite}_ALPHA.mov"), alphaType: "hvc1", alphaWebm: eliteAssetName("GUTO_VERMELHO_{elite}_ALPHA.webm"), apple: eliteAssetName("GUTO_VERMELHO_{elite}_ios_safe.mov"), fallback: eliteAssetName("GUTO_VERMELHO_{elite}.webm") },
     reward:   { alphaApple: eliteAssetName("GUTO_ROXO_{elite}_ALPHA.mov"), alphaType: "hvc1", alphaWebm: eliteAssetName("GUTO_ROXO_{elite}_ALPHA.webm"), apple: eliteAssetName("GUTO_ROXO_{elite}_ios_safe.mov"), fallback: eliteAssetName("GUTO_ROXO_{elite}.webm") },
-    super:    { apple: "GUTO_ELIT_SUPER_ios_safe.mov",  fallback: "GUTO_ELIT_SUPER_ALPHA.webm" },
+    super:    { mp4: "GUTO_ELIT_SUPER_ios_safe.mp4",  apple: "GUTO_ELIT_SUPER_ios_safe.mov",  fallback: "GUTO_ELIT_SUPER_ALPHA.webm" },
   },
 }
 
@@ -417,8 +417,13 @@ export function GutoOfficialAvatar({
             backgroundColor: "transparent",
           }}
         >
+          {/* Safari — QuickTime MOV black-bg → stripVideoMatte */}
           {sources.apple && isSafari && (
-            <source src={`/assets/guto/${sources.apple}`} type='video/quicktime; codecs="hvc1"' />
+            <source src={`/assets/guto/${sources.apple}`} type="video/quicktime" />
+          )}
+          {/* Chrome / Android — MP4 black-bg → stripVideoMatte (VP8 alpha não funciona em canvas) */}
+          {sources.mp4 && !isSafari && (
+            <source src={`/assets/guto/${sources.mp4}`} type="video/mp4" />
           )}
           {sources.alphaApple && !sources.preferCanvas && !isSafari && (
             <source
