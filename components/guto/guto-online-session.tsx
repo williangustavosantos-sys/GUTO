@@ -21,6 +21,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Clock, RotateCcw, Undo2, X } from "lucide-react"
 
 import type { GutoWorkoutPlan } from "@/lib/api/guto"
+import type { EvolutionStage } from "@/types/contract"
 import { GutoOnlineLightAvatar } from "@/components/guto/guto-online-light-avatar"
 
 import { useGutoOnlineEngine } from "@/lib/guto-online/use-guto-online-engine"
@@ -49,7 +50,7 @@ interface GutoOnlineSessionProps {
   workoutPlan: GutoWorkoutPlan
   language: string
   userName?: string
-  evolution?: "baby" | "teen" | "adult" | "master" | "legend"
+  evolution?: EvolutionStage
   onFinish?: () => void
 }
 
