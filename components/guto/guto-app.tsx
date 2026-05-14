@@ -155,6 +155,8 @@ const stageCopy: Record<
     pushDisable: string
     pushDenied: string
     pushUnsupported: string
+    nameConfirm: string
+    nameChange: string
     billingTitle: string
     billingManage: string
     billingNoSubscription: string
@@ -214,6 +216,8 @@ const stageCopy: Record<
     pushDisable: "Desativar notificações",
     pushDenied: "Permissão bloqueada. Libere nas configurações do navegador.",
     pushUnsupported: "Este dispositivo não suporta notificações push.",
+    nameConfirm: "Confirmar",
+    nameChange: "Alterar",
     billingTitle: "Assinatura",
     billingManage: "Gerenciar assinatura",
     billingNoSubscription: "Você ainda não tem uma assinatura ativa.",
@@ -272,6 +276,8 @@ const stageCopy: Record<
     pushDisable: "Disable notifications",
     pushDenied: "Permission blocked. Allow it in your browser settings.",
     pushUnsupported: "This device does not support push notifications.",
+    nameConfirm: "Confirm",
+    nameChange: "Change",
     billingTitle: "Subscription",
     billingManage: "Manage subscription",
     billingNoSubscription: "You don't have an active subscription yet.",
@@ -330,6 +336,8 @@ const stageCopy: Record<
     pushDisable: "Disattiva notifiche",
     pushDenied: "Permesso bloccato. Abilitalo nelle impostazioni del browser.",
     pushUnsupported: "Questo dispositivo non supporta le notifiche push.",
+    nameConfirm: "Conferma",
+    nameChange: "Modifica",
     billingTitle: "Abbonamento",
     billingManage: "Gestisci abbonamento",
     billingNoSubscription: "Non hai ancora un abbonamento attivo.",
@@ -891,10 +899,14 @@ export function GutoApp({
         if (process.env.NODE_ENV === "development") {
           console.info("[GUTO_LANGUAGE] applied in private app:", persistedLanguage)
         }
-        setDraftName(resolvedName)
-        setCommittedName(resolvedName)
 
         const hasConfirmedName = hasStoredName(stored) || hasMemoryName(loadedMemory)
+
+        // Only set committedName (used in the chat header) if the user has already
+        // confirmed their own name. If they're still at the naming screen, only
+        // pre-fill draftName so the presetName from the invite does not leak into the UI.
+        setDraftName(resolvedName)
+        setCommittedName(hasConfirmedName ? resolvedName : "")
 
         persistProfile({
           language: persistedLanguage,
@@ -1973,6 +1985,7 @@ export function GutoApp({
             language={selectedLanguage}
             userName={userLabel}
             userId={gutoUserId}
+            evolution={evolution}
             workoutFocus={localizedWorkoutPlan?.focusKey || "full_body"}
             onAskExercise={handleExerciseQuestion}
             workoutPlan={localizedWorkoutPlan}
@@ -2313,14 +2326,14 @@ export function GutoApp({
                           onClick={() => void handleSeal(true)}
                           className="rounded-full bg-[var(--guto-cyan)] px-4 py-2 text-[10px] font-black uppercase tracking-normal text-white"
                         >
-                          Confirmar
+                          {locale.nameConfirm}
                         </button>
                         <button
                           type="button"
                           onClick={() => setNameGate(null)}
                           className="rounded-full border border-[rgba(13,35,65,0.14)] bg-white/55 px-4 py-2 text-[10px] font-black uppercase tracking-normal text-[var(--guto-navy)]"
                         >
-                          Alterar
+                          {locale.nameChange}
                         </button>
                       </div>
                     )}
@@ -2780,14 +2793,14 @@ export function GutoApp({
                             onClick={() => void saveSettingsName(true)}
                             className="rounded-full bg-[var(--guto-cyan)] px-4 py-2 text-[10px] font-black uppercase tracking-normal text-white"
                           >
-                            Confirmar
+                            {locale.nameConfirm}
                           </button>
                           <button
                             type="button"
                             onClick={() => setNameGate(null)}
                             className="rounded-full border border-[rgba(13,35,65,0.14)] bg-white/55 px-4 py-2 text-[10px] font-black uppercase tracking-normal text-[var(--guto-navy)]"
                           >
-                            Alterar
+                            {locale.nameChange}
                           </button>
                         </div>
                       )}

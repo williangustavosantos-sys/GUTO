@@ -192,6 +192,24 @@
   background-clip: padding-box;
 }
 
+/* iOS: inputs with font-size < 16px trigger auto-zoom on focus.
+   Force minimum 16px on all inputs/textareas to prevent this.
+   font-size: 1rem = 16px by default; using max() keeps visual size
+   but prevents zoom. */
+.sala-guto input,
+.sala-guto textarea,
+.sala-guto select {
+  font-size: max(16px, 1em);
+}
+
+/* Prevent iOS 300ms tap delay on all interactive elements */
+.sala-guto button,
+.sala-guto a,
+.sala-guto [role="button"],
+.sala-guto [role="checkbox"] {
+  touch-action: manipulation;
+}
+
 .sala-guto :is(button, input, textarea, select) {
   font-family: var(--font-tech);
 }

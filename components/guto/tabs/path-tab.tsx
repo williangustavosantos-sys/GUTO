@@ -11,6 +11,7 @@ import { getLanguage, translations } from "../translations"
 import type { EvolutionStage } from "@/types/contract"
 import type { PathDay, PathDayStatus } from "../view-models"
 import { getGutoVitalState } from "@/lib/guto-vital-state"
+import { gutoAudio } from "@/lib/audio-haptics"
 
 interface PathTabProps {
   userName: string
@@ -30,6 +31,10 @@ const pathCopy = {
     waitingMissionBody: "O GUTO precisa fechar o treino no chat antes de cravar execução no caminho.",
     noXp: "0 XP hoje",
     noStreak: "Sequência ainda zerada",
+    close: "FECHAR",
+    xpFull: "+100 XP hoje",
+    xpAdapted: "+50 XP hoje",
+    streakDays: "dias na sequência",
   },
   "en-US": {
     active: "Active path",
@@ -39,6 +44,10 @@ const pathCopy = {
     waitingMissionBody: "GUTO needs to close the workout in chat before carving execution into the path.",
     noXp: "0 XP today",
     noStreak: "Streak still at zero",
+    close: "CLOSE",
+    xpFull: "+100 XP today",
+    xpAdapted: "+50 XP today",
+    streakDays: "day streak",
   },
   "it-IT": {
     active: "Percorso attivo",
@@ -48,6 +57,10 @@ const pathCopy = {
     waitingMissionBody: "GUTO deve chiudere l'allenamento in chat prima di incidere l'esecuzione nel percorso.",
     noXp: "0 XP oggi",
     noStreak: "Sequenza ancora a zero",
+    close: "CHIUDI",
+    xpFull: "+100 XP oggi",
+    xpAdapted: "+50 XP oggi",
+    streakDays: "giorni di fila",
   },
 } as const
 
@@ -231,11 +244,11 @@ export function PathTab({ language, memory, workoutPlan, currentEvolution, valid
                 </p>
                 <p className="flex items-center gap-2">
                   <Zap className="h-4 w-4 text-[rgba(117,165,211,0.95)]" />
-                  {memory?.trainedToday ? "+100 XP hoje" : isAdaptedToday ? "+50 XP hoje" : copy.noXp}
+                  {memory?.trainedToday ? copy.xpFull : isAdaptedToday ? copy.xpAdapted : copy.noXp}
                 </p>
                 <p className="flex items-center gap-2">
                   <Flame className="h-4 w-4 text-[rgba(117,165,211,0.95)]" />
-                  {streak > 0 ? `+${streak} dias na sequência` : copy.noStreak}
+                  {streak > 0 ? `+${streak} ${copy.streakDays}` : copy.noStreak}
                 </p>
               </div>
             </div>
@@ -271,7 +284,7 @@ export function PathTab({ language, memory, workoutPlan, currentEvolution, valid
               <button
                 key={record.id}
                 type="button"
-                onClick={() => setSelectedPoster(`${API_URL}${record.posterUrl}`)}
+                onClick={() => { gutoAudio.playGutoFeedback('tap'); setSelectedPoster(`${API_URL}${record.posterUrl}`) }}
                 className="shrink-0 text-left"
               >
                 <div className="h-[72px] w-[54px] overflow-hidden rounded-[0.85rem] border border-[rgba(82,231,255,0.35)] bg-white/40">
@@ -308,11 +321,11 @@ export function PathTab({ language, memory, workoutPlan, currentEvolution, valid
           />
           <button
             type="button"
-            onClick={() => setSelectedPoster(null)}
+            onClick={() => { gutoAudio.playGutoFeedback('tap'); setSelectedPoster(null) }}
             className="mt-5 rounded-full border border-[rgba(82,231,255,0.4)] bg-white/70 px-8 py-2.5 font-mono text-[10px] font-black uppercase tracking-[0.2em] text-[var(--guto-navy)]"
             style={{ boxShadow: "0 2px 12px rgba(13,35,65,0.08)" }}
           >
-            FECHAR
+            {copy.close}
           </button>
         </div>
       )}

@@ -8,6 +8,7 @@ import { getDietPlan, generateDietPlan, type DietPlan, type DietMeal, type DietF
 import { sanitizeDietPlan } from "@/lib/diet-plan"
 import { getLanguage } from "../translations"
 import type { ValidLanguage } from "../translations"
+import { gutoAudio } from "@/lib/audio-haptics"
 
 // ─── Copy ────────────────────────────────────────────────────────────────────
 
@@ -197,7 +198,7 @@ function MealCard({
       {/* Header row — always visible */}
       <button
         type="button"
-        onClick={() => setExpanded((v) => !v)}
+        onClick={() => { gutoAudio.playGutoFeedback('tap'); setExpanded((v) => !v) }}
         className="w-full flex items-center gap-2.5 px-3.5 py-3"
         aria-expanded={expanded}
       >
@@ -258,6 +259,7 @@ function MealCard({
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation()
+                  gutoAudio.playGutoFeedback('tap')
                   onFoodDoubt(food, meal)
                 }}
                 aria-label={`${foodQuestionLabel} ${food.name}`}
@@ -686,7 +688,7 @@ export function DietTab({ userId, language, onFoodDoubt, memory }: DietTabProps)
         <motion.button
           type="button"
           whileTap={{ scale: 0.97 }}
-          onClick={handleRetry}
+          onClick={() => { gutoAudio.playGutoFeedback('tap'); handleRetry() }}
           disabled={retrying}
           className="mt-1 flex items-center justify-center gap-2 w-full h-9 rounded-[0.85rem] border border-[rgba(82,231,255,0.25)] bg-transparent text-[var(--guto-cyan)]/60 font-mono text-[8px] font-black uppercase tracking-[0.14em] disabled:opacity-40"
         >

@@ -8,11 +8,13 @@ import type { GutoWorkoutPlan } from "@/lib/api/guto"
 import { getLanguage, translations } from "../translations"
 import type { MissionExercise } from "../view-models"
 import { GutoOnlineSession } from "../guto-online-session"
+import { gutoAudio } from "@/lib/audio-haptics"
 
 interface MissionTabProps {
   language: string
   userName?: string
   userId: string
+  evolution?: "baby" | "teen" | "adult" | "master" | "legend"
   workoutFocus?: string
   onAskExercise: (exercise: MissionExercise) => void
   workoutPlan?: GutoWorkoutPlan | null
@@ -151,6 +153,7 @@ export function MissionTab({
   language,
   userName,
   userId: _userId,
+  evolution = "baby",
   workoutFocus: _workoutFocus,
   onAskExercise,
   workoutPlan,
@@ -253,7 +256,7 @@ export function MissionTab({
         <div className="flex items-center gap-2 mb-2.5">
           <button
             type="button"
-            onClick={() => toggleExercise(exercise.id)}
+            onClick={() => { gutoAudio.playGutoFeedback('select'); toggleExercise(exercise.id) }}
             className="guto-slot grid h-8 w-8 shrink-0 place-items-center rounded-full"
             aria-label={`${copy.completed}: ${exercise.name}`}
             aria-pressed={isDone}
@@ -274,7 +277,7 @@ export function MissionTab({
 
           <button
             type="button"
-            onClick={() => onAskExercise(exercise)}
+            onClick={() => { gutoAudio.playGutoFeedback('tap'); onAskExercise(exercise) }}
             className="guto-slot grid h-8 w-8 shrink-0 place-items-center rounded-full border border-[rgba(82,231,255,0.35)] bg-[rgba(82,231,255,0.08)]"
             aria-label={`${copy.doubt}: ${exercise.name}`}
           >
@@ -379,6 +382,7 @@ export function MissionTab({
           type="button"
           onClick={() => {
             if (trainedToday || adaptedMissionToday) return
+            gutoAudio.playGutoFeedback('tap')
             if (started) {
               setStarted(false)
               setCompletedExerciseIds([])
@@ -397,6 +401,7 @@ export function MissionTab({
       <button
         type="button"
         onClick={() => {
+          gutoAudio.playGutoFeedback('transition')
           setStarted(true)
           setOnlineOpen(true)
         }}
@@ -437,6 +442,7 @@ export function MissionTab({
           type="button"
           onClick={() => {
             if (invalidWorkoutVideo) return
+            gutoAudio.playGutoFeedback('success')
             onValidateWorkout()
           }}
           disabled={invalidWorkoutVideo || (!canComplete && !trainedToday)}
@@ -452,6 +458,7 @@ export function MissionTab({
         workoutPlan={workoutPlan}
         language={validLang}
         userName={userName}
+        evolution={evolution}
         onFinish={() => {
           setCompletedExerciseIds(exercises.map((exercise) => exercise.id))
           setStarted(true)

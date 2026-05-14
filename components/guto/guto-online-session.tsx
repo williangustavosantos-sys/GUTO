@@ -21,7 +21,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Clock, RotateCcw, Undo2, X } from "lucide-react"
 
 import type { GutoWorkoutPlan } from "@/lib/api/guto"
-import { GutoAvatar } from "@/components/guto/guto-avatar"
+import { GutoOfficialAvatar } from "@/components/guto/guto-official-avatar"
 
 import { useGutoOnlineEngine } from "@/lib/guto-online/use-guto-online-engine"
 import { makeEventId, type GutoOnlineEvent } from "@/lib/guto-online/guto-online-events"
@@ -49,6 +49,7 @@ interface GutoOnlineSessionProps {
   workoutPlan: GutoWorkoutPlan
   language: string
   userName?: string
+  evolution?: "baby" | "teen" | "adult" | "master" | "legend"
   onFinish?: () => void
 }
 
@@ -171,6 +172,19 @@ const RESUME_BUTTONS: Record<string, { keep: string; reset: string }> = {
   "it-IT": { keep: "Riprendi da qui", reset: "Ricomincia" },
 }
 
+const CLOSE_LABEL: Record<string, string> = {
+  "pt-BR": "Fechar GUTO Online",
+  "en-US": "Close GUTO Online",
+  "it-IT": "Chiudi GUTO Online",
+}
+
+function pickCloseLabel(language: string) {
+  if (language in CLOSE_LABEL) return CLOSE_LABEL[language]
+  const prefix = language.split("-")[0]
+  const found = Object.keys(CLOSE_LABEL).find((key) => key.startsWith(prefix))
+  return found ? CLOSE_LABEL[found] : CLOSE_LABEL["pt-BR"]
+}
+
 function pickResumeCopy(language: string) {
   if (language in RESUME_BUTTONS) return RESUME_BUTTONS[language]
   const prefix = language.split("-")[0]
@@ -186,6 +200,7 @@ export function GutoOnlineSession({
   workoutPlan,
   language,
   userName,
+  evolution = "baby",
   onFinish,
 }: GutoOnlineSessionProps) {
   // ─── Engine ──────────────────────────────────────────────────────────────
@@ -662,7 +677,7 @@ export function GutoOnlineSession({
               type="button"
               onClick={onClose}
               className="grid h-10 w-10 place-items-center rounded-full border border-white/70 bg-white/48 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]"
-              aria-label="Fechar GUTO Online"
+              aria-label={pickCloseLabel(language)}
             >
               <X className="h-4 w-4" />
             </button>
@@ -704,7 +719,21 @@ export function GutoOnlineSession({
           <section className="flex w-full flex-col items-center">
             <div className="relative">
               <div className="absolute inset-8 rounded-full bg-[rgba(82,231,255,0.18)] blur-2xl" />
-              <GutoAvatar size="xl" showPlatform={false} className="relative" />
+              <GutoOfficialAvatar
+                size="xl"
+                showPlatform={false}
+                className="relative"
+                evolution={evolution}
+                emotion={
+                  state.phase === "finished"
+                    ? "reward"
+                    : state.phase === "pain_check" || state.phase === "fatigue_adjustment"
+                    ? "alert"
+                    : state.phase === "quick_talk" || state.phase === "thinking" || state.phase === "substitution"
+                    ? "alert"
+                    : "default"
+                }
+              />
             </div>
             {state.lastGutoLine && (
               <p className="mt-2 max-w-sm text-center text-[13px] font-bold leading-snug text-[rgba(13,35,65,0.84)]">

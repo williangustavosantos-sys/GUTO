@@ -121,6 +121,7 @@ export interface TranslationDictionary {
     emptyState: string;
     xpEarned: string;
     leveledUp: string;
+    pairWithGuto: string;
   };
 }
 
@@ -262,6 +263,7 @@ export const translations: Record<ValidLanguage, TranslationDictionary> = {
       emptyState: "Nenhum treino validado ainda neste período.",
       xpEarned: "+100 XP na Arena",
       leveledUp: "Seu GUTO evoluiu!",
+      pairWithGuto: "DUPLA COM GUTO",
     },
   },
   "it-IT": {
@@ -392,6 +394,7 @@ export const translations: Record<ValidLanguage, TranslationDictionary> = {
       emptyState: "Nessun allenamento convalidato in questo periodo.",
       xpEarned: "+100 XP nell'Arena",
       leveledUp: "Il tuo GUTO si è evoluto!",
+      pairWithGuto: "COPPIA CON GUTO",
     },
   },
   "en-US": {
@@ -522,6 +525,7 @@ export const translations: Record<ValidLanguage, TranslationDictionary> = {
       emptyState: "No validated workouts yet this period.",
       xpEarned: "+100 XP in Arena",
       leveledUp: "Your GUTO evolved!",
+      pairWithGuto: "PAIRED WITH GUTO",
     },
   }
 };

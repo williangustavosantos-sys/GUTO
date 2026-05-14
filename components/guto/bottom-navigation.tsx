@@ -39,7 +39,7 @@ export function BottomNavigation({ activeTab, onTabChange, language }: BottomNav
   return (
     <div className="guto-bottom-navigation px-0 pt-3">
       <nav
-        aria-label="Navegação principal"
+        aria-label={safeLanguage === "it-IT" ? "Navigazione principale" : safeLanguage === "en-US" ? "Main navigation" : "Navegação principal"}
         className="mx-auto grid w-[91.54%] max-w-[400px] grid-cols-6 gap-[clamp(2px,1.5vw,6px)]"
       >
         {tabs.map((tab) => {

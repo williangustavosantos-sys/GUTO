@@ -156,6 +156,32 @@ async function touchCachedAudio(record: GutoVoiceBankRecord) {
   })
 }
 
+/**
+ * Picks the best available browser voice for the language.
+ * Priority: male voices (by name heuristic) matching the language code first,
+ * then any matching language voice, then system default.
+ * This avoids the default female voice (e.g. Google Maps "Alice") on most devices.
+ */
+function pickBrowserVoice(language: string): SpeechSynthesisVoice | null {
+  if (!isBrowser() || !window.speechSynthesis) return null
+  const voices = window.speechSynthesis.getVoices()
+  if (!voices.length) return null
+
+  const langCode = language.toLowerCase().replace("_", "-")
+  const baseLang = langCode.split("-")[0]
+
+  // Male-sounding name keywords (heuristic across pt-BR, en-US, it-IT)
+  const maleKeywords = /male|masculino|homem|uomo|reed|daniel|jorge|mark|google uk english male|alex|diego|luciano|andrés/i
+
+  const exactMatch = voices.filter((v) => v.lang.toLowerCase().replace("_", "-") === langCode)
+  const baseMatch = voices.filter((v) => v.lang.toLowerCase().startsWith(baseLang))
+
+  const preferMale = (list: SpeechSynthesisVoice[]) =>
+    list.find((v) => maleKeywords.test(v.name)) ?? list[0] ?? null
+
+  return preferMale(exactMatch) ?? preferMale(baseMatch) ?? null
+}
+
 function speakWithBrowser(text: string, language: string) {
   return new Promise<void>((resolve) => {
     if (!isBrowser() || !window.speechSynthesis || !text.trim()) {
@@ -163,14 +189,31 @@ function speakWithBrowser(text: string, language: string) {
       return
     }
 
-    window.speechSynthesis.cancel()
-    const utterance = new SpeechSynthesisUtterance(text)
-    utterance.lang = language
-    utterance.rate = 1.04
-    utterance.pitch = 0.96
-    utterance.onend = () => resolve()
-    utterance.onerror = () => resolve()
-    window.speechSynthesis.speak(utterance)
+    const doSpeak = () => {
+      window.speechSynthesis.cancel()
+      const utterance = new SpeechSynthesisUtterance(text)
+      utterance.lang = language
+      utterance.rate = 1.04
+      utterance.pitch = 0.82  // slightly lower pitch for a less feminine sound
+      const selectedVoice = pickBrowserVoice(language)
+      if (selectedVoice) utterance.voice = selectedVoice
+      utterance.onend = () => resolve()
+      utterance.onerror = () => resolve()
+      window.speechSynthesis.speak(utterance)
+    }
+
+    // Voices may not be loaded yet on first call — wait for them
+    const voices = window.speechSynthesis.getVoices()
+    if (voices.length > 0) {
+      doSpeak()
+    } else {
+      window.speechSynthesis.onvoiceschanged = () => {
+        window.speechSynthesis.onvoiceschanged = null
+        doSpeak()
+      }
+      // Safety timeout: speak even if onvoiceschanged never fires
+      setTimeout(doSpeak, 500)
+    }
   })
 }
 

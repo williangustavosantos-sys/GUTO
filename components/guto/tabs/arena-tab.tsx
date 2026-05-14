@@ -12,6 +12,7 @@ import {
   ArenaRankingResponse,
 } from "@/lib/api/guto"
 import { TranslationDictionary } from "@/components/guto/translations"
+import { gutoAudio } from "@/lib/audio-haptics"
 
 type ArenaSubTab = "week" | "month" | "individual"
 
@@ -114,7 +115,7 @@ function RankingCard({
                 {displayName}
               </p>
               <p className="text-[8px] font-black uppercase tracking-widest text-[rgba(13,35,65,0.42)]">
-                DUPLA COM GUTO
+                {t.arena.pairWithGuto}
               </p>
             </div>
             {/* XP */}
@@ -271,7 +272,7 @@ export function ArenaTab({ userId, language, translations: t, refreshKey, curren
             <button
               key={sub.id}
               type="button"
-              onClick={() => setActiveSubTab(sub.id)}
+              onClick={() => { gutoAudio.playGutoFeedback('tap'); setActiveSubTab(sub.id) }}
               className={cn(
                 "flex-1 rounded-[0.7rem] py-2 font-mono text-[10px] font-black tracking-widest transition-all",
                 activeSubTab === sub.id
