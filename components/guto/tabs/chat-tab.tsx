@@ -128,6 +128,7 @@ const chatCopy: Record<
     audioFailure: string
     emptyResponseFallback: string
     connectionError: string
+    xpRewardLabel: string
     opening: (name: string) => string
   }
 > = {
@@ -141,6 +142,7 @@ const chatCopy: Record<
     audioFailure: "O áudio falhou. Sem perder o ritmo: escreve a mesma resposta em uma frase curta.",
     emptyResponseFallback: "Sem distração. Executa a próxima ação agora.",
     connectionError: "Perdi conexão por um momento. Reorganiza e me envia de novo em 1 frase.",
+    xpRewardLabel: "Prêmio Inicial • Guto Ativo",
     opening: (name) => `Finalmente${name ? `, ${name}` : ""}. Tava te esperando. Enquanto isso, já organizei nosso plano daqui pra frente. Estamos juntos — bora começar?`,
   },
   "en-US": {
@@ -153,6 +155,7 @@ const chatCopy: Record<
     audioFailure: "Audio failed. No need to stop — just type your answer in one short sentence.",
     emptyResponseFallback: "No distractions. Execute the next action now.",
     connectionError: "Lost connection for a moment. Reorganize and send me again in 1 sentence.",
+    xpRewardLabel: "Initial Reward • GUTO Active",
     opening: (name) => `Finally${name ? `, ${name}` : ""}. I was waiting for you. In the meantime, I already organized our plan from here. I'm with you — ready to start?`,
   },
   "it-IT": {
@@ -165,6 +168,7 @@ const chatCopy: Record<
     audioFailure: "Audio fallito. Senza perdere il ritmo: scrivi la stessa risposta in una frase breve.",
     emptyResponseFallback: "Niente distrazioni. Esegui la prossima azione adesso.",
     connectionError: "Ho perso la connessione per un momento. Riorganizza e mandami di nuovo in 1 frase.",
+    xpRewardLabel: "Premio Iniziale • GUTO Attivo",
     opening: (name) => `Finalmente${name ? `, ${name}` : ""}. Ti stavo aspettando. Nel frattempo ho già organizzato il nostro piano da qui in avanti. Sono con te — iniziamo?`,
   },
 }
@@ -459,7 +463,7 @@ export function ChatTab({
   const [input, setInput] = useState("")
   const [isSending, setIsSending] = useState(false)
   const [isSpeaking, setIsSpeaking] = useState(false)
-  const [isMuted, setIsMuted] = useState(true)
+  const [isMuted, setIsMuted] = useState(false)
   const [isRecording, setIsRecording] = useState(false)
   const [showXpReward, setShowXpReward] = useState(false)
 
@@ -519,9 +523,10 @@ export function ChatTab({
     if (typeof window === "undefined") return
     try {
       const stored = window.localStorage.getItem(`guto-voice-enabled-${userId}`)
-      if (stored === "true") {
-        setIsMuted(false)
+      if (stored === "false") {
+        setIsMuted(true) // user explicitly disabled voice — respect that
       }
+      // stored === "true" or null (new user) → keep default (unmuted)
     } catch {}
   }, [userId])
 
@@ -863,7 +868,7 @@ export function ChatTab({
         text: fala,
         isGuto: true,
         timestamp: new Date(),
-        avatarEmotion: normalizeAvatarEmotion(data.avatarEmotion),
+        avatarEmotion: normalizeAvatarEmotion(data?.avatarEmotion),
       }
 
       setMessages((prev) => appendMessagesWithoutDuplicateGuto(prev, [gutoMessage]))
@@ -948,14 +953,19 @@ export function ChatTab({
 
     handledExerciseQuestionRef.current = pendingExerciseQuestion.id
     const { exercise } = pendingExerciseQuestion
-    const displayText = `Dúvida: ${exercise.name}`
+    const exerciseDoubtLabel: Record<SupportedLanguage, string> = {
+      "pt-BR": "Dúvida",
+      "en-US": "Question",
+      "it-IT": "Dubbio",
+    }
+    const displayText = `${exerciseDoubtLabel[validLang as SupportedLanguage] ?? exerciseDoubtLabel["pt-BR"]}: ${exercise.name}`
     const modelInput = [
-      "O usuário apertou o botão de dúvida no treino do dia.",
-      `Exercício: ${exercise.name}.`,
-      `Séries: ${exercise.sets}. Repetições: ${exercise.reps}. Descanso: ${exercise.rest}.`,
-      `Instrução base: ${exercise.cue}`,
-      `Observação do GUTO: ${exercise.note}`,
-      "Explique como executar com clareza, corrija os principais erros e termine dizendo que ele pode perguntar a dúvida específica na mesma conversa.",
+      `[Exercise doubt — language: ${validLang}]`,
+      `Exercise: ${exercise.name}.`,
+      `Sets: ${exercise.sets}. Reps: ${exercise.reps}. Rest: ${exercise.rest}.`,
+      `Base cue: ${exercise.cue}`,
+      `GUTO note: ${exercise.note}`,
+      `Reply in ${validLang}. Explain how to perform it clearly, correct the main mistakes, and invite follow-up questions.`,
     ].join(" ")
 
     void sendTextToGuto(displayText, modelInput).finally(() => {
@@ -975,26 +985,19 @@ export function ChatTab({
     if (handledFoodQuestionRef.current === key) return
     handledFoodQuestionRef.current = key
 
-    const goalMap: Record<string, string> = {
-      fat_loss: "Emagrecimento",
-      muscle_gain: "Hipertrofia",
-      conditioning: "Condicionamento",
-      mobility_health: "Saúde",
-      consistency: "Consistência",
-    }
-    const goalLabel = memory?.trainingGoal ? goalMap[memory.trainingGoal] || memory.trainingGoal : "não informado"
-    const sexLabel = memory?.biologicalSex === "female" ? "mulher" : memory?.biologicalSex === "male" ? "homem" : "não informado"
-    const countryLabel = memory?.country ? `mora em ${memory.country}` : ""
+    const goalLabel = memory?.trainingGoal ?? "unknown"
+    const sexLabel = memory?.biologicalSex ?? "unknown"
+    const countryLabel = memory?.country ?? ""
     const mealFoodsList = meal.foods.map((f) => `${f.name} (${f.quantity})`).join(", ")
-    const profileStr = [sexLabel, memory?.userAge ? `${memory.userAge} anos` : "", memory?.heightCm ? `${memory.heightCm}cm` : "", memory?.weightKg ? `${memory.weightKg}kg` : "", countryLabel].filter(Boolean).join(", ")
+    const profileStr = [sexLabel, memory?.userAge ? `${memory.userAge}y` : "", memory?.heightCm ? `${memory.heightCm}cm` : "", memory?.weightKg ? `${memory.weightKg}kg` : "", countryLabel].filter(Boolean).join(", ")
 
-    const dietCtx = `[CONTEXTO DIETA — responda sobre NUTRIÇÃO, não sobre treino] Alimento: "${food.name}" (${food.quantity}). Refeição: "${meal.name}" (${meal.time}). Refeição completa: ${mealFoodsList}. Objetivo: ${goalLabel}. Perfil: ${profileStr}. Restrições: ${memory?.foodRestrictions || "nenhuma"}.`
+    const dietCtx = `[DIET CONTEXT — language: ${validLang} — reply about NUTRITION only] Food: "${food.name}" (${food.quantity}). Meal: "${meal.name}" (${meal.time}). Full meal: ${mealFoodsList}. Goal: ${goalLabel}. Profile: ${profileStr}. Restrictions: ${memory?.foodRestrictions || "none"}.`
 
     // Store context so follow-up messages carry it
     activeDietContextRef.current = dietCtx
 
     const displayText = `❓ ${food.name} (${food.quantity})`
-    const modelInput = `${dietCtx} O usuário vai fazer uma dúvida sobre este alimento. Aguarde e responda com substituição, porção ou esclarecimento. Direto, máximo 2 frases.`
+    const modelInput = `${dietCtx} User has a question about this food. Reply with substitution, portion guidance, or clarification. Direct, max 2 sentences.`
 
     void sendTextToGuto(displayText, modelInput).finally(() => {
       onFoodQuestionHandled?.()
@@ -1279,7 +1282,7 @@ export function ChatTab({
                   +100 XP
                 </div>
                 <div className="mt-2 rounded-full border border-[var(--guto-cyan)]/30 bg-black/70 px-4 py-1 font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--guto-cyan)]">
-                  Prêmio Inicial • Guto Ativo
+                  {copy.xpRewardLabel}
                 </div>
               </div>
             </div>

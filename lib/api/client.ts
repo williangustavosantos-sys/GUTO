@@ -41,10 +41,14 @@ function isApiErrorBody(value: unknown): value is { message?: string; error?: st
   return typeof value === "object" && value !== null
 }
 
-export function getApiErrorMessage(error: unknown) {
-  if (error instanceof ApiError) return error.message
+export function getApiErrorMessage(error: unknown): string {
+  if (error instanceof ApiError) {
+    if (error.code === "TIMEOUT") return "Request timed out. Please try again."
+    if (error.code === "CONNECTION_ERROR") return "Connection failed. Check your internet connection."
+    return error.message
+  }
   if (error instanceof Error) return error.message
-  return "Falha de conexão com o servidor."
+  return "Connection failed."
 }
 
 interface RequestOptions extends RequestInit {

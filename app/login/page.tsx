@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import Image from "next/image"
 import { useAuth } from "@/components/auth-provider"
 import { loginUser } from "@/lib/api/auth"
-import { getApiErrorMessage } from "@/lib/api/client"
+import { ApiError, getApiErrorMessage } from "@/lib/api/client"
 import { gutoAudio } from "@/lib/audio-haptics"
 import { resolveGutoLanguage } from "@/lib/guto-profile"
 import { Loader2 } from "lucide-react"
@@ -21,6 +21,8 @@ const T = {
     passPH: "••••••••",
     cta: "ENTRAR",
     hint: "Acesso restrito. Você precisa de convite para ativar o GUTO.",
+    timeoutError: "Servidor demorando. Tente novamente em instantes.",
+    connectionError: "Sem conexão. Verifique sua internet.",
   },
   "it-IT": {
     subtitle: "Accesso Riservato",
@@ -30,6 +32,8 @@ const T = {
     passPH: "••••••••",
     cta: "ACCEDI",
     hint: "Accesso riservato. Ti serve un invito per attivare GUTO.",
+    timeoutError: "Server lento. Riprova tra un momento.",
+    connectionError: "Nessuna connessione. Controlla internet.",
   },
   "en-US": {
     subtitle: "Restricted Access",
@@ -39,6 +43,8 @@ const T = {
     passPH: "••••••••",
     cta: "ENTER",
     hint: "Restricted access. You need an invite to activate GUTO.",
+    timeoutError: "Server is slow. Please try again in a moment.",
+    connectionError: "No connection. Check your internet.",
   },
 } as const
 
@@ -92,7 +98,13 @@ function LoginPageContent() {
       router.push("/")
     } catch (err) {
       gutoAudio.playGutoFeedback("error")
-      setError(getApiErrorMessage(err))
+      if (err instanceof ApiError && err.code === "TIMEOUT") {
+        setError(t.timeoutError)
+      } else if (err instanceof ApiError && err.code === "CONNECTION_ERROR") {
+        setError(t.connectionError)
+      } else {
+        setError(getApiErrorMessage(err))
+      }
     } finally {
       setIsLoading(false)
     }
