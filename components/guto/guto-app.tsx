@@ -21,7 +21,7 @@ import { WorkoutValidationFlow } from "./validation/workout-validation-flow"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { getGutoMemory, saveGutoMemory, trackGutoEvent, validateGutoName, type DietFood, type DietMeal, type GutoMemory, type GutoNameValidation, type GutoTelemetryEvent, type GutoWorkoutPlan } from "@/lib/api/guto"
 import { useAuth } from "@/components/auth-provider"
-import { getInvite, claimInvite, logout, deleteOwnAccount } from "@/lib/api/auth"
+import { getInvite, claimInvite, logout, deleteOwnAccount, revokeConsent } from "@/lib/api/auth"
 import type { EvolutionStage, SupportedLanguage } from "@/types/contract"
 import { resolveGutoEvolutionStage } from "@/lib/guto-evolution"
 import { getGutoVitalState } from "@/lib/guto-vital-state"
@@ -1613,8 +1613,16 @@ export function GutoApp({
     setSettingsMode("menu")
   }, [selectedLanguage])
 
-  const handleRevokeConsent = useCallback(() => {
+  const handleRevokeConsent = useCallback(async () => {
     gutoAudio.playGutoFeedback("tap")
+    // P2-D — Call the server first so the user's sensitive fields are cleared
+    // backend-side BEFORE flipping the local consent flag. If the call fails we
+    // still flip locally and log the error so the user is never stuck.
+    try {
+      await revokeConsent()
+    } catch (err) {
+      console.warn("[GUTO] revokeConsent server call failed (continuing local revoke)", err)
+    }
     persistProfile({ consentHealthFitness: false, acceptedTerms: false, consentAcceptedAt: undefined })
     setPrivacyConfirm(null)
     setPrivacyMsg(null)
