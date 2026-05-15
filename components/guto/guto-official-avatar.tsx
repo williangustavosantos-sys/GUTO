@@ -268,7 +268,7 @@ export function GutoOfficialAvatar({
 
       const cssWidth = Math.round(canvas.clientWidth || 360)
       const cssHeight = Math.round(canvas.clientHeight || 360)
-      const pixelRatio = Math.min(window.devicePixelRatio || 1, canUseNativeAlphaVideo ? 2 : 1.5)
+      const pixelRatio = Math.min(window.devicePixelRatio || 1, 3)
       const width = Math.max(1, Math.round(cssWidth * pixelRatio))
       const height = Math.max(1, Math.round(cssHeight * pixelRatio))
       if (canvas.width !== width || canvas.height !== height) {
@@ -327,7 +327,8 @@ export function GutoOfficialAvatar({
     video.addEventListener("loadeddata", handleReady)
     video.addEventListener("canplay", handleReady)
     video.addEventListener("pause", handleReady)
-    document.addEventListener("visibilitychange", handleReady)
+    const handleVisibility = () => { if (document.visibilityState === "visible") handleReady() }
+    document.addEventListener("visibilitychange", handleVisibility)
     handleReady()
 
     return () => {
@@ -335,7 +336,7 @@ export function GutoOfficialAvatar({
       video.removeEventListener("loadeddata", handleReady)
       video.removeEventListener("canplay", handleReady)
       video.removeEventListener("pause", handleReady)
-      document.removeEventListener("visibilitychange", handleReady)
+      document.removeEventListener("visibilitychange", handleVisibility)
       if (frameRef.current) {
         window.cancelAnimationFrame(frameRef.current)
         frameRef.current = null

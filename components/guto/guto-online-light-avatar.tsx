@@ -163,7 +163,7 @@ export function GutoOnlineLightAvatar({
       if (cancelled || !video.videoWidth || !video.videoHeight) return
       if (!canvasReady) setCanvasReady(true)
 
-      const pr = Math.min(window.devicePixelRatio || 1, 1.5)
+      const pr = Math.min(window.devicePixelRatio || 1, 3)
       const cw = Math.round((canvas.clientWidth  || 360) * pr)
       const ch = Math.round((canvas.clientHeight || 360) * pr)
       if (canvas.width !== cw || canvas.height !== ch) {

@@ -214,12 +214,16 @@ function speakWithBrowser(text: string, language: string) {
     if (voices.length > 0) {
       doSpeak()
     } else {
-      window.speechSynthesis.onvoiceschanged = () => {
+      let spoken = false
+      const speakOnce = () => {
+        if (spoken) return
+        spoken = true
         window.speechSynthesis.onvoiceschanged = null
         doSpeak()
       }
+      window.speechSynthesis.onvoiceschanged = speakOnce
       // Safety timeout: speak even if onvoiceschanged never fires
-      setTimeout(doSpeak, 500)
+      setTimeout(speakOnce, 500)
     }
   })
 }
