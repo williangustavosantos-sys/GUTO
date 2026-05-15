@@ -1,26 +1,31 @@
 "use client"
 
 /**
- * GutoAvatarController — Avatar interativo com 3D spring tilt + toggle super
+ * GutoAvatarController — Avatar interativo com 3D GLB + spring tilt + toggle super
  *
  * ARQUITETURA:
- * - GutoOfficialAvatar sempre roda embaixo (qualidade 100% preservada: alpha channel, canvas matte, HEVC)
- * - Vídeo super em overlay com crossfade suave — toggle manual (tap entra, tap sai)
- * - Framer Motion spring tilt no toque/drag e giroscópio no mobile
- * - Squish + glow azul + ripple em ambos os taps
- *
- * Three.js NÃO é usado aqui intencionalmente:
- * O avatar é um render 3D profissional. Qualquer recriação em WebGL seria um downgrade.
- * O efeito 3D vem de CSS perspective + spring physics — dá sensação de profundidade e massa
- * sem sacrificar nada da qualidade do render original.
+ * - Guto3DAvatar renderiza o modelo GLB em Three.js com fundo 100% transparente
+ * - Modo super: troca o modelo GLB via isSuperMode → crossfade pelo próprio loader
+ * - Tilt: callbacks passados ao 3D scene → lidos em useFrame, zero re-renders React
+ * - Squish: scaleV MotionValue → getSquish callback lida em useFrame
+ * - Giroscópio no mobile (DeviceOrientation API)
+ * - Glow azul + ripple de feedback em tap
+ * - Haptic via Web Vibration API (Android Chrome)
+ * - Dynamic import com ssr:false — Three.js é browser-only
  */
 
+import dynamic from "next/dynamic"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { animate, motion, useMotionValue, useSpring } from "framer-motion"
 
 import { cn } from "@/lib/utils"
 import type { EvolutionStage } from "@/types/contract"
-import { GutoOfficialAvatar } from "./guto-official-avatar"
+
+// Three.js só funciona no browser — carregamento lazy com ssr:false
+const Guto3DAvatar = dynamic(
+  () => import("./guto-3d-avatar").then((m) => ({ default: m.Guto3DAvatar })),
+  { ssr: false, loading: () => null }
+)
 
 interface GutoAvatarControllerProps {
   stage: EvolutionStage
@@ -30,8 +35,6 @@ interface GutoAvatarControllerProps {
   onTap?: () => void
 }
 
-// Duração do crossfade entrada/saída (ms)
-const FADE_MS = 320
 // Duração do glow/ripple de feedback (ms)
 const REACT_MS = 850
 // Máximo de inclinação 3D em graus (toque manual)
@@ -59,23 +62,27 @@ export function GutoAvatarController({
   const glowTimerRef   = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pointerDownRef = useRef<{ x: number; y: number } | null>(null)
 
-  // Toggle: true = modo super (roupa) ativo
-  const [superOn, setSuperOn]       = useState(false)
-  // Lazy mount: só renderiza o super após o primeiro tap (economia de CPU na abertura)
-  // Permanece montado para que os taps seguintes sejam instantâneos
-  const [superMounted, setSuperMounted] = useState(false)
-  // Glow/ripple de feedback visual (dispara em ambos os taps)
+  // Toggle: true = modo super ativo
+  const [superOn, setSuperOn]     = useState(false)
+  // Feedback visual (glow + ripple)
   const [glowActive, setGlowActive] = useState(false)
   const [gyroActive, setGyroActive] = useState(false)
 
-  // ── Motion values para tilt 3D ──────────────────────────────────────────────
-  const rawX  = useMotionValue(0)
-  const rawY  = useMotionValue(0)
+  // ── Motion values para tilt ─────────────────────────────────────────────────
+  const rawX   = useMotionValue(0)
+  const rawY   = useMotionValue(0)
   const scaleV = useMotionValue(1)
-  const tiltX = useSpring(rawX, SPRING_CONFIG)
-  const tiltY = useSpring(rawY, SPRING_CONFIG)
+  const tiltX  = useSpring(rawX, SPRING_CONFIG)
+  const tiltY  = useSpring(rawY, SPRING_CONFIG)
 
-  // ── Giroscópio (DeviceOrientation) ──────────────────────────────────────────
+  // ── Callbacks para o GutoScene ler em useFrame (zero re-renders) ────────────
+  const getTilt = useCallback(
+    () => ({ x: tiltX.get(), y: tiltY.get() }),
+    [tiltX, tiltY]
+  )
+  const getSquish = useCallback(() => scaleV.get(), [scaleV])
+
+  // ── Giroscópio (DeviceOrientation) ─────────────────────────────────────────
   useEffect(() => {
     if (typeof window === "undefined") return
     if (!("DeviceOrientationEvent" in window)) return
@@ -99,7 +106,7 @@ export function GutoAvatarController({
     }
   }, [rawX, rawY])
 
-  // ── Tilt por pointer (mouse/touch drag) ─────────────────────────────────────
+  // ── Tilt por pointer ────────────────────────────────────────────────────────
   const updateTiltFromPointer = useCallback(
     (clientX: number, clientY: number) => {
       const rect = containerRef.current?.getBoundingClientRect()
@@ -119,40 +126,30 @@ export function GutoAvatarController({
     }
   }, [gyroActive, rawX, rawY])
 
-  // ── Toggle super ─────────────────────────────────────────────────────────────
-  // Tap 1 → super entra com crossfade natural
-  // Tap 2 → super sai com crossfade natural
-  // Squish + glow + ripple disparam nos dois taps
+  // ── Toggle super ────────────────────────────────────────────────────────────
   const triggerToggle = useCallback(() => {
     onTap?.()
 
-    // Haptic feedback — vibra no celular (API Web Vibration, suportado no Android Chrome)
+    // Haptic feedback (Android Chrome)
     if (typeof navigator !== "undefined" && "vibrate" in navigator) {
       navigator.vibrate(superOn ? [30, 20, 30] : 45)
     }
 
-    // Squish spring em ambos os sentidos
+    // Squish spring — anima scaleV que o getSquish callback repassa ao Three.js
     void animate(scaleV, [1, 0.91, 1.07, 1.0], {
       duration: 0.42,
       ease: [0.22, 1, 0.36, 1],
     })
 
-    // Glow / ripple de feedback — sempre
+    // Glow / ripple
     setGlowActive(true)
     if (glowTimerRef.current) clearTimeout(glowTimerRef.current)
     glowTimerRef.current = setTimeout(() => setGlowActive(false), REACT_MS)
 
-    setSuperOn(prev => {
-      const next = !prev
-      if (next) {
-        // Entrando em modo super: garante que o overlay está montado
-        setSuperMounted(true)
-      }
-      return next
-    })
+    setSuperOn(prev => !prev)
   }, [onTap, scaleV, superOn])
 
-  // ── Handlers de pointer ──────────────────────────────────────────────────────
+  // ── Handlers de pointer ─────────────────────────────────────────────────────
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     pointerDownRef.current = { x: e.clientX, y: e.clientY }
   }, [])
@@ -168,7 +165,6 @@ export function GutoAvatarController({
       if (down) {
         const dx = Math.abs(e.clientX - down.x)
         const dy = Math.abs(e.clientY - down.y)
-        // Só considera tap se o dedo não se moveu mais de 8px (evita disparar no scroll)
         if (dx < 8 && dy < 8) triggerToggle()
       }
       pointerDownRef.current = null
@@ -196,75 +192,45 @@ export function GutoAvatarController({
         "relative flex select-none flex-col items-center justify-center",
         className
       )}
-      style={{ perspective: "900px" }}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onPointerLeave={handlePointerLeave}
     >
-      {/* ── Bloco 3D: tilt + squish ─────────────────────────────────────────── */}
-      <motion.div
-        style={{
-          rotateX: tiltX,
-          rotateY: tiltY,
-          scale: scaleV,
-          transformStyle: "preserve-3d",
-          cursor: "pointer",
-        }}
+      {/* ── Avatar 3D ──────────────────────────────────────────────────────── */}
+      {/* Nota: o tilt e squish são delegados ao useFrame do Three.js via
+          callbacks — sem perspective CSS aqui, a profundidade vem do 3D real */}
+      <div
+        className={cn("relative cursor-pointer", sizeClasses[size])}
+        style={{ touchAction: "none" }}
       >
-        <div className={cn("relative", sizeClasses[size])}>
+        {/* Modelo 3D — muda GLB quando superOn troca */}
+        <Guto3DAvatar
+          stage={stage}
+          isSuperMode={superOn}
+          getTilt={getTilt}
+          getSquish={getSquish}
+          className="pointer-events-none absolute inset-0"
+        />
 
-          {/* Camada 1 — Avatar idle (normal branco/azul, qualidade máxima) */}
-          <GutoOfficialAvatar
-            size={size}
-            evolution={stage}
-            emotion="default"
-            showPlatform={false}
-            className="pointer-events-none h-full w-full"
-          />
+        {/* Glow azul no tap */}
+        <motion.div
+          className="pointer-events-none absolute inset-0 z-30 rounded-full"
+          animate={
+            glowActive
+              ? { opacity: [0, 0.8, 0], scale: [0.85, 1.25, 1.55] }
+              : { opacity: 0, scale: 1 }
+          }
+          transition={{ duration: 0.72, ease: "easeOut" }}
+          style={{
+            background:
+              "radial-gradient(circle, rgba(82,231,255,0.55) 0%, rgba(82,231,255,0.2) 40%, transparent 68%)",
+            boxShadow:
+              "0 0 50px rgba(82,231,255,0.55), 0 0 90px rgba(82,231,255,0.25)",
+          }}
+        />
 
-          {/* Camada 2 — GUTO de roupa (super) com crossfade natural
-              Lazy mount: só renderiza após o primeiro tap.
-              Permanece montado — taps seguintes são instantâneos.
-              O crossfade é feito apenas com opacity + CSS transition,
-              sem remount → sem flash, parece que o avatar "muda de roupa". */}
-          {superMounted && (
-            <div
-              className="pointer-events-none absolute inset-0 z-20"
-              style={{
-                opacity: superOn ? 1 : 0,
-                transition: `opacity ${FADE_MS}ms cubic-bezier(0.4, 0, 0.2, 1)`,
-              }}
-            >
-              <GutoOfficialAvatar
-                size={size}
-                evolution={stage}
-                emotion="super"
-                showPlatform={false}
-                className="pointer-events-none h-full w-full"
-              />
-            </div>
-          )}
-
-          {/* Camada 3 — Glow azul no tap (entra e sai) */}
-          <motion.div
-            className="pointer-events-none absolute inset-0 z-30 rounded-full"
-            animate={
-              glowActive
-                ? { opacity: [0, 0.8, 0], scale: [0.85, 1.25, 1.55] }
-                : { opacity: 0, scale: 1 }
-            }
-            transition={{ duration: 0.72, ease: "easeOut" }}
-            style={{
-              background:
-                "radial-gradient(circle, rgba(82,231,255,0.55) 0%, rgba(82,231,255,0.2) 40%, transparent 68%)",
-              boxShadow:
-                "0 0 50px rgba(82,231,255,0.55), 0 0 90px rgba(82,231,255,0.25)",
-            }}
-          />
-        </div>
-
-        {/* Anel de ripple — dispara em tap de entrada E de saída */}
+        {/* Anel de ripple */}
         {glowActive && (
           <motion.div
             className="pointer-events-none absolute inset-0 z-30 rounded-full"
@@ -274,9 +240,9 @@ export function GutoAvatarController({
             style={{ border: "2px solid rgba(82,231,255,0.55)" }}
           />
         )}
-      </motion.div>
+      </div>
 
-      {/* ── Plataforma ────────────────────────────────────────────────────────── */}
+      {/* ── Plataforma ─────────────────────────────────────────────────────── */}
       {showPlatform && (
         <div className="relative mt-[-0.5rem] flex w-full max-w-[10.5rem] items-center justify-center">
           <div className="absolute h-10 w-[72%] rounded-full bg-[radial-gradient(circle,rgba(82,231,255,0.12)_0%,rgba(82,231,255,0)_76%)] blur-xl" />
