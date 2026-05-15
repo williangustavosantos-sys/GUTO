@@ -1215,7 +1215,7 @@ export function GutoApp({
       // Proactively trigger diet generation in background so it's ready when they open the tab
       try {
         const { generateDietPlan } = await import("@/lib/api/guto")
-        await generateDietPlan(gutoUserId, selectedLanguage)
+        await generateDietPlan(selectedLanguage)
       } catch (err) {
         console.warn("[GUTO] Proactive diet generation failed:", err)
       }

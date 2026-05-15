@@ -462,11 +462,11 @@ export async function getDietPlan(userId = "local-user") {
   }
 }
 
-export async function generateDietPlan(userId = "local-user", language: SupportedLanguage = "pt-BR") {
+export async function generateDietPlan(language: SupportedLanguage = "pt-BR") {
   return apiRequest<DietPlan>("/guto/diet/generate", {
     method: "POST",
     timeoutMs: 45000,
-    body: JSON.stringify({ userId, language }),
+    body: JSON.stringify({ language }),
   })
 }
 

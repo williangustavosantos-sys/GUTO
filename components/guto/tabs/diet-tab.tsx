@@ -15,6 +15,7 @@ import { gutoAudio } from "@/lib/audio-haptics"
 const dietCopy = {
   "pt-BR": {
     title: "DIETA DA SEMANA",
+    lockedConfirm: "Esta dieta foi bloqueada pelo supervisor. O GUTO vai tentar recalcular, mas o backend não deve sobrescrever sem liberação.",
     regenerateButton: "REGENERAR DIETA",
     generatingLabel: "GUTO calculando...",
     generatingSubtitle: "Montando sua dieta personalizada...",
@@ -51,6 +52,7 @@ const dietCopy = {
   },
   "en-US": {
     title: "WEEKLY DIET",
+    lockedConfirm: "This diet was locked by the supervisor. GUTO will try to recalculate, but the backend should not overwrite without authorization.",
     regenerateButton: "REGENERATE DIET",
     generatingLabel: "GUTO calculating...",
     generatingSubtitle: "Building your personalized plan...",
@@ -87,6 +89,7 @@ const dietCopy = {
   },
   "it-IT": {
     title: "DIETA DELLA SETTIMANA",
+    lockedConfirm: "Questa dieta è stata bloccata dal supervisore. GUTO proverà a ricalcolare, ma il backend non dovrebbe sovrascrivere senza autorizzazione.",
     regenerateButton: "RIGENERA DIETA",
     generatingLabel: "GUTO sta calcolando...",
     generatingSubtitle: "Creando il tuo piano personale...",
@@ -479,7 +482,7 @@ export function DietTab({ userId, language, onFoodDoubt, memory }: DietTabProps)
 
         if (!fetched) {
           setStatus("generating")
-          fetched = await generateDietPlan(userId, validLang)
+          fetched = await generateDietPlan(validLang)
           if (cancelled) return
         }
 
@@ -507,13 +510,13 @@ export function DietTab({ userId, language, onFoodDoubt, memory }: DietTabProps)
   const handleRetry = async () => {
     if (retrying) return
     if (plan?.lockedByCoach) {
-      const confirmed = window.confirm("Esta dieta foi bloqueada pelo supervisor. O GUTO vai tentar recalcular, mas o backend não deve sobrescrever sem liberação.")
+      const confirmed = window.confirm(copy.lockedConfirm)
       if (!confirmed) return
     }
     setRetrying(true)
     setErrorMsg(null)
     try {
-      const newPlan = await generateDietPlan(userId, validLang)
+      const newPlan = await generateDietPlan(validLang)
       setPlan(sanitizeDietPlan(newPlan, memory, validLang))
       setStatus("ready")
     } catch (err: unknown) {
