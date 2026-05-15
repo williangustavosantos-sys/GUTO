@@ -196,16 +196,21 @@ function speakWithBrowser(text: string, language: string) {
       return
     }
 
+    let done = false
+    const MAX_TTS_MS = 8000
+    const safeResolve = () => { if (!done) { done = true; resolve() } }
+    const hardTimeout = setTimeout(safeResolve, MAX_TTS_MS)
+
     const doSpeak = () => {
       window.speechSynthesis.cancel()
       const utterance = new SpeechSynthesisUtterance(text)
       utterance.lang = language
       utterance.rate = 1.04
-      utterance.pitch = 0.82  // slightly lower pitch for a less feminine sound
+      utterance.pitch = 0.82
       const selectedVoice = pickBrowserVoice(language)
       if (selectedVoice) utterance.voice = selectedVoice
-      utterance.onend = () => resolve()
-      utterance.onerror = () => resolve()
+      utterance.onend = () => { clearTimeout(hardTimeout); safeResolve() }
+      utterance.onerror = () => { clearTimeout(hardTimeout); safeResolve() }
       window.speechSynthesis.speak(utterance)
     }
 
@@ -429,19 +434,25 @@ class GutoVoiceService {
   private playBlob(blob: Blob) {
     return new Promise<void>((resolve) => {
       const url = URL.createObjectURL(blob)
-      try {
-        const audio = new Audio(url)
-        this.currentAudio = audio
-        const cleanup = () => {
+      let done = false
+      const MAX_BLOB_MS = 15000
+      const safeCleanup = () => {
+        if (!done) {
+          done = true
           URL.revokeObjectURL(url)
           resolve()
         }
-        audio.onended = cleanup
-        audio.onerror = cleanup
-        void audio.play().catch(cleanup)
+      }
+      const hardTimeout = setTimeout(safeCleanup, MAX_BLOB_MS)
+      try {
+        const audio = new Audio(url)
+        this.currentAudio = audio
+        audio.onended = () => { clearTimeout(hardTimeout); safeCleanup() }
+        audio.onerror = () => { clearTimeout(hardTimeout); safeCleanup() }
+        void audio.play().catch(() => { clearTimeout(hardTimeout); safeCleanup() })
       } catch {
-        URL.revokeObjectURL(url)
-        resolve()
+        clearTimeout(hardTimeout)
+        safeCleanup()
       }
     })
   }
