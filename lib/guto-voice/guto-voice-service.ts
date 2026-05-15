@@ -156,30 +156,21 @@ async function touchCachedAudio(record: GutoVoiceBankRecord) {
   })
 }
 
-/**
- * Picks the best available browser voice for the language.
- * Priority: male voices (by name heuristic) matching the language code first,
- * then any matching language voice, then system default.
- * This avoids the default female voice (e.g. Google Maps "Alice") on most devices.
- */
-function pickBrowserVoice(language: string): SpeechSynthesisVoice | null {
-  if (!isBrowser() || !window.speechSynthesis) return null
-  const voices = window.speechSynthesis.getVoices()
-  if (!voices.length) return null
-
+// Returns a confirmed male voice for the given language, or null.
+// NEVER returns a non-male voice — silence is better than a female GUTO.
+function pickBrowserVoice(voices: SpeechSynthesisVoice[], language: string): SpeechSynthesisVoice | null {
   const langCode = language.toLowerCase().replace("_", "-")
   const baseLang = langCode.split("-")[0]
 
-  // Male-sounding name keywords (heuristic across pt-BR, en-US, it-IT)
-  const maleKeywords = /male|masculino|homem|uomo|reed|daniel|jorge|mark|google uk english male|alex|diego|luciano|andrés/i
+  const maleKeywords = /\bmale\b|masculino|homem|uomo|reed|daniel|jorge|mark|google uk english male|alex|diego|luciano|andrés|carlos|luca|marco|david|james/i
 
   const exactMatch = voices.filter((v) => v.lang.toLowerCase().replace("_", "-") === langCode)
   const baseMatch = voices.filter((v) => v.lang.toLowerCase().startsWith(baseLang))
 
-  const preferMale = (list: SpeechSynthesisVoice[]) =>
-    list.find((v) => maleKeywords.test(v.name)) ?? list[0] ?? null
+  const findMale = (list: SpeechSynthesisVoice[]) =>
+    list.find((v) => maleKeywords.test(v.name)) ?? null
 
-  return preferMale(exactMatch) ?? preferMale(baseMatch) ?? null
+  return findMale(exactMatch) ?? findMale(baseMatch) ?? null
 }
 
 function speakWithBrowser(text: string, language: string) {
@@ -189,30 +180,43 @@ function speakWithBrowser(text: string, language: string) {
       return
     }
 
-    const doSpeak = () => {
+    const doSpeak = (voices: SpeechSynthesisVoice[]) => {
+      const selectedVoice = pickBrowserVoice(voices, language)
+      if (!selectedVoice) {
+        // No confirmed male voice available — stay silent rather than use female browser default
+        console.warn("[GutoVoice] No male browser voice found. Using silence.")
+        resolve()
+        return
+      }
       window.speechSynthesis.cancel()
       const utterance = new SpeechSynthesisUtterance(text)
       utterance.lang = language
       utterance.rate = 1.04
-      utterance.pitch = 0.82  // slightly lower pitch for a less feminine sound
-      const selectedVoice = pickBrowserVoice(language)
-      if (selectedVoice) utterance.voice = selectedVoice
+      utterance.pitch = 0.82
+      utterance.voice = selectedVoice
       utterance.onend = () => resolve()
       utterance.onerror = () => resolve()
       window.speechSynthesis.speak(utterance)
     }
 
-    // Voices may not be loaded yet on first call — wait for them
     const voices = window.speechSynthesis.getVoices()
     if (voices.length > 0) {
-      doSpeak()
+      doSpeak(voices)
     } else {
       window.speechSynthesis.onvoiceschanged = () => {
         window.speechSynthesis.onvoiceschanged = null
-        doSpeak()
+        doSpeak(window.speechSynthesis.getVoices())
       }
-      // Safety timeout: speak even if onvoiceschanged never fires
-      setTimeout(doSpeak, 500)
+      // Safety timeout: if onvoiceschanged never fires, resolve silently
+      setTimeout(() => {
+        const v = window.speechSynthesis.getVoices()
+        if (v.length > 0) {
+          doSpeak(v)
+        } else {
+          console.warn("[GutoVoice] Voice list unavailable after timeout. Using silence.")
+          resolve()
+        }
+      }, 500)
     }
   })
 }
