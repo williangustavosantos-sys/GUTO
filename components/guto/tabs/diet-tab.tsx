@@ -475,7 +475,7 @@ export function DietTab({ userId, language, onFoodDoubt, memory }: DietTabProps)
       setStatus("loading")
       setErrorMsg(null)
       try {
-        let fetched = await getDietPlan(userId)
+        let fetched = await getDietPlan()
         if (cancelled) return
 
         if (fetched && isPlanStale(fetched.generatedAt)) fetched = null
