@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { motion } from "framer-motion"
 import { Check, CheckCircle2 } from "lucide-react"
 import { ParticlesBackground } from "../particles-background"
@@ -18,8 +18,19 @@ const localeTexts: Record<string, { complete: string; placeholder: string }> = {
 
 export function NameScreen({ onSubmit, language = "pt-BR" }: NameScreenProps) {
   const [name, setName] = useState("")
+  const [keyboardHeight, setKeyboardHeight] = useState(0)
   const locale = localeTexts[language] ?? localeTexts["pt-BR"]
   const canSubmit = name.trim().length >= 2
+
+  useEffect(() => {
+    const vp = window.visualViewport
+    if (!vp) return
+    const handler = () => {
+      setKeyboardHeight(Math.max(0, window.innerHeight - vp.height))
+    }
+    vp.addEventListener("resize", handler)
+    return () => vp.removeEventListener("resize", handler)
+  }, [])
 
   const displayName = useMemo(() => {
     const trimmed = name.trim()
@@ -58,6 +69,7 @@ export function NameScreen({ onSubmit, language = "pt-BR" }: NameScreenProps) {
         initial={{ y: 16, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.15, duration: 0.45 }}
+        style={{ paddingBottom: keyboardHeight > 0 ? keyboardHeight + 16 : undefined }}
       >
         <motion.span
           className="text-muted-foreground/60 text-lg mb-8 tracking-wide"

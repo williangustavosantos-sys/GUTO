@@ -54,6 +54,12 @@ export function CalibrationScreen({
   const isWeightValid = !isNaN(weightNum) && weightNum >= 30 && weightNum <= 300
   const isComplete = Boolean(biologicalSex && isAgeValid && trainingStatus && goal && location && isHeightValid && isWeightValid)
 
+  const noInjuryFallback: Record<ValidLanguage, string> = {
+    "pt-BR": "sem dor",
+    "en-US": "no pain or injury",
+    "it-IT": "nessun dolore",
+  }
+
   const handleSubmit = () => {
     if (!isComplete) return
     onComplete({
@@ -62,7 +68,7 @@ export function CalibrationScreen({
       trainingLevel: trainingStatus ?? undefined,
       trainingGoal: goal ?? undefined,
       preferredTrainingLocation: location ?? undefined,
-      trainingPathology: pathology.trim() || "sem dor",
+      trainingPathology: pathology.trim() || noInjuryFallback[language],
       country: country.trim() || undefined,
       heightCm: isHeightValid ? heightNum : undefined,
       weightKg: isWeightValid ? weightNum : undefined,

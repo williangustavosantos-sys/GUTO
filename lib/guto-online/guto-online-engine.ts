@@ -65,9 +65,16 @@ function parseRestSeconds(rest?: string | null, restSeconds?: number) {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 60
 }
 
-function buildInitialChecklist(exercises: GutoWorkoutExercise[]): GutoChecklistItem[] {
+const checklistI18n: Record<string, { warmup: string; set: string; validate: string }> = {
+  "pt-BR": { warmup: "Aquecimento", set: "série", validate: "Validar treino" },
+  "en-US": { warmup: "Warm-up", set: "set", validate: "Validate workout" },
+  "it-IT": { warmup: "Riscaldamento", set: "serie", validate: "Valida allenamento" },
+}
+
+function buildInitialChecklist(exercises: GutoWorkoutExercise[], language: string): GutoChecklistItem[] {
+  const i18n = checklistI18n[language] ?? checklistI18n["pt-BR"]
   const items: GutoChecklistItem[] = []
-  items.push({ id: "warmup", kind: "warmup", label: "Aquecimento", done: false })
+  items.push({ id: "warmup", kind: "warmup", label: i18n.warmup, done: false })
 
   for (const exercise of exercises) {
     const total = exercise.sets || 1
@@ -75,7 +82,7 @@ function buildInitialChecklist(exercises: GutoWorkoutExercise[]): GutoChecklistI
       items.push({
         id: `set:${exercise.id}:${setNumber}`,
         kind: "set",
-        label: `${exercise.name} — série ${setNumber}`,
+        label: `${exercise.name} — ${i18n.set} ${setNumber}`,
         exerciseId: exercise.id,
         exerciseName: exercise.name,
         setNumber,
@@ -85,7 +92,7 @@ function buildInitialChecklist(exercises: GutoWorkoutExercise[]): GutoChecklistI
     }
   }
 
-  items.push({ id: "validation", kind: "validation", label: "Validar treino", done: false })
+  items.push({ id: "validation", kind: "validation", label: i18n.validate, done: false })
   return items
 }
 
@@ -151,7 +158,7 @@ export function createInitialState(input: CreateInitialStateInput): GutoOnlineSe
     lastGutoLine: "",
     lastAction: "",
     completedSets: [],
-    checklist: buildInitialChecklist(exercises),
+    checklist: buildInitialChecklist(exercises, input.language),
   }
 }
 
