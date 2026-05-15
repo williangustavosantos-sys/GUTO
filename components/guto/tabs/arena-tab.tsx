@@ -41,6 +41,18 @@ const avatarStageLabel: Record<string, Record<string, string>> = {
   elite: { "pt-BR": "Elite", "en-US": "Elite", "it-IT": "Elite" },
 }
 
+const arenaStatusLabels: Record<string, Record<string, string>> = {
+  "arena.status.on_fire":     { "pt-BR": "EM CHAMAS",    "en-US": "ON FIRE",      "it-IT": "IN FIAMMA" },
+  "arena.status.rising":      { "pt-BR": "SUBINDO",      "en-US": "RISING",       "it-IT": "IN ASCESA" },
+  "arena.status.consistent":  { "pt-BR": "CONSISTENTE",  "en-US": "CONSISTENT",   "it-IT": "COSTANTE" },
+  "arena.status.needs_action":{ "pt-BR": "PRECISA REAGIR","en-US": "NEEDS ACTION", "it-IT": "REAGIRE" },
+}
+
+function translateArenaStatus(statusKey: string | undefined, language: string): string {
+  if (!statusKey) return ""
+  return arenaStatusLabels[statusKey]?.[language] ?? statusKey
+}
+
 const positionIcons = [Trophy, Star, TrendingUp]
 
 function RankingCard({
@@ -59,7 +71,8 @@ function RankingCard({
   const PositionIcon = positionIcons[item.position - 1] ?? null
   const stageColor = avatarStageColor[item.avatarStage] ?? "text-[var(--guto-cyan)]"
   const stageName = avatarStageLabel[item.avatarStage]?.[language] ?? item.avatarStage.toUpperCase()
-  const isOnFire = item.status === "EM CHAMAS" || item.status === "ON FIRE"
+  const translatedStatus = translateArenaStatus(item.status, language)
+  const isOnFire = item.status === "arena.status.on_fire" || item.status === "EM CHAMAS" || item.status === "ON FIRE"
   const rawName = item.pairName.toUpperCase().startsWith("GUTO & ")
     ? item.pairName.slice(7).trim()
     : item.pairName
@@ -148,7 +161,7 @@ function RankingCard({
           <TrendingUp className="h-3 w-3 text-[rgba(82,231,255,0.6)]" />
         )}
         <span className="font-mono text-[9px] font-black uppercase tracking-[0.18em] text-[rgba(13,35,65,0.42)]">
-          {item.status}
+          {translatedStatus}
         </span>
         {item.currentStreak !== undefined && item.currentStreak > 0 && (
           <span className="ml-auto font-mono text-[9px] text-[rgba(13,35,65,0.32)]">

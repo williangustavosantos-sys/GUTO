@@ -64,7 +64,7 @@ export interface TranslationDictionary {
     submit: string;
     errorRequired: string;
     statusLabel: string;
-    statusChips: { paused: string; returning: string; active: string };
+    statusChips: { paused: string; returning: string; active: string; advanced: string };
     pathologySection: string;
     objectiveSection: string;
     objectiveChips: { fat_loss: string; muscle_gain: string; conditioning: string; mobility_health: string; consistency: string };
@@ -206,7 +206,7 @@ export const translations: Record<ValidLanguage, TranslationDictionary> = {
       submit: "Calibrar GUTO",
       errorRequired: "Falta calibrar isso antes de seguir.",
       statusLabel: "ESTADO ATUAL",
-      statusChips: { paused: "Parado", returning: "Voltando", active: "Treinando" },
+      statusChips: { paused: "Parado", returning: "Voltando", active: "Treinando", advanced: "Avançado" },
       pathologySection: "LIMITAÇÃO PATOLOGIA",
       objectiveSection: "OBJETIVO",
       objectiveChips: { fat_loss: "Emagrecer", muscle_gain: "Hipertrofia", conditioning: "Condicionamento", mobility_health: "Saúde", consistency: "Consistência" },
@@ -337,7 +337,7 @@ export const translations: Record<ValidLanguage, TranslationDictionary> = {
       submit: "Calibra GUTO",
       errorRequired: "Calibra questo prima di continuare.",
       statusLabel: "STATO ATTUALE",
-      statusChips: { paused: "Fermo", returning: "Rientro", active: "In allenamento" },
+      statusChips: { paused: "Fermo", returning: "Rientro", active: "In allenamento", advanced: "Avanzato" },
       pathologySection: "DOLORE E LIMITI",
       objectiveSection: "OBIETTIVO",
       objectiveChips: { fat_loss: "Dimagrire", muscle_gain: "Ipertrofia", conditioning: "Condizionamento", mobility_health: "Salute", consistency: "Costanza" },
@@ -468,7 +468,7 @@ export const translations: Record<ValidLanguage, TranslationDictionary> = {
       submit: "Calibrate GUTO",
       errorRequired: "Calibrate this before moving on.",
       statusLabel: "CURRENT STATUS",
-      statusChips: { paused: "Inactive", returning: "Returning", active: "Active" },
+      statusChips: { paused: "Inactive", returning: "Returning", active: "Active", advanced: "Advanced" },
       pathologySection: "PAIN & LIMITATIONS",
       objectiveSection: "GOAL",
       objectiveChips: { fat_loss: "Lose Fat", muscle_gain: "Hypertrophy", conditioning: "Conditioning", mobility_health: "Health", consistency: "Consistency" },
