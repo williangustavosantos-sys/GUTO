@@ -125,6 +125,9 @@ const chatCopy: Record<
     micNoSpeech: string
     unmute: string
     mute: string
+    audioFailure: string
+    emptyResponseFallback: string
+    connectionError: string
     opening: (name: string) => string
   }
 > = {
@@ -135,6 +138,9 @@ const chatCopy: Record<
     micNoSpeech: "Não entrou voz suficiente. Segura o microfone e fala uma frase direta.",
     unmute: "Ativar fala do GUTO",
     mute: "Silenciar fala do GUTO",
+    audioFailure: "O áudio falhou. Sem perder o ritmo: escreve a mesma resposta em uma frase curta.",
+    emptyResponseFallback: "Sem distração. Executa a próxima ação agora.",
+    connectionError: "Perdi conexão por um momento. Reorganiza e me envia de novo em 1 frase.",
     opening: (name) => `Finalmente${name ? `, ${name}` : ""}. Tava te esperando. Enquanto isso, já organizei nosso plano daqui pra frente. Estamos juntos — bora começar?`,
   },
   "en-US": {
@@ -144,6 +150,9 @@ const chatCopy: Record<
     micNoSpeech: "Not enough voice came through. Hold the mic and say one direct sentence.",
     unmute: "Enable GUTO voice",
     mute: "Mute GUTO voice",
+    audioFailure: "Audio failed. No need to stop — just type your answer in one short sentence.",
+    emptyResponseFallback: "No distractions. Execute the next action now.",
+    connectionError: "Lost connection for a moment. Reorganize and send me again in 1 sentence.",
     opening: (name) => `Finally${name ? `, ${name}` : ""}. I was waiting for you. In the meantime, I already organized our plan from here. I'm with you — ready to start?`,
   },
   "it-IT": {
@@ -153,6 +162,9 @@ const chatCopy: Record<
     micNoSpeech: "Non è arrivata abbastanza voce. Tieni premuto il microfono e di una frase diretta.",
     unmute: "Attiva la voce di GUTO",
     mute: "Silenzia la voce di GUTO",
+    audioFailure: "Audio fallito. Senza perdere il ritmo: scrivi la stessa risposta in una frase breve.",
+    emptyResponseFallback: "Niente distrazioni. Esegui la prossima azione adesso.",
+    connectionError: "Ho perso la connessione per un momento. Riorganizza e mandami di nuovo in 1 frase.",
     opening: (name) => `Finalmente${name ? `, ${name}` : ""}. Ti stavo aspettando. Nel frattempo ho già organizzato il nostro piano da qui in avanti. Sono con te — iniziamo?`,
   },
 }
@@ -165,7 +177,8 @@ const PROACTIVITY_EXTRACTION_KEY_PREFIX = "guto-proactivity-extracted"
 const PROACTIVITY_WEEKLY_OPENED_KEY_PREFIX = "guto-proactivity-weekly-opened"
 const PROACTIVITY_ACTION_KEY_PREFIX = "guto-proactivity-action"
 const GUTO_OPERATIONAL_TIME_ZONE = process.env.NEXT_PUBLIC_GUTO_TIME_ZONE || "Europe/Rome"
-const STALE_AUDIO_FAILURE_TEXT = "O áudio falhou. Sem perder o ritmo: escreve a mesma resposta em uma frase curta."
+// All language variants — used to filter stale audio messages regardless of which language was active when saved.
+const AUDIO_FAILURE_TEXTS = new Set(Object.values(chatCopy).map((c) => c.audioFailure))
 // Minimum number of messages in chat (user + GUTO) before triggering extraction
 const PROACTIVITY_MIN_MESSAGES_FOR_EXTRACTION = 6
 
@@ -278,7 +291,7 @@ function getBrowserSpeechRecognition() {
 }
 
 function isStaleAudioFailureMessage(message: Message) {
-  return message.isGuto && message.text.trim() === STALE_AUDIO_FAILURE_TEXT
+  return message.isGuto && AUDIO_FAILURE_TEXTS.has(message.text.trim())
 }
 
 function normalizeMessageText(value: string) {
@@ -566,7 +579,6 @@ export function ChatTab({
 
     try {
       const data = await getGutoProactive({
-        userId,
         language: safeLanguage,
         force: forceArrivalBriefing,
       })
@@ -616,7 +628,7 @@ export function ChatTab({
     } finally {
       proactiveInFlightRef.current = false
     }
-  }, [isMuted, language, onWorkoutPlanUpdated, synthesizeAndPlay, userId])
+  }, [isMuted, language, onWorkoutPlanUpdated, synthesizeAndPlay])
 
   useEffect(() => {
     const shouldForceArrivalBriefing = shouldForceArrivalBriefingRef.current
@@ -839,7 +851,7 @@ export function ChatTab({
         expectedResponse,
       })
 
-      const fala = data?.fala?.trim() || "Sem distração. Executa a próxima ação agora."
+      const fala = data?.fala?.trim() || chatCopy[getLanguage(language) as SupportedLanguage].emptyResponseFallback
       const messageId = `g-${Date.now()}`
       pendingExpectedResponseRef.current = data?.expectedResponse || null
       pendingExpectedResponseMessageIdRef.current = data?.expectedResponse ? messageId : null
@@ -905,7 +917,7 @@ export function ChatTab({
         ...prev,
         {
           id: `g-err-${Date.now()}`,
-          text: "Perdi conexão por um momento. Reorganiza e me envia de novo em 1 frase.",
+          text: chatCopy[getLanguage(language) as SupportedLanguage].connectionError,
           isGuto: true,
           timestamp: new Date(),
           avatarEmotion: "default",

@@ -856,7 +856,7 @@ export function GutoApp({
 
         let loadedMemory: GutoMemory | null = null
         try {
-          loadedMemory = await getGutoMemory(currentUserId)
+          loadedMemory = await getGutoMemory()
         } catch {
           loadedMemory = null
         }
@@ -1737,7 +1737,7 @@ export function GutoApp({
     if (!user?.userId) return
     let cancelled = false
 
-    void getGutoMemory(gutoUserId)
+    void getGutoMemory()
       .then((memory) => {
         if (cancelled) return
         setMemory(memory)
@@ -3347,7 +3347,7 @@ export function GutoApp({
               setShowValidationFlow(false)
               setActiveTab("caminho")
               // Refresh full memory so totalXp, trainedToday, streak sync everywhere
-              getGutoMemory(gutoUserId).then((fresh) => {
+              getGutoMemory().then((fresh) => {
                 if (fresh) setMemory(fresh)
               }).catch(() => {})
               // Tell ArenaTab to refetch rankings
