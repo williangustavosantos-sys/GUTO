@@ -581,7 +581,6 @@ export function ChatTab({
 
     try {
       const data = await getGutoProactive({
-        userId,
         language: safeLanguage,
         force: forceArrivalBriefing,
       })
@@ -631,7 +630,7 @@ export function ChatTab({
     } finally {
       proactiveInFlightRef.current = false
     }
-  }, [isMuted, language, onWorkoutPlanUpdated, synthesizeAndPlay, userId])
+  }, [isMuted, language, onWorkoutPlanUpdated, synthesizeAndPlay])
 
   useEffect(() => {
     const shouldForceArrivalBriefing = shouldForceArrivalBriefingRef.current

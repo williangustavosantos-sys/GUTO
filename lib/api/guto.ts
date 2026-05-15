@@ -328,8 +328,8 @@ export async function saveGutoMemory(payload: {
   })
 }
 
-export async function getGutoMemory(userId = "local-user") {
-  return apiRequest<GutoMemory>(`/guto/memory?userId=${encodeURIComponent(userId)}`, {
+export async function getGutoMemory() {
+  return apiRequest<GutoMemory>(`/guto/memory`, {
     method: "GET",
   })
 }
@@ -400,15 +400,13 @@ export interface ArenaAwardResult {
 }
 
 export async function getGutoProactive({
-  userId = "local-user",
   language,
   force = false,
 }: {
-  userId?: string
   language: SupportedLanguage
   force?: boolean
 }) {
-  const params = new URLSearchParams({ userId, language })
+  const params = new URLSearchParams({ language })
   if (force) params.set("force", "1")
 
   return apiRequest<GutoProactiveResponse>(`/guto/proactive?${params.toString()}`, {
@@ -451,9 +449,9 @@ export async function getArenaMe(userId: string) {
 
 // ─── Diet API ─────────────────────────────────────────────────────────────────
 
-export async function getDietPlan(userId = "local-user") {
+export async function getDietPlan() {
   try {
-    return await apiRequest<DietPlan>(`/guto/diet?userId=${encodeURIComponent(userId)}`, {
+    return await apiRequest<DietPlan>(`/guto/diet`, {
       method: "GET",
     })
   } catch (err) {
