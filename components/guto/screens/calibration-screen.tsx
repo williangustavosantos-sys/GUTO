@@ -18,9 +18,10 @@ interface CalibrationProfile {
   heightCm?: number
   weightKg?: number
   foodRestrictions?: string
+  foodIntolerances?: string
 }
 
-type TrainingStatus = "beginner" | "returning" | "consistent"
+type TrainingStatus = "beginner" | "returning" | "consistent" | "advanced"
 type GoalKey = "consistency" | "fat_loss" | "muscle_gain" | "conditioning" | "mobility_health"
 type LocationKey = "gym" | "home" | "park" | "mixed"
 
@@ -35,7 +36,7 @@ export function CalibrationScreen({
 }) {
   const t = translations[language].calibration
 
-  const [biologicalSex, setBiologicalSex] = useState<"male" | "female" | null>(null)
+  const [biologicalSex, setBiologicalSex] = useState<"male" | "female" | "prefer_not_to_say" | null>(null)
   const [ageInput, setAgeInput] = useState("")
   const [trainingStatus, setTrainingStatus] = useState<TrainingStatus | null>(null)
   const [pathology, setPathology] = useState("")
@@ -45,6 +46,7 @@ export function CalibrationScreen({
   const [heightInput, setHeightInput] = useState("")
   const [weightInput, setWeightInput] = useState("")
   const [foodRestrictions, setFoodRestrictions] = useState("")
+  const [foodIntolerances, setFoodIntolerances] = useState("")
 
   const ageNum = parseInt(ageInput, 10)
   const isAgeValid = !isNaN(ageNum) && ageNum >= 14 && ageNum <= 99
@@ -54,6 +56,12 @@ export function CalibrationScreen({
   const isWeightValid = !isNaN(weightNum) && weightNum >= 30 && weightNum <= 300
   const isComplete = Boolean(biologicalSex && isAgeValid && trainingStatus && goal && location && isHeightValid && isWeightValid)
 
+  const noInjuryFallback: Record<ValidLanguage, string> = {
+    "pt-BR": "sem dor",
+    "en-US": "no pain or injury",
+    "it-IT": "nessun dolore",
+  }
+
   const handleSubmit = () => {
     if (!isComplete) return
     onComplete({
@@ -62,11 +70,12 @@ export function CalibrationScreen({
       trainingLevel: trainingStatus ?? undefined,
       trainingGoal: goal ?? undefined,
       preferredTrainingLocation: location ?? undefined,
-      trainingPathology: pathology.trim() || "sem dor",
+      trainingPathology: pathology.trim() || noInjuryFallback[language],
       country: country.trim() || undefined,
       heightCm: isHeightValid ? heightNum : undefined,
       weightKg: isWeightValid ? weightNum : undefined,
       foodRestrictions: foodRestrictions.trim() || undefined,
+      foodIntolerances: foodIntolerances.trim() || undefined,
     })
   }
 
@@ -199,6 +208,11 @@ export function CalibrationScreen({
             active={biologicalSex === "male"}
             onClick={() => setBiologicalSex("male")}
           />
+          <PillChip
+            label={t.sexOptions.prefer_not_to_say}
+            active={biologicalSex === "prefer_not_to_say"}
+            onClick={() => setBiologicalSex("prefer_not_to_say")}
+          />
 
           {/* Divider */}
           <div
@@ -321,10 +335,11 @@ export function CalibrationScreen({
         {/* Estado atual */}
         <div>
           <CyanLabel text={`${t.statusLabel}:`} />
-          <div className="flex gap-1.5 mt-1">
+          <div className="flex gap-1.5 flex-wrap mt-1">
             <PillChip label={t.statusChips.paused} active={trainingStatus === "beginner"} onClick={() => setTrainingStatus("beginner")} flex />
             <PillChip label={t.statusChips.returning} active={trainingStatus === "returning"} onClick={() => setTrainingStatus("returning")} flex />
             <PillChip label={t.statusChips.active} active={trainingStatus === "consistent"} onClick={() => setTrainingStatus("consistent")} flex />
+            <PillChip label={t.statusChips.advanced} active={trainingStatus === "advanced"} onClick={() => setTrainingStatus("advanced")} flex />
           </div>
         </div>
 
@@ -335,6 +350,18 @@ export function CalibrationScreen({
             value={pathology}
             onChange={setPathology}
             placeholder={t.pathologyPlaceholder}
+            inputMode="text"
+            className="mt-1"
+          />
+        </div>
+
+        {/* Intolerâncias alimentares */}
+        <div>
+          <CyanLabel text={t.intolerancesLabel} />
+          <BottomPillInput
+            value={foodIntolerances}
+            onChange={setFoodIntolerances}
+            placeholder={t.intolerancesPlaceholder}
             inputMode="text"
             className="mt-1"
           />

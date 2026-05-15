@@ -71,3 +71,10 @@ export async function deleteOwnAccount(): Promise<void> {
     body: JSON.stringify({ confirmation: "EXCLUIR" }),
   })
 }
+
+// GDPR — Revoke consent on the server (P2-D from GUTO_SPRINT_ZERO).
+// Clears sensitive health/fitness fields from the user's memory and flips
+// consentHealthFitness to false. The account itself stays alive.
+export async function revokeConsent(): Promise<void> {
+  await apiRequest("/guto/consent/revoke", { method: "POST" })
+}

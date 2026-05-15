@@ -21,7 +21,7 @@ import { WorkoutValidationFlow } from "./validation/workout-validation-flow"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { getGutoMemory, saveGutoMemory, trackGutoEvent, validateGutoName, type DietFood, type DietMeal, type GutoMemory, type GutoNameValidation, type GutoTelemetryEvent, type GutoWorkoutPlan } from "@/lib/api/guto"
 import { useAuth } from "@/components/auth-provider"
-import { getInvite, claimInvite, logout, deleteOwnAccount } from "@/lib/api/auth"
+import { getInvite, claimInvite, logout, deleteOwnAccount, revokeConsent } from "@/lib/api/auth"
 import type { EvolutionStage, SupportedLanguage } from "@/types/contract"
 import { resolveGutoEvolutionStage } from "@/lib/guto-evolution"
 import { getGutoVitalState } from "@/lib/guto-vital-state"
@@ -107,6 +107,8 @@ const stageCopy: Record<
     complete: string
     noReturn: string
     hold: string
+    pactSealing: string
+    pactConnecting: string
     status: string
     connection: string
     settingsTitle: string
@@ -168,6 +170,8 @@ const stageCopy: Record<
     complete: "Complete.",
     noReturn: "Tem certeza? Depois que apertar, o jogo fica sério.",
     hold: "Pressione e segure",
+    pactSealing: "SELANDO O PACTO...",
+    pactConnecting: "CONECTANDO COM O GUTO...",
     status: "Status: Ativo",
     connection: "Conexão: Estável",
     settingsTitle: "Ajustes",
@@ -228,6 +232,8 @@ const stageCopy: Record<
     complete: "Complete.",
     noReturn: "Are you sure? Once you tap, it gets serious.",
     hold: "Press and hold",
+    pactSealing: "SEALING THE PACT...",
+    pactConnecting: "CONNECTING WITH GUTO...",
     status: "Status: Active",
     connection: "Connection: Stable",
     settingsTitle: "Settings",
@@ -288,6 +294,8 @@ const stageCopy: Record<
     complete: "Completa.",
     noReturn: "Sei sicuro? Dopo che tocchi, si fa sul serio.",
     hold: "Tieni premuto",
+    pactSealing: "SIGILLANDO IL PATTO...",
+    pactConnecting: "CONNESSIONE CON GUTO...",
     status: "Stato: Attivo",
     connection: "Connessione: Stabile",
     settingsTitle: "Impostazioni",
@@ -1016,8 +1024,13 @@ export function GutoApp({
         setWhiteout(false)
         setPactProgress(0)
       }, 860)
+      schedule(() => {
+        void getGutoMemory().then((fresh) => {
+          if (fresh) setMemory(fresh)
+        }).catch(() => {})
+      }, 1200)
     },
-    [effectRegistry, persistMemory, persistProfile, schedule, trackBehaviorEvent]
+    [effectRegistry, gutoUserId, persistMemory, persistProfile, schedule, setMemory, trackBehaviorEvent]
   )
 
   const handleConsentAccepted = useCallback(() => {
@@ -1600,8 +1613,16 @@ export function GutoApp({
     setSettingsMode("menu")
   }, [selectedLanguage])
 
-  const handleRevokeConsent = useCallback(() => {
+  const handleRevokeConsent = useCallback(async () => {
     gutoAudio.playGutoFeedback("tap")
+    // P2-D — Call the server first so the user's sensitive fields are cleared
+    // backend-side BEFORE flipping the local consent flag. If the call fails we
+    // still flip locally and log the error so the user is never stuck.
+    try {
+      await revokeConsent()
+    } catch (err) {
+      console.warn("[GUTO] revokeConsent server call failed (continuing local revoke)", err)
+    }
     persistProfile({ consentHealthFitness: false, acceptedTerms: false, consentAcceptedAt: undefined })
     setPrivacyConfirm(null)
     setPrivacyMsg(null)
@@ -1835,14 +1856,12 @@ export function GutoApp({
         writeOnboardingLanguageStorage(selectedLanguage)
         if (inviteResolvedName) {
           setDraftName(inviteResolvedName)
-          setCommittedName(inviteResolvedName)
-          // Do NOT write userName here — the student must confirm on the naming screen.
           // Only save language so hydration doesn't reset to a wrong language.
+          // committedName and backend name are set only after the user confirms on the naming screen.
           writeStorageItem(`${STORAGE_KEY}-${res.userId}`, JSON.stringify({
             language: selectedLanguage,
             onboardingComplete: false,
           }))
-          void saveGutoMemory({ userId: res.userId, name: inviteResolvedName, language: selectedLanguage }).catch(() => {})
         }
         console.log("[GUTO_ONBOARDING] resolved stage naming")
         setStage("naming")
@@ -2493,8 +2512,8 @@ export function GutoApp({
             <p className="guto-pact-hold mt-8">
               {isHoldingPact
                 ? pactProgress > 70
-                  ? `SELANDO ${Math.round(pactProgress)}%`
-                  : `CONECTANDO ${Math.round(pactProgress)}%`
+                  ? `${locale.pactSealing} ${Math.round(pactProgress)}%`
+                  : `${locale.pactConnecting} ${Math.round(pactProgress)}%`
                 : locale.hold}
             </p>
           </motion.section>

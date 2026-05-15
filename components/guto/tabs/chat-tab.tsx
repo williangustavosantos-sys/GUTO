@@ -169,6 +169,10 @@ const chatCopy: Record<
   },
 }
 
+// Set of all language variants of audioFailure — used to detect stale messages
+// saved before language switch. Replaces the old STALE_AUDIO_FAILURE_TEXT constant.
+const AUDIO_FAILURE_TEXTS = new Set(Object.values(chatCopy).map((c) => c.audioFailure))
+
 const PROACTIVE_CHECK_INTERVAL_MS = 60_000
 const FIRST_MESSAGE_SENT_KEY_PREFIX = "guto-first-message-sent"
 const CHAT_STATE_KEY_PREFIX = "guto-chat-state"
@@ -177,8 +181,6 @@ const PROACTIVITY_EXTRACTION_KEY_PREFIX = "guto-proactivity-extracted"
 const PROACTIVITY_WEEKLY_OPENED_KEY_PREFIX = "guto-proactivity-weekly-opened"
 const PROACTIVITY_ACTION_KEY_PREFIX = "guto-proactivity-action"
 const GUTO_OPERATIONAL_TIME_ZONE = process.env.NEXT_PUBLIC_GUTO_TIME_ZONE || "Europe/Rome"
-// All language variants — used to filter stale audio messages regardless of which language was active when saved.
-const AUDIO_FAILURE_TEXTS = new Set(Object.values(chatCopy).map((c) => c.audioFailure))
 // Minimum number of messages in chat (user + GUTO) before triggering extraction
 const PROACTIVITY_MIN_MESSAGES_FOR_EXTRACTION = 6
 
@@ -851,7 +853,7 @@ export function ChatTab({
         expectedResponse,
       })
 
-      const fala = data?.fala?.trim() || chatCopy[getLanguage(language) as SupportedLanguage].emptyResponseFallback
+      const fala = data?.fala?.trim() || copy.emptyResponseFallback
       const messageId = `g-${Date.now()}`
       pendingExpectedResponseRef.current = data?.expectedResponse || null
       pendingExpectedResponseMessageIdRef.current = data?.expectedResponse ? messageId : null
@@ -917,7 +919,7 @@ export function ChatTab({
         ...prev,
         {
           id: `g-err-${Date.now()}`,
-          text: chatCopy[getLanguage(language) as SupportedLanguage].connectionError,
+          text: copy.connectionError,
           isGuto: true,
           timestamp: new Date(),
           avatarEmotion: "default",

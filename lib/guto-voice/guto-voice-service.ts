@@ -172,12 +172,19 @@ function pickBrowserVoice(language: string): SpeechSynthesisVoice | null {
 
   // Male-sounding name keywords (heuristic across pt-BR, en-US, it-IT)
   const maleKeywords = /male|masculino|homem|uomo|reed|daniel|jorge|mark|google uk english male|alex|diego|luciano|andrés/i
+  // Female keywords to avoid when no male voice is found
+  const femaleKeywords = /female|feminino|mulher|donna|alice|samantha|victoria|karen|lisa|moira|tessa|fiona|yelena|paulina|lekha|amélie/i
 
   const exactMatch = voices.filter((v) => v.lang.toLowerCase().replace("_", "-") === langCode)
   const baseMatch = voices.filter((v) => v.lang.toLowerCase().startsWith(baseLang))
 
-  const preferMale = (list: SpeechSynthesisVoice[]) =>
-    list.find((v) => maleKeywords.test(v.name)) ?? list[0] ?? null
+  const preferMale = (list: SpeechSynthesisVoice[]) => {
+    const maleVoice = list.find((v) => maleKeywords.test(v.name))
+    if (maleVoice) return maleVoice
+    // No explicit male name found — prefer voices that don't match female keywords
+    const nonFemale = list.filter((v) => !femaleKeywords.test(v.name))
+    return nonFemale[0] ?? list[0] ?? null
+  }
 
   return preferMale(exactMatch) ?? preferMale(baseMatch) ?? null
 }

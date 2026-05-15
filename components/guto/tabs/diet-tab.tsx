@@ -42,6 +42,7 @@ const dietCopy = {
     coachNotes: "Observações",
     coachCalories: "kcal estimadas",
     coachProtein: "proteína estimada",
+    disclaimer: "Orientação fitness. Não substitui consulta médica ou nutricional.",
     goalNames: {
       fat_loss: "Emagrecer",
       muscle_gain: "Hipertrofia",
@@ -79,6 +80,7 @@ const dietCopy = {
     coachNotes: "Notes",
     coachCalories: "estimated kcal",
     coachProtein: "estimated protein",
+    disclaimer: "Fitness guidance only. Not a substitute for medical or nutritional advice.",
     goalNames: {
       fat_loss: "Fat Loss",
       muscle_gain: "Hypertrophy",
@@ -116,6 +118,7 @@ const dietCopy = {
     coachNotes: "Note",
     coachCalories: "kcal stimate",
     coachProtein: "proteine stimate",
+    disclaimer: "Solo orientamento fitness. Non sostituisce la consulenza medica o nutrizionale.",
     goalNames: {
       fat_loss: "Dimagrire",
       muscle_gain: "Ipertrofia",
@@ -698,6 +701,10 @@ export function DietTab({ userId, language, onFoodDoubt, memory }: DietTabProps)
           <RefreshCw className="h-3 w-3" />
           {copy.regenerateButton}
         </motion.button>
+
+        <p className="mt-2 text-center font-mono text-[7px] uppercase tracking-[0.1em] text-[rgba(13,35,65,0.30)] px-4">
+          {copy.disclaimer}
+        </p>
       </div>
     </div>
   )
