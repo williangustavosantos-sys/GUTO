@@ -47,6 +47,7 @@ const copy = {
     errorTitle: "Algo deu errado",
     missingLocation: "Local do treino não está fechado. Volte e ajuste o local antes de validar.",
     incompleteWorkout: "Este treino está incompleto. GUTO precisa corrigir os exercícios antes de validar.",
+    manualValidate: "VALIDAR MESMO ASSIM",
   },
   "en-US": {
     title: "Validate workout",
@@ -74,6 +75,7 @@ const copy = {
     errorTitle: "Something went wrong",
     missingLocation: "Workout location is not locked. Go back and set the location before validating.",
     incompleteWorkout: "This workout is incomplete. GUTO must fix the exercises before validation.",
+    manualValidate: "VALIDATE ANYWAY",
   },
   "it-IT": {
     title: "Valida allenamento",
@@ -101,6 +103,7 @@ const copy = {
     errorTitle: "Qualcosa è andato storto",
     missingLocation: "Il luogo dell'allenamento non è definito. Torna indietro e impostalo prima di validare.",
     incompleteWorkout: "Questo allenamento è incompleto. GUTO deve correggere gli esercizi prima di validare.",
+    manualValidate: "VALIDA LO STESSO",
   },
 } as const
 
@@ -143,12 +146,16 @@ export function WorkoutValidationFlow({
   } | null>(null)
   const [arenaResult, setArenaResult] = useState<ArenaAwardResult | null>(null)
 
+  const [cameraTimedOut, setCameraTimedOut] = useState(false)
+
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const imageBase64Ref = useRef<string>("")
+  const manualOverrideRef = useRef(false)
   const countdownTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const speakingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const cameraTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   // face-detection refs
   const rafRef = useRef<number | null>(null)
   const faceStableCountRef = useRef(0)
@@ -163,6 +170,10 @@ export function WorkoutValidationFlow({
     if (speakingTimerRef.current !== null) {
       clearTimeout(speakingTimerRef.current)
       speakingTimerRef.current = null
+    }
+    if (cameraTimeoutRef.current !== null) {
+      clearTimeout(cameraTimeoutRef.current)
+      cameraTimeoutRef.current = null
     }
   }, [])
 
@@ -182,6 +193,28 @@ export function WorkoutValidationFlow({
     return () => { stopCamera() }
   }, [stopCamera])
 
+  // If face detection takes > 15s, offer manual override so the user isn't stuck
+  const CAMERA_TIMEOUT_MS = 15_000
+  useEffect(() => {
+    if (step !== "camera") {
+      setCameraTimedOut(false)
+      if (cameraTimeoutRef.current !== null) {
+        clearTimeout(cameraTimeoutRef.current)
+        cameraTimeoutRef.current = null
+      }
+      return
+    }
+    setCameraTimedOut(false)
+    cameraTimeoutRef.current = setTimeout(() => setCameraTimedOut(true), CAMERA_TIMEOUT_MS)
+    return () => {
+      if (cameraTimeoutRef.current !== null) {
+        clearTimeout(cameraTimeoutRef.current)
+        cameraTimeoutRef.current = null
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step])
+
   const capturePhoto = useCallback(() => {
     const video = videoRef.current
     const canvas = canvasRef.current
@@ -196,6 +229,14 @@ export function WorkoutValidationFlow({
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
     return canvas.toDataURL("image/jpeg", 0.8)
   }, [])
+
+  const submitManualOverride = useCallback(() => {
+    manualOverrideRef.current = true
+    const dataUrl = capturePhoto()
+    imageBase64Ref.current = dataUrl
+    stopCamera()
+    setStep("uploading")
+  }, [capturePhoto, stopCamera])
 
   const startCameraCountdown = useCallback(() => {
     setStep("countdown")
@@ -384,6 +425,7 @@ export function WorkoutValidationFlow({
       locationMode,
       language,
       workoutPlan,
+      manualOverride: manualOverrideRef.current || undefined,
     })
       .then((result) => {
         if (cancelled) return
@@ -696,6 +738,18 @@ export function WorkoutValidationFlow({
                 </motion.div>
               )}
             </AnimatePresence>
+
+            {/* Manual override — shown after 15s of failed face detection */}
+            {cameraTimedOut && step === "camera" && (
+              <div className="absolute inset-x-6 bottom-20 z-30 rounded-[1.5rem] px-6 py-5 text-center"
+                style={{ background: "rgba(5,13,26,0.88)", border: "1px solid rgba(82,231,255,0.18)", backdropFilter: "blur(8px)" }}>
+                <button type="button"
+                  onClick={submitManualOverride}
+                  className="rounded-full border border-[rgba(82,231,255,0.4)] bg-[rgba(82,231,255,0.12)] px-6 py-2.5 font-mono text-[10px] font-black uppercase tracking-[0.16em] text-[var(--guto-cyan)]">
+                  {locale.manualValidate}
+                </button>
+              </div>
+            )}
 
             {/* Camera error */}
             {cameraError && (
