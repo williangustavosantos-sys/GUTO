@@ -935,6 +935,7 @@ export function ChatTab({
       setIsSending(false)
     }
   }, [
+    copy,
     handleProactiveMemoryAction,
     isMuted,
     language,
