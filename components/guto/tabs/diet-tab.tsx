@@ -5,6 +5,7 @@ import { motion } from "framer-motion"
 import { Flame, Zap, Wheat, Droplets, RefreshCw, ChevronDown, ChevronUp } from "lucide-react"
 
 import { getDietPlan, generateDietPlan, type DietPlan, type DietMeal, type DietFood } from "@/lib/api/guto"
+import { ApiError } from "@/lib/api/client"
 import { sanitizeDietPlan } from "@/lib/diet-plan"
 import { getLanguage } from "../translations"
 import type { ValidLanguage } from "../translations"
@@ -43,6 +44,8 @@ const dietCopy = {
     coachCalories: "kcal estimadas",
     coachProtein: "proteína estimada",
     disclaimer: "Orientação fitness. Não substitui consulta médica ou nutricional.",
+    timeoutError: "Tempo de resposta excedido. Tente novamente.",
+    connectionError: "Falha de conexão. Verifique sua internet e tente novamente.",
     goalNames: {
       fat_loss: "Emagrecer",
       muscle_gain: "Hipertrofia",
@@ -81,6 +84,8 @@ const dietCopy = {
     coachCalories: "estimated kcal",
     coachProtein: "estimated protein",
     disclaimer: "Fitness guidance only. Not a substitute for medical or nutritional advice.",
+    timeoutError: "Request timed out. Please try again.",
+    connectionError: "Connection failed. Check your internet and try again.",
     goalNames: {
       fat_loss: "Fat Loss",
       muscle_gain: "Hypertrophy",
@@ -119,6 +124,8 @@ const dietCopy = {
     coachCalories: "kcal stimate",
     coachProtein: "proteine stimate",
     disclaimer: "Solo orientamento fitness. Non sostituisce la consulenza medica o nutrizionale.",
+    timeoutError: "Tempo di risposta superato. Riprova.",
+    connectionError: "Connessione fallita. Controlla la connessione e riprova.",
     goalNames: {
       fat_loss: "Dimagrire",
       muscle_gain: "Ipertrofia",
@@ -165,8 +172,16 @@ function isMissingProfileError(error: unknown) {
   return typeof details === "object" && details !== null && (details as { error?: unknown }).error === "missing_profile_fields"
 }
 
-function getDietErrorMessage(error: unknown) {
-  return error instanceof Error ? error.message : "Erro ao gerar dieta."
+function getDietErrorMessage(
+  error: unknown,
+  copy: { timeoutError: string; connectionError: string }
+): string {
+  if (error instanceof ApiError) {
+    if (error.code === "TIMEOUT") return copy.timeoutError
+    if (error.code === "CONNECTION_ERROR") return copy.connectionError
+    return error.message
+  }
+  return error instanceof Error ? error.message : copy.connectionError
 }
 
 // ─── Meal Card ────────────────────────────────────────────────────────────────
@@ -470,7 +485,7 @@ export function DietTab({ userId, language, onFoodDoubt, memory }: DietTabProps)
       if (!cancelled) {
         cancelled = true
         setStatus("error")
-        setErrorMsg("Timeout: geração demorou demais. Tente novamente.")
+        setErrorMsg(copy.timeoutError)
       }
     }, 50_000)
 
@@ -496,7 +511,7 @@ export function DietTab({ userId, language, onFoodDoubt, memory }: DietTabProps)
         setPlan(null)
         setStatus("error")
         if (!isMissingProfileError(err)) {
-          setErrorMsg(getDietErrorMessage(err))
+          setErrorMsg(getDietErrorMessage(err, copy))
         }
       } finally {
         clearTimeout(hardTimeout)
@@ -524,7 +539,7 @@ export function DietTab({ userId, language, onFoodDoubt, memory }: DietTabProps)
       setStatus("ready")
     } catch (err: unknown) {
       setStatus("error")
-      setErrorMsg(getDietErrorMessage(err))
+      setErrorMsg(getDietErrorMessage(err, copy))
     } finally {
       setRetrying(false)
     }

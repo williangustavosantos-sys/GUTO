@@ -27,11 +27,13 @@ function isQaDemoMode() {
 export class ApiError extends Error {
   status?: number
   details?: unknown
-  constructor(message: string, status?: number, details?: unknown) {
+  code?: string
+  constructor(message: string, status?: number, details?: unknown, code?: string) {
     super(message)
     this.name = "ApiError"
     this.status = status
     this.details = details
+    this.code = code
   }
 }
 
@@ -115,10 +117,10 @@ export async function apiRequest<T>(
     return (await res.json()) as T
   } catch (err) {
     if (err instanceof DOMException && err.name === "AbortError") {
-      throw new ApiError("Tempo de resposta excedido. Tente novamente.")
+      throw new ApiError("timeout", undefined, undefined, "TIMEOUT")
     }
     if (err instanceof ApiError) throw err
-    throw new ApiError(`Falha de conexão com o servidor em ${API_URL}. Verifique NEXT_PUBLIC_API_URL ou se o backend está rodando.`)
+    throw new ApiError(`connection_error: ${API_URL}`, undefined, undefined, "CONNECTION_ERROR")
   } finally {
     clearTimeout(timeout)
   }
