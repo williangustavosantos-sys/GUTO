@@ -179,7 +179,7 @@ async function setupApiMocks(page: Page) {
   )
   // /guto/arena
   await page.route(`${API_BASE}/guto/arena**`, (route) =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ entries: [], userRank: null }) })
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ rankingType: 'weekly', arenaGroupId: 'qa-group', items: [] }) })
   )
   // /guto/validations
   await page.route(`${API_BASE}/guto/validations**`, (route) =>
@@ -590,6 +590,33 @@ test.describe('GUTO – Fluxos críticos', () => {
     const bodyText = await page.locator('body').innerText()
     expect(bodyText).not.toMatch(/Application error|Internal Server Error|500/i)
     await snap(page, '19-login-page')
+  })
+
+  // ── 20. Arena — abre sem crash e sem TypeError ────────────────────────────
+  test('20 — aba Arena abre sem crash e mostra ranking ou estado vazio', async ({ page }) => {
+    await setupApiMocks(page)
+    await injectAuthStorage(page)
+    await page.goto('/?skip-intro=1')
+    await page.waitForTimeout(2500)
+
+    // Clicar na aba Arena
+    await page.getByRole('button', { name: 'ARENA' }).click()
+    await page.waitForTimeout(1500)
+
+    // Confirmar que não há TypeError ou crash
+    const bodyText = await page.locator('body').innerText()
+    expect(bodyText).not.toMatch(/TypeError|Cannot read properties|Application error/i)
+
+    // Confirmar que sub-tabs existem (Semana, Mês, Individual)
+    await expect(page.getByText('SEMANA')).toBeVisible()
+    await expect(page.getByText('MÊS')).toBeVisible()
+    await expect(page.getByText('INDIVIDUAL')).toBeVisible()
+
+    // Confirmar que a aba Arena mostra ranking ou estado vazio controlado (não tela branca)
+    const arenaContent = page.locator('body')
+    await expect(arenaContent).not.toBeEmpty()
+
+    await snap(page, '20-arena-sem-crash')
   })
 
 })

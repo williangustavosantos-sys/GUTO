@@ -320,7 +320,7 @@ export function ArenaTab({ userId, language, translations: t, refreshKey, curren
             <motion.div key="error" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               <EmptyState message={error} />
             </motion.div>
-          ) : !data || data.items.length === 0 ? (
+          ) : !data || !data.items || data.items.length === 0 ? (
             <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               <EmptyState message={t.arena.emptyState} />
             </motion.div>
