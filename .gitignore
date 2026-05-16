@@ -55,3 +55,10 @@ task_progress.md
 
 # Sentry Config File
 .env.sentry-build-plugin
+
+# E2E screenshots (auditoria local, não versionar)
+/e2e-screenshots/
+
+# Configs locais de ferramentas de dev
+.mcp.json
+.claude/launch.json

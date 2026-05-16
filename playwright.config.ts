@@ -31,6 +31,13 @@ export default defineConfig({
     video: 'retain-on-failure',
   },
 
+  /* Start dev server in CI before running tests */
+  webServer: {
+    command: 'npm run dev',
+    url: 'http://localhost:3000',
+    reuseExistingServer: !process.env.CI,
+  },
+
   /* Only Chromium for local QA — faster feedback */
   projects: [
     {
