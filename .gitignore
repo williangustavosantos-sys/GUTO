@@ -45,3 +45,13 @@ node_modules
 # logs de upload / arquivos temporários
 *_subindo_arquivos_para_o_git_hub.json
 task_progress.md
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
+
+# Sentry Config File
+.env.sentry-build-plugin

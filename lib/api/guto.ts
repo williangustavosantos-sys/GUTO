@@ -336,7 +336,7 @@ export async function getGutoMemory() {
 
 export async function validateWorkout(payload: {
   userId: string
-  imageBase64: string
+  imageBase64?: string  // optional: undefined when user skips camera
   workoutFocus: string
   workoutLabel: string
   locationMode: WorkoutLocationMode

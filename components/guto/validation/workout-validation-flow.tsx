@@ -414,7 +414,9 @@ export function WorkoutValidationFlow({
     let cancelled = false
     void validateWorkout({
       userId,
-      imageBase64: imageBase64Ref.current,
+      // P0 FIX: only send imageBase64 when user captured a photo.
+      // Empty string = skip-camera path — backend handles it without image.
+      imageBase64: imageBase64Ref.current || undefined,
       workoutFocus,
       workoutLabel,
       locationMode,
@@ -693,6 +695,8 @@ export function WorkoutValidationFlow({
                     type="button"
                     onClick={() => {
                       stopCamera()
+                      // P0 FIX: do NOT set imageBase64 — send undefined so backend
+                      // processes validation without image (skip-camera path).
                       imageBase64Ref.current = ""
                       setStep("uploading")
                     }}

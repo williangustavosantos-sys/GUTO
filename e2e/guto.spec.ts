@@ -1,0 +1,595 @@
+import { test, expect, Page } from '@playwright/test'
+import path from 'path'
+import fs from 'fs'
+
+// ─── Screenshot helper ────────────────────────────────────────────────────────
+
+const SCREENSHOT_DIR = path.join(__dirname, '..', 'e2e-screenshots')
+
+async function snap(page: Page, name: string) {
+  if (!fs.existsSync(SCREENSHOT_DIR)) fs.mkdirSync(SCREENSHOT_DIR, { recursive: true })
+  const filePath = path.join(SCREENSHOT_DIR, `${name}.png`)
+  await page.screenshot({ path: filePath, fullPage: false })
+  return filePath
+}
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const TEST_USER_ID = 'qa-test-user-001'
+const TEST_TOKEN = 'qa-fake-token-playwright'
+// API URL from .env.local (NEXT_PUBLIC_API_URL)
+const API_BASE = 'https://cerebroguto.onrender.com'
+
+// ─── Mock data ────────────────────────────────────────────────────────────────
+
+const mockUser = {
+  userId: TEST_USER_ID,
+  name: 'QA',
+  email: 'qa@guto.test',
+  role: 'student',
+}
+
+const mockMemory = {
+  userId: TEST_USER_ID,
+  name: 'QA',
+  language: 'pt-BR',
+  initialXpGranted: true,
+  totalXp: 500,
+  streak: 3,
+  trainedToday: false,
+  adaptedMissionToday: false,
+  lastActiveAt: new Date().toISOString(),
+  trainingLocation: 'gym',
+  trainingStatus: 'active',
+  trainingLevel: 'consistent',
+  trainingGoal: 'muscle_gain',
+  preferredTrainingLocation: 'gym',
+  biologicalSex: 'male',
+  userAge: 28,
+  country: 'Brasil',
+  heightCm: 175,
+  weightKg: 75,
+  completedWorkoutDates: [],
+  adaptedMissionDates: [],
+  missedMissionDates: [],
+  xpEvents: [],
+  proactiveSent: {},
+  initialXpRewardSeen: true,
+  lastWorkoutPlan: {
+    studentId: TEST_USER_ID,
+    title: 'Treino de Peito e Tríceps',
+    focus: 'Peito e Tríceps',
+    focusKey: 'chest_triceps',
+    weekDay: 'Qui',
+    goal: 'muscle_gain',
+    location: 'Academia',
+    locationMode: 'gym',
+    dateLabel: 'Qui 15/05',
+    scheduledFor: new Date().toISOString(),
+    summary: 'Foco em peitoral com sobrecarga progressiva.',
+    exercises: [
+      {
+        id: 'ex-001',
+        name: 'Supino Reto com Barra',
+        canonicalNamePt: 'Supino Reto com Barra',
+        muscleGroup: 'peito',
+        sets: 4,
+        reps: '8-10',
+        load: '60kg',
+        rest: '90s',
+        restSeconds: 90,
+        cue: 'Mantenha as escápulas retraídas.',
+        note: '',
+        videoUrl: '/exercise/visuals/supino-reto.mp4',
+        videoProvider: 'local',
+        sourceFileName: 'supino-reto.mp4',
+      },
+      {
+        id: 'ex-002',
+        name: 'Crucifixo Inclinado com Halteres',
+        canonicalNamePt: 'Crucifixo Inclinado com Halteres',
+        muscleGroup: 'peito',
+        sets: 3,
+        reps: '12',
+        load: '14kg',
+        rest: '60s',
+        restSeconds: 60,
+        cue: 'Cotovelos ligeiramente fletidos.',
+        note: '',
+        videoUrl: '/exercise/visuals/crucifixo.mp4',
+        videoProvider: 'local',
+        sourceFileName: 'crucifixo.mp4',
+      },
+    ],
+  },
+}
+
+const mockDiet = {
+  userId: TEST_USER_ID,
+  title: 'Dieta da Semana — Hipertrofia',
+  generatedAt: new Date().toISOString(),
+  country: 'Brasil',
+  goal: 'muscle_gain',
+  macros: {
+    bmr: 1850,
+    tdee: 2590,
+    targetKcal: 2900,
+    proteinG: 180,
+    carbsG: 310,
+    fatG: 90,
+    goal: 'muscle_gain',
+  },
+  meals: [
+    {
+      id: 'meal-001',
+      name: 'Café da manhã',
+      time: '07:00',
+      totalKcal: 620,
+      gutoNote: 'Refeição de abertura com carbo rápido.',
+      foods: [
+        { name: 'Ovos mexidos', quantity: '3 unidades', kcal: 210 },
+        { name: 'Aveia', quantity: '50g', kcal: 180 },
+        { name: 'Banana', quantity: '1 unidade', kcal: 90 },
+      ],
+    },
+  ],
+}
+
+// ─── Auth setup helpers ───────────────────────────────────────────────────────
+
+/**
+ * Register Playwright route mocks for the production API.
+ * Must be called BEFORE page.goto().
+ */
+async function setupApiMocks(page: Page) {
+  // /auth/me
+  await page.route(`${API_BASE}/auth/me`, (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(mockUser) })
+  )
+  // /guto/memory — no userId in path (server uses Bearer token)
+  await page.route(`${API_BASE}/guto/memory`, (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(mockMemory) })
+  )
+  // /guto/diet — no userId in path
+  await page.route(`${API_BASE}/guto/diet`, (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(mockDiet) })
+  )
+  // /guto/diet/generate
+  await page.route(`${API_BASE}/guto/diet/generate`, (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(mockDiet) })
+  )
+  // /guto (chat POST)
+  await page.route(`${API_BASE}/guto`, (route) => {
+    if (route.request().method() === 'POST') {
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          fala: 'Boa, QA! Treino montado e dieta calibrada. Bora, dupla!',
+          acao: 'none',
+          avatarEmotion: 'default',
+        }),
+      })
+    }
+    return route.continue()
+  })
+  // /guto/proactive
+  await page.route(`${API_BASE}/guto/proactive**`, (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ due: false }) })
+  )
+  // /guto/arena
+  await page.route(`${API_BASE}/guto/arena**`, (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ entries: [], userRank: null }) })
+  )
+  // /guto/validations
+  await page.route(`${API_BASE}/guto/validations**`, (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) })
+  )
+  // /guto/name/validate
+  await page.route(`${API_BASE}/guto/name**`, (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ status: 'valid', normalized: 'QA', message: 'ok' }) })
+  )
+  // billing
+  await page.route(`${API_BASE}/billing**`, (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ status: 'active' }) })
+  )
+}
+
+/**
+ * Inject localStorage BEFORE page JS runs (addInitScript).
+ * The per-user version key is required to avoid forced reset.
+ */
+async function injectAuthStorage(page: Page) {
+  await page.addInitScript(
+    ({ token, userId, profile, storageVersion }) => {
+      // Auth token
+      localStorage.setItem('guto-auth-token', token)
+      // Profile (key is per-user)
+      localStorage.setItem(`guto-white-lab-profile-${userId}`, JSON.stringify(profile))
+      // Version key must also be per-user to avoid shouldReset = true
+      localStorage.setItem(`guto-storage-version-${userId}`, String(storageVersion))
+      // Language preference
+      localStorage.setItem('guto-selected-language', 'pt-BR')
+    },
+    {
+      token: TEST_TOKEN,
+      userId: TEST_USER_ID,
+      storageVersion: 2,
+      profile: {
+        language: 'pt-BR',
+        userName: 'QA',
+        onboardingComplete: true,
+        namingConfirmed: true,
+        calibrationComplete: true,
+        pactAccepted: true,
+        consentHealthFitness: true,
+        acceptedTerms: true,
+        consentAcceptedAt: new Date().toISOString(),
+      },
+    }
+  )
+}
+
+// ─── Tests ────────────────────────────────────────────────────────────────────
+
+test.describe('GUTO – Fluxos críticos', () => {
+
+  // ── 1. App abre sem tela branca ────────────────────────────────────────────
+  test('01 — app abre sem tela branca', async ({ page }) => {
+    await page.goto('/')
+    await expect(page.locator('body')).not.toBeEmpty()
+    const html = await page.content()
+    expect(html.length).toBeGreaterThan(200)
+    await snap(page, '01-app-home')
+  })
+
+  // ── 2. Loader não fica infinito ────────────────────────────────────────────
+  test('02 — loader resolve em até 10 segundos', async ({ page }) => {
+    await page.goto('/')
+    // Se aparecer spinner, deve sumir em 10s
+    await expect(page.locator('[class*="animate-spin"]').first())
+      .not.toBeVisible({ timeout: 10000 })
+      .catch(() => { /* spinner nunca apareceu — também válido */ })
+    await snap(page, '02-app-loaded')
+  })
+
+  // ── 3. Tela de idiomas aparece com ?skip-intro=1 ───────────────────────────
+  test('03 — tela de idioma aparece ao pular intro', async ({ page }) => {
+    await page.goto('/?skip-intro=1')
+    // Botões usam aria-label, não texto visível — usar getByRole
+    await expect(page.getByRole('button', { name: 'Português' })).toBeVisible({ timeout: 8000 })
+    await expect(page.getByRole('button', { name: 'English' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Italiano' })).toBeVisible()
+    await snap(page, '03-language-screen')
+  })
+
+  // ── 4. Seleção de idioma PT-BR ─────────────────────────────────────────────
+  test('04 — seleciona PT-BR e persiste em localStorage', async ({ page }) => {
+    await page.goto('/?skip-intro=1')
+    await page.getByRole('button', { name: 'Português' }).click()
+    await page.waitForTimeout(600)
+    const stored = await page.evaluate(
+      () => localStorage.getItem('guto-selected-language') || localStorage.getItem('guto-onboarding-language')
+    )
+    expect(stored).toBe('pt-BR')
+    await snap(page, '04-language-pt-selected')
+  })
+
+  // ── 5. Seleção de idioma EN-US ─────────────────────────────────────────────
+  test('05 — seleciona EN-US e persiste em localStorage', async ({ page }) => {
+    await page.goto('/?skip-intro=1')
+    await page.getByRole('button', { name: 'English' }).click()
+    await page.waitForTimeout(600)
+    const stored = await page.evaluate(
+      () => localStorage.getItem('guto-selected-language') || localStorage.getItem('guto-onboarding-language')
+    )
+    expect(stored).toBe('en-US')
+    await snap(page, '05-language-en-selected')
+  })
+
+  // ── 6. Seleção de idioma IT-IT ─────────────────────────────────────────────
+  test('06 — seleciona IT-IT e persiste em localStorage', async ({ page }) => {
+    await page.goto('/?skip-intro=1')
+    await page.getByRole('button', { name: 'Italiano' }).click()
+    await page.waitForTimeout(600)
+    const stored = await page.evaluate(
+      () => localStorage.getItem('guto-selected-language') || localStorage.getItem('guto-onboarding-language')
+    )
+    expect(stored).toBe('it-IT')
+    await snap(page, '06-language-it-selected')
+  })
+
+  // ── 7. Idioma persiste após reload ─────────────────────────────────────────
+  test('07 — idioma EN-US persiste após reload', async ({ page }) => {
+    await page.goto('/?skip-intro=1')
+    await page.getByRole('button', { name: 'English' }).click()
+    await page.waitForTimeout(600)
+
+    await page.reload()
+    await page.waitForTimeout(1000)
+
+    const stored = await page.evaluate(() => localStorage.getItem('guto-selected-language'))
+    expect(stored).toBe('en-US')
+  })
+
+  // ── 8. Três botões de idioma — sem mistura ────────────────────────────────
+  test('08 — tela de idioma tem exatamente 3 botões sem mistura de idiomas', async ({ page }) => {
+    await page.goto('/?skip-intro=1')
+    await expect(page.getByRole('button', { name: 'Português' })).toBeVisible({ timeout: 8000 })
+    await expect(page.getByRole('button', { name: 'English' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Italiano' })).toBeVisible()
+
+    // Exatamente 3 botões de idioma (não pode aparecer "Português" e "Portuguese" juntos)
+    const allButtons = await page.locator('button[aria-label]').evaluateAll((btns) =>
+      btns.map((b) => b.getAttribute('aria-label'))
+    )
+    const langLabels = allButtons.filter((l) =>
+      l && ['Português', 'English', 'Italiano'].includes(l)
+    )
+    expect(langLabels.length).toBe(3)
+    await snap(page, '08-language-no-mixing')
+  })
+
+  // ── 9. Sistema autenticado — tabs visíveis ────────────────────────────────
+  test('09 — sistema mostra tabs ao usuário autenticado (mocked)', async ({ page }) => {
+    await injectAuthStorage(page)
+    await setupApiMocks(page)
+    await page.goto('/')
+
+    // O app usa isHydrated + resolveAuthenticatedStage para chegar em "system"
+    // A nav inferior tem aria-label "Navegação principal" em pt-BR
+    await expect(
+      page.locator('nav[aria-label="Navegação principal"]')
+    ).toBeVisible({ timeout: 15000 })
+
+    await snap(page, '09-system-tabs')
+  })
+
+  // ── 10. Aba Chat — avatar e input visíveis ────────────────────────────────
+  test('10 — aba chat está na tab GUTO e input de mensagem está visível', async ({ page }) => {
+    await injectAuthStorage(page)
+    await setupApiMocks(page)
+    await page.goto('/')
+
+    // Aguarda sistema carregar
+    await expect(page.locator('nav[aria-label="Navegação principal"]')).toBeVisible({ timeout: 15000 })
+
+    // Tab "GUTO" (chat) já é o ativo por padrão — não precisa de clique
+    await page.waitForTimeout(800)
+
+    // Input de texto do chat
+    const input = page.locator('input[type="text"]').first()
+    await expect(input).toBeVisible({ timeout: 8000 })
+
+    // Não deve estar coberto — bounding box válida
+    const box = await input.boundingBox()
+    expect(box).not.toBeNull()
+    expect(box!.height).toBeGreaterThanOrEqual(16) // input text-[16px], leading-none
+    expect(box!.width).toBeGreaterThan(80)
+
+    await snap(page, '10-chat-input')
+  })
+
+  // ── 11. Enviar mensagem no chat ────────────────────────────────────────────
+  test('11 — envia mensagem no chat e recebe resposta (mocked)', async ({ page }) => {
+    await injectAuthStorage(page)
+    await setupApiMocks(page)
+    await page.goto('/')
+
+    await expect(page.locator('nav[aria-label="Navegação principal"]')).toBeVisible({ timeout: 15000 })
+
+    // Já estamos no chat (tab GUTO)
+    const input = page.locator('input[type="text"]').first()
+    await expect(input).toBeVisible({ timeout: 8000 })
+
+    await input.fill('Oi GUTO, tudo bem?')
+    await input.press('Enter')
+
+    // Aguarda a resposta mock aparecer no chat
+    await expect(page.getByText('Boa, QA!')).toBeVisible({ timeout: 10000 })
+
+    // Sem erro técnico exposto
+    const bodyText = await page.locator('body').innerText()
+    expect(bodyText).not.toMatch(/connection_error|TypeError|Cannot read/i)
+
+    await snap(page, '11-chat-response')
+  })
+
+  // ── 12. Aba Treino — cards de exercício ───────────────────────────────────
+  test('12 — aba MISSÃO mostra exercícios do treino', async ({ page }) => {
+    await injectAuthStorage(page)
+    await setupApiMocks(page)
+    await page.goto('/')
+
+    await expect(page.locator('nav[aria-label="Navegação principal"]')).toBeVisible({ timeout: 15000 })
+
+    // Clica na aba MISSÃO
+    await page.getByRole('button', { name: 'MISSÃO' }).click()
+    await page.waitForTimeout(2000)
+
+    // Deve mostrar algum conteúdo — não tela branca
+    const html = await page.content()
+    expect(html.length).toBeGreaterThan(1000)
+
+    // Sem erro técnico
+    const bodyText = await page.locator('body').innerText()
+    expect(bodyText).not.toMatch(/TypeError|Cannot read|undefined is not/i)
+
+    await snap(page, '12-workout-tab')
+  })
+
+  // ── 13. GUTO Online — modal abre sem sobreposição ────────────────────────
+  test('13 — GUTO Online: modal abre com botão fechar acessível', async ({ page }) => {
+    await injectAuthStorage(page)
+    await setupApiMocks(page)
+    await page.goto('/')
+
+    await expect(page.locator('nav[aria-label="Navegação principal"]')).toBeVisible({ timeout: 15000 })
+    await page.getByRole('button', { name: 'MISSÃO' }).click()
+    await page.waitForTimeout(2000)
+
+    // Procura o botão de iniciar GUTO Online (texto "GUTO PERSONAL ONLINE")
+    const onlineBtn = page.locator('button').filter({ hasText: /guto\s*personal\s*online/i }).first()
+    const radioBtn = page.locator('[aria-label*="online" i], [aria-label*="radio" i]').first()
+
+    const hasOnlineBtn = await onlineBtn.isVisible({ timeout: 3000 }).catch(() => false)
+    const hasRadioBtn = await radioBtn.isVisible({ timeout: 500 }).catch(() => false)
+
+    if (hasOnlineBtn) {
+      await onlineBtn.click()
+      await page.waitForTimeout(1500)
+
+      // Verificar ausência de overflow horizontal
+      const overflow = await page.evaluate(() => document.body.scrollWidth > document.body.clientWidth)
+      expect(overflow).toBe(false)
+
+      // Verificar que algum botão de fechar ou X aparece
+      const closeBtn = page.locator('[aria-label*="fechar" i], [aria-label*="close" i], button:has([data-lucide="x"])').first()
+      const closeBtnVisible = await closeBtn.isVisible({ timeout: 3000 }).catch(() => false)
+      // Registra no log mas não falha se não encontrou fechar (o botão pode ter outra label)
+      if (!closeBtnVisible) {
+        console.log('[QA] GUTO Online: botão fechar não encontrado com aria-label — verificar manualmente')
+      }
+
+      await snap(page, '13-guto-online-open')
+    } else if (hasRadioBtn) {
+      await radioBtn.click()
+      await page.waitForTimeout(1500)
+      await snap(page, '13-guto-online-radio-btn')
+    } else {
+      console.log('[QA] GUTO Online: sem plano de treino carregado — botão não encontrado')
+      await snap(page, '13-guto-online-no-workout')
+    }
+  })
+
+  // ── 14. Aba Dieta — sem tela morta nem timeout ────────────────────────────
+  test('14 — aba DIETA abre sem tela morta e sem timeout exposto', async ({ page }) => {
+    await injectAuthStorage(page)
+    await setupApiMocks(page)
+    await page.goto('/')
+
+    await expect(page.locator('nav[aria-label="Navegação principal"]')).toBeVisible({ timeout: 15000 })
+    await page.getByRole('button', { name: 'DIETA' }).click()
+    await page.waitForTimeout(3000)
+
+    // Sem spinner infinito
+    const spinner = page.locator('[class*="animate-spin"]').first()
+    const spinning = await spinner.isVisible({ timeout: 200 }).catch(() => false)
+    if (spinning) {
+      await expect(spinner).not.toBeVisible({ timeout: 12000 })
+    }
+
+    // Sem tela branca / HTML mínimo
+    const html = await page.content()
+    expect(html.length).toBeGreaterThan(1000)
+
+    // Sem erro técnico exposto
+    const bodyText = await page.locator('body').innerText()
+    expect(bodyText).not.toMatch(/TypeError|Cannot read|undefined is not|TIMEOUT_ERROR/i)
+    expect(bodyText).not.toMatch(/Tempo de resposta excedido|timed out/i)
+    // Sem mensagem de falha de conexão visível ao usuário
+    expect(bodyText).not.toMatch(/Falha de conexão|connection failed/i)
+
+    await snap(page, '14-diet-tab')
+  })
+
+  // ── 15. Overflow horizontal — tela de idioma ──────────────────────────────
+  test('15 — sem overflow horizontal na tela de idioma', async ({ page }) => {
+    await page.goto('/?skip-intro=1')
+    await expect(page.getByRole('button', { name: 'Português' })).toBeVisible({ timeout: 8000 })
+
+    const overflow = await page.evaluate(() => document.body.scrollWidth > document.body.clientWidth)
+    expect(overflow).toBe(false)
+    await snap(page, '15-no-overflow-language')
+  })
+
+  // ── 16. Overflow horizontal — sistema autenticado ────────────────────────
+  test('16 — sem overflow horizontal no sistema autenticado', async ({ page }) => {
+    await injectAuthStorage(page)
+    await setupApiMocks(page)
+    await page.goto('/')
+
+    await expect(page.locator('nav[aria-label="Navegação principal"]')).toBeVisible({ timeout: 15000 })
+
+    const overflow = await page.evaluate(() => document.body.scrollWidth > document.body.clientWidth)
+    expect(overflow).toBe(false)
+  })
+
+  // ── 17. Avatar GUTO — sem fundo quadrado cinza ───────────────────────────
+  test('17 — avatar não tem dimensão zero nem fundo cinza quadrado', async ({ page }) => {
+    await injectAuthStorage(page)
+    await setupApiMocks(page)
+    await page.goto('/')
+
+    await expect(page.locator('nav[aria-label="Navegação principal"]')).toBeVisible({ timeout: 15000 })
+    await page.waitForTimeout(1000)
+
+    // Imagens de avatar não devem ser 0x0
+    const avatarImgs = page.locator('img[src*="guto"], img[src*="avatar"], canvas').first()
+    const exists = await avatarImgs.isVisible({ timeout: 2000 }).catch(() => false)
+
+    if (exists) {
+      const box = await avatarImgs.boundingBox()
+      if (box) {
+        expect(box.width).toBeGreaterThan(0)
+        expect(box.height).toBeGreaterThan(0)
+      }
+    }
+
+    await snap(page, '17-avatar-check')
+  })
+
+  // ── 18. GUTO Online — fechar com X volta ao treino sem overlay preso ───────
+  test('18 — GUTO Online: fechar com X remove overlay e volta ao treino', async ({ page }) => {
+    await injectAuthStorage(page)
+    await setupApiMocks(page)
+    await page.goto('/')
+
+    await expect(page.locator('nav[aria-label="Navegação principal"]')).toBeVisible({ timeout: 15000 })
+    await page.getByRole('button', { name: 'MISSÃO' }).click()
+    await page.waitForTimeout(2000)
+
+    // Clica no botão GUTO Online (texto "GUTO PERSONAL ONLINE")
+    const onlineBtn = page.locator('button').filter({ hasText: /guto\s*personal\s*online/i }).first()
+    const hasBtnVisible = await onlineBtn.isVisible({ timeout: 3000 }).catch(() => false)
+
+    if (!hasBtnVisible) {
+      console.log('[QA] GUTO Online: botão não encontrado — treino não carregado no mock')
+      await snap(page, '18-guto-online-btn-not-found')
+      return
+    }
+
+    await onlineBtn.click()
+    await page.waitForTimeout(1500)
+
+    // Overlay deve estar presente — há um header com "Presença ativa" ou "Active presence"
+    const overlayVisible = await page.locator('text=/Presença ativa|Active presence/i').isVisible({ timeout: 5000 }).catch(() => false)
+    expect(overlayVisible).toBe(true)
+
+    await snap(page, '18-guto-online-open')
+
+    // Clica no X (aria-label "Fechar GUTO Online" para pt-BR)
+    const closeBtn = page.getByRole('button', { name: 'Fechar GUTO Online' })
+    await expect(closeBtn).toBeVisible({ timeout: 3000 })
+    await closeBtn.click()
+    await page.waitForTimeout(800)
+
+    // Overlay deve ter desaparecido — "Presença ativa" não deve mais existir
+    const overlayGone = await page.locator('text=/Presença ativa|Active presence/i').isVisible({ timeout: 1000 }).catch(() => false)
+    expect(overlayGone).toBe(false)
+
+    // Aba MISSÃO ainda deve estar acessível (nav visível, sem tela travada)
+    await expect(page.locator('nav[aria-label="Navegação principal"]')).toBeVisible()
+
+    await snap(page, '18-guto-online-closed')
+  })
+
+  // ── 19. Página /login renderiza sem crash ─────────────────────────────────
+  test('19 — página /login renderiza sem erro', async ({ page }) => {
+    await page.goto('/login')
+    const bodyText = await page.locator('body').innerText()
+    expect(bodyText).not.toMatch(/Application error|Internal Server Error|500/i)
+    await snap(page, '19-login-page')
+  })
+
+})

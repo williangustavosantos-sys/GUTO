@@ -538,6 +538,15 @@ function resolveAuthenticatedStage(
     return "consent"
   }
 
+  // P0 FIX: calibration check runs BEFORE onboardingComplete/pactAccepted shortcuts.
+  // Old sessions may have onboardingComplete=true without real calibration data,
+  // which previously let them skip directly to "system" with an incomplete profile.
+  if (!profile?.calibrationComplete && !hasMemoryCalibration(memory)) {
+    console.log("[GUTO_ONBOARDING] missing calibration")
+    console.log("[GUTO_ONBOARDING] resolved stage calibration")
+    return "calibration"
+  }
+
   // namingConfirmed must be set on THIS device by the student clicking confirm.
   // Admin-set names do not count. Backwards-compat: onboardingComplete=true implies confirmed.
   if (!profile?.namingConfirmed && !profile?.onboardingComplete) {
@@ -550,12 +559,6 @@ function resolveAuthenticatedStage(
     console.log("[GUTO_ONBOARDING] complete -> system")
     console.log("[GUTO_ONBOARDING] resolved stage system")
     return "system"
-  }
-
-  if (!profile?.calibrationComplete && !hasMemoryCalibration(memory)) {
-    console.log("[GUTO_ONBOARDING] missing calibration")
-    console.log("[GUTO_ONBOARDING] resolved stage calibration")
-    return "calibration"
   }
 
   console.log("[GUTO_ONBOARDING] missing pact")

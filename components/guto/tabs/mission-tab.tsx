@@ -406,7 +406,7 @@ export function MissionTab({
           setStarted(true)
           setOnlineOpen(true)
         }}
-        disabled={trainedToday || adaptedMissionToday || invalidWorkoutVideo}
+        disabled={trainedToday || adaptedMissionToday}
         className="mb-2.5 flex h-11 w-full items-center justify-center gap-2 rounded-[1.05rem] border border-[rgba(82,231,255,0.55)] bg-[rgba(82,231,255,0.12)] font-mono text-[10px] font-black uppercase tracking-[0.16em] text-[var(--guto-cyan)] shadow-[inset_0_1px_0_rgba(255,255,255,0.74)] disabled:opacity-30"
       >
         <Radio className="h-4 w-4" />
