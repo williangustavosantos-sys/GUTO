@@ -13,25 +13,28 @@ interface AgreementScreenProps {
 
 const commitmentTexts: Record<
   string,
-  { title: string; subtitle: string; instruction: string; complete: string }
+  { title: string; subtitle: string; instruction: string; complete: string; holdAria: string }
 > = {
   "pt-BR": {
     title: "Sem volta.",
     subtitle: "A gente executa.",
     instruction: "Segure para confirmar o acordo",
     complete: "Pacto selado.",
+    holdAria: "Segurar para selar pacto",
   },
   "it-IT": {
     title: "Senza ritorno.",
     subtitle: "Noi eseguiamo.",
     instruction: "Tieni premuto per confermare l'accordo",
     complete: "Patto suggellato.",
+    holdAria: "Tieni premuto per sigillare il patto",
   },
   "en-US": {
     title: "No turning back.",
     subtitle: "We execute.",
     instruction: "Hold to confirm the agreement",
     complete: "Pact sealed.",
+    holdAria: "Hold to seal the pact",
   },
 }
 
@@ -204,7 +207,7 @@ export function AgreementScreen({ userName, language = "pt-BR", onComplete }: Ag
             }}
             whileHover={{ scale: isComplete ? 1 : 1.03 }}
             disabled={isComplete}
-            aria-label="Segurar para selar pacto"
+            aria-label={commitment.holdAria}
           >
             <motion.div
               animate={{ scale: isHolding ? [1, 1.15, 1] : 1 }}

@@ -16,6 +16,7 @@ import {
   requestDiscardProactiveMemory,
   sendGutoMessage,
   trackGutoEvent,
+  updateProactiveMemory,
   validateProactiveMemory,
 } from "@/lib/api/guto"
 import type { DietMeal, GutoAvatarEmotion, GutoExpectedResponse, GutoMemory, GutoProactiveMemoryAction, GutoWorkoutPlan } from "@/lib/api/guto"
@@ -140,8 +141,8 @@ const chatCopy: Record<
     unmute: "Ativar fala do GUTO",
     mute: "Silenciar fala do GUTO",
     audioFailure: "O áudio falhou. Sem perder o ritmo: escreve a mesma resposta em uma frase curta.",
-    emptyResponseFallback: "Sem distração. Executa a próxima ação agora.",
-    connectionError: "Perdi conexão por um momento. Reorganiza e me envia de novo em 1 frase.",
+    emptyResponseFallback: "Ixi, meu sistema engasgou por um segundo. Me manda de novo em uma frase que eu resolvo.",
+    connectionError: "Ixi, deu um curto na conexão aqui. Aguenta aí e me manda de novo em 1 frase.",
     xpRewardLabel: "Prêmio Inicial • Guto Ativo",
     opening: (name) => `Finalmente${name ? `, ${name}` : ""}. Tava te esperando. Enquanto isso, já organizei nosso plano daqui pra frente. Estamos juntos — bora começar?`,
   },
@@ -153,8 +154,8 @@ const chatCopy: Record<
     unmute: "Enable GUTO voice",
     mute: "Mute GUTO voice",
     audioFailure: "Audio failed. No need to stop — just type your answer in one short sentence.",
-    emptyResponseFallback: "No distractions. Execute the next action now.",
-    connectionError: "Lost connection for a moment. Reorganize and send me again in 1 sentence.",
+    emptyResponseFallback: "My system hiccuped for a second. Send it again in one sentence and I will handle it.",
+    connectionError: "Connection shorted out on my side for a moment. Hold on and send it again in 1 sentence.",
     xpRewardLabel: "Initial Reward • GUTO Active",
     opening: (name) => `Finally${name ? `, ${name}` : ""}. I was waiting for you. In the meantime, I already organized our plan from here. I'm with you — ready to start?`,
   },
@@ -166,8 +167,8 @@ const chatCopy: Record<
     unmute: "Attiva la voce di GUTO",
     mute: "Silenzia la voce di GUTO",
     audioFailure: "Audio fallito. Senza perdere il ritmo: scrivi la stessa risposta in una frase breve.",
-    emptyResponseFallback: "Niente distrazioni. Esegui la prossima azione adesso.",
-    connectionError: "Ho perso la connessione per un momento. Riorganizza e mandami di nuovo in 1 frase.",
+    emptyResponseFallback: "Mi si è inceppato il sistema per un secondo. Mandamelo di nuovo in una frase e lo sistemo.",
+    connectionError: "Mi è saltata la connessione per un attimo. Aspetta un secondo e rimandamelo in 1 frase.",
     xpRewardLabel: "Premio Iniziale • GUTO Attivo",
     opening: (name) => `Finalmente${name ? `, ${name}` : ""}. Ti stavo aspettando. Nel frattempo ho già organizzato il nostro piano da qui in avanti. Sono con te — iniziamo?`,
   },
@@ -227,7 +228,7 @@ function markExtractedThisWeek(userId: string): void {
   } catch {}
 }
 
-/** True if the weekly Monday opening has already been fired this week */
+/** True if this week's proactivity opening has already been fired from this browser */
 function hasOpenedWeeklyThisWeek(userId: string): boolean {
   if (typeof window === "undefined") return false
   try {
@@ -246,18 +247,10 @@ function markOpenedWeeklyThisWeek(userId: string): void {
   } catch {}
 }
 
-/** True if today is Monday */
-function isTodayMonday(): boolean {
-  const weekday = new Intl.DateTimeFormat("en-US", {
-    timeZone: GUTO_OPERATIONAL_TIME_ZONE,
-    weekday: "long",
-  }).format(new Date())
-  return weekday.toLowerCase() === "monday"
-}
-
 function getProactivityActionKey(userId: string, action: GutoProactiveMemoryAction): string {
   const outcome = action.type === "validate" ? action.outcome : "none"
-  return `${PROACTIVITY_ACTION_KEY_PREFIX}:${userId}:${action.type}:${action.memoryId}:${outcome}`
+  const patchKey = action.type === "update" ? JSON.stringify(action.patch) : ""
+  return `${PROACTIVITY_ACTION_KEY_PREFIX}:${userId}:${action.type}:${action.memoryId}:${outcome}:${patchKey}`
 }
 
 function hasProcessedProactivityAction(storageKey: string): boolean {
@@ -557,11 +550,6 @@ export function ChatTab({
     }
   }, [])
 
-  const lastGutoIndex = useMemo(
-    () => messages.reduce((acc, msg, index) => (msg.isGuto ? index : acc), -1),
-    [messages]
-  )
-
   const synthesizeAndPlay = useCallback(async (text: string, lang: SupportedLanguage) => {
     console.info("[GUTO_VOICE] speak", { language: lang, textLength: text.length, source: "chat" })
     await gutoVoice.speak({
@@ -787,6 +775,8 @@ export function ChatTab({
         ok = await confirmProactiveMemory(action.memoryId)
       } else if (action.type === "discard") {
         ok = await discardProactiveMemory(action.memoryId)
+      } else if (action.type === "update") {
+        ok = await updateProactiveMemory(action.memoryId, action.patch)
       } else if (action.type === "request_discard") {
         ok = await requestDiscardProactiveMemory(action.memoryId)
       } else if (action.type === "cancel_discard_request") {
@@ -847,8 +837,14 @@ export function ChatTab({
           ? pendingExpectedResponseRef.current
           : null
 
+      const fallbackName: Record<SupportedLanguage, string> = {
+        "pt-BR": "Usuário",
+        "en-US": "User",
+        "it-IT": "Utente",
+      }
+
       const data = await sendGutoMessage({
-        profile: { name: userName || "Usuário", userId },
+        profile: { name: userName || fallbackName[safeLanguage], userId },
         input: modelInput,
         language: safeLanguage,
         history: messagesRef.current.slice(-6).map((message) => ({
@@ -889,10 +885,9 @@ export function ChatTab({
       }
       void handleProactiveMemoryAction(data.proactiveMemoryAction)
 
-      // ── Proactivity: Monday weekly opening signal ──────────────────────────
-      // On Monday, when the proactive briefing arrives, mark weekly as opened
-      // so the backend knows the weekly conversation happened this week.
-      if (isTodayMonday() && !hasOpenedWeeklyThisWeek(userId)) {
+      // ── Proactivity: weekly opening signal ─────────────────────────────────
+      // The cycle opens the first time the user shows up in the week, not only Monday.
+      if (!hasOpenedWeeklyThisWeek(userId)) {
         markOpenedWeeklyThisWeek(userId)
         void openWeeklyConversation().catch(() => {})
       }
@@ -905,13 +900,15 @@ export function ChatTab({
         !hasExtractedThisWeek(userId) &&
         currentMessages.length >= PROACTIVITY_MIN_MESSAGES_FOR_EXTRACTION
       if (shouldExtract) {
-        markExtractedThisWeek(userId)
         // Build conversation text from recent messages (last 20)
         const conversationText = currentMessages
           .slice(-20)
           .map((m) => `${m.isGuto ? "GUTO" : "USER"}: ${m.text}`)
           .join("\n")
-        void extractProactivityEvents(conversationText, safeLanguage).catch(() => {})
+        void extractProactivityEvents(conversationText, safeLanguage)
+          .then((extracted) => {
+            if (extracted !== null) markExtractedThisWeek(userId)
+          })
       }
 
       if (!isMuted) {
@@ -972,7 +969,7 @@ export function ChatTab({
     void sendTextToGuto(displayText, modelInput).finally(() => {
       onExerciseQuestionHandled?.()
     })
-  }, [isSending, onExerciseQuestionHandled, pendingExerciseQuestion, sendTextToGuto])
+  }, [isSending, onExerciseQuestionHandled, pendingExerciseQuestion, sendTextToGuto, validLang])
 
   // Handle meal doubt from diet tab
   // Keeps the diet context active for follow-up replies so GUTO knows it's a nutrition thread
@@ -992,7 +989,9 @@ export function ChatTab({
     const mealFoodsList = meal.foods.map((f) => `${f.name} (${f.quantity})`).join(", ")
     const profileStr = [sexLabel, memory?.userAge ? `${memory.userAge}y` : "", memory?.heightCm ? `${memory.heightCm}cm` : "", memory?.weightKg ? `${memory.weightKg}kg` : "", countryLabel].filter(Boolean).join(", ")
 
-    const dietCtx = `[DIET CONTEXT — language: ${validLang} — reply about NUTRITION only] Food: "${food.name}" (${food.quantity}). Meal: "${meal.name}" (${meal.time}). Full meal: ${mealFoodsList}. Goal: ${goalLabel}. Profile: ${profileStr}. Restrictions: ${memory?.foodRestrictions || "none"}.`
+    const restrictionsLabel = memory?.foodRestrictions || "none"
+    const intolerancesLabel = memory?.foodIntolerances || "none"
+    const dietCtx = `[DIET CONTEXT — language: ${validLang} — reply about NUTRITION only] Food: "${food.name}" (${food.quantity}). Meal: "${meal.name}" (${meal.time}). Full meal: ${mealFoodsList}. Goal: ${goalLabel}. Profile: ${profileStr}. Restrictions: ${restrictionsLabel}. Allergies/intolerances: ${intolerancesLabel}.`
 
     // Store context so follow-up messages carry it
     activeDietContextRef.current = dietCtx
@@ -1003,7 +1002,7 @@ export function ChatTab({
     void sendTextToGuto(displayText, modelInput).finally(() => {
       onFoodQuestionHandled?.()
     })
-  }, [isSending, onFoodQuestionHandled, pendingFoodQuestion, sendTextToGuto, memory])
+  }, [isSending, onFoodQuestionHandled, pendingFoodQuestion, sendTextToGuto, memory, validLang])
 
   const addGutoMessage = (text: string, emotion: GutoAvatarEmotion = "default") => {
     const msg: Message = { id: `g-pu-${Date.now()}`, text, isGuto: true, timestamp: new Date(), avatarEmotion: emotion }
@@ -1090,7 +1089,7 @@ export function ChatTab({
     const dietCtx = activeDietContextRef.current
     if (dietCtx) {
       activeDietContextRef.current = null
-      await sendTextToGuto(text, `${dietCtx} Pergunta do usuário: ${text}`)
+      await sendTextToGuto(text, `${dietCtx} User question: ${text}`)
     } else {
       await sendTextToGuto(text)
     }
@@ -1100,7 +1099,7 @@ export function ChatTab({
 
   return (
     <div className="guto-chat-stage relative h-full min-h-0 overflow-hidden">
-      <div className="guto-top-strip absolute left-0 top-[1.03%] z-40 h-[9.27%] w-full border-y border-[var(--guto-cyan)]">
+      <div className="guto-top-strip absolute left-0 top-[1.03%] z-40 h-[9.27%] w-full border-y border-(--guto-cyan)">
         <div className="guto-chat-brand" aria-label={brandName ? `GUTO e ${brandName}` : "GUTO"}>
           <Image
             src="/assets/guto/logo_guto.png"
@@ -1109,6 +1108,7 @@ export function ChatTab({
             height={33}
             priority
             className="guto-chat-brand-logo"
+            style={{ height: "auto" }}
           />
         </div>
         {brandName && (
@@ -1181,7 +1181,7 @@ export function ChatTab({
               animate={{ opacity: 1, y: 0 }}
               className={
                 message.isGuto
-                  ? "mx-auto w-full max-w-[20rem] rounded-[20px] border border-[rgba(82,231,255,0.72)] px-4 py-3 text-center font-mono text-[clamp(11px,2.8vw,13px)] font-black leading-snug text-[var(--guto-navy)]"
+                  ? "mx-auto w-full max-w-[20rem] rounded-[20px] border border-[rgba(82,231,255,0.72)] px-4 py-3 text-center font-mono text-[clamp(11px,2.8vw,13px)] font-black leading-snug text-(--guto-navy)"
                   : "ml-auto max-w-[70%] rounded-[18px] border border-white/80 bg-white/90 px-4 py-2 text-right text-xs font-semibold leading-snug text-[rgba(13,35,65,0.68)] shadow-[0_12px_26px_rgba(137,151,168,0.1)]"
               }
               style={message.isGuto ? {
@@ -1197,7 +1197,7 @@ export function ChatTab({
         </div>
       </div>
 
-      <div className="absolute left-[8.46%] z-50 h-[58px] w-[81.34%] bottom-[var(--guto-chat-input-bottom)]">
+      <div className="absolute left-[8.46%] z-50 h-[58px] w-[81.34%] bottom-(--guto-chat-input-bottom)">
         <div className="guto-chat-input h-full rounded-[18px] px-3 py-2">
           <div className="flex h-[42px] items-center gap-3">
             <motion.button
@@ -1209,7 +1209,7 @@ export function ChatTab({
               onPointerUp={stopRecording}
               onPointerLeave={() => isRecording && stopRecording()}
               disabled={isSending}
-              className="grid h-[34px] w-[34px] shrink-0 place-items-center rounded-full text-[var(--guto-cyan)]"
+              className="grid h-[34px] w-[34px] shrink-0 place-items-center rounded-full text-(--guto-cyan)"
               animate={isRecording ? { scale: [1, 1.08, 1] } : { scale: 1 }}
               transition={{ duration: 0.8, repeat: isRecording ? Infinity : 0 }}
               aria-label="Microfone"
@@ -1227,7 +1227,7 @@ export function ChatTab({
                 event.preventDefault()
                 void handleSend()
               }}
-              className="min-w-0 flex-1 bg-transparent text-center text-[16px] font-semibold leading-none tracking-normal text-[var(--guto-navy)] outline-none placeholder:text-[#a6aeb1]"
+              className="min-w-0 flex-1 bg-transparent text-center text-[16px] font-semibold leading-none tracking-normal text-(--guto-navy) outline-none placeholder:text-[#a6aeb1]"
             />
 
             <motion.button
@@ -1237,7 +1237,7 @@ export function ChatTab({
                 void handleSend()
               }}
               disabled={isSending || !input.trim()}
-              className="grid h-[34px] w-[34px] shrink-0 place-items-center rounded-full text-[var(--guto-cyan)] disabled:opacity-35"
+              className="grid h-[34px] w-[34px] shrink-0 place-items-center rounded-full text-(--guto-cyan) disabled:opacity-35"
               whileTap={{ scale: isSending ? 1 : 0.94 }}
               aria-label="Enviar mensagem"
             >
@@ -1247,7 +1247,7 @@ export function ChatTab({
         </div>
 
         {isSpeaking && !isMuted && (
-          <div className="mt-2 text-center font-mono text-[9px] uppercase tracking-normal text-[var(--guto-cyan)]">
+          <div className="mt-2 text-center font-mono text-[9px] uppercase tracking-normal text-(--guto-cyan)">
             {copy.speaking}
           </div>
         )}
@@ -1267,7 +1267,7 @@ export function ChatTab({
             onAnimationComplete={() => {
               setTimeout(() => setShowXpReward(false), 3000)
             }}
-            className="pointer-events-none absolute inset-0 z-[100] flex flex-col items-center justify-center"
+            className="pointer-events-none absolute inset-0 z-100 flex flex-col items-center justify-center"
           >
             <div className="relative">
               <motion.div 
@@ -1276,13 +1276,13 @@ export function ChatTab({
                 className="absolute inset-[-40px] rounded-full bg-[radial-gradient(circle,rgba(82,231,255,0.4)_0%,rgba(255,255,255,0)_70%)] blur-xl"
               />
               <div className="relative flex flex-col items-center">
-                <div className="mb-2 text-[var(--guto-cyan)] drop-shadow-[0_0_15px_rgba(82,231,255,0.8)]">
-                  <TrendingUp className="h-16 w-16 stroke-[3]" />
+                <div className="mb-2 text-(--guto-cyan) drop-shadow-[0_0_15px_rgba(82,231,255,0.8)]">
+                  <TrendingUp className="h-16 w-16 stroke-3" />
                 </div>
                 <div className="guto-chrome-text text-6xl font-black italic tracking-tighter">
                   +100 XP
                 </div>
-                <div className="mt-2 rounded-full border border-[var(--guto-cyan)]/30 bg-black/70 px-4 py-1 font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--guto-cyan)]">
+                <div className="mt-2 rounded-full border border-(--guto-cyan)/30 bg-black/70 px-4 py-1 font-mono text-[10px] uppercase tracking-[0.2em] text-(--guto-cyan)">
                   {copy.xpRewardLabel}
                 </div>
               </div>

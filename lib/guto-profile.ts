@@ -23,6 +23,26 @@ export type ResolvedGutoProfile = {
 const GENERIC_NAMES = new Set(["", "operador", "operator", "usuário", "usuario", "user", "guto"])
 const SUPPORTED_GUTO_LANGUAGES: GutoLanguage[] = ["pt-BR", "it-IT", "en-US"]
 
+export const NO_PAIN_PATHOLOGY_BY_LANGUAGE: Record<GutoLanguage, string> = {
+  "pt-BR": "sem dor",
+  "en-US": "no pain or injury",
+  "it-IT": "nessun dolore",
+}
+
+const NO_PAIN_PATHOLOGY_VALUES = new Set(
+  Object.values(NO_PAIN_PATHOLOGY_BY_LANGUAGE).map((value) => value.toLocaleLowerCase("en-US"))
+)
+
+export function defaultNoPainPathology(language?: string | null): string {
+  return isSupportedGutoLanguage(language) ? NO_PAIN_PATHOLOGY_BY_LANGUAGE[language] : NO_PAIN_PATHOLOGY_BY_LANGUAGE["pt-BR"]
+}
+
+export function isNoPainPathology(value?: string | null): boolean {
+  const normalized = (value || "").trim().toLocaleLowerCase("en-US")
+  if (!normalized) return true
+  return NO_PAIN_PATHOLOGY_VALUES.has(normalized)
+}
+
 export function isSupportedGutoLanguage(value?: string | null): value is GutoLanguage {
   return SUPPORTED_GUTO_LANGUAGES.includes(value as GutoLanguage)
 }
@@ -60,6 +80,10 @@ export function formatGutoDisplayName(value?: string | null) {
   return (value || "").replace(/\s+/g, " ").trimStart().toLocaleUpperCase()
 }
 
+export function firstGutoGivenName(value?: string | null) {
+  return formatGutoDisplayName(value).split(/\s+/).find(Boolean) || ""
+}
+
 export function isGenericGutoName(value?: string | null) {
   const normalized = (value || "").replace(/\s+/g, " ").trim().toLocaleLowerCase("pt-BR")
   if (GENERIC_NAMES.has(normalized)) return true
@@ -82,6 +106,7 @@ export function getMissingCalibrationFields(memory?: GutoMemory | null) {
   if (!memory?.preferredTrainingLocation) missing.push("local")
   if (!memory?.heightCm) missing.push("altura")
   if (!memory?.weightKg) missing.push("peso")
+  if (!memory?.country) missing.push("país")
   return missing
 }
 
@@ -103,11 +128,11 @@ export function resolveGutoProfile({
   fallbackName?: string | null
 }): ResolvedGutoProfile {
   const displayName = firstRealGutoName(
-    inviteName,
-    user?.name,
     stored?.userName,
+    fallbackName,
     memory?.name,
-    fallbackName
+    inviteName,
+    user?.name
   )
   const missingCalibrationFields = getMissingCalibrationFields(memory)
 

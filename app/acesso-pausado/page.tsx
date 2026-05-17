@@ -21,11 +21,12 @@ export default function PausedAccessPage() {
           width={140}
           height={46}
           className="opacity-40 grayscale"
+          style={{ height: "auto" }}
         />
       </div>
 
       <div className="max-w-xs space-y-4">
-        <h1 className="font-mono text-xs font-black uppercase tracking-widest text-[var(--guto-navy)]">
+        <h1 className="font-mono text-xs font-black uppercase tracking-widest text-(--guto-navy)">
           Acesso Pausado
         </h1>
         <p className="font-mono text-[10px] font-black uppercase leading-relaxed tracking-wider text-[rgba(13,35,65,0.5)]">
@@ -37,7 +38,7 @@ export default function PausedAccessPage() {
       <div className="mt-12 flex flex-col gap-4">
         <button
           onClick={() => router.push("/")}
-          className="rounded-full bg-[var(--guto-cyan)] px-8 py-3 font-mono text-[10px] font-black uppercase tracking-[0.2em] text-[var(--guto-navy)] shadow-[0_4px_16px_rgba(82,231,255,0.3)] transition-all active:scale-95"
+          className="rounded-full bg-(--guto-cyan) px-8 py-3 font-mono text-[10px] font-black uppercase tracking-[0.2em] text-(--guto-navy) shadow-[0_4px_16px_rgba(82,231,255,0.3)] transition-all active:scale-95"
         >
           Tentar Novamente
         </button>

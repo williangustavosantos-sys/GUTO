@@ -47,6 +47,8 @@ const mockMemory = {
   biologicalSex: 'male',
   userAge: 28,
   country: 'Brasil',
+  foodRestrictions: 'nenhuma',
+  foodIntolerances: 'nenhuma',
   heightCm: 175,
   weightKg: 75,
   completedWorkoutDates: [],
@@ -80,9 +82,9 @@ const mockMemory = {
         restSeconds: 90,
         cue: 'Mantenha as escápulas retraídas.',
         note: '',
-        videoUrl: '/exercise/visuals/supino-reto.mp4',
+        videoUrl: '/exercise/visuals/peito/supino_reto.mp4',
         videoProvider: 'local',
-        sourceFileName: 'supino-reto.mp4',
+        sourceFileName: 'supino_reto.mp4',
       },
       {
         id: 'ex-002',
@@ -96,9 +98,9 @@ const mockMemory = {
         restSeconds: 60,
         cue: 'Cotovelos ligeiramente fletidos.',
         note: '',
-        videoUrl: '/exercise/visuals/crucifixo.mp4',
+        videoUrl: '/exercise/visuals/peito/crucifixo_maquina.mp4',
         videoProvider: 'local',
-        sourceFileName: 'crucifixo.mp4',
+        sourceFileName: 'crucifixo_maquina.mp4',
       },
     ],
   },
@@ -113,10 +115,10 @@ const mockDiet = {
   macros: {
     bmr: 1850,
     tdee: 2590,
-    targetKcal: 2900,
-    proteinG: 180,
-    carbsG: 310,
-    fatG: 90,
+    targetKcal: 483,
+    proteinG: 40,
+    carbsG: 65,
+    fatG: 7,
     goal: 'muscle_gain',
   },
   meals: [
@@ -124,7 +126,7 @@ const mockDiet = {
       id: 'meal-001',
       name: 'Café da manhã',
       time: '07:00',
-      totalKcal: 620,
+      totalKcal: 480,
       gutoNote: 'Refeição de abertura com carbo rápido.',
       foods: [
         { name: 'Ovos mexidos', quantity: '3 unidades', kcal: 210 },
@@ -176,6 +178,14 @@ async function setupApiMocks(page: Page) {
   // /guto/proactive
   await page.route(`${API_BASE}/guto/proactive**`, (route) =>
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ due: false }) })
+  )
+  // /guto/events telemetry
+  await page.route(`${API_BASE}/guto/events`, (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) })
+  )
+  // /voz — remote voice synthesis is not under test here.
+  await page.route(`${API_BASE}/voz`, (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ audioContent: null }) })
   )
   // /guto/arena
   await page.route(`${API_BASE}/guto/arena**`, (route) =>

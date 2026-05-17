@@ -539,7 +539,12 @@
     0 0 18px rgba(82, 231, 255, 0.18);
 }
 
+body.guto-online-active .guto-settings-trigger-shell {
+  pointer-events: none;
+}
+
 .guto-name-stage {
+  min-height: 0;
   padding-top: clamp(112px, 18dvh, 168px);
 }
 
@@ -548,9 +553,14 @@
   display: flex;
   width: min(82vw, 320px);
   min-height: 172px;
+  flex-shrink: 1;
   align-items: center;
   justify-content: center;
   flex-direction: column;
+}
+
+.guto-name-input-block {
+  flex-shrink: 0;
 }
 
 .guto-name-lockup::before {
@@ -663,6 +673,7 @@
 .sala-guto[data-keyboard-open] .guto-name-lockup {
   width: min(72vw, 252px);
   min-height: 116px;
+  max-height: calc(var(--guto-viewport-height) - 104px);
 }
 
 .sala-guto[data-keyboard-open] .guto-name-lockup::before {
@@ -690,6 +701,16 @@
 
 .sala-guto[data-keyboard-open] .guto-name-input-block {
   padding-bottom: max(env(safe-area-inset-bottom), 0.8rem);
+}
+
+.sala-guto[data-keyboard-open] .guto-calibration-stage {
+  height: var(--guto-viewport-height);
+  max-height: var(--guto-viewport-height);
+}
+
+.sala-guto[data-keyboard-open] .guto-calibration-body {
+  overflow-y: auto;
+  scroll-padding-bottom: max(env(safe-area-inset-bottom), 1rem);
 }
 
 .guto-seal-plate {

@@ -201,7 +201,6 @@ export function GutoOnlineSession({
   workoutPlan,
   language,
   userName,
-  evolution = "baby",
   onFinish,
 }: GutoOnlineSessionProps) {
   // ─── Engine ──────────────────────────────────────────────────────────────
@@ -255,6 +254,13 @@ export function GutoOnlineSession({
   useEffect(() => {
     if (!open) {
       voiceQueueRef.current?.abort()
+    }
+  }, [open])
+  useEffect(() => {
+    if (!open || typeof document === "undefined") return
+    document.body.classList.add("guto-online-active")
+    return () => {
+      document.body.classList.remove("guto-online-active")
     }
   }, [open])
   useEffect(() => {
@@ -649,12 +655,12 @@ export function GutoOnlineSession({
   const isVoiceEnabled = state.voiceMode === "enabled"
 
   return (
-    <div className="fixed inset-0 z-[80] flex bg-[radial-gradient(circle_at_top,rgba(82,231,255,0.18),transparent_34%),linear-gradient(180deg,#f8fcff_0%,#eaf4fb_54%,#dbe8f2_100%)] text-[var(--guto-navy)]">
+    <div className="fixed inset-0 z-9999 flex bg-[radial-gradient(circle_at_top,rgba(82,231,255,0.18),transparent_34%),linear-gradient(180deg,#f8fcff_0%,#eaf4fb_54%,#dbe8f2_100%)] text-(--guto-navy)">
       <div className="mx-auto flex h-full w-full max-w-md flex-col px-4 pb-5 pt-[max(1rem,env(safe-area-inset-top))]">
         {/* ─── Header ──────────────────────────────────────────────── */}
         <header className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="font-mono text-[9px] font-black uppercase tracking-[0.24em] text-[var(--guto-cyan)]">
+            <p className="font-mono text-[9px] font-black uppercase tracking-[0.24em] text-(--guto-cyan)">
               GUTO ONLINE
             </p>
             <h1 className="mt-1 truncate text-[1rem] font-black uppercase tracking-[0.08em]">
@@ -677,7 +683,7 @@ export function GutoOnlineSession({
             <button
               type="button"
               onClick={onClose}
-              className="grid h-10 w-10 place-items-center rounded-full border border-white/70 bg-white/48 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]"
+              className="relative z-10000 grid h-10 w-10 place-items-center rounded-full border border-white/70 bg-white/48 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]"
               aria-label={pickCloseLabel(language)}
             >
               <X className="h-4 w-4" />
@@ -699,7 +705,7 @@ export function GutoOnlineSession({
               <button
                 type="button"
                 onClick={acceptResume}
-                className="h-10 rounded-[0.9rem] border border-[rgba(82,231,255,0.55)] bg-[rgba(82,231,255,0.18)] font-mono text-[10px] font-black uppercase tracking-[0.14em] text-[var(--guto-navy)]"
+                className="h-10 rounded-[0.9rem] border border-[rgba(82,231,255,0.55)] bg-[rgba(82,231,255,0.18)] font-mono text-[10px] font-black uppercase tracking-[0.14em] text-(--guto-navy)"
               >
                 {resumeCopy.keep}
               </button>

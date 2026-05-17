@@ -459,21 +459,21 @@ export function WorkoutValidationFlow({
               className="guto-slot absolute right-5 top-[max(env(safe-area-inset-top),1.1rem)] grid h-9 w-9 place-items-center rounded-full"
               aria-label="Fechar"
             >
-              <X className="h-4 w-4 text-[var(--guto-navy)]" />
+              <X className="h-4 w-4 text-(--guto-navy)" />
             </button>
 
             <div className="guto-frost-panel w-full max-w-[22rem] rounded-[2rem] p-6">
-              <span className="block text-center font-mono text-[9px] font-black uppercase tracking-[0.24em] text-[var(--guto-cyan)]">
+              <span className="block text-center font-mono text-[9px] font-black uppercase tracking-[0.24em] text-(--guto-cyan)">
                 {locale.badge}
               </span>
-              <h1 className="mb-5 mt-1 text-center text-[1.3rem] font-black uppercase leading-tight tracking-[0.08em] text-[var(--guto-navy)]">
+              <h1 className="mb-5 mt-1 text-center text-[1.3rem] font-black uppercase leading-tight tracking-[0.08em] text-(--guto-navy)">
                 {locale.title}
               </h1>
 
               <ol className="space-y-3">
                 {locale.instructions.map((inst, i) => (
                   <li key={i} className="flex items-start gap-3">
-                    <span className="guto-deboss-deep mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full font-mono text-[10px] font-black text-[var(--guto-cyan)]">
+                    <span className="guto-deboss-deep mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full font-mono text-[10px] font-black text-(--guto-cyan)">
                       {i + 1}
                     </span>
                     <span className="text-[13px] leading-snug text-[rgba(13,35,65,0.7)]">
@@ -484,7 +484,7 @@ export function WorkoutValidationFlow({
               </ol>
 
               {cameraError && (
-                <p className="mt-5 rounded-[0.85rem] border border-[rgba(157,43,43,0.18)] bg-[rgba(157,43,43,0.07)] px-4 py-3 font-mono text-[10px] uppercase tracking-[0.1em] text-[var(--destructive)]">
+                <p className="mt-5 rounded-[0.85rem] border border-[rgba(157,43,43,0.18)] bg-[rgba(157,43,43,0.07)] px-4 py-3 font-mono text-[10px] uppercase tracking-widest text-destructive">
                   {cameraError}
                 </p>
               )}
@@ -492,7 +492,7 @@ export function WorkoutValidationFlow({
               <button
                 type="button"
                 onClick={() => void openCamera()}
-                className="guto-deboss-deep mt-6 h-[3.25rem] w-full rounded-[1.2rem] border border-[rgba(82,231,255,0.42)] font-mono text-[11px] font-black uppercase tracking-[0.2em] text-[var(--guto-cyan)]"
+                className="guto-deboss-deep mt-6 h-[3.25rem] w-full rounded-[1.2rem] border border-[rgba(82,231,255,0.42)] font-mono text-[11px] font-black uppercase tracking-[0.2em] text-(--guto-cyan)"
               >
                 {locale.cta}
               </button>
@@ -516,14 +516,14 @@ export function WorkoutValidationFlow({
               className="guto-slot absolute right-5 top-[max(env(safe-area-inset-top),1.1rem)] grid h-9 w-9 place-items-center rounded-full"
               aria-label="Fechar"
             >
-              <X className="h-4 w-4 text-[var(--guto-navy)]" />
+              <X className="h-4 w-4 text-(--guto-navy)" />
             </button>
 
             <div className="guto-frost-panel w-full max-w-[22rem] rounded-[2rem] p-6">
-              <span className="block text-center font-mono text-[9px] font-black uppercase tracking-[0.24em] text-[var(--guto-cyan)]">
+              <span className="block text-center font-mono text-[9px] font-black uppercase tracking-[0.24em] text-(--guto-cyan)">
                 {locale.badge}
               </span>
-              <h1 className="mb-5 mt-1 text-center text-[1.3rem] font-black uppercase leading-tight tracking-[0.08em] text-[var(--guto-navy)]">
+              <h1 className="mb-5 mt-1 text-center text-[1.3rem] font-black uppercase leading-tight tracking-[0.08em] text-(--guto-navy)">
                 {locale.readyTitle}
               </h1>
 
@@ -532,7 +532,7 @@ export function WorkoutValidationFlow({
                 <p className="font-mono text-[9px] uppercase tracking-[0.2em] text-[rgba(13,35,65,0.38)]">
                   {locale.phraseHint}
                 </p>
-                <p className="mt-2 font-black uppercase leading-tight tracking-[0.06em] text-[var(--guto-navy)]" style={{ fontSize: "clamp(1rem,5vw,1.25rem)" }}>
+                <p className="mt-2 font-black uppercase leading-tight tracking-[0.06em] text-(--guto-navy)" style={{ fontSize: "clamp(1rem,5vw,1.25rem)" }}>
                   {locale.phrase}
                 </p>
               </div>
@@ -540,7 +540,7 @@ export function WorkoutValidationFlow({
               <button
                 type="button"
                 onClick={() => setStep("camera")}
-                className="guto-deboss-deep mt-5 h-[3.25rem] w-full rounded-[1.2rem] border border-[rgba(82,231,255,0.42)] font-mono text-[11px] font-black uppercase tracking-[0.2em] text-[var(--guto-cyan)]"
+                className="guto-deboss-deep mt-5 h-[3.25rem] w-full rounded-[1.2rem] border border-[rgba(82,231,255,0.42)] font-mono text-[11px] font-black uppercase tracking-[0.2em] text-(--guto-cyan)"
               >
                 {locale.ready}
               </button>
@@ -583,7 +583,7 @@ export function WorkoutValidationFlow({
             <div className="absolute top-[max(env(safe-area-inset-top),1.2rem)] inset-x-0 z-30 flex items-center justify-between px-5">
               <div className="flex items-center gap-2">
                 <motion.div
-                  className="h-2 w-2 rounded-full bg-[var(--guto-cyan)]"
+                  className="h-2 w-2 rounded-full bg-(--guto-cyan)"
                   animate={{ opacity: [1, 0.3, 1] }}
                   transition={{ duration: 1.6, repeat: Infinity }}
                 />
@@ -754,14 +754,14 @@ export function WorkoutValidationFlow({
 
             {/* Camera error */}
             {cameraError && (
-              <div className="absolute inset-x-6 bottom-20 z-30 rounded-[1.5rem] px-6 py-5 text-center"
+              <div className="absolute inset-x-6 bottom-20 z-30 rounded-3xl px-6 py-5 text-center"
                 style={{ background: "rgba(5,13,26,0.92)", border: "1px solid rgba(255,255,255,0.08)", backdropFilter: "blur(8px)" }}>
                 <p className="mb-4 font-mono text-[10px] uppercase tracking-[0.14em] text-[rgba(255,130,130,0.9)]">
                   {cameraError}
                 </p>
                 <button type="button"
                   onClick={() => { setCameraError(null); stopCamera(); setStep("intro") }}
-                  className="rounded-full border border-[rgba(82,231,255,0.3)] bg-[rgba(82,231,255,0.1)] px-6 py-2.5 font-mono text-[10px] font-black uppercase tracking-[0.16em] text-[var(--guto-cyan)]">
+                  className="rounded-full border border-[rgba(82,231,255,0.3)] bg-[rgba(82,231,255,0.1)] px-6 py-2.5 font-mono text-[10px] font-black uppercase tracking-[0.16em] text-(--guto-cyan)">
                   {locale.retry}
                 </button>
               </div>
@@ -781,10 +781,10 @@ export function WorkoutValidationFlow({
           >
             {uploadError ? (
               <div className="guto-frost-panel w-full max-w-[22rem] rounded-[2rem] p-6 text-center">
-                <p className="font-mono text-[9px] font-black uppercase tracking-[0.2em] text-[var(--guto-cyan)]">
+                <p className="font-mono text-[9px] font-black uppercase tracking-[0.2em] text-(--guto-cyan)">
                   {locale.badge}
                 </p>
-                <h2 className="mt-2 mb-4 text-[1.1rem] font-black uppercase tracking-[0.06em] text-[var(--guto-navy)]">
+                <h2 className="mt-2 mb-4 text-[1.1rem] font-black uppercase tracking-[0.06em] text-(--guto-navy)">
                   {locale.errorTitle}
                 </h2>
                 <p className="mb-5 text-[12px] leading-relaxed text-[rgba(13,35,65,0.62)]">
@@ -793,7 +793,7 @@ export function WorkoutValidationFlow({
                 <button
                   type="button"
                   onClick={() => { setUploadError(null); setStep("intro") }}
-                  className="guto-deboss-deep h-[3.25rem] w-full rounded-[1.2rem] border border-[rgba(82,231,255,0.42)] font-mono text-[11px] font-black uppercase tracking-[0.2em] text-[var(--guto-cyan)]"
+                  className="guto-deboss-deep h-[3.25rem] w-full rounded-[1.2rem] border border-[rgba(82,231,255,0.42)] font-mono text-[11px] font-black uppercase tracking-[0.2em] text-(--guto-cyan)"
                 >
                   {locale.retry}
                 </button>
@@ -857,8 +857,8 @@ export function WorkoutValidationFlow({
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.06 }}
             >
-              <span className="h-1.5 w-1.5 rounded-full bg-[var(--guto-cyan)]" style={{ boxShadow: "0 0 6px rgba(82,231,255,0.8)" }} />
-              <span className="font-mono text-[9px] font-black uppercase tracking-[0.22em] text-[var(--guto-cyan)]">
+              <span className="h-1.5 w-1.5 rounded-full bg-(--guto-cyan)" style={{ boxShadow: "0 0 6px rgba(82,231,255,0.8)" }} />
+              <span className="font-mono text-[9px] font-black uppercase tracking-[0.22em] text-(--guto-cyan)">
                 {locale.badge}
               </span>
             </motion.div>
@@ -883,7 +883,7 @@ export function WorkoutValidationFlow({
                   transition={{ delay: 0.28, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
                 >
                   <Zap
-                    className="h-11 w-11 text-[var(--guto-cyan)]"
+                    className="h-11 w-11 text-(--guto-cyan)"
                     style={{ filter: "drop-shadow(0 0 12px rgba(82,231,255,0.7))" }}
                   />
                 </motion.div>
@@ -898,7 +898,7 @@ export function WorkoutValidationFlow({
               transition={{ delay: 0.22, duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
             >
               <h1
-                className="font-mono text-[2.1rem] font-black uppercase leading-none tracking-[0.1em] text-[var(--guto-navy)]"
+                className="font-mono text-[2.1rem] font-black uppercase leading-none tracking-widest text-(--guto-navy)"
                 style={{ textShadow: "0 0 32px rgba(82,231,255,0.22)" }}
               >
                 {locale.validated}
@@ -919,7 +919,7 @@ export function WorkoutValidationFlow({
                 className="guto-slot flex items-baseline gap-1 rounded-[1.4rem] px-8 py-3"
               >
                 <span
-                  className="font-mono text-[2.4rem] font-black leading-none tracking-[-0.02em] text-[var(--guto-cyan)]"
+                  className="font-mono text-[2.4rem] font-black leading-none tracking-[-0.02em] text-(--guto-cyan)"
                   style={{ textShadow: "0 0 24px rgba(82,231,255,0.5)" }}
                 >
                   +{validationResult.validation.xp}
@@ -938,7 +938,7 @@ export function WorkoutValidationFlow({
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.45 }}
               >
-                <span className="rounded-full border border-[rgba(82,231,255,0.3)] bg-[rgba(82,231,255,0.08)] px-4 py-1.5 font-mono text-xs font-black tracking-widest text-[var(--guto-cyan)]">
+                <span className="rounded-full border border-[rgba(82,231,255,0.3)] bg-[rgba(82,231,255,0.08)] px-4 py-1.5 font-mono text-xs font-black tracking-widest text-(--guto-cyan)">
                   +{arenaResult.xpAwarded} XP · ARENA
                 </span>
                 {arenaResult.leveledUp && (
@@ -958,7 +958,7 @@ export function WorkoutValidationFlow({
                 transition={{ delay: 0.38 }}
               >
                 <div
-                  className="guto-frost-panel rounded-[1.5rem] px-5 py-4 text-center"
+                  className="guto-frost-panel rounded-3xl px-5 py-4 text-center"
                   style={{ border: "1px solid rgba(82,231,255,0.2)" }}
                 >
                   <p className="mb-1.5 font-mono text-[9px] font-black uppercase tracking-[0.22em] text-[rgba(82,231,255,0.7)]">
@@ -984,7 +984,7 @@ export function WorkoutValidationFlow({
               <motion.button
                 type="button"
                 onClick={() => onComplete(validationResult.validationHistory)}
-                className="guto-deboss-deep h-[3.4rem] w-full rounded-[1.3rem] border border-[rgba(82,231,255,0.5)] font-mono text-[11px] font-black uppercase tracking-[0.22em] text-[var(--guto-cyan)]"
+                className="guto-deboss-deep h-[3.4rem] w-full rounded-[1.3rem] border border-[rgba(82,231,255,0.5)] font-mono text-[11px] font-black uppercase tracking-[0.22em] text-(--guto-cyan)"
                 style={{ boxShadow: "0 0 20px rgba(82,231,255,0.08)" }}
                 whileTap={{ scale: 0.97 }}
               >

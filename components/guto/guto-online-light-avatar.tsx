@@ -6,12 +6,12 @@
  * TRANSPARÊNCIA IMPECÁVEL em Safari + Chrome:
  *
  *  Chrome / Android
- *    → GUTO_ONLINE_ALPHA.webm  (VP9 yuva420p, alpha_mode=1)
+ *    → guto_online.webm  (VP9 yuva420p, alpha_mode=1)
  *    → Canvas lê alpha nativo do VP9 — stripVideoMatte NÃO é chamado
  *    → Transparência perfeita, zero artefato de borda
  *
  *  Safari macOS / iOS
- *    → GUTO_ONLINE_ios_safe.mov  (H.264 fundo preto)
+ *    → guto_online_safari.mov  (H.264 fundo preto)
  *    → Canvas + stripVideoMatte detecta fundo preto e remove
  *    → Resultado: luz brilhante sobre fundo transparente
  *
@@ -267,7 +267,7 @@ export function GutoOnlineLightAvatar({
             nativeReady ? "opacity-100" : "opacity-0"
           )}
         >
-          <source src="/assets/guto/GUTO_ONLINE_ALPHA.webm" type='video/webm; codecs="vp9"' />
+          <source src="/assets/guto/guto_online.webm" type='video/webm; codecs="vp9"' />
         </video>
       )}
 
@@ -291,13 +291,13 @@ export function GutoOnlineLightAvatar({
           >
             {/* Safari: H.264 fundo preto → stripVideoMatte remove */}
             {isSafari && (
-              <source src="/assets/guto/GUTO_ONLINE_ios_safe.mov" type="video/quicktime" />
+              <source src="/assets/guto/guto_online_safari.mov" type="video/quicktime" />
             )}
             {/* Fallback: VP9 alpha webm */}
-            <source src="/assets/guto/GUTO_ONLINE_ALPHA.webm" type='video/webm; codecs="vp9"' />
+            <source src="/assets/guto/guto_online.webm" type='video/webm; codecs="vp9"' />
             {/* Último recurso: ios_safe */}
             {!isSafari && (
-              <source src="/assets/guto/GUTO_ONLINE_ios_safe.mov" type="video/quicktime" />
+              <source src="/assets/guto/guto_online_safari.mov" type="video/quicktime" />
             )}
           </video>
         </>

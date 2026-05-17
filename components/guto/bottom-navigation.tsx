@@ -59,7 +59,7 @@ export function BottomNavigation({ activeTab, onTabChange, language }: BottomNav
               aria-label={tabLabels[safeLanguage][tab.labelKey]}
               className={cn(
                 "guto-action-tile relative grid h-[var(--guto-nav-tile-size)] min-w-0 place-items-center overflow-hidden rounded-[16px] text-[rgba(13,35,65,0.56)]",
-                isActive && "text-[var(--guto-navy)]"
+                isActive && "text-(--guto-navy)"
               )}
               whileTap={{ scale: 0.96 }}
             >
@@ -74,7 +74,7 @@ export function BottomNavigation({ activeTab, onTabChange, language }: BottomNav
               <Icon
                 className={cn(
                   "relative z-10 h-[22px] w-[22px] stroke-[2.4]",
-                  isActive ? "text-[var(--guto-cyan)]" : "text-[rgba(82,231,255,0.86)]"
+                  isActive ? "text-(--guto-cyan)" : "text-[rgba(82,231,255,0.86)]"
                 )}
               />
             </motion.button>

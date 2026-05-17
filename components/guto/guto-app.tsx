@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { AnimatePresence, motion } from "framer-motion"
-import { Activity, AlertCircle, ArrowLeft, Check, CheckCircle2, Download, Dumbbell, Fingerprint, Globe, Languages, Loader2, MapPin, Phone, Scale, Send, Settings, Shield, Trash2, UserRound, Utensils, Volume2, Zap } from "lucide-react"
+import { Activity, ArrowLeft, Check, CheckCircle2, Download, Dumbbell, Fingerprint, Globe, Languages, Loader2, MapPin, Scale, Send, Settings, Shield, Trash2, UserRound, Utensils, Volume2, Zap } from "lucide-react"
 
 import { BottomNavigation, type TabType } from "./bottom-navigation"
 import { createGutoEffectRegistry } from "./effects"
@@ -16,25 +16,29 @@ import { MissionTab } from "./tabs/mission-tab"
 import { PathTab } from "./tabs/path-tab"
 import { CalibrationScreen } from "./screens/calibration-screen"
 import { ConsentScreen } from "./screens/consent-screen"
+import { LanguageScreen } from "./screens/language-screen"
 import type { MissionExercise } from "./view-models"
 import { WorkoutValidationFlow } from "./validation/workout-validation-flow"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { getGutoMemory, saveGutoMemory, trackGutoEvent, validateGutoName, type DietFood, type DietMeal, type GutoMemory, type GutoNameValidation, type GutoTelemetryEvent, type GutoWorkoutPlan } from "@/lib/api/guto"
 import { useAuth } from "@/components/auth-provider"
-import { getInvite, claimInvite, logout, deleteOwnAccount, revokeConsent } from "@/lib/api/auth"
+import { getInvite, claimInvite, logout, deleteOwnAccount, revokeConsent, type InvitePreview } from "@/lib/api/auth"
 import type { EvolutionStage, SupportedLanguage } from "@/types/contract"
 import { resolveGutoEvolutionStage } from "@/lib/guto-evolution"
 import { getGutoVitalState } from "@/lib/guto-vital-state"
-import { isPushSupported, getPushPermission, getCurrentSubscription, subscribePush, unsubscribePush } from "@/lib/push-client"
+import { isPushSupported, getCurrentSubscription, subscribePush, unsubscribePush } from "@/lib/push-client"
 import { createPortalSession, getBillingStatus, type BillingStatus } from "@/lib/api/billing"
 import { translations } from "./translations"
 import { gutoAudio } from "@/lib/audio-haptics"
 import {
+  firstGutoGivenName,
   firstRealGutoName,
   formatGutoDisplayName,
   hasCompleteGutoCalibration,
   isGenericGutoName,
   resolveGutoLanguage,
+  defaultNoPainPathology,
+  isNoPainPathology,
   resolveGutoProfile,
   type StoredGutoProfile,
 } from "@/lib/guto-profile"
@@ -42,7 +46,7 @@ import { createLocalWorkoutPlan, getWorkoutMissingFields, localizeGutoWorkoutPla
 import { resolveWorkoutValidationLocationMode } from "@/lib/workout-location"
 
 type AppStage = "intro" | "language" | "invite_claim" | "consent" | "naming" | "calibration" | "pact" | "system" | "settings"
-type SettingsMode = "menu" | "language" | "name" | "profile" | "goal" | "location" | "pathology" | "physicaldata" | "residence" | "food_restrictions" | "food_intolerances" | "privacy"
+type SettingsMode = "menu" | "language" | "name" | "profile" | "goal" | "location" | "pathology" | "physicaldata" | "residence" | "food_restrictions" | "privacy"
 type IntroPlaybackState = "idle" | "starting" | "playing" | "finishing" | "finished"
 
 const PENDING_INVITE_TOKEN_KEY = "guto-pending-invite-token"
@@ -131,6 +135,7 @@ const stageCopy: Record<
     settingsFoodIntolerances: string
     settingsPrivacy: string
     settingsPrivacySubtext: string
+    privacyConsentTitle: string
     privacyHealthConsentLabel: string
     privacyTermsConsentLabel: string
     privacyAccepted: string
@@ -149,6 +154,7 @@ const stageCopy: Record<
     privacyDeleteStep2Label: string
     privacyDeleteConfirmWord: string
     privacyDeleteBtn: string
+    privacyDeleteError: string
     privacyDeleteBetaTitle: string
     privacyDeleteBetaMsg: string
     pushTitle: string
@@ -159,9 +165,17 @@ const stageCopy: Record<
     pushUnsupported: string
     nameConfirm: string
     nameChange: string
+    nameTooShort: string
+    nameTooLong: string
+    nameInvalidChars: string
+    nameConfirmPrompt: string
+    nameAccepted: string
+    submitNameAria: string
     billingTitle: string
     billingManage: string
     billingNoSubscription: string
+    pactHoldAria: string
+    startIntro: string
   }
 > = {
   "pt-BR": {
@@ -194,6 +208,7 @@ const stageCopy: Record<
     settingsFoodIntolerances: "Intolerâncias",
     settingsPrivacy: "Privacidade e dados",
     settingsPrivacySubtext: "Baixe, corrija ou exclua seus dados.",
+    privacyConsentTitle: "Consentimento",
     privacyHealthConsentLabel: "Dados de saúde/fitness",
     privacyTermsConsentLabel: "Termos e privacidade",
     privacyAccepted: "Aceito",
@@ -212,6 +227,7 @@ const stageCopy: Record<
     privacyDeleteStep2Label: "Digite EXCLUIR para confirmar",
     privacyDeleteConfirmWord: "EXCLUIR",
     privacyDeleteBtn: "Excluir definitivamente",
+    privacyDeleteError: "Não foi possível excluir agora. Tente novamente.",
     privacyDeleteBetaTitle: "Solicitação registrada",
     privacyDeleteBetaMsg: "No beta, sua solicitação de exclusão foi registrada. Para exclusão imediata no servidor, entre em contato com o suporte do GUTO.",
     pushTitle: "Notificações do GUTO",
@@ -222,9 +238,17 @@ const stageCopy: Record<
     pushUnsupported: "Este dispositivo não suporta notificações push.",
     nameConfirm: "Confirmar",
     nameChange: "Alterar",
+    nameTooShort: "Nome curto demais. Me dá um nome real.",
+    nameTooLong: "Nome longo demais. Usa até 20 caracteres.",
+    nameInvalidChars: "Nome não precisa de número nem símbolo. Só letras.",
+    nameConfirmPrompt: "Esse é o nome que você quer que eu use com você: {name}?",
+    nameAccepted: "Nome aceito.",
+    submitNameAria: "Enviar nome",
     billingTitle: "Assinatura",
     billingManage: "Gerenciar assinatura",
     billingNoSubscription: "Você ainda não tem uma assinatura ativa.",
+    pactHoldAria: "Segurar para selar o pacto",
+    startIntro: "Iniciar GUTO",
   },
   "en-US": {
     namingTitle: "GUTO & ________",
@@ -256,6 +280,7 @@ const stageCopy: Record<
     settingsFoodIntolerances: "Intolerances",
     settingsPrivacy: "Privacy & Data",
     settingsPrivacySubtext: "Download, correct or delete your data.",
+    privacyConsentTitle: "Consent",
     privacyHealthConsentLabel: "Health/fitness data",
     privacyTermsConsentLabel: "Terms & privacy",
     privacyAccepted: "Accepted",
@@ -274,6 +299,7 @@ const stageCopy: Record<
     privacyDeleteStep2Label: "Type DELETE to confirm",
     privacyDeleteConfirmWord: "DELETE",
     privacyDeleteBtn: "Delete permanently",
+    privacyDeleteError: "Could not delete right now. Try again.",
     privacyDeleteBetaTitle: "Request registered",
     privacyDeleteBetaMsg: "In beta, your deletion request has been registered. For immediate server deletion, contact GUTO support.",
     pushTitle: "GUTO notifications",
@@ -284,9 +310,17 @@ const stageCopy: Record<
     pushUnsupported: "This device does not support push notifications.",
     nameConfirm: "Confirm",
     nameChange: "Change",
+    nameTooShort: "Name is too short. Give me a real one.",
+    nameTooLong: "Name is too long. Use up to 20 characters.",
+    nameInvalidChars: "No numbers or symbols. Letters only.",
+    nameConfirmPrompt: "Is this the name you want me to use with you: {name}?",
+    nameAccepted: "Name accepted.",
+    submitNameAria: "Submit name",
     billingTitle: "Subscription",
     billingManage: "Manage subscription",
     billingNoSubscription: "You don't have an active subscription yet.",
+    pactHoldAria: "Hold to seal the pact",
+    startIntro: "Start GUTO",
   },
   "it-IT": {
     namingTitle: "GUTO & ________",
@@ -318,6 +352,7 @@ const stageCopy: Record<
     settingsFoodIntolerances: "Intolleranze",
     settingsPrivacy: "Privacy e dati",
     settingsPrivacySubtext: "Scarica, correggi o elimina i tuoi dati.",
+    privacyConsentTitle: "Consenso",
     privacyHealthConsentLabel: "Dati salute/fitness",
     privacyTermsConsentLabel: "Termini e privacy",
     privacyAccepted: "Accettato",
@@ -336,6 +371,7 @@ const stageCopy: Record<
     privacyDeleteStep2Label: "Scrivi ELIMINA per confermare",
     privacyDeleteConfirmWord: "ELIMINA",
     privacyDeleteBtn: "Elimina definitivamente",
+    privacyDeleteError: "Non è stato possibile eliminare ora. Riprova.",
     privacyDeleteBetaTitle: "Richiesta registrata",
     privacyDeleteBetaMsg: "In beta, la tua richiesta di eliminazione è stata registrata. Per l'eliminazione immediata dal server, contatta il supporto GUTO.",
     pushTitle: "Notifiche GUTO",
@@ -346,9 +382,17 @@ const stageCopy: Record<
     pushUnsupported: "Questo dispositivo non supporta le notifiche push.",
     nameConfirm: "Conferma",
     nameChange: "Modifica",
+    nameTooShort: "Nome troppo corto. Dammi un nome vero.",
+    nameTooLong: "Nome troppo lungo. Usa al massimo 20 caratteri.",
+    nameInvalidChars: "Niente numeri o simboli. Solo lettere.",
+    nameConfirmPrompt: "È questo il nome che vuoi che usi con te: {name}?",
+    nameAccepted: "Nome accettato.",
+    submitNameAria: "Invia nome",
     billingTitle: "Abbonamento",
     billingManage: "Gestisci abbonamento",
     billingNoSubscription: "Non hai ancora un abbonamento attivo.",
+    pactHoldAria: "Tieni premuto per sigillare il patto",
+    startIntro: "Avvia GUTO",
   },
 }
 
@@ -383,53 +427,54 @@ const inviteClaimCopy: Record<SupportedLanguage, {
   },
 }
 
-function isSupportedLanguage(value: string): value is SupportedLanguage {
-  return ["pt-BR", "en-US", "it-IT"].includes(value)
-}
-
 function formatGutoName(value: string) {
   return formatGutoDisplayName(value)
+}
+
+function onboardingSuggestedName(value?: string | null) {
+  return firstGutoGivenName(value)
 }
 
 function normalizeGutoName(value: string) {
   return value.replace(/\s+/g, " ").trim()
 }
 
-function validateGutoNameLocally(value: string): GutoNameValidation {
+function validateGutoNameLocally(value: string, language: SupportedLanguage = "pt-BR"): GutoNameValidation {
   const normalized = normalizeGutoName(value)
-  const lower = normalized.toLocaleLowerCase("pt-BR")
-  const suspiciousNames = new Set(["banana", "teste", "asdf", "qwerty", "nome", "usuario", "usuário", "nada", "ovo"])
+  const lower = normalized.toLocaleLowerCase(language)
+  const copy = stageCopy[language]
+  const suspiciousNames = new Set(["banana", "teste", "asdf", "qwerty", "nome", "usuario", "usuário", "nada", "ovo", "test", "user", "name"])
 
   if (normalized.length < 2) {
-    return { status: "invalid", normalized, message: "Nome curto demais. Me dá um nome real." }
+    return { status: "invalid", normalized, message: copy.nameTooShort }
   }
 
   if (normalized.length > 20) {
-    return { status: "invalid", normalized, message: "Nome longo demais. Usa até 20 caracteres." }
+    return { status: "invalid", normalized, message: copy.nameTooLong }
   }
 
   if (!/^[\p{L} ]+$/u.test(normalized)) {
-    return { status: "invalid", normalized, message: "Nome não precisa de número nem símbolo. Só letras." }
+    return { status: "invalid", normalized, message: copy.nameInvalidChars }
   }
 
   if (suspiciousNames.has(lower)) {
     return {
       status: "confirm",
       normalized,
-      message: `Esse é o nome que você quer que eu use com você: ${normalized}?`,
+      message: copy.nameConfirmPrompt.replace("{name}", normalized),
     }
   }
 
-  return { status: "valid", normalized, message: "Nome aceito." }
+  return { status: "valid", normalized, message: copy.nameAccepted }
 }
 
 const resolveEvolutionStage = resolveGutoEvolutionStage
 
-async function resolveGutoNameValidation(value: string, userId?: string) {
+async function resolveGutoNameValidation(value: string, language: SupportedLanguage, userId?: string) {
   try {
     return await validateGutoName(value, userId)
   } catch {
-    return validateGutoNameLocally(value)
+    return validateGutoNameLocally(value, language)
   }
 }
 
@@ -530,39 +575,26 @@ function resolveAuthenticatedStage(
 ): AppStage {
   if (!user) return "intro"
 
-  console.log("[GUTO_ONBOARDING] authenticated user detected", user.userId)
-  console.log("[GUTO_ONBOARDING] profile loaded", Boolean(profile))
 
   if (!profile?.consentHealthFitness || !profile?.acceptedTerms) {
-    console.log("[GUTO_ONBOARDING] missing consent -> consent")
     return "consent"
-  }
-
-  // P0 FIX: calibration check runs BEFORE onboardingComplete/pactAccepted shortcuts.
-  // Old sessions may have onboardingComplete=true without real calibration data,
-  // which previously let them skip directly to "system" with an incomplete profile.
-  if (!profile?.calibrationComplete && !hasMemoryCalibration(memory)) {
-    console.log("[GUTO_ONBOARDING] missing calibration")
-    console.log("[GUTO_ONBOARDING] resolved stage calibration")
-    return "calibration"
   }
 
   // namingConfirmed must be set on THIS device by the student clicking confirm.
   // Admin-set names do not count. Backwards-compat: onboardingComplete=true implies confirmed.
-  if (!profile?.namingConfirmed && !profile?.onboardingComplete) {
-    console.log("[GUTO_ONBOARDING] missing namingConfirmed")
-    console.log("[GUTO_ONBOARDING] resolved stage naming")
+  const hasRealName = hasStoredName(profile) || hasMemoryName(memory)
+  if ((!profile?.namingConfirmed && !profile?.onboardingComplete) || !hasRealName) {
     return "naming"
   }
 
+  if (!profile?.calibrationComplete && !hasMemoryCalibration(memory)) {
+    return "calibration"
+  }
+
   if (profile?.onboardingComplete || profile?.pactAccepted) {
-    console.log("[GUTO_ONBOARDING] complete -> system")
-    console.log("[GUTO_ONBOARDING] resolved stage system")
     return "system"
   }
 
-  console.log("[GUTO_ONBOARDING] missing pact")
-  console.log("[GUTO_ONBOARDING] resolved stage pact")
   return "pact"
 }
 
@@ -602,7 +634,6 @@ export function GutoApp({
   const [settingsHeightDraft, setSettingsHeightDraft] = useState("")
   const [settingsCountryDraft, setSettingsCountryDraft] = useState("")
   const [settingsFoodRestrictionsDraft, setSettingsFoodRestrictionsDraft] = useState("")
-  const [settingsFoodIntolerancesDraft, setSettingsFoodIntolerancesDraft] = useState("")
   const [settingsPhoneDraft, setSettingsPhoneDraft] = useState("")
   const [settingsSavedToast, setSettingsSavedToast] = useState(false)
   const [privacyConfirm, setPrivacyConfirm] = useState<"revoke" | "delete-step1" | "delete-step2" | "delete-done" | null>(null)
@@ -625,7 +656,7 @@ export function GutoApp({
   const [showValidationFlow, setShowValidationFlow] = useState(false)
   const [arenaRefreshKey, setArenaRefreshKey] = useState(0)
   const [pendingInviteToken, setPendingInviteToken] = useState<string | null>(null)
-  const [inviteClaimData, setInviteClaimData] = useState<{ name: string; userId: string; coachId: string } | null>(null)
+  const [inviteClaimData, setInviteClaimData] = useState<InvitePreview | null>(null)
   const [invitePassword, setInvitePassword] = useState("")
   const [inviteConfirmPassword, setInviteConfirmPassword] = useState("")
   const [inviteError, setInviteError] = useState<string | null>(null)
@@ -793,21 +824,27 @@ export function GutoApp({
   }, [])
 
   useEffect(() => {
+    if (typeof document !== "undefined") {
+      document.documentElement.lang = selectedLanguage
+    }
+  }, [selectedLanguage])
+
+  useEffect(() => {
     if (typeof window === "undefined") return
     if (authLoading) return
     let cancelled = false
 
     if (!user?.userId) {
       const savedLang = readResolvedStoredLanguage({ scope: "onboarding", fallbackLanguage: language })
-      const savedInviteToken = localStorage.getItem(PENDING_INVITE_TOKEN_KEY)
-      const savedEntryMode = localStorage.getItem(ENTRY_MODE_KEY)
+      const savedInviteToken = readStorageItem(PENDING_INVITE_TOKEN_KEY)
+      const savedEntryMode = readStorageItem(ENTRY_MODE_KEY)
       setSelectedLanguage(savedLang)
       if (savedInviteToken) {
         setPendingInviteToken(savedInviteToken)
-        if (savedEntryMode !== "invite") localStorage.setItem(ENTRY_MODE_KEY, "invite")
+        if (savedEntryMode !== "invite") writeStorageItem(ENTRY_MODE_KEY, "invite")
         setStage(getPublicEntryStage(true, skipIntro))
       } else if (savedEntryMode === "invite") {
-        localStorage.removeItem(ENTRY_MODE_KEY)
+        removeStorageItem(ENTRY_MODE_KEY)
       } else {
         setStage(getPublicEntryStage(false, skipIntro))
       }
@@ -833,7 +870,6 @@ export function GutoApp({
         const shouldReset =
           search.get("guto-reset") === "1" || forceResetParam || readStorageItem(DEBUG_RESET_KEY) === "1" || versionOutdated
 
-        console.log(`[GUTO_FLOW] useEffect init - guto-reset detected: ${shouldReset}`);
 
         if (shouldReset) {
           removeStorageItem(userStorageKey)
@@ -845,7 +881,6 @@ export function GutoApp({
 
         // Cleanup URL parameters precisely once without triggering a re-render
         if (search.has("guto-reset") || search.has("forceReset") || search.has("skip-intro")) {
-          console.log("[GUTO_FLOW] Removendo parametros guto-reset e skip-intro da URL...");
           const url = new URL(window.location.href);
           url.searchParams.delete("guto-reset");
           url.searchParams.delete("skip-intro");
@@ -888,8 +923,9 @@ export function GutoApp({
           }
         }
 
+        const onboardingIncomplete = !stored?.onboardingComplete && !stored?.pactAccepted
         const persistedLanguage = readResolvedStoredLanguage({
-          scope: "private",
+          scope: onboardingIncomplete ? "onboarding" : "private",
           localProfileLanguage: stored?.language,
           memoryLanguage: loadedMemory?.language,
           fallbackLanguage: language,
@@ -911,12 +947,13 @@ export function GutoApp({
           console.info("[GUTO_LANGUAGE] applied in private app:", persistedLanguage)
         }
 
-        const hasConfirmedName = hasStoredName(stored) || hasMemoryName(loadedMemory)
+        const hasConfirmedName = Boolean(stored?.namingConfirmed || stored?.onboardingComplete)
+        const onboardingDraftName = hasConfirmedName ? resolvedName : onboardingSuggestedName(resolvedName)
 
         // Only set committedName (used in the chat header) if the user has already
         // confirmed their own name. If they're still at the naming screen, only
         // pre-fill draftName so the presetName from the invite does not leak into the UI.
-        setDraftName(resolvedName)
+        setDraftName(onboardingDraftName)
         setCommittedName(hasConfirmedName ? resolvedName : "")
 
         persistProfile({
@@ -934,8 +971,8 @@ export function GutoApp({
         if (cancelled) return
         const safeLanguage = readResolvedStoredLanguage({ scope: "private", fallbackLanguage: language })
         setSelectedLanguage(safeLanguage)
-        setDraftName(formatGutoName(userName || ""))
-        setCommittedName(formatGutoName(userName || ""))
+        setDraftName(onboardingSuggestedName(userName || ""))
+        setCommittedName("")
         setStage(resolveAuthenticatedStage(user, null, null))
       } finally {
         if (!cancelled) setIsHydrated(true)
@@ -950,7 +987,7 @@ export function GutoApp({
       clearPactInterval()
       clearIntroSafetyTimer()
     }
-  }, [authLoading, clearIntroSafetyTimer, clearPactInterval, clearScheduled, language, skipIntro, user?.userId, userName])
+  }, [authLoading, clearIntroSafetyTimer, clearPactInterval, clearScheduled, language, persistMemory, persistProfile, skipIntro, user, userName])
 
   useEffect(() => {
     if (authLoading || !isHydrated) return
@@ -966,7 +1003,6 @@ export function GutoApp({
       if (stage !== "intro" && stage !== "language" && stage !== "invite_claim") {
         // If somehow in a private stage without being logged in, reset to intro
         if (PRIVATE_STAGES.has(stage)) {
-          console.log("[GUTO_FLOW] Unauthorized access to private stage, resetting to intro")
           setStage("intro")
         }
       }
@@ -987,7 +1023,6 @@ export function GutoApp({
 
   useEffect(() => {
     if (stage === "intro") {
-      console.log("[GUTO_FLOW] intro screen mounted")
       introFinishedRef.current = false
       introStartedRef.current = false
       clearIntroSafetyTimer()
@@ -1015,6 +1050,7 @@ export function GutoApp({
         name: finalName,
         language: finalLanguage,
         trainedToday: false,
+        xpEvent: "grant_initial_xp",
       })
       trackBehaviorEvent("pact_completed", { finalLanguage })
       setPactProgress(100)
@@ -1033,20 +1069,22 @@ export function GutoApp({
         }).catch(() => {})
       }, 1200)
     },
-    [effectRegistry, gutoUserId, persistMemory, persistProfile, schedule, setMemory, trackBehaviorEvent]
+    [effectRegistry, persistMemory, persistProfile, schedule, setMemory, trackBehaviorEvent]
   )
 
   const handleConsentAccepted = useCallback(() => {
     persistProfile({
+      language: selectedLanguage,
       consentHealthFitness: true,
       acceptedTerms: true,
       consentAcceptedAt: new Date().toISOString(),
     })
+    void persistMemory({ language: selectedLanguage })
     const storedRaw = readStorageItem(`${STORAGE_KEY}-${user?.userId}`)
     let stored: StoredProfile | null = null
     try { stored = storedRaw ? JSON.parse(storedRaw) as StoredProfile : null } catch { stored = null }
     setStage(resolveAuthenticatedStage(user, stored, memory))
-  }, [memory, persistProfile, user])
+  }, [memory, persistMemory, persistProfile, selectedLanguage, user])
 
   // ── Unique completer: ONLY sets stage to language, never decides login/invite ─
   const completeIntroToLanguage = useCallback(() => {
@@ -1055,7 +1093,6 @@ export function GutoApp({
     clearIntroSafetyTimer()
     effectRegistry.emit("portal_open")
     setIntroPlaybackState("finished")
-    console.log("[GUTO_FLOW] intro finished -> language")
     setStage("language")
   }, [clearIntroSafetyTimer, effectRegistry])
 
@@ -1076,7 +1113,6 @@ export function GutoApp({
   const startIntroVideo = useCallback(() => {
     gutoAudio.playGutoFeedback("tap")
     if (introStartedRef.current) return // prevent double-tap
-    console.log("[GUTO_FLOW] start intro clicked")
     clearIntroSafetyTimer()
     introStartedRef.current = true
     introStartedAtRef.current = Date.now()
@@ -1097,11 +1133,9 @@ export function GutoApp({
     setIntroNeedsActivation(false)
 
     // Safety timer is the MASTER control: 4000ms fixed
-    console.log("[GUTO_FLOW] starting 4000ms master timer")
     introSafetyTimerRef.current = window.setTimeout(completeIntroToLanguage, INTRO_VIDEO_MS)
 
     if (!video) {
-      console.log("[GUTO_FLOW] video play attempt — no element, using timer only")
       return
     }
 
@@ -1113,7 +1147,6 @@ export function GutoApp({
     // Use requestAnimationFrame so the seek to 0 has been painted
     // before we start playback — critical for Safari
     requestAnimationFrame(() => {
-      console.log("[GUTO_FLOW] video play attempt")
 
       // Try unmuted first
       video.muted = false
@@ -1122,28 +1155,23 @@ export function GutoApp({
 
       video.play()
         .then(() => {
-          console.log("[GUTO_FLOW] video play success")
           setIntroPlaybackState("playing")
         })
         .catch(() => {
-          console.log("[GUTO_FLOW] video play failed, trying muted")
           video.muted = true
           video.defaultMuted = true
           video.setAttribute("muted", "")
           video.play()
             .then(() => {
-              console.log("[GUTO_FLOW] video play success (muted)")
               setIntroPlaybackState("playing")
             })
             .catch(() => {
-              console.log("[GUTO_FLOW] muted play failed, fallback visual only")
             })
         })
     })
   }, [clearIntroSafetyTimer, completeIntroToLanguage])
 
   const handleIntroVideoEnded = useCallback(() => {
-    console.log("[GUTO_FLOW] video playback ended naturally")
   }, [])
 
   const handleLanguageSelect = useCallback(
@@ -1157,15 +1185,12 @@ export function GutoApp({
       if (process.env.NODE_ENV === "development") {
         console.info("[GUTO_LANGUAGE] onboarding selected:", lang)
       }
-      console.log("[GUTO_FLOW] language selected", lang)
 
       if (!user) {
         if (typeof window !== "undefined") {
           const pendingToken = localStorage.getItem(PENDING_INVITE_TOKEN_KEY)
           
           if (pendingToken) {
-            console.log("[GUTO_FLOW] pending invite", true)
-            console.log("[GUTO_FLOW] after language target", "invite_claim")
             setPendingInviteToken(pendingToken)
             setActiveLanguageGlow(lang)
             setRotatingLanguage(true)
@@ -1178,9 +1203,7 @@ export function GutoApp({
           }
         }
         
-        console.log("[GUTO_FLOW] pending invite", false)
         const target = `/login?lang=${lang}`
-        console.log("[GUTO_FLOW] after language target", target)
         router.push(target)
         return
       }
@@ -1216,7 +1239,7 @@ export function GutoApp({
         meta: { nameLength: normalizedName.length, language: selectedLanguage },
       })
       persistProfile({ userName: normalizedName, language: selectedLanguage, onboardingComplete: false, namingConfirmed: true })
-      persistMemory({ name: normalizedName, confirmedName })
+      persistMemory({ name: normalizedName, confirmedName, language: selectedLanguage })
     },
     [effectRegistry, persistMemory, persistProfile, selectedLanguage]
   )
@@ -1225,7 +1248,14 @@ export function GutoApp({
     async (calibration: Parameters<typeof saveGutoMemory>[0]) => {
       setStage("pact")
       persistProfile({ calibrationComplete: true, onboardingComplete: false })
-      await persistMemory(calibration)
+      await persistMemory({
+        ...calibration,
+        language: selectedLanguage,
+        foodRestrictions: calibration.foodRestrictions?.trim() || undefined,
+        foodIntolerances: calibration.foodIntolerances?.trim() || undefined,
+        trainingPathology:
+          calibration.trainingPathology?.trim() || defaultNoPainPathology(selectedLanguage),
+      })
       trackBehaviorEvent("calibration_completed", { ...calibration })
       
       // Proactively trigger diet generation in background so it's ready when they open the tab
@@ -1236,7 +1266,7 @@ export function GutoApp({
         console.warn("[GUTO] Proactive diet generation failed:", err)
       }
     },
-    [gutoUserId, persistMemory, selectedLanguage, trackBehaviorEvent]
+    [persistMemory, persistProfile, selectedLanguage, trackBehaviorEvent]
   )
 
   const handleFoodDoubt = useCallback((food: DietFood, meal: DietMeal) => {
@@ -1251,7 +1281,7 @@ export function GutoApp({
       if (!normalizedName || isValidatingName) return
 
       setIsValidatingName(true)
-      const validation = await resolveGutoNameValidation(normalizedName, gutoUserId)
+      const validation = await resolveGutoNameValidation(normalizedName, selectedLanguage, gutoUserId)
       setIsValidatingName(false)
 
       if (validation.status === "invalid") {
@@ -1278,7 +1308,7 @@ export function GutoApp({
 
       commitOnboardingName(validation.normalized, confirmedName)
     },
-    [commitOnboardingName, draftName, isValidatingName]
+    [commitOnboardingName, draftName, isValidatingName, selectedLanguage, gutoUserId]
   )
 
   // Hoist `userId` para que o React Compiler enxergue apenas o primitivo
@@ -1293,17 +1323,25 @@ export function GutoApp({
     setSettingsAgeDraft(memory?.userAge ? String(memory.userAge) : "")
     setSettingsGoalDraft(memory?.trainingGoal ?? null)
     setSettingsLocationDraft(memory?.preferredTrainingLocation ?? null)
-    setSettingsPathologyDraft(memory?.trainingPathology && memory.trainingPathology !== "sem dor" ? memory.trainingPathology : "")
+    setSettingsPathologyDraft(
+      memory?.trainingPathology && !isNoPainPathology(memory.trainingPathology)
+        ? memory.trainingPathology
+        : ""
+    )
     setSettingsWeightDraft(memory?.weightKg ? String(memory.weightKg) : "")
     setSettingsHeightDraft(memory?.heightCm ? String(memory.heightCm) : "")
     setSettingsCountryDraft(memory?.country ?? "")
-    setSettingsFoodRestrictionsDraft(memory?.foodRestrictions ?? "")
     const stored = (() => {
       if (typeof window === "undefined" || !settingsUserId) return null
       try { return JSON.parse(window.localStorage.getItem(`${STORAGE_KEY}-${settingsUserId}`) ?? "null") as StoredProfile | null } catch { return null }
     })()
+    const mergedFoodLimits =
+      memory?.foodRestrictions?.trim() ||
+      memory?.foodIntolerances?.trim() ||
+      stored?.foodIntolerances?.trim() ||
+      ""
+    setSettingsFoodRestrictionsDraft(mergedFoodLimits)
     setSettingsPhoneDraft(stored?.phone ?? "")
-    setSettingsFoodIntolerancesDraft(stored?.foodIntolerances ?? "")
     setSettingsMode("menu")
     setSettingsSavedToast(false)
     setNameGate(null)
@@ -1431,7 +1469,7 @@ export function GutoApp({
       if (!normalizedName || isValidatingName) return
 
       setIsValidatingName(true)
-      const validation = await resolveGutoNameValidation(normalizedName, gutoUserId)
+      const validation = await resolveGutoNameValidation(normalizedName, selectedLanguage, gutoUserId)
       setIsValidatingName(false)
 
       if (validation.status === "invalid") {
@@ -1464,7 +1502,7 @@ export function GutoApp({
       setSettingsMode("menu")
       setStage("system")
     },
-    [isValidatingName, persistMemory, persistProfile, settingsNameDraft]
+    [gutoUserId, isValidatingName, persistMemory, persistProfile, selectedLanguage, settingsNameDraft]
   )
 
   const showSavedToast = useCallback(() => {
@@ -1506,13 +1544,13 @@ export function GutoApp({
   }, [persistMemory, settingsLocationDraft, showSavedToast])
 
   const savePathologySettings = useCallback(() => {
-    const val = settingsPathologyDraft.trim() || "sem dor"
+    const val = settingsPathologyDraft.trim() || defaultNoPainPathology(selectedLanguage)
     persistMemory({ trainingPathology: val })
     setMemory((prev) => prev ? { ...prev, trainingPathology: val } : prev)
     showSavedToast()
     setSettingsMode("menu")
     setStage("system")
-  }, [persistMemory, settingsPathologyDraft, showSavedToast])
+  }, [persistMemory, selectedLanguage, settingsPathologyDraft, showSavedToast])
 
   const savePhysicalDataSettings = useCallback(() => {
     const wNum = parseFloat(settingsWeightDraft)
@@ -1541,30 +1579,23 @@ export function GutoApp({
 
   const saveFoodRestrictionsSettings = useCallback(() => {
     const val = settingsFoodRestrictionsDraft.trim()
-    persistMemory({ foodRestrictions: val || undefined })
-    setMemory((prev) => prev ? { ...prev, foodRestrictions: val || undefined } : prev)
+    persistMemory({
+      foodRestrictions: val || undefined,
+      foodIntolerances: val || undefined,
+    })
+    setMemory((prev) =>
+      prev
+        ? {
+            ...prev,
+            foodRestrictions: val || undefined,
+            foodIntolerances: val || undefined,
+          }
+        : prev
+    )
     showSavedToast()
     setSettingsMode("menu")
     setStage("system")
   }, [persistMemory, settingsFoodRestrictionsDraft, showSavedToast])
-
-  const saveFoodIntolerancesSettings = useCallback(() => {
-    const val = settingsFoodIntolerancesDraft.trim()
-    persistProfile({ foodIntolerances: val || undefined })
-    persistMemory({ foodIntolerances: val || undefined })
-    showSavedToast()
-    setSettingsMode("menu")
-    setStage("system")
-  }, [persistMemory, persistProfile, settingsFoodIntolerancesDraft, showSavedToast])
-
-  const savePhoneSettings = useCallback(() => {
-    const val = settingsPhoneDraft.trim()
-    persistProfile({ phone: val || undefined })
-    persistMemory({ phone: val || undefined })
-    showSavedToast()
-    setSettingsMode("menu")
-    setStage("system")
-  }, [persistMemory, persistProfile, settingsPhoneDraft, showSavedToast])
 
   const handleDownloadData = useCallback(() => {
     if (typeof window === "undefined" || !user?.userId) return
@@ -1639,7 +1670,7 @@ export function GutoApp({
       await deleteOwnAccount()
     } catch (error) {
       console.error("[GUTO] account self-delete failed", error)
-      setPrivacyMsg(getApiErrorMessage(error) || "Não foi possível excluir agora. Tente novamente.")
+      setPrivacyMsg(getApiErrorMessage(error) || stageCopy[selectedLanguage].privacyDeleteError)
       return
     }
     try { window.localStorage.removeItem(`${STORAGE_KEY}-${user.userId}`) } catch { /* noop */ }
@@ -1647,7 +1678,7 @@ export function GutoApp({
     setPrivacyConfirm("delete-done")
     try { await logout() } catch { /* sessão já invalidada */ }
     router.push("/login")
-  }, [router, user])
+  }, [router, selectedLanguage, user])
 
   const updateUserProfileField = useCallback(
     async (field: string, value: string | number) => {
@@ -1685,17 +1716,27 @@ export function GutoApp({
           setMemory((prev) => prev ? { ...prev, preferredTrainingLocation: value as "gym" | "home" | "park" | "mixed" } : prev)
           break
         case "pathology":
-          persistMemory({ trainingPathology: String(value) || "sem dor" })
-          setMemory((prev) => prev ? { ...prev, trainingPathology: String(value) || "sem dor" } : prev)
+          persistMemory({ trainingPathology: String(value) || defaultNoPainPathology(selectedLanguage) })
+          setMemory((prev) =>
+            prev
+              ? { ...prev, trainingPathology: String(value) || defaultNoPainPathology(selectedLanguage) }
+              : prev
+          )
           break
         case "country":
           persistMemory({ country: String(value) || undefined })
           setMemory((prev) => prev ? { ...prev, country: String(value) || undefined } : prev)
           break
-        case "foodRestrictions":
-          persistMemory({ foodRestrictions: String(value) || undefined })
-          setMemory((prev) => prev ? { ...prev, foodRestrictions: String(value) || undefined } : prev)
+        case "foodRestrictions": {
+          const foodValue = String(value) || undefined
+          persistMemory({ foodRestrictions: foodValue, foodIntolerances: foodValue })
+          setMemory((prev) =>
+            prev
+              ? { ...prev, foodRestrictions: foodValue, foodIntolerances: foodValue }
+              : prev
+          )
           break
+        }
         case "phone":
           persistProfile({ phone: String(value) || undefined })
           persistMemory({ phone: String(value) || undefined })
@@ -1718,7 +1759,7 @@ export function GutoApp({
           break
       }
     },
-    [formatGutoName, persistMemory, persistProfile]
+    [persistMemory, persistProfile, selectedLanguage]
   )
 
   useEffect(() => {
@@ -1766,9 +1807,15 @@ export function GutoApp({
         if (cancelled) return
         setMemory(memory)
         if (memory?.name && memory.name.toLocaleLowerCase("pt-BR") !== "operador") {
+          const storedRaw = readStorageItem(`${STORAGE_KEY}-${user.userId}`)
+          let stored: StoredProfile | null = null
+          try { stored = storedRaw ? JSON.parse(storedRaw) as StoredProfile : null } catch { stored = null }
+          const hasConfirmedName = Boolean(stored?.namingConfirmed || stored?.onboardingComplete)
           const memoryName = formatGutoName(memory.name)
-          setDraftName((prev) => prev || memoryName)
-          setCommittedName((prev) => prev || memoryName)
+          setDraftName((prev) => prev || (hasConfirmedName ? memoryName : onboardingSuggestedName(memoryName)))
+          if (hasConfirmedName) {
+            setCommittedName((prev) => prev || memoryName)
+          }
         }
         setEvolution(resolveEvolutionStage(memory?.totalXp || 0))
         const weekDays = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"] as const
@@ -1794,7 +1841,6 @@ export function GutoApp({
     if (!memory || workoutPlan?.exercises?.length) return
     const localPlan = createLocalWorkoutPlan(memory, selectedLanguage)
     if (!localPlan) return
-    console.log("[GUTO_WORKOUT] complete calibration -> local workout fallback")
     setWorkoutPlan(localPlan)
     void persistMemory({ lastWorkoutPlan: localPlan } as Parameters<typeof saveGutoMemory>[0]).catch(() => {})
   }, [memory, persistMemory, selectedLanguage, workoutPlan])
@@ -1852,13 +1898,12 @@ export function GutoApp({
       clearPendingInviteStorage()
       setPendingInviteToken(null)
       schedule(() => {
-        console.log("[GUTO_INVITE] claim success -> resolve onboarding stage")
         login({ ...res, role: res.role ?? "student" })
         const inviteResolvedName = firstRealGutoName(res.name, inviteClaimData?.name)
         setGutoUserId(res.userId)
         writeOnboardingLanguageStorage(selectedLanguage)
         if (inviteResolvedName) {
-          setDraftName(inviteResolvedName)
+          setDraftName(onboardingSuggestedName(inviteResolvedName))
           // Only save language so hydration doesn't reset to a wrong language.
           // committedName and backend name are set only after the user confirms on the naming screen.
           writeStorageItem(`${STORAGE_KEY}-${res.userId}`, JSON.stringify({
@@ -1866,7 +1911,6 @@ export function GutoApp({
             onboardingComplete: false,
           }))
         }
-        console.log("[GUTO_ONBOARDING] resolved stage naming")
         setStage("naming")
         router.replace("/")
       }, 2000)
@@ -1959,6 +2003,7 @@ export function GutoApp({
         setSelectedLanguage(nextLang)
         writeConfirmedLanguageStorage(nextLang)
         persistProfile({ language: nextLang })
+        persistMemory({ language: nextLang })
       }}
       onOpenPrivacySettings={() => {
         setSettingsMode("privacy")
@@ -2041,7 +2086,7 @@ export function GutoApp({
       default:
         return null
     }
-  }, [activeTab, gutoUserId, handleAdaptedMissionComplete, handleExerciseQuestion, handleFoodDoubt, handleMissionComplete, localizedWorkoutPlan, memory, selectedLanguage, userLabel, workoutMissingFields])
+  }, [activeTab, arenaRefreshKey, evolution, gutoUserId, handleAdaptedMissionComplete, handleExerciseQuestion, handleFoodDoubt, handleMissionComplete, localizedWorkoutPlan, memory, selectedLanguage, userLabel, workoutMissingFields])
 
   if (authLoading || !isHydrated || (user && user.role !== "student")) {
     return (
@@ -2053,7 +2098,7 @@ export function GutoApp({
 
   return (
     <div ref={shellRef} className="sala-guto">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-[var(--guto-varnish)]" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-(--guto-varnish)" />
       <div className="pointer-events-none absolute inset-x-0 top-[18%] h-px bg-[linear-gradient(90deg,transparent,rgba(82,231,255,0.28),transparent)]" />
 
       <AnimatePresence mode="wait">
@@ -2092,10 +2137,10 @@ export function GutoApp({
                     id="guto-start-button"
                     onClick={startIntroVideo}
                     className="guto-intro-sound-button inline-flex items-center gap-3 rounded-full px-5 py-3 text-[11px] font-black uppercase tracking-normal shadow-md"
-                    aria-label="Iniciar GUTO"
+                    aria-label={locale.startIntro}
                   >
                     <Volume2 className="h-5 w-5" />
-                    INICIAR GUTO
+                    {locale.startIntro}
                   </button>
                 </div>
               </div>
@@ -2104,9 +2149,9 @@ export function GutoApp({
         )}
 
         {stage === "language" && (
-          <motion.section
+          <motion.div
             key="language"
-            className="guto-main-screen absolute inset-0 z-30 flex items-center justify-center px-8"
+            className="absolute inset-0 z-30"
             initial={skipIntro ? false : { rotateY: 0, opacity: 0 }}
             animate={{
               rotateY: rotatingLanguage ? 180 : 0,
@@ -2116,43 +2161,11 @@ export function GutoApp({
             transition={{ duration: 0.56, ease: [0.66, 0, 0.18, 1] }}
             style={{ transformStyle: "preserve-3d" }}
           >
-            <div className="guto-language-grid grid grid-cols-3">
-              {languages.map((lang) => (
-                <motion.button
-                  key={lang.id}
-                  type="button"
-                  whileTap={{ scale: 0.96 }}
-                  onHoverStart={() => setActiveLanguageGlow(lang.id)}
-                  onHoverEnd={() => setActiveLanguageGlow((current) => (current === lang.id ? null : current))}
-                  onPointerDown={() => setActiveLanguageGlow(lang.id)}
-                  onPointerUp={() => {
-                    if (!rotatingLanguage) {
-                      setActiveLanguageGlow(null)
-                    }
-                  }}
-                  onPointerCancel={() => setActiveLanguageGlow(null)}
-                  onPointerLeave={() => {
-                    if (!rotatingLanguage) {
-                      setActiveLanguageGlow(null)
-                    }
-                  }}
-                  onClick={() => handleLanguageSelect(lang.id)}
-                  aria-label={lang.label}
-                  className="guto-language-card group relative flex items-center overflow-hidden rounded-[18px]"
-                  data-active={activeLanguageGlow === lang.id || (rotatingLanguage && selectedLanguage === lang.id)}
-                >
-                  <Image
-                    src={lang.asset}
-                    alt=""
-                    aria-hidden="true"
-                    width={70}
-                    height={70}
-                    className="guto-language-vector"
-                  />
-                </motion.button>
-              ))}
-            </div>
-          </motion.section>
+            <LanguageScreen
+              selectedLanguage={selectedLanguage}
+              onSelect={(lang) => handleLanguageSelect(lang as SupportedLanguage)}
+            />
+          </motion.div>
         )}
 
         {stage === "invite_claim" && (
@@ -2173,18 +2186,19 @@ export function GutoApp({
                   height={60}
                   priority
                   className="mb-5 h-auto w-[180px] max-w-[78%] object-contain drop-shadow-sm"
+                  style={{ height: "auto" }}
                 />
                 {inviteLoading && (
-                  <Loader2 className="h-6 w-6 animate-spin text-[var(--guto-cyan)]" />
+                  <Loader2 className="h-6 w-6 animate-spin text-(--guto-cyan)" />
                 )}
                 {!inviteLoading && inviteClaimData && !inviteSuccess && (
                   <>
                     <p className="mb-2 font-mono text-[10px] font-black uppercase tracking-[0.24em] text-[rgba(13,35,65,0.45)]">
                       {inviteClaimCopy[selectedLanguage].title}
                     </p>
-                    <h1 className="font-mono text-sm font-black uppercase tracking-[0.1em] text-[var(--guto-navy)]">
+                    <h1 className="font-mono text-sm font-black uppercase tracking-widest text-(--guto-navy)">
                       {inviteClaimCopy[selectedLanguage].greetingPrefix}{" "}
-                      <span className="text-[var(--guto-cyan)]">{inviteClaimData.name}</span>
+                      <span className="text-(--guto-cyan)">{inviteClaimData.name}</span>
                     </h1>
                     <p className="mt-2 font-mono text-[10px] font-black uppercase tracking-wider text-[rgba(13,35,65,0.4)]">
                       {inviteClaimCopy[selectedLanguage].invited}
@@ -2199,7 +2213,7 @@ export function GutoApp({
               {!inviteLoading && inviteSuccess && (
                 <div className="flex flex-col items-center space-y-4 text-center">
                   <CheckCircle2 className="h-12 w-12 text-green-500" />
-                  <p className="font-mono text-[11px] font-black uppercase tracking-widest text-[var(--guto-navy)]">
+                  <p className="font-mono text-[11px] font-black uppercase tracking-widest text-(--guto-navy)">
                     {inviteClaimCopy[selectedLanguage].activated}
                   </p>
                   <p className="font-mono text-[9px] font-black uppercase tracking-widest text-[rgba(13,35,65,0.4)]">
@@ -2221,7 +2235,7 @@ export function GutoApp({
                       type="password"
                       value={invitePassword}
                       onChange={(e) => { setInvitePassword(e.target.value); setInviteError(null) }}
-                      className="w-full border-none bg-transparent font-mono text-sm font-black text-[var(--guto-navy)] outline-none placeholder:text-[rgba(13,35,65,0.2)]"
+                      className="w-full border-none bg-transparent font-mono text-sm font-black text-(--guto-navy) outline-none placeholder:text-[rgba(13,35,65,0.2)]"
                       placeholder="••••••••"
                       required
                       autoComplete="new-password"
@@ -2235,7 +2249,7 @@ export function GutoApp({
                       type="password"
                       value={inviteConfirmPassword}
                       onChange={(e) => { setInviteConfirmPassword(e.target.value); setInviteError(null) }}
-                      className="w-full border-none bg-transparent font-mono text-sm font-black text-[var(--guto-navy)] outline-none placeholder:text-[rgba(13,35,65,0.2)]"
+                      className="w-full border-none bg-transparent font-mono text-sm font-black text-(--guto-navy) outline-none placeholder:text-[rgba(13,35,65,0.2)]"
                       placeholder="••••••••"
                       required
                       autoComplete="new-password"
@@ -2247,7 +2261,7 @@ export function GutoApp({
                   <button
                     type="submit"
                     disabled={inviteSubmitting}
-                    className="mt-2 flex h-14 w-full items-center justify-center rounded-full bg-[var(--guto-cyan)] font-mono text-xs font-black uppercase tracking-[0.2em] text-[var(--guto-navy)] shadow-[0_4px_20px_rgba(82,231,255,0.3)] transition-all active:scale-95 disabled:opacity-50"
+                    className="mt-2 flex h-14 w-full items-center justify-center rounded-full bg-(--guto-cyan) font-mono text-xs font-black uppercase tracking-[0.2em] text-(--guto-navy) shadow-[0_4px_20px_rgba(82,231,255,0.3)] transition-all active:scale-95 disabled:opacity-50"
                   >
                     {inviteSubmitting
                       ? <Loader2 className="h-5 w-5 animate-spin" />
@@ -2260,7 +2274,7 @@ export function GutoApp({
                 <button
                   type="button"
                   onClick={() => router.push(`/login?lang=${selectedLanguage}`)}
-                  className="mt-8 font-mono text-[10px] font-black uppercase tracking-widest text-[var(--guto-cyan)] underline"
+                  className="mt-8 font-mono text-[10px] font-black uppercase tracking-widest text-(--guto-cyan) underline"
                 >
                   {inviteClaimCopy[selectedLanguage].back}
                 </button>
@@ -2300,6 +2314,7 @@ export function GutoApp({
                   height={86}
                   priority
                   className="guto-name-logo"
+                  style={{ height: "auto" }}
                 />
                 <div className="guto-name-ampersand" aria-hidden="true">
                   &
@@ -2323,11 +2338,11 @@ export function GutoApp({
                     }}
                     placeholder={locale.namingPlaceholder}
                     autoFocus
-                    className="min-w-0 flex-1 border-none bg-transparent text-center font-mono text-xl font-black uppercase tracking-normal text-[var(--guto-cyan)] outline-none placeholder:text-[rgba(13,35,65,0.24)]"
+                    className="min-w-0 flex-1 border-none bg-transparent text-center font-mono text-xl font-black uppercase tracking-normal text-(--guto-cyan) outline-none placeholder:text-[rgba(13,35,65,0.24)]"
                   />
                   <motion.button
                     type="button"
-                    aria-label="Enviar nome"
+                    aria-label={locale.submitNameAria}
                     onClick={() => void handleSeal()}
                     disabled={!draftName.trim() || isValidatingName}
                     whileTap={{ scale: 0.92 }}
@@ -2338,7 +2353,7 @@ export function GutoApp({
                 </div>
                 {nameGate?.target === "onboarding" && (
                   <div className="mx-auto mt-3 w-full max-w-[24rem] rounded-[18px] border border-white/70 bg-white/92 px-4 py-3 text-center shadow-[inset_4px_4px_12px_rgba(105,119,138,0.16),inset_-4px_-4px_12px_rgba(255,255,255,0.82)]">
-                    <p className="font-mono text-[11px] font-black uppercase leading-snug tracking-normal text-[var(--guto-navy)]">
+                    <p className="font-mono text-[11px] font-black uppercase leading-snug tracking-normal text-(--guto-navy)">
                       {nameGate.message}
                     </p>
                     {nameGate.status === "confirm" && (
@@ -2346,14 +2361,14 @@ export function GutoApp({
                         <button
                           type="button"
                           onClick={() => void handleSeal(true)}
-                          className="rounded-full bg-[var(--guto-cyan)] px-4 py-2 text-[10px] font-black uppercase tracking-normal text-white"
+                          className="rounded-full bg-(--guto-cyan) px-4 py-2 text-[10px] font-black uppercase tracking-normal text-white"
                         >
                           {locale.nameConfirm}
                         </button>
                         <button
                           type="button"
                           onClick={() => setNameGate(null)}
-                          className="rounded-full border border-[rgba(13,35,65,0.14)] bg-white/55 px-4 py-2 text-[10px] font-black uppercase tracking-normal text-[var(--guto-navy)]"
+                          className="rounded-full border border-[rgba(13,35,65,0.14)] bg-white/55 px-4 py-2 text-[10px] font-black uppercase tracking-normal text-(--guto-navy)"
                         >
                           {locale.nameChange}
                         </button>
@@ -2481,7 +2496,7 @@ export function GutoApp({
                 onPointerUp={stopHold}
                 onPointerLeave={stopHold}
                 onPointerCancel={stopHold}
-                aria-label="Selar pacto"
+                  aria-label={locale.pactHoldAria}
                 className="guto-biometric-scanner relative flex h-44 w-44 touch-none items-center justify-center rounded-full"
                 animate={{
                   scale: isHoldingPact ? (pactProgress > 70 ? [0.95, 1.02, 0.97] : 0.97) : 1,
@@ -2537,7 +2552,7 @@ export function GutoApp({
                 {chatContent}
               </div>
               {activeTab !== "guto" && (
-                <div className="mx-4 mb-[var(--guto-bottom-nav-space)] mt-[max(env(safe-area-inset-top),1.1rem)] flex min-h-0 flex-1 flex-col">
+                <div className="mx-4 mb-(--guto-bottom-nav-space) mt-[max(env(safe-area-inset-top),1.1rem)] flex min-h-0 flex-1 flex-col">
                 <div className="guto-deboss flex min-h-0 flex-1 flex-col rounded-[2.25rem] px-4 py-4">
                   <div className="custom-scrollbar min-h-0 flex-1 overflow-y-auto">
                     <AnimatePresence mode="wait">
@@ -2565,7 +2580,7 @@ export function GutoApp({
                 />
               </div>
 
-              <div className="absolute right-4 top-[max(env(safe-area-inset-top),1rem)] z-40">
+              <div className="guto-settings-trigger-shell absolute right-4 top-[max(env(safe-area-inset-top),1rem)] z-40">
                 <motion.button
                   type="button"
                   aria-label={locale.settingsTitle}
@@ -2617,10 +2632,8 @@ export function GutoApp({
                               : settingsMode === "residence"
                                 ? locale.settingsResidence
                                 : settingsMode === "food_restrictions"
-                                  ? locale.settingsFoodRestrictions
-                                  : settingsMode === "food_intolerances"
-                                    ? locale.settingsFoodIntolerances
-                                    : settingsMode === "privacy"
+                                  ? translations[selectedLanguage].calibration.restrictionsLabel
+                                  : settingsMode === "privacy"
                                       ? locale.settingsPrivacy
                                       : locale.settingsTitle}
               </p>
@@ -2635,16 +2648,11 @@ export function GutoApp({
               const humanSex = memory?.biologicalSex === "male" ? cal.sexOptions.male : memory?.biologicalSex === "female" ? cal.sexOptions.female : null
               const profileSummary = [humanSex, memory?.userAge ? String(memory.userAge) : null].filter(Boolean).join(" · ") || null
               const physicalSummary = [memory?.weightKg ? `${memory.weightKg}kg` : null, memory?.heightCm ? `${memory.heightCm}cm` : null].filter(Boolean).join(" · ") || null
-              const storedFoodIntolerances = (() => {
-                if (typeof window === "undefined" || !user?.userId) return null
-                try {
-                  const p = JSON.parse(window.localStorage.getItem(`${STORAGE_KEY}-${user.userId}`) ?? "null") as StoredProfile | null
-                  return p?.foodIntolerances || null
-                } catch { return null }
-              })()
+              const foodLimitsSummary =
+                memory?.foodRestrictions?.trim() || memory?.foodIntolerances?.trim() || null
 
               const cardClass = "guto-language-card guto-settings-choice-card group relative flex flex-col items-center justify-center gap-1 overflow-hidden rounded-[18px] p-4"
-              const valueClass = "mt-0.5 max-w-full truncate font-mono text-[9px] font-black uppercase tracking-[0.08em] text-[var(--guto-cyan)] opacity-80"
+              const valueClass = "mt-0.5 max-w-full truncate font-mono text-[9px] font-black uppercase tracking-[0.08em] text-(--guto-cyan) opacity-80"
 
               return (
                 <div className="guto-language-grid grid grid-cols-2 gap-3 pt-2 overflow-y-auto">
@@ -2681,7 +2689,9 @@ export function GutoApp({
                   <motion.button type="button" whileTap={{ scale: 0.96 }} onClick={() => { gutoAudio.playGutoFeedback("tap"); setSettingsMode("pathology"); }} aria-label={locale.settingsPathology} className={cardClass}>
                     <Zap className="guto-settings-choice-icon" strokeWidth={2.2} />
                     <span className="guto-settings-choice-label">{locale.settingsPathology}</span>
-                    {memory?.trainingPathology && memory.trainingPathology !== "sem dor" && <span className={valueClass}>{memory.trainingPathology}</span>}
+                    {memory?.trainingPathology && !isNoPainPathology(memory.trainingPathology) && (
+                      <span className={valueClass}>{memory.trainingPathology}</span>
+                    )}
                   </motion.button>
 
                   <motion.button type="button" whileTap={{ scale: 0.96 }} onClick={() => { gutoAudio.playGutoFeedback("tap"); setSettingsMode("physicaldata"); }} aria-label={locale.settingsPhysicalData} className={cardClass}>
@@ -2696,16 +2706,10 @@ export function GutoApp({
                     {memory?.country && <span className={valueClass}>{memory.country}</span>}
                   </motion.button>
 
-                  <motion.button type="button" whileTap={{ scale: 0.96 }} onClick={() => { gutoAudio.playGutoFeedback("tap"); setSettingsMode("food_restrictions"); }} aria-label={locale.settingsFoodRestrictions} className={cardClass}>
+                  <motion.button type="button" whileTap={{ scale: 0.96 }} onClick={() => { gutoAudio.playGutoFeedback("tap"); setSettingsMode("food_restrictions"); }} aria-label={cal.restrictionsLabel} className={cardClass}>
                     <Utensils className="guto-settings-choice-icon" strokeWidth={2.2} />
-                    <span className="guto-settings-choice-label">{locale.settingsFoodRestrictions}</span>
-                    {memory?.foodRestrictions && <span className={valueClass}>{memory.foodRestrictions}</span>}
-                  </motion.button>
-
-                  <motion.button type="button" whileTap={{ scale: 0.96 }} onClick={() => { gutoAudio.playGutoFeedback("tap"); setSettingsMode("food_intolerances"); }} aria-label={locale.settingsFoodIntolerances} className={cardClass}>
-                    <AlertCircle className="guto-settings-choice-icon" strokeWidth={2.2} />
-                    <span className="guto-settings-choice-label">{locale.settingsFoodIntolerances}</span>
-                    {storedFoodIntolerances && <span className={valueClass}>{storedFoodIntolerances}</span>}
+                    <span className="guto-settings-choice-label">{cal.restrictionsLabel}</span>
+                    {foodLimitsSummary && <span className={valueClass}>{foodLimitsSummary}</span>}
                   </motion.button>
 
                   <motion.button type="button" whileTap={{ scale: 0.96 }} onClick={() => { gutoAudio.playGutoFeedback("tap"); setPrivacyMsg(null); setPrivacyConfirm(null); setDeleteConfirmText(""); setSettingsMode("privacy"); }} aria-label={locale.settingsPrivacy} className={`${cardClass} col-span-2`}>
@@ -2765,6 +2769,7 @@ export function GutoApp({
                     width={268}
                     height={86}
                     className="guto-name-logo"
+                    style={{ height: "auto" }}
                   />
                   <div className="guto-name-ampersand" aria-hidden="true">
                     &
@@ -2791,7 +2796,7 @@ export function GutoApp({
                       }}
                       placeholder={locale.settingsNamePlaceholder}
                       autoFocus
-                      className="min-w-0 flex-1 border-none bg-transparent text-center font-mono text-xl font-black uppercase tracking-normal text-[var(--guto-cyan)] outline-none placeholder:text-[rgba(13,35,65,0.24)]"
+                      className="min-w-0 flex-1 border-none bg-transparent text-center font-mono text-xl font-black uppercase tracking-normal text-(--guto-cyan) outline-none placeholder:text-[rgba(13,35,65,0.24)]"
                     />
                     <motion.button
                       type="submit"
@@ -2805,7 +2810,7 @@ export function GutoApp({
                   </div>
                   {nameGate?.target === "settings" && (
                     <div className="mx-auto mt-3 w-full max-w-[24rem] rounded-[18px] border border-white/70 bg-white/92 px-4 py-3 text-center shadow-[inset_4px_4px_12px_rgba(105,119,138,0.16),inset_-4px_-4px_12px_rgba(255,255,255,0.82)]">
-                      <p className="font-mono text-[11px] font-black uppercase leading-snug tracking-normal text-[var(--guto-navy)]">
+                      <p className="font-mono text-[11px] font-black uppercase leading-snug tracking-normal text-(--guto-navy)">
                         {nameGate.message}
                       </p>
                       {nameGate.status === "confirm" && (
@@ -2813,14 +2818,14 @@ export function GutoApp({
                           <button
                             type="button"
                             onClick={() => void saveSettingsName(true)}
-                            className="rounded-full bg-[var(--guto-cyan)] px-4 py-2 text-[10px] font-black uppercase tracking-normal text-white"
+                            className="rounded-full bg-(--guto-cyan) px-4 py-2 text-[10px] font-black uppercase tracking-normal text-white"
                           >
                             {locale.nameConfirm}
                           </button>
                           <button
                             type="button"
                             onClick={() => setNameGate(null)}
-                            className="rounded-full border border-[rgba(13,35,65,0.14)] bg-white/55 px-4 py-2 text-[10px] font-black uppercase tracking-normal text-[var(--guto-navy)]"
+                            className="rounded-full border border-[rgba(13,35,65,0.14)] bg-white/55 px-4 py-2 text-[10px] font-black uppercase tracking-normal text-(--guto-navy)"
                           >
                             {locale.nameChange}
                           </button>
@@ -2837,11 +2842,11 @@ export function GutoApp({
               const ageNum = parseInt(settingsAgeDraft, 10)
               const isAgeValid = !isNaN(ageNum) && ageNum >= 14 && ageNum <= 99
               const canSave = Boolean((settingsSexDraft && isAgeValid) || settingsPhoneDraft.trim())
-              const inputClass = "w-full rounded-full border border-[rgba(82,231,255,0.45)] bg-white px-4 py-2.5 text-center font-mono text-[14px] font-black text-[var(--guto-navy)] outline-none appearance-none [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              const inputClass = "w-full rounded-full border border-[rgba(82,231,255,0.45)] bg-white px-4 py-2.5 text-center font-mono text-[14px] font-black text-(--guto-navy) outline-none appearance-none [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               const labelClass = "mt-4 mb-2 font-mono text-[8px] font-black uppercase tracking-[0.2em] text-[rgba(13,35,65,0.42)]"
               return (
                 <div className="flex flex-1 flex-col gap-4 pt-2 overflow-y-auto">
-                  <div className="guto-slot rounded-[1.5rem] px-5 py-4">
+                  <div className="guto-slot rounded-3xl px-5 py-4">
                     <p className="mb-3 font-mono text-[8px] font-black uppercase tracking-[0.2em] text-[rgba(13,35,65,0.42)]">
                       {t.sexOptions.male} / {t.sexOptions.female}
                     </p>
@@ -2853,7 +2858,7 @@ export function GutoApp({
                           onClick={() => setSettingsSexDraft(s)}
                           className={`flex-1 rounded-full border py-2 font-mono text-[10px] font-black uppercase tracking-[0.12em] transition-all ${
                             settingsSexDraft === s
-                              ? "border-[rgba(82,231,255,0.75)] bg-[rgba(82,231,255,0.18)] text-[var(--guto-cyan)]"
+                              ? "border-[rgba(82,231,255,0.75)] bg-[rgba(82,231,255,0.18)] text-(--guto-cyan)"
                               : "border-[rgba(82,231,255,0.28)] bg-white/50 text-[rgba(13,35,65,0.65)]"
                           }`}
                         >
@@ -2890,7 +2895,7 @@ export function GutoApp({
                     onClick={saveProfileSettings}
                     className={`h-12 w-full rounded-full font-mono text-[11px] font-black uppercase tracking-[0.2em] transition-all ${
                       canSave
-                        ? "bg-[var(--guto-cyan)] text-[var(--guto-navy)] shadow-[0_4px_16px_rgba(82,231,255,0.3)]"
+                        ? "bg-(--guto-cyan) text-(--guto-navy) shadow-[0_4px_16px_rgba(82,231,255,0.3)]"
                         : "bg-white/40 text-[rgba(13,35,65,0.3)] border border-[rgba(13,35,65,0.08)]"
                     }`}
                   >
@@ -2905,16 +2910,16 @@ export function GutoApp({
               type GoalKey = "consistency" | "fat_loss" | "muscle_gain" | "conditioning" | "mobility_health"
               return (
                 <div className="flex flex-1 flex-col gap-4 pt-2">
-                  <div className="guto-slot rounded-[1.5rem] px-5 py-4">
+                  <div className="guto-slot rounded-3xl px-5 py-4">
                     <div className="flex flex-wrap justify-center gap-2">
                       {(Object.entries(t.objectiveChips) as [GoalKey, string][]).map(([key, label]) => (
                         <button
                           key={key}
                           type="button"
                           onClick={() => setSettingsGoalDraft(key)}
-                          className={`rounded-full border px-4 py-1.5 font-mono text-[10px] font-black uppercase tracking-[0.1em] transition-all ${
+                          className={`rounded-full border px-4 py-1.5 font-mono text-[10px] font-black uppercase tracking-widest transition-all ${
                             settingsGoalDraft === key
-                              ? "border-[rgba(82,231,255,0.75)] bg-[rgba(82,231,255,0.18)] text-[var(--guto-cyan)]"
+                              ? "border-[rgba(82,231,255,0.75)] bg-[rgba(82,231,255,0.18)] text-(--guto-cyan)"
                               : "border-[rgba(82,231,255,0.28)] bg-white/50 text-[rgba(13,35,65,0.65)]"
                           }`}
                         >
@@ -2929,7 +2934,7 @@ export function GutoApp({
                     onClick={saveGoalSettings}
                     className={`h-12 w-full rounded-full font-mono text-[11px] font-black uppercase tracking-[0.2em] transition-all ${
                       settingsGoalDraft
-                        ? "bg-[var(--guto-cyan)] text-[var(--guto-navy)] shadow-[0_4px_16px_rgba(82,231,255,0.3)]"
+                        ? "bg-(--guto-cyan) text-(--guto-navy) shadow-[0_4px_16px_rgba(82,231,255,0.3)]"
                         : "bg-white/40 text-[rgba(13,35,65,0.3)] border border-[rgba(13,35,65,0.08)]"
                     }`}
                   >
@@ -2944,16 +2949,16 @@ export function GutoApp({
               type LocationKey = "gym" | "home" | "park" | "mixed"
               return (
                 <div className="flex flex-1 flex-col gap-4 pt-2">
-                  <div className="guto-slot rounded-[1.5rem] px-5 py-4">
+                  <div className="guto-slot rounded-3xl px-5 py-4">
                     <div className="flex flex-wrap justify-center gap-2">
                       {(Object.entries(t.locationOptions) as [LocationKey, string][]).map(([key, label]) => (
                         <button
                           key={key}
                           type="button"
                           onClick={() => setSettingsLocationDraft(key)}
-                          className={`rounded-full border px-4 py-1.5 font-mono text-[10px] font-black uppercase tracking-[0.1em] transition-all ${
+                          className={`rounded-full border px-4 py-1.5 font-mono text-[10px] font-black uppercase tracking-widest transition-all ${
                             settingsLocationDraft === key
-                              ? "border-[rgba(82,231,255,0.75)] bg-[rgba(82,231,255,0.18)] text-[var(--guto-cyan)]"
+                              ? "border-[rgba(82,231,255,0.75)] bg-[rgba(82,231,255,0.18)] text-(--guto-cyan)"
                               : "border-[rgba(82,231,255,0.28)] bg-white/50 text-[rgba(13,35,65,0.65)]"
                           }`}
                         >
@@ -2968,7 +2973,7 @@ export function GutoApp({
                     onClick={saveLocationSettings}
                     className={`h-12 w-full rounded-full font-mono text-[11px] font-black uppercase tracking-[0.2em] transition-all ${
                       settingsLocationDraft
-                        ? "bg-[var(--guto-cyan)] text-[var(--guto-navy)] shadow-[0_4px_16px_rgba(82,231,255,0.3)]"
+                        ? "bg-(--guto-cyan) text-(--guto-navy) shadow-[0_4px_16px_rgba(82,231,255,0.3)]"
                         : "bg-white/40 text-[rgba(13,35,65,0.3)] border border-[rgba(13,35,65,0.08)]"
                     }`}
                   >
@@ -2980,7 +2985,7 @@ export function GutoApp({
 
             {settingsMode === "pathology" && (
               <div className="flex flex-1 flex-col gap-4 pt-2">
-                <div className="guto-slot rounded-[1.5rem] px-5 py-4">
+                <div className="guto-slot rounded-3xl px-5 py-4">
                   <input
                     type="text"
                     value={settingsPathologyDraft}
@@ -2989,13 +2994,13 @@ export function GutoApp({
                     autoComplete="off"
                     autoCorrect="off"
                     spellCheck={false}
-                    className="w-full rounded-full border border-[rgba(82,231,255,0.45)] bg-white px-4 py-2.5 font-mono text-[12px] text-[var(--guto-navy)] placeholder-[rgba(13,35,65,0.3)] outline-none"
+                    className="w-full rounded-full border border-[rgba(82,231,255,0.45)] bg-white px-4 py-2.5 font-mono text-[12px] text-(--guto-navy) placeholder-[rgba(13,35,65,0.3)] outline-none"
                   />
                 </div>
                 <button
                   type="button"
                   onClick={savePathologySettings}
-                  className="h-12 w-full rounded-full bg-[var(--guto-cyan)] font-mono text-[11px] font-black uppercase tracking-[0.2em] text-[var(--guto-navy)] shadow-[0_4px_16px_rgba(82,231,255,0.3)]"
+                  className="h-12 w-full rounded-full bg-(--guto-cyan) font-mono text-[11px] font-black uppercase tracking-[0.2em] text-(--guto-navy) shadow-[0_4px_16px_rgba(82,231,255,0.3)]"
                 >
                   {locale.settingsSave}
                 </button>
@@ -3009,11 +3014,11 @@ export function GutoApp({
               const isWeightValid = !isNaN(wNum) && wNum >= 30 && wNum <= 300
               const isHeightValid = !isNaN(hNum) && hNum >= 100 && hNum <= 250
               const canSave = isWeightValid || isHeightValid
-              const inputClass = "w-full rounded-full border border-[rgba(82,231,255,0.45)] bg-white px-4 py-2.5 text-center font-mono text-[14px] font-black text-[var(--guto-navy)] outline-none appearance-none [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              const inputClass = "w-full rounded-full border border-[rgba(82,231,255,0.45)] bg-white px-4 py-2.5 text-center font-mono text-[14px] font-black text-(--guto-navy) outline-none appearance-none [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               const labelClass = "mb-2 font-mono text-[8px] font-black uppercase tracking-[0.2em] text-[rgba(13,35,65,0.42)]"
               return (
                 <div className="flex flex-1 flex-col gap-4 pt-2">
-                  <div className="guto-slot rounded-[1.5rem] px-5 py-4 flex flex-col gap-3">
+                  <div className="guto-slot rounded-3xl px-5 py-4 flex flex-col gap-3">
                     <div>
                       <p className={labelClass}>{cal.weightLabel}</p>
                       <input
@@ -3050,7 +3055,7 @@ export function GutoApp({
                     onClick={savePhysicalDataSettings}
                     className={`h-12 w-full rounded-full font-mono text-[11px] font-black uppercase tracking-[0.2em] transition-all ${
                       canSave
-                        ? "bg-[var(--guto-cyan)] text-[var(--guto-navy)] shadow-[0_4px_16px_rgba(82,231,255,0.3)]"
+                        ? "bg-(--guto-cyan) text-(--guto-navy) shadow-[0_4px_16px_rgba(82,231,255,0.3)]"
                         : "bg-white/40 text-[rgba(13,35,65,0.3)] border border-[rgba(13,35,65,0.08)]"
                     }`}
                   >
@@ -3064,7 +3069,7 @@ export function GutoApp({
               const cal = translations[selectedLanguage].calibration
               return (
                 <div className="flex flex-1 flex-col gap-4 pt-2">
-                  <div className="guto-slot rounded-[1.5rem] px-5 py-4">
+                  <div className="guto-slot rounded-3xl px-5 py-4">
                     <p className="mb-2 font-mono text-[8px] font-black uppercase tracking-[0.2em] text-[rgba(13,35,65,0.42)]">{cal.countryLabel}</p>
                     <input
                       type="text"
@@ -3074,13 +3079,13 @@ export function GutoApp({
                       autoComplete="country-name"
                       autoCorrect="off"
                       spellCheck={false}
-                      className="w-full rounded-full border border-[rgba(82,231,255,0.45)] bg-white px-4 py-2.5 font-mono text-[12px] text-[var(--guto-navy)] placeholder-[rgba(13,35,65,0.3)] outline-none"
+                      className="w-full rounded-full border border-[rgba(82,231,255,0.45)] bg-white px-4 py-2.5 font-mono text-[12px] text-(--guto-navy) placeholder-[rgba(13,35,65,0.3)] outline-none"
                     />
                   </div>
                   <button
                     type="button"
                     onClick={saveResidenceSettings}
-                    className="h-12 w-full rounded-full bg-[var(--guto-cyan)] font-mono text-[11px] font-black uppercase tracking-[0.2em] text-[var(--guto-navy)] shadow-[0_4px_16px_rgba(82,231,255,0.3)]"
+                    className="h-12 w-full rounded-full bg-(--guto-cyan) font-mono text-[11px] font-black uppercase tracking-[0.2em] text-(--guto-navy) shadow-[0_4px_16px_rgba(82,231,255,0.3)]"
                   >
                     {locale.settingsSave}
                   </button>
@@ -3092,7 +3097,7 @@ export function GutoApp({
               const cal = translations[selectedLanguage].calibration
               return (
                 <div className="flex flex-1 flex-col gap-4 pt-2">
-                  <div className="guto-slot rounded-[1.5rem] px-5 py-4">
+                  <div className="guto-slot rounded-3xl px-5 py-4">
                     <p className="mb-2 font-mono text-[8px] font-black uppercase tracking-[0.2em] text-[rgba(13,35,65,0.42)]">{cal.restrictionsLabel}</p>
                     <input
                       type="text"
@@ -3102,13 +3107,13 @@ export function GutoApp({
                       autoComplete="off"
                       autoCorrect="off"
                       spellCheck={false}
-                      className="w-full rounded-full border border-[rgba(82,231,255,0.45)] bg-white px-4 py-2.5 font-mono text-[12px] text-[var(--guto-navy)] placeholder-[rgba(13,35,65,0.3)] outline-none"
+                      className="w-full rounded-full border border-[rgba(82,231,255,0.45)] bg-white px-4 py-2.5 font-mono text-[12px] text-(--guto-navy) placeholder-[rgba(13,35,65,0.3)] outline-none"
                     />
                   </div>
                   <button
                     type="button"
                     onClick={saveFoodRestrictionsSettings}
-                    className="h-12 w-full rounded-full bg-[var(--guto-cyan)] font-mono text-[11px] font-black uppercase tracking-[0.2em] text-[var(--guto-navy)] shadow-[0_4px_16px_rgba(82,231,255,0.3)]"
+                    className="h-12 w-full rounded-full bg-(--guto-cyan) font-mono text-[11px] font-black uppercase tracking-[0.2em] text-(--guto-navy) shadow-[0_4px_16px_rgba(82,231,255,0.3)]"
                   >
                     {locale.settingsSave}
                   </button>
@@ -3116,33 +3121,6 @@ export function GutoApp({
               )
             })()}
 
-            {settingsMode === "food_intolerances" && (() => {
-              const cal = translations[selectedLanguage].calibration
-              return (
-                <div className="flex flex-1 flex-col gap-4 pt-2">
-                  <div className="guto-slot rounded-[1.5rem] px-5 py-4">
-                    <p className="mb-2 font-mono text-[8px] font-black uppercase tracking-[0.2em] text-[rgba(13,35,65,0.42)]">{cal.intolerancesLabel}</p>
-                    <input
-                      type="text"
-                      value={settingsFoodIntolerancesDraft}
-                      onChange={(e) => setSettingsFoodIntolerancesDraft(e.target.value)}
-                      placeholder={cal.intolerancesPlaceholder}
-                      autoComplete="off"
-                      autoCorrect="off"
-                      spellCheck={false}
-                      className="w-full rounded-full border border-[rgba(82,231,255,0.45)] bg-white px-4 py-2.5 font-mono text-[12px] text-[var(--guto-navy)] placeholder-[rgba(13,35,65,0.3)] outline-none"
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={saveFoodIntolerancesSettings}
-                    className="h-12 w-full rounded-full bg-[var(--guto-cyan)] font-mono text-[11px] font-black uppercase tracking-[0.2em] text-[var(--guto-navy)] shadow-[0_4px_16px_rgba(82,231,255,0.3)]"
-                  >
-                    {locale.settingsSave}
-                  </button>
-                </div>
-              )
-            })()}
 
             {settingsMode === "privacy" && (() => {
               const stored = (() => {
@@ -3157,16 +3135,16 @@ export function GutoApp({
 
               const rowClass = "flex items-center justify-between gap-2 py-1"
               const labelClass = "font-mono text-[10px] font-black uppercase tracking-[0.12em] text-[rgba(13,35,65,0.6)]"
-              const statusClass = (ok: boolean) => `font-mono text-[10px] font-black uppercase tracking-[0.1em] ${ok ? "text-[var(--guto-cyan)]" : "text-[rgba(13,35,65,0.38)]"}`
-              const btnPrimary = "h-11 w-full rounded-full bg-[var(--guto-cyan)] font-mono text-[11px] font-black uppercase tracking-[0.2em] text-[var(--guto-navy)] shadow-[0_4px_16px_rgba(82,231,255,0.3)] flex items-center justify-center gap-2"
+              const statusClass = (ok: boolean) => `font-mono text-[10px] font-black uppercase tracking-widest ${ok ? "text-(--guto-cyan)" : "text-[rgba(13,35,65,0.38)]"}`
+              const btnPrimary = "h-11 w-full rounded-full bg-(--guto-cyan) font-mono text-[11px] font-black uppercase tracking-[0.2em] text-(--guto-navy) shadow-[0_4px_16px_rgba(82,231,255,0.3)] flex items-center justify-center gap-2"
               const btnGhost = "h-11 w-full rounded-full border border-[rgba(13,35,65,0.14)] bg-white/55 font-mono text-[10px] font-black uppercase tracking-[0.18em] text-[rgba(13,35,65,0.65)]"
               const btnDanger = "h-11 w-full rounded-full border border-[rgba(255,60,60,0.4)] bg-[rgba(255,60,60,0.07)] font-mono text-[11px] font-black uppercase tracking-[0.18em] text-[rgba(200,30,30,0.85)] flex items-center justify-center gap-2 disabled:opacity-40"
 
               return (
                 <div className="flex flex-1 flex-col gap-3 pt-2 overflow-y-auto pb-8">
                   {/* Consent status */}
-                  <div className="guto-slot rounded-[1.5rem] px-5 py-4 flex flex-col gap-1">
-                    <p className="mb-2 font-mono text-[8px] font-black uppercase tracking-[0.2em] text-[rgba(13,35,65,0.42)]">Consentimento</p>
+                  <div className="guto-slot rounded-3xl px-5 py-4 flex flex-col gap-1">
+                    <p className="mb-2 font-mono text-[8px] font-black uppercase tracking-[0.2em] text-[rgba(13,35,65,0.42)]">{locale.privacyConsentTitle}</p>
                     <div className={rowClass}>
                       <span className={labelClass}>{locale.privacyHealthConsentLabel}</span>
                       <span className={statusClass(consentHealth)}>{consentHealth ? locale.privacyAccepted : locale.privacyNotAccepted}</span>
@@ -3176,7 +3154,7 @@ export function GutoApp({
                       <span className={statusClass(consentTerms)}>{consentTerms ? locale.privacyAccepted : locale.privacyNotAccepted}</span>
                     </div>
                     {consentDate && (
-                      <p className="mt-1 font-mono text-[8px] text-[rgba(13,35,65,0.38)] uppercase tracking-[0.1em]">
+                      <p className="mt-1 font-mono text-[8px] text-[rgba(13,35,65,0.38)] uppercase tracking-widest">
                         {locale.privacyAcceptedAt}: {new Date(consentDate).toLocaleDateString()}
                       </p>
                     )}
@@ -3184,7 +3162,7 @@ export function GutoApp({
 
                   {/* Notifications toggle */}
                   {!privacyConfirm && (
-                    <div className="guto-slot rounded-[1.5rem] px-5 py-4 flex flex-col gap-2">
+                    <div className="guto-slot rounded-3xl px-5 py-4 flex flex-col gap-2">
                       <p className="font-mono text-[8px] font-black uppercase tracking-[0.2em] text-[rgba(13,35,65,0.42)]">{locale.pushTitle}</p>
                       <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-[rgba(13,35,65,0.6)] leading-relaxed">{locale.pushSubtitle}</p>
                       <button
@@ -3196,14 +3174,14 @@ export function GutoApp({
                         {pushSubscribed ? locale.pushDisable : locale.pushEnable}
                       </button>
                       {pushMsg && (
-                        <p className="font-mono text-[9px] uppercase tracking-[0.1em] text-[rgba(200,30,30,0.85)]">{pushMsg}</p>
+                        <p className="font-mono text-[9px] uppercase tracking-widest text-[rgba(200,30,30,0.85)]">{pushMsg}</p>
                       )}
                     </div>
                   )}
 
                   {/* Billing — manage subscription */}
                   {!privacyConfirm && billingStatus?.hasStripeCustomer && (
-                    <div className="guto-slot rounded-[1.5rem] px-5 py-4 flex flex-col gap-2">
+                    <div className="guto-slot rounded-3xl px-5 py-4 flex flex-col gap-2">
                       <p className="font-mono text-[8px] font-black uppercase tracking-[0.2em] text-[rgba(13,35,65,0.42)]">{locale.billingTitle}</p>
                       <button
                         type="button"
@@ -3214,7 +3192,7 @@ export function GutoApp({
                         {locale.billingManage}
                       </button>
                       {billingMsg && (
-                        <p className="font-mono text-[9px] uppercase tracking-[0.1em] text-[rgba(200,30,30,0.85)]">{billingMsg}</p>
+                        <p className="font-mono text-[9px] uppercase tracking-widest text-[rgba(200,30,30,0.85)]">{billingMsg}</p>
                       )}
                     </div>
                   )}
@@ -3222,14 +3200,14 @@ export function GutoApp({
                   {/* Inline message (after correct data) */}
                   {privacyMsg && !privacyConfirm && (
                     <div className="rounded-[1.25rem] border border-[rgba(82,231,255,0.4)] bg-[rgba(82,231,255,0.08)] px-4 py-3">
-                      <p className="font-mono text-[10px] font-black uppercase tracking-[0.1em] text-[var(--guto-navy)]">{privacyMsg}</p>
+                      <p className="font-mono text-[10px] font-black uppercase tracking-widest text-(--guto-navy)">{privacyMsg}</p>
                     </div>
                   )}
 
                   {/* Revoke confirm dialog */}
                   {privacyConfirm === "revoke" && (
-                    <div className="guto-slot rounded-[1.5rem] px-5 py-4 flex flex-col gap-3">
-                      <p className="font-mono text-[10px] font-black uppercase tracking-[0.1em] text-[var(--guto-navy)] leading-relaxed">{locale.privacyRevokeWarning}</p>
+                    <div className="guto-slot rounded-3xl px-5 py-4 flex flex-col gap-3">
+                      <p className="font-mono text-[10px] font-black uppercase tracking-widest text-(--guto-navy) leading-relaxed">{locale.privacyRevokeWarning}</p>
                       <button type="button" onClick={handleRevokeConsent} className={btnDanger}>
                         {locale.privacyRevokeConfirm}
                       </button>
@@ -3241,8 +3219,8 @@ export function GutoApp({
 
                   {/* Delete step 1 */}
                   {privacyConfirm === "delete-step1" && (
-                    <div className="guto-slot rounded-[1.5rem] px-5 py-4 flex flex-col gap-3">
-                      <p className="font-mono text-[10px] font-black uppercase tracking-[0.1em] text-[var(--guto-navy)] leading-relaxed">{locale.privacyDeleteStep1}</p>
+                    <div className="guto-slot rounded-3xl px-5 py-4 flex flex-col gap-3">
+                      <p className="font-mono text-[10px] font-black uppercase tracking-widest text-(--guto-navy) leading-relaxed">{locale.privacyDeleteStep1}</p>
                       <button type="button" onClick={() => setPrivacyConfirm("delete-step2")} className={btnDanger}>
                         <Trash2 className="h-3.5 w-3.5" strokeWidth={2.2} />
                         {locale.privacyDeleteBtn}
@@ -3255,7 +3233,7 @@ export function GutoApp({
 
                   {/* Delete step 2 — type confirmation */}
                   {privacyConfirm === "delete-step2" && (
-                    <div className="guto-slot rounded-[1.5rem] px-5 py-4 flex flex-col gap-3">
+                    <div className="guto-slot rounded-3xl px-5 py-4 flex flex-col gap-3">
                       <p className="font-mono text-[9px] font-black uppercase tracking-[0.15em] text-[rgba(13,35,65,0.5)]">{locale.privacyDeleteStep2Label}</p>
                       <input
                         type="text"
@@ -3279,8 +3257,8 @@ export function GutoApp({
 
                   {/* Delete done — beta message */}
                   {privacyConfirm === "delete-done" && (
-                    <div className="guto-slot rounded-[1.5rem] px-5 py-4 flex flex-col gap-3">
-                      <p className="font-mono text-[11px] font-black uppercase tracking-[0.12em] text-[var(--guto-navy)]">{locale.privacyDeleteBetaTitle}</p>
+                    <div className="guto-slot rounded-3xl px-5 py-4 flex flex-col gap-3">
+                      <p className="font-mono text-[11px] font-black uppercase tracking-[0.12em] text-(--guto-navy)">{locale.privacyDeleteBetaTitle}</p>
                       <p className="font-mono text-[9px] uppercase tracking-[0.08em] text-[rgba(13,35,65,0.6)] leading-relaxed">{locale.privacyDeleteBetaMsg}</p>
                       <button
                         type="button"
@@ -3345,8 +3323,8 @@ export function GutoApp({
             transition={{ duration: 0.22 }}
           >
             <div className="flex items-center gap-2 rounded-full border border-[rgba(82,231,255,0.35)] bg-white/92 px-5 py-2.5 shadow-[0_4px_20px_rgba(13,35,65,0.12)] backdrop-blur-sm">
-              <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-[var(--guto-cyan)]" strokeWidth={2.4} />
-              <span className="font-mono text-[10px] font-black uppercase tracking-[0.12em] text-[var(--guto-navy)]">
+              <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-(--guto-cyan)" strokeWidth={2.4} />
+              <span className="font-mono text-[10px] font-black uppercase tracking-[0.12em] text-(--guto-navy)">
                 {locale.settingsSavedMsg}
               </span>
             </div>

@@ -44,8 +44,8 @@ const dietCopy = {
     coachCalories: "kcal estimadas",
     coachProtein: "proteína estimada",
     disclaimer: "Orientação fitness. Não substitui consulta médica ou nutricional.",
-    timeoutError: "Tempo de resposta excedido. Tente novamente.",
-    connectionError: "Falha de conexão. Verifique sua internet e tente novamente.",
+    timeoutError: "Ixi, meu sistema demorou demais pra calcular tua dieta. Aguenta aí e tenta de novo.",
+    connectionError: "Perdi o fio com o cérebro por um instante. Confere a conexão e me chama de novo.",
     goalNames: {
       fat_loss: "Emagrecer",
       muscle_gain: "Hipertrofia",
@@ -84,8 +84,8 @@ const dietCopy = {
     coachCalories: "estimated kcal",
     coachProtein: "estimated protein",
     disclaimer: "Fitness guidance only. Not a substitute for medical or nutritional advice.",
-    timeoutError: "Request timed out. Please try again.",
-    connectionError: "Connection failed. Check your internet and try again.",
+    timeoutError: "My system took too long to calculate your diet. Hold on and try again.",
+    connectionError: "I lost the line to my brain for a moment. Check the connection and call me again.",
     goalNames: {
       fat_loss: "Fat Loss",
       muscle_gain: "Hypertrophy",
@@ -124,8 +124,8 @@ const dietCopy = {
     coachCalories: "kcal stimate",
     coachProtein: "proteine stimate",
     disclaimer: "Solo orientamento fitness. Non sostituisce la consulenza medica o nutrizionale.",
-    timeoutError: "Tempo di risposta superato. Riprova.",
-    connectionError: "Connessione fallita. Controlla la connessione e riprova.",
+    timeoutError: "Il mio sistema ci ha messo troppo a calcolare la tua dieta. Aspetta un attimo e riprova.",
+    connectionError: "Ho perso il filo col mio cervello per un attimo. Controlla la connessione e richiamami.",
     goalNames: {
       fat_loss: "Dimagrire",
       muscle_gain: "Ipertrofia",
@@ -227,23 +227,23 @@ function MealCard({
         <span className="text-[16px] shrink-0">{emoji}</span>
 
         {/* Time */}
-        <span className="font-mono text-[9px] font-black tracking-[0.06em] text-[var(--guto-cyan)] shrink-0">
+        <span className="font-mono text-[9px] font-black tracking-[0.06em] text-(--guto-cyan) shrink-0">
           {meal.time}
         </span>
 
         {/* Name */}
-        <h2 className="min-w-0 flex-1 break-words text-left text-[12px] font-black uppercase leading-tight tracking-[0.05em] text-[var(--guto-navy)]">
+        <h2 className="min-w-0 flex-1 wrap-break-word text-left text-[12px] font-black uppercase leading-tight tracking-[0.05em] text-(--guto-navy)">
           {meal.name}
         </h2>
 
         {/* Total kcal + chevron */}
         <div className="flex items-center gap-1.5 shrink-0">
-          <span className="font-mono text-[11px] font-black text-[var(--guto-navy)]/55">
+          <span className="font-mono text-[11px] font-black text-(--guto-navy)/55">
             {meal.totalKcal}
-            <span className="text-[8px] font-normal ml-0.5 text-[var(--guto-navy)]/35">kcal</span>
+            <span className="text-[8px] font-normal ml-0.5 text-(--guto-navy)/35">kcal</span>
           </span>
           {expanded
-            ? <ChevronUp className="h-3.5 w-3.5 text-[var(--guto-cyan)]" />
+            ? <ChevronUp className="h-3.5 w-3.5 text-(--guto-cyan)" />
             : <ChevronDown className="h-3.5 w-3.5 text-[rgba(13,35,65,0.28)]" />
           }
         </div>
@@ -266,12 +266,12 @@ function MealCard({
               className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-2 gap-y-1 py-2 border-b border-[rgba(13,35,65,0.06)] last:border-0 max-[360px]:grid-cols-[minmax(0,1fr)_auto]"
             >
               {/* Food name */}
-              <span className="min-w-0 break-words text-[12px] leading-snug text-[var(--guto-navy)]/85">
+              <span className="min-w-0 wrap-break-word text-[12px] leading-snug text-(--guto-navy)/85">
                 {food.name}
               </span>
 
               {/* Quantity badge */}
-              <span className="justify-self-end font-mono text-[9px] font-black text-[var(--guto-navy)]/50 bg-[rgba(82,231,255,0.12)] px-2 py-0.5 rounded-full whitespace-nowrap max-[360px]:col-start-1 max-[360px]:row-start-2 max-[360px]:justify-self-start">
+              <span className="justify-self-end font-mono text-[9px] font-black text-(--guto-navy)/50 bg-[rgba(82,231,255,0.12)] px-2 py-0.5 rounded-full whitespace-nowrap max-[360px]:col-start-1 max-[360px]:row-start-2 max-[360px]:justify-self-start">
                 {food.quantity}
               </span>
 
@@ -284,7 +284,7 @@ function MealCard({
                   onFoodDoubt(food, meal)
                 }}
                 aria-label={`${foodQuestionLabel} ${food.name}`}
-                className="h-7 w-7 rounded-full border border-[rgba(82,231,255,0.45)] bg-[rgba(82,231,255,0.10)] text-[var(--guto-cyan)] font-black text-[12px] flex items-center justify-center active:scale-90 transition-transform touch-manipulation max-[360px]:col-start-2 max-[360px]:row-span-2"
+                className="h-7 w-7 rounded-full border border-[rgba(82,231,255,0.45)] bg-[rgba(82,231,255,0.10)] text-(--guto-cyan) font-black text-[12px] flex items-center justify-center active:scale-90 transition-transform touch-manipulation max-[360px]:col-start-2 max-[360px]:row-span-2"
               >
                 ?
               </button>
@@ -294,7 +294,7 @@ function MealCard({
           {/* Guto note */}
           {meal.gutoNote && (
             <p className="text-[10px] leading-snug text-[rgba(13,35,65,0.50)] italic pt-2">
-              <span className="not-italic font-black text-[var(--guto-cyan)] mr-1">GUTO</span>
+              <span className="not-italic font-black text-(--guto-cyan) mr-1">GUTO</span>
               {meal.gutoNote}
             </p>
           )}
@@ -342,8 +342,8 @@ function CoachMealCard({ emoji, label, text, index }: { emoji: string; label: st
       <div className="flex items-start gap-2.5">
         <span className="text-[16px] shrink-0 mt-0.5">{emoji}</span>
         <div className="min-w-0 flex-1">
-          <h3 className="text-[10px] font-black uppercase tracking-[0.06em] text-[var(--guto-cyan)] mb-1">{label}</h3>
-          <p className="text-[12px] leading-relaxed text-[var(--guto-navy)]/80 whitespace-pre-wrap">{text}</p>
+          <h3 className="text-[10px] font-black uppercase tracking-[0.06em] text-(--guto-cyan) mb-1">{label}</h3>
+          <p className="text-[12px] leading-relaxed text-(--guto-navy)/80 whitespace-pre-wrap">{text}</p>
         </div>
       </div>
     </motion.div>
@@ -361,11 +361,11 @@ function CoachDietView({ coachDiet, copy }: { coachDiet: CoachDietDay; copy: Coa
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="shrink-0 pb-2.5 pt-0.5 text-center">
-        <h1 className="text-[1.1rem] font-black uppercase leading-tight tracking-[0.08em] text-[var(--guto-navy)]">
+        <h1 className="text-[1.1rem] font-black uppercase leading-tight tracking-[0.08em] text-(--guto-navy)">
           {copy.coachDietTitle}
         </h1>
         <div className="mt-2 flex items-center justify-center">
-          <span className="rounded-full bg-[rgba(82,231,255,0.13)] px-2 py-0.5 font-mono text-[7px] font-black uppercase tracking-[0.12em] text-[var(--guto-cyan)]">
+          <span className="rounded-full bg-[rgba(82,231,255,0.13)] px-2 py-0.5 font-mono text-[7px] font-black uppercase tracking-[0.12em] text-(--guto-cyan)">
             {copy.coachDietBadge}
           </span>
         </div>
@@ -380,9 +380,9 @@ function CoachDietView({ coachDiet, copy }: { coachDiet: CoachDietDay; copy: Coa
         >
           {coachDiet.caloriesEstimate && (
             <div className="flex flex-col items-center gap-0.5 flex-1">
-              <Flame className="h-3 w-3 text-[var(--guto-cyan)]" />
-              <span className="text-[14px] font-black leading-none text-[var(--guto-navy)]">{coachDiet.caloriesEstimate}</span>
-              <span className="font-mono text-[7px] uppercase tracking-[0.1em] text-[rgba(13,35,65,0.38)] mt-0.5">{copy.coachCalories}</span>
+              <Flame className="h-3 w-3 text-(--guto-cyan)" />
+              <span className="text-[14px] font-black leading-none text-(--guto-navy)">{coachDiet.caloriesEstimate}</span>
+              <span className="font-mono text-[7px] uppercase tracking-widest text-[rgba(13,35,65,0.38)] mt-0.5">{copy.coachCalories}</span>
             </div>
           )}
           {coachDiet.caloriesEstimate && coachDiet.proteinEstimate && (
@@ -390,15 +390,15 @@ function CoachDietView({ coachDiet, copy }: { coachDiet: CoachDietDay; copy: Coa
           )}
           {coachDiet.proteinEstimate && (
             <div className="flex flex-col items-center gap-0.5 flex-1">
-              <Zap className="h-3 w-3 text-[var(--guto-cyan)]" />
-              <span className="text-[14px] font-black leading-none text-[var(--guto-navy)]">{coachDiet.proteinEstimate}g</span>
-              <span className="font-mono text-[7px] uppercase tracking-[0.1em] text-[rgba(13,35,65,0.38)] mt-0.5">{copy.coachProtein}</span>
+              <Zap className="h-3 w-3 text-(--guto-cyan)" />
+              <span className="text-[14px] font-black leading-none text-(--guto-navy)">{coachDiet.proteinEstimate}g</span>
+              <span className="font-mono text-[7px] uppercase tracking-widest text-[rgba(13,35,65,0.38)] mt-0.5">{copy.coachProtein}</span>
             </div>
           )}
         </motion.div>
       )}
 
-      <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto flex flex-col gap-2 pb-[calc(8rem+env(safe-area-inset-bottom))] overscroll-contain [scroll-padding-bottom:calc(8rem+env(safe-area-inset-bottom))] [-webkit-overflow-scrolling:touch]">
+      <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto flex flex-col gap-2 pb-[calc(8rem+env(safe-area-inset-bottom))] overscroll-contain scroll-pb-[calc(8rem+env(safe-area-inset-bottom))] [-webkit-overflow-scrolling:touch]">
         {meals.map((m, i) => (
           <CoachMealCard key={m.key} emoji={m.emoji} label={m.label} text={m.text} index={i} />
         ))}
@@ -412,8 +412,8 @@ function CoachDietView({ coachDiet, copy }: { coachDiet: CoachDietDay; copy: Coa
           >
             <span className="text-[16px] shrink-0 mt-0.5">💧</span>
             <div className="min-w-0 flex-1">
-              <h3 className="text-[10px] font-black uppercase tracking-[0.06em] text-[var(--guto-cyan)] mb-1">{copy.coachHydration}</h3>
-              <p className="text-[12px] leading-relaxed text-[var(--guto-navy)]/80">{coachDiet.hydration}</p>
+              <h3 className="text-[10px] font-black uppercase tracking-[0.06em] text-(--guto-cyan) mb-1">{copy.coachHydration}</h3>
+              <p className="text-[12px] leading-relaxed text-(--guto-navy)/80">{coachDiet.hydration}</p>
             </div>
           </motion.div>
         )}
@@ -427,8 +427,8 @@ function CoachDietView({ coachDiet, copy }: { coachDiet: CoachDietDay; copy: Coa
           >
             <span className="text-[16px] shrink-0 mt-0.5">📋</span>
             <div className="min-w-0 flex-1">
-              <h3 className="text-[10px] font-black uppercase tracking-[0.06em] text-[var(--guto-cyan)] mb-1">{copy.coachNotes}</h3>
-              <p className="text-[12px] leading-relaxed text-[var(--guto-navy)]/80 italic">{coachDiet.notes}</p>
+              <h3 className="text-[10px] font-black uppercase tracking-[0.06em] text-(--guto-cyan) mb-1">{copy.coachNotes}</h3>
+              <p className="text-[12px] leading-relaxed text-(--guto-navy)/80 italic">{coachDiet.notes}</p>
             </div>
           </motion.div>
         )}
@@ -523,7 +523,7 @@ export function DietTab({ userId, language, onFoodDoubt, memory }: DietTabProps)
       cancelled = true
       clearTimeout(hardTimeout)
     }
-  }, [userId, validLang, memory])
+  }, [userId, validLang, memory, copy, todayCoachDiet])
 
   const handleRetry = async () => {
     if (retrying) return
@@ -563,7 +563,7 @@ export function DietTab({ userId, language, onFoodDoubt, memory }: DietTabProps)
         <motion.div
           animate={{ opacity: [0.4, 1, 0.4] }}
           transition={{ duration: 1.5, repeat: Infinity }}
-          className="font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--guto-cyan)]"
+          className="font-mono text-[10px] uppercase tracking-[0.22em] text-(--guto-cyan)"
         >
           {copy.generatingLabel}
         </motion.div>
@@ -589,7 +589,7 @@ export function DietTab({ userId, language, onFoodDoubt, memory }: DietTabProps)
     return (
       <div className="flex h-full min-h-0 flex-col">
         <div className="shrink-0 pb-3 pt-1 text-center">
-          <h1 className="text-[1.15rem] font-black uppercase leading-tight tracking-[0.08em] text-[var(--guto-navy)]">
+          <h1 className="text-[1.15rem] font-black uppercase leading-tight tracking-[0.08em] text-(--guto-navy)">
             {copy.title}
           </h1>
         </div>
@@ -605,7 +605,7 @@ export function DietTab({ userId, language, onFoodDoubt, memory }: DietTabProps)
             </motion.div>
           </div>
           <div className="text-center max-w-[240px]">
-            <h2 className="text-[0.95rem] font-black uppercase leading-tight tracking-[0.06em] text-[var(--guto-navy)] mb-2">
+            <h2 className="text-[0.95rem] font-black uppercase leading-tight tracking-[0.06em] text-(--guto-navy) mb-2">
               {copy.emptyTitle}
             </h2>
             <p className="text-[12px] leading-relaxed text-[rgba(13,35,65,0.60)]">{bodyText}</p>
@@ -634,7 +634,7 @@ export function DietTab({ userId, language, onFoodDoubt, memory }: DietTabProps)
 
       {/* ── Header ── */}
       <div className="shrink-0 pb-2.5 pt-0.5 text-center">
-        <h1 className="text-[1.1rem] font-black uppercase leading-tight tracking-[0.08em] text-[var(--guto-navy)]">
+        <h1 className="text-[1.1rem] font-black uppercase leading-tight tracking-[0.08em] text-(--guto-navy)">
           {copy.title}
         </h1>
         <p className="font-mono text-[8px] uppercase tracking-[0.12em] text-[rgba(13,35,65,0.40)] mt-0.5">
@@ -643,7 +643,7 @@ export function DietTab({ userId, language, onFoodDoubt, memory }: DietTabProps)
         {(planSourceLabel || plan.lockedByCoach) && (
           <div className="mt-2 flex flex-wrap items-center justify-center gap-1.5">
             {planSourceLabel && (
-              <span className="rounded-full bg-[rgba(82,231,255,0.13)] px-2 py-0.5 font-mono text-[7px] font-black uppercase tracking-[0.12em] text-[var(--guto-cyan)]">
+              <span className="rounded-full bg-[rgba(82,231,255,0.13)] px-2 py-0.5 font-mono text-[7px] font-black uppercase tracking-[0.12em] text-(--guto-cyan)">
                 {planSourceLabel}
               </span>
             )}
@@ -666,16 +666,16 @@ export function DietTab({ userId, language, onFoodDoubt, memory }: DietTabProps)
         {/* Kcal row */}
         <div className="flex items-center justify-between px-4 pt-3 pb-2">
           <div className="flex items-end gap-1.5">
-            <Flame className="h-4 w-4 text-[var(--guto-cyan)] mb-px shrink-0" />
-            <span className="text-[24px] font-black leading-none text-[var(--guto-navy)]">
+            <Flame className="h-4 w-4 text-(--guto-cyan) mb-px shrink-0" />
+            <span className="text-[24px] font-black leading-none text-(--guto-navy)">
               {macros.targetKcal}
             </span>
             <div className="flex flex-col mb-0.5">
-              <span className="font-mono text-[8px] leading-none text-[var(--guto-navy)]/40">kcal</span>
-              <span className="font-mono text-[7px] leading-none text-[var(--guto-navy)]/30">{copy.perDay}</span>
+              <span className="font-mono text-[8px] leading-none text-(--guto-navy)/40">kcal</span>
+              <span className="font-mono text-[7px] leading-none text-(--guto-navy)/30">{copy.perDay}</span>
             </div>
           </div>
-          <span className="font-mono text-[8px] font-black uppercase tracking-[0.1em] text-[var(--guto-navy)] bg-[rgba(82,231,255,0.15)] px-2.5 py-1 rounded-full">
+          <span className="font-mono text-[8px] font-black uppercase tracking-widest text-(--guto-navy) bg-[rgba(82,231,255,0.15)] px-2.5 py-1 rounded-full">
             {goalName}
           </span>
         </div>
@@ -694,7 +694,7 @@ export function DietTab({ userId, language, onFoodDoubt, memory }: DietTabProps)
       </motion.div>
 
       {/* ── Scrollable meals ── */}
-      <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto flex flex-col gap-2 pb-[calc(8rem+env(safe-area-inset-bottom))] overscroll-contain [scroll-padding-bottom:calc(8rem+env(safe-area-inset-bottom))] [-webkit-overflow-scrolling:touch]">
+      <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto flex flex-col gap-2 pb-[calc(8rem+env(safe-area-inset-bottom))] overscroll-contain scroll-pb-[calc(8rem+env(safe-area-inset-bottom))] [-webkit-overflow-scrolling:touch]">
         {meals.map((meal, i) => (
           <MealCard
             key={meal.id}
@@ -711,13 +711,13 @@ export function DietTab({ userId, language, onFoodDoubt, memory }: DietTabProps)
           whileTap={{ scale: 0.97 }}
           onClick={() => { gutoAudio.playGutoFeedback('tap'); handleRetry() }}
           disabled={retrying}
-          className="mt-1 flex items-center justify-center gap-2 w-full h-9 rounded-[0.85rem] border border-[rgba(82,231,255,0.25)] bg-transparent text-[var(--guto-cyan)]/60 font-mono text-[8px] font-black uppercase tracking-[0.14em] disabled:opacity-40"
+          className="mt-1 flex items-center justify-center gap-2 w-full h-9 rounded-[0.85rem] border border-[rgba(82,231,255,0.25)] bg-transparent text-(--guto-cyan)/60 font-mono text-[8px] font-black uppercase tracking-[0.14em] disabled:opacity-40"
         >
           <RefreshCw className="h-3 w-3" />
           {copy.regenerateButton}
         </motion.button>
 
-        <p className="mt-2 text-center font-mono text-[7px] uppercase tracking-[0.1em] text-[rgba(13,35,65,0.30)] px-4">
+        <p className="mt-2 text-center font-mono text-[7px] uppercase tracking-widest text-[rgba(13,35,65,0.30)] px-4">
           {copy.disclaimer}
         </p>
       </div>
@@ -738,12 +738,12 @@ function MacroPill({
   value: string
   color: "cyan" | "amber" | "sky"
 }) {
-  const colorMap = { cyan: "text-[var(--guto-cyan)]", amber: "text-amber-500", sky: "text-sky-400" }
+  const colorMap = { cyan: "text-(--guto-cyan)", amber: "text-amber-500", sky: "text-sky-400" }
   return (
     <div className="flex flex-col items-center gap-0.5 flex-1">
       <div className={colorMap[color]}>{icon}</div>
-      <span className="text-[14px] font-black leading-none text-[var(--guto-navy)]">{value}</span>
-      <span className="font-mono text-[7px] uppercase tracking-[0.1em] text-[rgba(13,35,65,0.38)] mt-0.5">{label}</span>
+      <span className="text-[14px] font-black leading-none text-(--guto-navy)">{value}</span>
+      <span className="font-mono text-[7px] uppercase tracking-widest text-[rgba(13,35,65,0.38)] mt-0.5">{label}</span>
     </div>
   )
 }

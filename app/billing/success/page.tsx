@@ -42,14 +42,14 @@ export default function BillingSuccessPage() {
       <div className="mb-8 flex flex-col items-center">
         <div className="guto-deboss mb-6 flex h-20 w-20 items-center justify-center rounded-full">
           {confirmed
-            ? <CheckCircle2 className="h-10 w-10 text-[var(--guto-cyan)]" />
+            ? <CheckCircle2 className="h-10 w-10 text-(--guto-cyan)" />
             : <Loader2 className="h-10 w-10 animate-spin text-[rgba(13,35,65,0.3)]" />}
         </div>
-        <Image src="/assets/guto/logo_guto.png" alt="GUTO" width={140} height={46} />
+        <Image src="/assets/guto/logo_guto.png" alt="GUTO" width={140} height={46} style={{ height: "auto" }} />
       </div>
 
       <div className="max-w-xs space-y-4">
-        <h1 className="font-mono text-xs font-black uppercase tracking-widest text-[var(--guto-navy)]">
+        <h1 className="font-mono text-xs font-black uppercase tracking-widest text-(--guto-navy)">
           {confirmed ? "Dupla ativada" : "Confirmando pagamento"}
         </h1>
         <p className="font-mono text-[10px] font-black uppercase leading-relaxed tracking-wider text-[rgba(13,35,65,0.5)]">
@@ -62,7 +62,7 @@ export default function BillingSuccessPage() {
       <button
         onClick={() => router.push("/")}
         disabled={!confirmed}
-        className="mt-12 rounded-full bg-[var(--guto-cyan)] px-8 py-3 font-mono text-[10px] font-black uppercase tracking-[0.2em] text-[var(--guto-navy)] shadow-[0_4px_16px_rgba(82,231,255,0.3)] transition-all active:scale-95 disabled:opacity-40"
+        className="mt-12 rounded-full bg-(--guto-cyan) px-8 py-3 font-mono text-[10px] font-black uppercase tracking-[0.2em] text-(--guto-navy) shadow-[0_4px_16px_rgba(82,231,255,0.3)] transition-all active:scale-95 disabled:opacity-40"
       >
         Entrar no GUTO
       </button>

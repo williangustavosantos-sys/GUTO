@@ -72,13 +72,19 @@ const mealFoodKeys = [
   ["pasta", "chicken", "oliveOil", "parmesan"],
 ]
 
-const foodDistribution = [
-  [0.36, 0.16, 0.22, 0.26],
-  [0.46, 0.27, 0.27],
-  [0.42, 0.36, 0.09, 0.13],
-  [0.45, 0.32, 0.23],
-  [0.48, 0.34, 0.08, 0.1],
-]
+const foodSafetyGroups: Record<string, Array<FoodTemplate["key"]>> = {
+  dairy: ["yogurt", "parmesan"],
+  meat: ["chicken"],
+  animal: ["yogurt", "parmesan", "eggs", "chicken"],
+  gluten: ["oats", "pasta"],
+}
+
+const foodSafetyTerms = {
+  dairy: /\b(lactose|lactos|láct|latic|dairy|milk|leite|latte|cheese|queijo|formagg|yogurt|iogurte)\b/i,
+  vegan: /\b(vegan|vegano|vegana|plant[-\s]?based)\b/i,
+  vegetarian: /\b(vegetarian|vegetariano|vegetariana)\b/i,
+  gluten: /\b(gluten|glúten|celiac|celíac|celiach)\b/i,
+}
 
 export function validateDietPlan(plan: DietPlan) {
   const macroKcal = plan.macros.proteinG * 4 + plan.macros.carbsG * 4 + plan.macros.fatG * 9
@@ -115,7 +121,8 @@ export function sanitizeDietPlan(plan: DietPlan, memory: GutoMemory | null, lang
 
   const validation = validateDietPlan(plan)
   logValidation(validation)
-  if (validation.valid) return plan
+  const violatesDietLimits = memory ? planViolatesDietLimits(plan, memory) : false
+  if (validation.valid && !violatesDietLimits) return plan
 
   if (memory && hasDietProfile(memory)) {
     const corrected = createCalculatedDietPlan(memory, language, plan.userId, plan.generatedAt)
@@ -147,7 +154,7 @@ export function createCalculatedDietPlan(
   const fatG = Math.round(weightKg * getFatPerKg(memory.trainingGoal))
   const carbsG = Math.max(80, Math.round((rawTarget - proteinG * 4 - fatG * 9) / 4))
   const targetKcal = proteinG * 4 + carbsG * 4 + fatG * 9
-  const meals = buildMeals(targetKcal, language)
+  const meals = buildMeals(targetKcal, language, memory)
 
   if (process.env.NODE_ENV === "development") {
     console.info("[GUTO_DIET_INPUT]", {
@@ -191,7 +198,15 @@ export function createCalculatedDietPlan(
 }
 
 function hasDietProfile(memory: GutoMemory): boolean {
-  return Boolean(memory.heightCm && memory.weightKg && memory.userAge && memory.biologicalSex && memory.trainingGoal)
+  return Boolean(
+    memory.heightCm &&
+    memory.weightKg &&
+    memory.userAge &&
+    memory.biologicalSex &&
+    memory.trainingGoal &&
+    memory.country &&
+    (memory.foodRestrictions || memory.foodIntolerances)
+  )
 }
 
 function getActivityFactor(memory: GutoMemory): number {
@@ -230,18 +245,69 @@ function getFatPerKg(goal?: string): number {
   return 0.85
 }
 
-function buildMeals(targetKcal: number, language: SupportedLanguage): DietMeal[] {
+function buildMeals(targetKcal: number, language: SupportedLanguage, memory?: GutoMemory): DietMeal[] {
   let allocated = 0
   return MEAL_DISTRIBUTION.map((pct, index) => {
     const mealKcal = index === MEAL_DISTRIBUTION.length - 1 ? targetKcal - allocated : Math.round(targetKcal * pct)
     allocated += mealKcal
     const copy = mealCopy[language][index]
+    const allowedFoodKeys = filterFoodKeysForDietLimits(mealFoodKeys[index], memory)
     return {
       ...copy,
       totalKcal: mealKcal,
-      foods: buildFoods(mealKcal, mealFoodKeys[index], foodDistribution[index], language),
+      foods: buildFoods(mealKcal, allowedFoodKeys, rebalanceDistribution(allowedFoodKeys.length), language),
     }
   })
+}
+
+function getDietLimits(memory?: GutoMemory | null) {
+  const text = `${memory?.foodRestrictions ?? ""} ${memory?.foodIntolerances ?? ""}`.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+  return {
+    dairy: foodSafetyTerms.dairy.test(text),
+    vegan: foodSafetyTerms.vegan.test(text),
+    vegetarian: foodSafetyTerms.vegetarian.test(text),
+    gluten: foodSafetyTerms.gluten.test(text),
+  }
+}
+
+function filterFoodKeysForDietLimits(keys: string[], memory?: GutoMemory): string[] {
+  const limits = getDietLimits(memory)
+  const blocked = new Set<string>()
+  if (limits.dairy) foodSafetyGroups.dairy.forEach((key) => blocked.add(key))
+  if (limits.vegan) foodSafetyGroups.animal.forEach((key) => blocked.add(key))
+  if (limits.vegetarian) foodSafetyGroups.meat.forEach((key) => blocked.add(key))
+  if (limits.gluten) foodSafetyGroups.gluten.forEach((key) => blocked.add(key))
+
+  const allowed = keys.filter((key) => !blocked.has(key))
+  return allowed.length > 0 ? allowed : ["rice", "banana", "oliveOil"]
+}
+
+function rebalanceDistribution(length: number): number[] {
+  if (length <= 1) return [1]
+  return Array.from({ length }, () => 1 / length)
+}
+
+function planViolatesDietLimits(plan: DietPlan, memory: GutoMemory): boolean {
+  const limits = getDietLimits(memory)
+  if (!limits.dairy && !limits.vegan && !limits.vegetarian && !limits.gluten) return false
+
+  const text = plan.meals
+    .flatMap((meal) => meal.foods.map((food) => food.name))
+    .join(" ")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+
+  const hasDairy = /\b(iogurte|yogurt|yoghurt|parmes|queijo|cheese|milk|leite|latte|formagg|dairy)\b/i.test(text)
+  const hasMeat = /\b(frango|chicken|pollo)\b/i.test(text)
+  const hasEggs = /\b(ovo|ovos|egg|eggs|uova)\b/i.test(text)
+  const hasGluten = /\b(macarrao|pasta|aveia|oats|gluten)\b/i.test(text)
+
+  if (limits.vegan && (hasDairy || hasMeat || hasEggs)) return true
+  if (limits.vegetarian && hasMeat) return true
+  if (limits.dairy && hasDairy) return true
+  if (limits.gluten && hasGluten) return true
+  return false
 }
 
 function buildFoods(mealKcal: number, keys: string[], distribution: number[], language: SupportedLanguage): DietFood[] {
@@ -310,5 +376,5 @@ function logValidation(validation: ReturnType<typeof validateDietPlan>) {
     mealsKcal: validation.mealsKcal,
     mealValidation: validation.mealValidation,
   })
-  if (!validation.valid) console.error("[GUTO_DIET_ERROR]", validation)
+  if (!validation.valid) console.warn("[GUTO_DIET_INVALID]", validation)
 }

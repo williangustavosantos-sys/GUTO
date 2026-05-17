@@ -1584,7 +1584,7 @@ function CoachInner() {
               return (
                 <div
                   key={team.id}
-                  className={`rounded-xl border p-4 transition ${isSelected ? "border-[#00e5ff]/50 bg-[#00e5ff]/[0.06]" : "border-white/7 bg-white/[0.035]"}`}
+                  className={`rounded-xl border p-4 transition ${isSelected ? "border-[#00e5ff]/50 bg-[#00e5ff]/6" : "border-white/7 bg-white/[0.035]"}`}
                 >
                   {isEditing ? (
                     <div className="grid gap-3">
@@ -2024,22 +2024,24 @@ function CoachInner() {
                         )}
                       </div>
                     </Panel>
-                    <Panel title={copy.sheet.criticalZone}>
-                      <div className="grid gap-3">
-                        <ActionButton danger disabled={acting} onClick={() => {
-                          if (!window.confirm(copy.sheet.permanentDeleteConfirm)) return;
-                          void act(async () => {
-                            await deleteAdminStudent(selected.userId);
-                            setSelectedDetail(null);
-                            setStudents((current) => current.filter((student) => student.userId !== selected.userId));
-                          }, copy.sheet.permanentDeleted);
-                        }}>
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          {copy.sheet.permanentDelete}
-                        </ActionButton>
-                        <p className="text-xs font-bold leading-relaxed text-white/35">{copy.sheet.permanentDeleteHelp}</p>
-                      </div>
-                    </Panel>
+                    {isSuperAdmin && (
+                      <Panel title={copy.sheet.criticalZone}>
+                        <div className="grid gap-3">
+                          <ActionButton danger disabled={acting} onClick={() => {
+                            if (!window.confirm(copy.sheet.permanentDeleteConfirm)) return;
+                            void act(async () => {
+                              await deleteAdminStudent(selected.userId);
+                              setSelectedDetail(null);
+                              setStudents((current) => current.filter((student) => student.userId !== selected.userId));
+                            }, copy.sheet.permanentDeleted);
+                          }}>
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            {copy.sheet.permanentDelete}
+                          </ActionButton>
+                          <p className="text-xs font-bold leading-relaxed text-white/35">{copy.sheet.permanentDeleteHelp}</p>
+                        </div>
+                      </Panel>
+                    )}
                   </div>
                 )}
               </div>
@@ -2175,7 +2177,7 @@ function AdminSidebar({
               className={`flex h-10 w-full items-center gap-3 border-r-2 px-4 text-left text-[10px] font-black uppercase tracking-[0.22em] transition ${
                 active
                   ? "border-[#52e7ff] bg-[#52e7ff]/14 text-[#52e7ff]"
-                  : "border-transparent text-white/35 hover:bg-white/[0.03] hover:text-white/70"
+                  : "border-transparent text-white/35 hover:bg-white/3 hover:text-white/70"
               }`}
             >
               <span className="shrink-0">{item.icon}</span>
@@ -2422,7 +2424,7 @@ function StudentDesktopTable({
           {students.map((student) => {
             const status = getStatusInfo(student, copy);
             return (
-              <TableRow key={student.userId} className="border-[#52e7ff]/[0.08] hover:bg-[#52e7ff]/[0.045]">
+              <TableRow key={student.userId} className="border-[#52e7ff]/8 hover:bg-[#52e7ff]/4.5">
                 <TableCell className="max-w-[280px] pl-4">
                   <button type="button" onClick={() => onOpen(student)} className="block min-w-0 text-left">
                     <span className="block truncate text-sm font-black text-white">{student.name}</span>
@@ -2534,7 +2536,7 @@ function Panel({ title, children, className = "" }: { title: string; children: R
 
 function DataRow({ label, value }: { label: string; value: ReactNode }) {
   return (
-    <div className="flex items-center justify-between gap-4 border-b border-white/[0.04] py-2.5 last:border-0">
+    <div className="flex items-center justify-between gap-4 border-b border-white/4 py-2.5 last:border-0">
       <span className="text-xs text-white/35">{label}</span>
       <div className="text-right text-xs font-bold text-white">{value}</div>
     </div>
@@ -3040,7 +3042,7 @@ function WorkoutEditor({
                       key={item.id}
                       type="button"
                       onClick={() => selectCatalogExercise(index, item)}
-	                      className="min-w-0 rounded-md border border-white/10 bg-white/[0.04] px-3 py-2 text-left hover:border-[#00e5ff]/45"
+	                      className="min-w-0 rounded-md border border-white/10 bg-white/4 px-3 py-2 text-left hover:border-[#00e5ff]/45"
 	                    >
 	                      <span className="block truncate text-xs font-black text-white">{item.namesByLanguage?.[language] || item.canonicalNamePt}</span>
 	                      <span className="block truncate font-mono text-[9px] uppercase tracking-widest text-white/35">{item.muscleGroup} · {item.id}</span>

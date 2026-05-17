@@ -34,10 +34,10 @@ export function EvolutionsTab({ language, currentEvolution, memory }: Evolutions
   return (
     <div className="flex h-full flex-col pb-4">
       <div className="px-1 pb-4 pt-2 text-center shrink-0">
-        <p className="font-mono text-[9px] font-black uppercase tracking-[0.22em] text-[var(--guto-cyan)] mb-1">
+        <p className="font-mono text-[9px] font-black uppercase tracking-[0.22em] text-(--guto-cyan) mb-1">
           {locale.evoSubtitle}
         </p>
-        <h1 className="mx-auto max-w-[18rem] text-balance text-[1.25rem] font-black uppercase leading-tight tracking-[0.08em] text-[var(--guto-navy)]">
+        <h1 className="mx-auto max-w-[18rem] text-balance text-[1.25rem] font-black uppercase leading-tight tracking-[0.08em] text-(--guto-navy)">
           {locale.evoTitle}
         </h1>
       </div>
@@ -83,13 +83,13 @@ export function EvolutionsTab({ language, currentEvolution, memory }: Evolutions
                       <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-[rgba(13,35,65,0.38)]">
                         {locale.level}
                       </p>
-                      <h2 className="mt-1 text-xl font-black tracking-[0.16em] text-[var(--guto-navy)]">
+                      <h2 className="mt-1 text-xl font-black tracking-[0.16em] text-(--guto-navy)">
                         {card.label}
                       </h2>
                     </div>
 
                     {isCurrent ? (
-                      <span className="font-mono text-[10px] uppercase tracking-[0.24em] text-[var(--guto-cyan)]">
+                      <span className="font-mono text-[10px] uppercase tracking-[0.24em] text-(--guto-cyan)">
                         {copy.active}
                       </span>
                     ) : (
@@ -134,7 +134,7 @@ export function EvolutionsTab({ language, currentEvolution, memory }: Evolutions
               <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-[rgba(13,35,65,0.38)]">
                 XP
               </span>
-              <span className="text-xl font-black text-[var(--guto-navy)]">
+              <span className="text-xl font-black text-(--guto-navy)">
                 {currentXp.toLocaleString()}
               </span>
             </div>
@@ -142,7 +142,7 @@ export function EvolutionsTab({ language, currentEvolution, memory }: Evolutions
 
           <div className="min-w-0 flex-1">
             <p className="text-sm text-[rgba(13,35,65,0.68)]">{locale.evoAuto1}</p>
-            <p className="mt-1 text-sm font-semibold text-[var(--guto-navy)]">{locale.evoAuto2}</p>
+            <p className="mt-1 text-sm font-semibold text-(--guto-navy)">{locale.evoAuto2}</p>
 
             <div className="mt-4 h-2 overflow-hidden rounded-full bg-[rgba(13,35,65,0.08)]">
               <motion.div

@@ -10,10 +10,10 @@ interface NameScreenProps {
   language?: string
 }
 
-const localeTexts: Record<string, { complete: string; placeholder: string }> = {
-  "pt-BR": { complete: "Complete.", placeholder: "Seu nome" },
-  "it-IT": { complete: "Completa.", placeholder: "Il tuo nome" },
-  "en-US": { complete: "Complete.", placeholder: "Your name" },
+const localeTexts: Record<string, { complete: string; placeholder: string; confirmAria: string }> = {
+  "pt-BR": { complete: "Complete.", placeholder: "Seu nome", confirmAria: "Confirmar nome" },
+  "it-IT": { complete: "Completa.", placeholder: "Il tuo nome", confirmAria: "Conferma nome" },
+  "en-US": { complete: "Complete.", placeholder: "Your name", confirmAria: "Confirm name" },
 }
 
 export function NameScreen({ onSubmit, language = "pt-BR" }: NameScreenProps) {
@@ -145,7 +145,7 @@ export function NameScreen({ onSubmit, language = "pt-BR" }: NameScreenProps) {
             className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center transition-all disabled:opacity-30"
             whileHover={canSubmit ? { scale: 1.05, backgroundColor: "oklch(0.65 0.15 240 / 0.2)" } : {}}
             whileTap={canSubmit ? { scale: 0.95 } : {}}
-            aria-label="Confirmar nome"
+            aria-label={locale.confirmAria}
           >
             <Check className="w-5 h-5 text-primary" />
           </motion.button>

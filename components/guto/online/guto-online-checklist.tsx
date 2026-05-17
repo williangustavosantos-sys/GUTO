@@ -37,11 +37,11 @@ export function GutoOnlineChecklist({ items, language, expanded = true }: GutoOn
 
   if (!expanded) {
     return (
-      <div className="flex items-center justify-between rounded-[1rem] border border-white/70 bg-white/45 px-3 py-2">
+      <div className="flex items-center justify-between rounded-2xl border border-white/70 bg-white/45 px-3 py-2">
         <p className="font-mono text-[9px] font-black uppercase tracking-[0.14em] text-[rgba(13,35,65,0.6)]">
           Checklist
         </p>
-        <p className="font-mono text-[10px] font-black text-[var(--guto-cyan)]">
+        <p className="font-mono text-[10px] font-black text-(--guto-cyan)">
           {copy.progress(doneCount, total)}
         </p>
       </div>
@@ -54,7 +54,7 @@ export function GutoOnlineChecklist({ items, language, expanded = true }: GutoOn
         <p className="font-mono text-[9px] font-black uppercase tracking-[0.16em] text-[rgba(13,35,65,0.55)]">
           Checklist
         </p>
-        <p className="font-mono text-[10px] font-black uppercase tracking-[0.14em] text-[var(--guto-cyan)]">
+        <p className="font-mono text-[10px] font-black uppercase tracking-[0.14em] text-(--guto-cyan)">
           {copy.progress(doneCount, total)}
         </p>
       </header>
@@ -70,7 +70,7 @@ export function GutoOnlineChecklist({ items, language, expanded = true }: GutoOn
             ].join(" ")}
           >
             {item.done ? (
-              <Check className="h-3.5 w-3.5 shrink-0 text-[var(--guto-cyan)]" />
+              <Check className="h-3.5 w-3.5 shrink-0 text-(--guto-cyan)" />
             ) : (
               <Circle className="h-3.5 w-3.5 shrink-0 text-[rgba(13,35,65,0.35)]" />
             )}

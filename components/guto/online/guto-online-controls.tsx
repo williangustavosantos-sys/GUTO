@@ -95,7 +95,7 @@ export function GutoOnlineControls({
         <button
           type="button"
           onClick={onValidate}
-          className="guto-deboss-deep flex h-14 items-center justify-center gap-2 rounded-[1.1rem] border border-[rgba(82,231,255,0.6)] bg-[rgba(82,231,255,0.16)] font-mono text-[11px] font-black uppercase tracking-[0.18em] text-[var(--guto-navy)] active:scale-[0.99]"
+          className="guto-deboss-deep flex h-14 items-center justify-center gap-2 rounded-[1.1rem] border border-[rgba(82,231,255,0.6)] bg-[rgba(82,231,255,0.16)] font-mono text-[11px] font-black uppercase tracking-[0.18em] text-(--guto-navy) active:scale-[0.99]"
         >
           <Flame className="h-4 w-4" />
           {copy.validate}
@@ -110,7 +110,7 @@ export function GutoOnlineControls({
         <button
           type="button"
           onClick={onWarmupDone}
-          className="flex h-14 items-center justify-center gap-2 rounded-[1.1rem] border border-[rgba(82,231,255,0.55)] bg-[rgba(82,231,255,0.16)] font-mono text-[10px] font-black uppercase tracking-[0.14em] text-[var(--guto-navy)] active:scale-[0.98]"
+          className="flex h-14 items-center justify-center gap-2 rounded-[1.1rem] border border-[rgba(82,231,255,0.55)] bg-[rgba(82,231,255,0.16)] font-mono text-[10px] font-black uppercase tracking-[0.14em] text-(--guto-navy) active:scale-[0.98]"
         >
           <CheckCircle2 className="h-4 w-4" />
           {copy.warmupDone}
@@ -137,7 +137,7 @@ export function GutoOnlineControls({
             type="button"
             onClick={handler}
             disabled={phase === "paused"}
-            className="flex h-14 items-center justify-center gap-2 rounded-[1.1rem] border border-[rgba(82,231,255,0.55)] bg-[rgba(82,231,255,0.16)] font-mono text-[10px] font-black uppercase tracking-[0.14em] text-[var(--guto-navy)] active:scale-[0.98] disabled:opacity-40"
+            className="flex h-14 items-center justify-center gap-2 rounded-[1.1rem] border border-[rgba(82,231,255,0.55)] bg-[rgba(82,231,255,0.16)] font-mono text-[10px] font-black uppercase tracking-[0.14em] text-(--guto-navy) active:scale-[0.98] disabled:opacity-40"
           >
             <CheckCircle2 className="h-4 w-4" />
             {primary}
@@ -171,7 +171,7 @@ export function GutoOnlineControls({
         <button
           type="button"
           onClick={onTalk}
-          className="flex h-12 items-center justify-center gap-2 rounded-[1rem] border border-white/70 bg-white/55 font-mono text-[10px] font-black uppercase tracking-[0.14em] active:scale-[0.98]"
+          className="flex h-12 items-center justify-center gap-2 rounded-2xl border border-white/70 bg-white/55 font-mono text-[10px] font-black uppercase tracking-[0.14em] active:scale-[0.98]"
         >
           <MessageCircle className="h-4 w-4" />
           {copy.talk}
@@ -258,7 +258,7 @@ export function GutoOnlineMoreOptions({
         onClick={(event) => event.stopPropagation()}
       >
         <header className="flex items-center justify-between">
-          <h3 className="font-mono text-[10px] font-black uppercase tracking-[0.16em] text-[var(--guto-navy)]">
+          <h3 className="font-mono text-[10px] font-black uppercase tracking-[0.16em] text-(--guto-navy)">
             {copy.title}
           </h3>
           <button
@@ -275,7 +275,7 @@ export function GutoOnlineMoreOptions({
             <button
               type="button"
               onClick={onUndoLast}
-              className="flex w-full items-center justify-between rounded-[1rem] border border-white/70 bg-white/55 px-4 py-3 text-left font-mono text-[10px] font-black uppercase tracking-[0.14em] active:scale-[0.99]"
+              className="flex w-full items-center justify-between rounded-2xl border border-white/70 bg-white/55 px-4 py-3 text-left font-mono text-[10px] font-black uppercase tracking-[0.14em] active:scale-[0.99]"
             >
               {copy.undo}
             </button>
@@ -284,7 +284,7 @@ export function GutoOnlineMoreOptions({
             <button
               type="button"
               onClick={onPauseSession}
-              className="flex w-full items-center justify-between rounded-[1rem] border border-white/70 bg-white/55 px-4 py-3 text-left font-mono text-[10px] font-black uppercase tracking-[0.14em] active:scale-[0.99]"
+              className="flex w-full items-center justify-between rounded-2xl border border-white/70 bg-white/55 px-4 py-3 text-left font-mono text-[10px] font-black uppercase tracking-[0.14em] active:scale-[0.99]"
             >
               {copy.pause}
             </button>
@@ -297,7 +297,7 @@ export function GutoOnlineMoreOptions({
                   onSkipExercise()
                 }
               }}
-              className="flex w-full items-center justify-between rounded-[1rem] border border-[rgba(157,43,43,0.22)] bg-[rgba(157,43,43,0.08)] px-4 py-3 text-left font-mono text-[10px] font-black uppercase tracking-[0.14em] text-[var(--destructive)] active:scale-[0.99]"
+              className="flex w-full items-center justify-between rounded-2xl border border-[rgba(157,43,43,0.22)] bg-[rgba(157,43,43,0.08)] px-4 py-3 text-left font-mono text-[10px] font-black uppercase tracking-[0.14em] text-destructive active:scale-[0.99]"
             >
               <ShieldAlert className="mr-2 inline h-4 w-4" />
               {copy.skip}

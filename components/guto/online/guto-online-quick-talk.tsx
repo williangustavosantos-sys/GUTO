@@ -258,10 +258,10 @@ export function GutoOnlineQuickTalk({
       <div className="w-full max-w-md rounded-t-[1.5rem] border border-white/80 bg-white/95 p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-[0_-30px_80px_rgba(13,35,65,0.18)]">
         <header className="flex items-start justify-between gap-3">
           <div>
-            <p className="font-mono text-[9px] font-black uppercase tracking-[0.18em] text-[var(--guto-cyan)]">
+            <p className="font-mono text-[9px] font-black uppercase tracking-[0.18em] text-(--guto-cyan)">
               {language.startsWith("it") ? "Parla con GUTO" : language.startsWith("en") ? "Talk with GUTO" : "Falar com GUTO"}
             </p>
-            <h2 className="mt-1 text-[1.05rem] font-black leading-tight tracking-[0.02em] text-[var(--guto-navy)]">
+            <h2 className="mt-1 text-[1.05rem] font-black leading-tight tracking-[0.02em] text-(--guto-navy)">
               {headline}
             </h2>
           </div>
@@ -282,7 +282,7 @@ export function GutoOnlineQuickTalk({
         )}
 
         {responseLine && (
-          <section className="mt-3 rounded-[1rem] border border-[rgba(82,231,255,0.32)] bg-[rgba(82,231,255,0.08)] p-3">
+          <section className="mt-3 rounded-2xl border border-[rgba(82,231,255,0.32)] bg-[rgba(82,231,255,0.08)] p-3">
             <p className="font-mono text-[8px] font-black uppercase tracking-[0.18em] text-[rgba(13,35,65,0.5)]">GUTO</p>
             <p className="mt-1 text-[13px] font-bold leading-snug text-[rgba(13,35,65,0.86)]">{responseLine}</p>
           </section>
@@ -304,8 +304,8 @@ export function GutoOnlineQuickTalk({
               className={[
                 "flex h-20 w-full max-w-xs items-center justify-center gap-2 rounded-[1.4rem] font-mono text-[11px] font-black uppercase tracking-[0.18em] transition-colors",
                 pressing
-                  ? "border border-[rgba(82,231,255,0.7)] bg-[rgba(82,231,255,0.22)] text-[var(--guto-navy)]"
-                  : "border border-white/70 bg-white/65 text-[var(--guto-navy)]",
+                  ? "border border-[rgba(82,231,255,0.7)] bg-[rgba(82,231,255,0.22)] text-(--guto-navy)"
+                  : "border border-white/70 bg-white/65 text-(--guto-navy)",
               ].join(" ")}
             >
               {pressing ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
@@ -321,7 +321,7 @@ export function GutoOnlineQuickTalk({
             <button
               type="button"
               onClick={() => setMode("text")}
-              className="flex items-center gap-1.5 text-[11px] font-bold text-[var(--guto-cyan)] underline-offset-4 hover:underline"
+              className="flex items-center gap-1.5 text-[11px] font-bold text-(--guto-cyan) underline-offset-4 hover:underline"
             >
               <Keyboard className="h-3.5 w-3.5" />
               {copy.switchToText}
@@ -334,14 +334,14 @@ export function GutoOnlineQuickTalk({
               onChange={(event) => setTyped(event.target.value)}
               placeholder={copy.placeholder}
               rows={3}
-              className="w-full resize-none rounded-[1rem] border border-white/70 bg-white/65 p-3 text-[14px] font-medium text-[var(--guto-navy)] outline-none placeholder:text-[rgba(13,35,65,0.4)] focus:border-[rgba(82,231,255,0.6)]"
+              className="w-full resize-none rounded-2xl border border-white/70 bg-white/65 p-3 text-[14px] font-medium text-(--guto-navy) outline-none placeholder:text-[rgba(13,35,65,0.4)] focus:border-[rgba(82,231,255,0.6)]"
               autoFocus
             />
             <div className="flex items-center justify-between">
               <button
                 type="button"
                 onClick={() => setMode("voice")}
-                className="flex items-center gap-1.5 text-[11px] font-bold text-[var(--guto-cyan)] underline-offset-4 hover:underline"
+                className="flex items-center gap-1.5 text-[11px] font-bold text-(--guto-cyan) underline-offset-4 hover:underline"
               >
                 <Mic className="h-3.5 w-3.5" />
                 {copy.switchToVoice}
@@ -350,7 +350,7 @@ export function GutoOnlineQuickTalk({
                 type="button"
                 onClick={submitText}
                 disabled={!typed.trim()}
-                className="flex h-11 items-center gap-2 rounded-[1rem] border border-[rgba(82,231,255,0.55)] bg-[rgba(82,231,255,0.16)] px-4 font-mono text-[10px] font-black uppercase tracking-[0.14em] text-[var(--guto-navy)] disabled:opacity-40"
+                className="flex h-11 items-center gap-2 rounded-2xl border border-[rgba(82,231,255,0.55)] bg-[rgba(82,231,255,0.16)] px-4 font-mono text-[10px] font-black uppercase tracking-[0.14em] text-(--guto-navy) disabled:opacity-40"
               >
                 <Send className="h-3.5 w-3.5" />
                 {copy.send}
@@ -363,7 +363,7 @@ export function GutoOnlineQuickTalk({
           <button
             type="button"
             onClick={onCancel}
-            className="flex h-11 items-center justify-center gap-2 rounded-[1rem] border border-white/70 bg-white/55 font-mono text-[10px] font-black uppercase tracking-[0.14em]"
+            className="flex h-11 items-center justify-center gap-2 rounded-2xl border border-white/70 bg-white/55 font-mono text-[10px] font-black uppercase tracking-[0.14em]"
           >
             {copy.cancel}
           </button>
@@ -371,7 +371,7 @@ export function GutoOnlineQuickTalk({
             type="button"
             onClick={onResume}
             disabled={!responseLine}
-            className="flex h-11 items-center justify-center gap-2 rounded-[1rem] border border-[rgba(82,231,255,0.55)] bg-[rgba(82,231,255,0.16)] font-mono text-[10px] font-black uppercase tracking-[0.14em] text-[var(--guto-navy)] disabled:opacity-40"
+            className="flex h-11 items-center justify-center gap-2 rounded-2xl border border-[rgba(82,231,255,0.55)] bg-[rgba(82,231,255,0.16)] font-mono text-[10px] font-black uppercase tracking-[0.14em] text-(--guto-navy) disabled:opacity-40"
           >
             <MessageCircle className="h-3.5 w-3.5" />
             {copy.resume}

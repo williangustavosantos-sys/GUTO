@@ -15,6 +15,30 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
+function readStoredToken() {
+  try {
+    return localStorage.getItem("guto-auth-token")
+  } catch {
+    return null
+  }
+}
+
+function writeStoredToken(token: string) {
+  try {
+    localStorage.setItem("guto-auth-token", token)
+  } catch {
+    // Safari/private browsing can block storage; keep the session in React state.
+  }
+}
+
+function removeStoredToken() {
+  try {
+    localStorage.removeItem("guto-auth-token")
+  } catch {
+    // Storage is optional for first-run access.
+  }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [token, setToken] = useState<string | null>(null)
@@ -32,7 +56,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const login = (data: LoginResponse) => {
-    localStorage.setItem("guto-auth-token", data.token)
+    writeStoredToken(data.token)
     setToken(data.token)
     setUser({
       userId: data.userId,
@@ -47,7 +71,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const logout = () => {
-    localStorage.removeItem("guto-auth-token")
+    removeStoredToken()
     setToken(null)
     setUser(null)
     void apiLogout().catch(() => {})
@@ -55,7 +79,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   useEffect(() => {
-    const storedToken = localStorage.getItem("guto-auth-token")
+    const storedToken = readStoredToken()
     if (storedToken) {
       setToken(storedToken)
       getMe()
@@ -64,7 +88,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setIsLoading(false)
         })
         .catch(() => {
-          localStorage.removeItem("guto-auth-token")
+          removeStoredToken()
           setToken(null)
           setIsLoading(false)
         })

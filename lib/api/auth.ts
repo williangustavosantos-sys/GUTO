@@ -1,5 +1,10 @@
 import { apiRequest } from "./client"
 
+function normalizeLoginIdentifier(value: string) {
+  const trimmed = value.trim()
+  return trimmed.includes("@") ? trimmed.toLowerCase() : trimmed
+}
+
 export interface AuthUser {
   userId: string
   name?: string
@@ -24,24 +29,31 @@ export interface LoginResponse {
   subscriptionEndsAt?: string | null
 }
 
+export interface InvitePreview {
+  name: string
+  legalName?: string
+  userId: string
+  coachId: string
+}
+
 export async function loginAdmin(email: string, password: string): Promise<LoginResponse> {
   return apiRequest<LoginResponse>("/auth/admin/login", {
     method: "POST",
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ email: normalizeLoginIdentifier(email), password }),
   })
 }
 
 export async function loginCoach(email: string, password: string): Promise<LoginResponse> {
   return apiRequest<LoginResponse>("/auth/coach/login", {
     method: "POST",
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ email: normalizeLoginIdentifier(email), password }),
   })
 }
 
 export async function loginUser(emailOrId: string, password: string): Promise<LoginResponse> {
   return apiRequest<LoginResponse>("/auth/user/login", {
     method: "POST",
-    body: JSON.stringify({ emailOrId, password }),
+    body: JSON.stringify({ emailOrId: normalizeLoginIdentifier(emailOrId), password }),
   })
 }
 
@@ -49,8 +61,8 @@ export async function getMe(): Promise<AuthUser> {
   return apiRequest<AuthUser>("/auth/me")
 }
 
-export async function getInvite(token: string): Promise<{ name: string; userId: string; coachId: string }> {
-  return apiRequest<{ name: string; userId: string; coachId: string }>(`/auth/invite/${token}`)
+export async function getInvite(token: string): Promise<InvitePreview> {
+  return apiRequest<InvitePreview>(`/auth/invite/${token}`)
 }
 
 export async function claimInvite(token: string, password: string): Promise<LoginResponse> {

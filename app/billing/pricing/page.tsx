@@ -51,8 +51,8 @@ export default function PricingPage() {
   return (
     <div className="sala-guto min-h-dvh px-6 py-10">
       <div className="mx-auto flex max-w-md flex-col items-center text-center">
-        <Image src="/assets/guto/logo_guto.png" alt="GUTO" width={120} height={40} className="mb-8" />
-        <h1 className="font-mono text-xs font-black uppercase tracking-[0.2em] text-[var(--guto-navy)]">A dupla começa aqui</h1>
+        <Image src="/assets/guto/logo_guto.png" alt="GUTO" width={120} height={40} className="mb-8" style={{ height: "auto" }} />
+        <h1 className="font-mono text-xs font-black uppercase tracking-[0.2em] text-(--guto-navy)">A dupla começa aqui</h1>
         <p className="mt-3 font-mono text-[10px] font-black uppercase leading-relaxed tracking-[0.12em] text-[rgba(13,35,65,0.55)]">
           Escolha o plano. Cancela quando quiser.
         </p>
@@ -61,7 +61,7 @@ export default function PricingPage() {
           {PLANS.map((plan) => {
             const isBusy = busyPlan === plan.key
             const baseClass = plan.highlight
-              ? "border border-[var(--guto-cyan)] bg-white shadow-[0_8px_24px_rgba(82,231,255,0.18)]"
+              ? "border border-(--guto-cyan) bg-white shadow-[0_8px_24px_rgba(82,231,255,0.18)]"
               : "border border-[rgba(13,35,65,0.1)] bg-white/70"
             return (
               <button
@@ -69,22 +69,22 @@ export default function PricingPage() {
                 type="button"
                 disabled={Boolean(busyPlan)}
                 onClick={() => handleSelect(plan.key)}
-                className={`flex flex-col gap-1 rounded-[1.5rem] px-6 py-5 text-left transition-all active:scale-[0.99] disabled:opacity-50 ${baseClass}`}
+                className={`flex flex-col gap-1 rounded-3xl px-6 py-5 text-left transition-all active:scale-[0.99] disabled:opacity-50 ${baseClass}`}
               >
                 <div className="flex items-center justify-between">
-                  <span className="font-mono text-[10px] font-black uppercase tracking-[0.18em] text-[var(--guto-navy)]">{plan.title}</span>
+                  <span className="font-mono text-[10px] font-black uppercase tracking-[0.18em] text-(--guto-navy)">{plan.title}</span>
                   {plan.badge && (
-                    <span className="rounded-full bg-[var(--guto-cyan)]/30 px-3 py-1 font-mono text-[8px] font-black uppercase tracking-[0.16em] text-[var(--guto-navy)]">
+                    <span className="rounded-full bg-(--guto-cyan)/30 px-3 py-1 font-mono text-[8px] font-black uppercase tracking-[0.16em] text-(--guto-navy)">
                       {plan.badge}
                     </span>
                   )}
                 </div>
                 <div className="flex items-baseline gap-2">
-                  <span className="font-mono text-2xl font-black text-[var(--guto-navy)]">{plan.price}</span>
+                  <span className="font-mono text-2xl font-black text-(--guto-navy)">{plan.price}</span>
                   <span className="font-mono text-[9px] font-black uppercase tracking-[0.14em] text-[rgba(13,35,65,0.45)]">{plan.cadence}</span>
                 </div>
                 {isBusy && (
-                  <div className="mt-2 flex items-center gap-2 font-mono text-[9px] font-black uppercase tracking-[0.14em] text-[var(--guto-navy)]">
+                  <div className="mt-2 flex items-center gap-2 font-mono text-[9px] font-black uppercase tracking-[0.14em] text-(--guto-navy)">
                     <Loader2 className="h-3 w-3 animate-spin" /> Abrindo checkout...
                   </div>
                 )}

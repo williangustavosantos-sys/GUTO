@@ -93,10 +93,21 @@ function normalizeTextForHash(text: string) {
 
 async function sha1(value: string) {
   const data = new TextEncoder().encode(value)
-  const hashBuffer = await crypto.subtle.digest("SHA-1", data)
-  return Array.from(new Uint8Array(hashBuffer))
-    .map((byte) => byte.toString(16).padStart(2, "0"))
-    .join("")
+  const digest = globalThis.crypto?.subtle?.digest
+
+  if (digest) {
+    const hashBuffer = await digest.call(globalThis.crypto.subtle, "SHA-1", data)
+    return Array.from(new Uint8Array(hashBuffer))
+      .map((byte) => byte.toString(16).padStart(2, "0"))
+      .join("")
+  }
+
+  let hash = 0x811c9dc5
+  for (const byte of data) {
+    hash ^= byte
+    hash = Math.imul(hash, 0x01000193)
+  }
+  return `fnv1a-${(hash >>> 0).toString(16).padStart(8, "0")}`
 }
 
 function base64ToBlob(base64: string, contentType = "audio/mpeg") {

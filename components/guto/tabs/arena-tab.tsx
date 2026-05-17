@@ -29,8 +29,8 @@ interface ArenaTabProps {
 
 const avatarStageColor: Record<string, string> = {
   baby: "text-[rgba(13,35,65,0.38)]",
-  teen: "text-[var(--guto-cyan)]",
-  adult: "text-[var(--guto-cyan)]",
+  teen: "text-(--guto-cyan)",
+  adult: "text-(--guto-cyan)",
   elite: "text-yellow-500",
 }
 
@@ -69,7 +69,7 @@ function RankingCard({
   currentUserId: string
 }) {
   const PositionIcon = positionIcons[item.position - 1] ?? null
-  const stageColor = avatarStageColor[item.avatarStage] ?? "text-[var(--guto-cyan)]"
+  const stageColor = avatarStageColor[item.avatarStage] ?? "text-(--guto-cyan)"
   const stageName = avatarStageLabel[item.avatarStage]?.[language] ?? item.avatarStage.toUpperCase()
   const translatedStatus = translateArenaStatus(item.status, language)
   const isOnFire = item.status === "arena.status.on_fire" || item.status === "EM CHAMAS" || item.status === "ON FIRE"
@@ -124,7 +124,7 @@ function RankingCard({
           <div className="flex items-center justify-between gap-2">
             {/* Name */}
             <div className="min-w-0 flex-1 flex flex-col">
-              <p className="truncate text-[15px] font-black tracking-widest text-[var(--guto-navy)]">
+              <p className="truncate text-[15px] font-black tracking-widest text-(--guto-navy)">
                 {displayName}
               </p>
               <p className="text-[8px] font-black uppercase tracking-widest text-[rgba(13,35,65,0.42)]">
@@ -133,7 +133,7 @@ function RankingCard({
             </div>
             {/* XP */}
             <div className="shrink-0 text-right">
-              <p className="text-[15px] font-black leading-none text-[var(--guto-cyan)]">
+              <p className="text-[15px] font-black leading-none text-(--guto-cyan)">
                 {item.xp.toLocaleString()}{" "}
                 <span className="text-[10px] font-black tracking-widest">{t.arena.xp}</span>
               </p>
@@ -181,7 +181,7 @@ function RankingCard({
           </div>
           <div className="h-1 rounded-full bg-[rgba(13,35,65,0.08)]">
             <div
-              className="h-1 rounded-full bg-[var(--guto-cyan)] transition-all"
+              className="h-1 rounded-full bg-(--guto-cyan) transition-all"
               style={{
                 width: item.nextEvolutionXp
                   ? `${Math.min(100, (item.xp / item.nextEvolutionXp) * 100)}%`
@@ -270,17 +270,17 @@ export function ArenaTab({ userId, language, translations: t, refreshKey, curren
     <div className="flex h-full flex-col overflow-hidden">
       {/* Header */}
       <div className="px-1 pb-4 pt-2 text-center shrink-0">
-        <p className="font-mono text-[9px] font-black uppercase tracking-[0.22em] text-[var(--guto-cyan)] mb-1">
+        <p className="font-mono text-[9px] font-black uppercase tracking-[0.22em] text-(--guto-cyan) mb-1">
           {t.arena.subtitle}
         </p>
-        <h1 className="mx-auto max-w-[18rem] text-balance text-[1.25rem] font-black uppercase leading-tight tracking-[0.08em] text-[var(--guto-navy)]">
+        <h1 className="mx-auto max-w-[18rem] text-balance text-[1.25rem] font-black uppercase leading-tight tracking-[0.08em] text-(--guto-navy)">
           {t.arena.tab}
         </h1>
       </div>
 
       {/* Sub-tab strip */}
       <div className="shrink-0 px-5 pb-3">
-        <div className="flex gap-1 rounded-[1rem] bg-[rgba(13,35,65,0.06)] p-1">
+        <div className="flex gap-1 rounded-2xl bg-[rgba(13,35,65,0.06)] p-1">
           {subTabs.map((sub) => (
             <button
               key={sub.id}
@@ -289,7 +289,7 @@ export function ArenaTab({ userId, language, translations: t, refreshKey, curren
               className={cn(
                 "flex-1 rounded-[0.7rem] py-2 font-mono text-[10px] font-black tracking-widest transition-all",
                 activeSubTab === sub.id
-                  ? "bg-[var(--guto-cyan)] text-[var(--guto-navy)] shadow-sm"
+                  ? "bg-(--guto-cyan) text-(--guto-navy) shadow-sm"
                   : "text-[rgba(13,35,65,0.42)] hover:text-[rgba(13,35,65,0.65)]"
               )}
             >

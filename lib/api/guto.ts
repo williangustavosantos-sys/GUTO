@@ -27,6 +27,7 @@ export type GutoTelemetryEvent =
   | "mission_completed"
   | "user_returned_next_day"
   | "calibration_completed"
+  | "guto_online_session_event"
 
 export interface GutoWorkoutExercise {
   id: string
@@ -157,6 +158,8 @@ export interface GutoMemory {
   preferredTrainingLocation?: "gym" | "home" | "park" | "mixed"
   trainingPathology?: string
   country?: string
+  countryCode?: string
+  city?: string
   heightCm?: number
   weightKg?: number
   foodRestrictions?: string
@@ -313,6 +316,8 @@ export async function saveGutoMemory(payload: {
   preferredTrainingLocation?: "gym" | "home" | "park" | "mixed"
   trainingPathology?: string
   country?: string
+  countryCode?: string
+  city?: string
   heightCm?: number
   weightKg?: number
   foodRestrictions?: string
@@ -485,6 +490,11 @@ export type ProactiveValidationOutcome = "happened" | "postponed" | "discarded"
 export type GutoProactiveMemoryAction =
   | { type: "confirm"; memoryId: string }
   | { type: "discard"; memoryId: string }
+  | {
+      type: "update"
+      memoryId: string
+      patch: Partial<Pick<ProactiveMemory, "understood" | "dateText" | "dateParsed" | "location">>
+    }
   | { type: "validate"; memoryId: string; outcome: ProactiveValidationOutcome }
   | { type: "request_discard"; memoryId: string }
   | { type: "cancel_discard_request"; memoryId: string }
@@ -507,6 +517,7 @@ export interface ProactiveMemory {
     condition: string
     conditionEn: string
     source: "wttr.in"
+    fetchedAt?: string
   }
   holidayEnrichment?: Array<{
     name: string
@@ -520,6 +531,8 @@ export interface ProactiveMemory {
   confirmedAt?: string
   validatedAt?: string
   discardedAt?: string
+  discardRequestedAt?: string
+  weatherFetchedAt?: string
 }
 
 /**
@@ -529,7 +542,7 @@ export interface ProactiveMemory {
 export async function extractProactivityEvents(
   conversationText: string,
   language: SupportedLanguage
-): Promise<number> {
+): Promise<number | null> {
   try {
     const result = await apiRequest<{ extracted: number; memories: ProactiveMemory[] }>(
       "/guto/proactivity/extract",
@@ -540,7 +553,7 @@ export async function extractProactivityEvents(
     )
     return result.extracted ?? 0
   } catch {
-    return 0
+    return null
   }
 }
 
@@ -588,6 +601,21 @@ export async function discardProactiveMemory(memoryId: string): Promise<boolean>
     const result = await apiRequest<{ ok: boolean }>("/guto/proactivity/discard", {
       method: "POST",
       body: JSON.stringify({ memoryId }),
+    })
+    return result.ok === true
+  } catch {
+    return false
+  }
+}
+
+export async function updateProactiveMemory(
+  memoryId: string,
+  patch: Partial<Pick<ProactiveMemory, "understood" | "dateText" | "dateParsed" | "location">>
+): Promise<boolean> {
+  try {
+    const result = await apiRequest<{ ok: boolean }>("/guto/proactivity/update", {
+      method: "POST",
+      body: JSON.stringify({ memoryId, patch }),
     })
     return result.ok === true
   } catch {

@@ -83,6 +83,15 @@ function LoginPageContent() {
       fallbackLanguage: "pt-BR",
     })
     setLang(resolved)
+    if (typeof window !== "undefined") {
+      try {
+        document.documentElement.lang = resolved
+        localStorage.setItem("guto-selected-language", resolved)
+        localStorage.setItem("guto-onboarding-language", resolved)
+      } catch {
+        // Storage can be blocked in Safari private mode; the visible login language still follows resolved.
+      }
+    }
   }, [router, searchParams])
 
   const t = T[lang]
@@ -93,7 +102,9 @@ function LoginPageContent() {
     setError(null)
     try {
       const res = await loginUser(emailOrId, password)
-      console.log("[GUTO_LOGIN] login success -> resolve onboarding stage")
+      if (process.env.NODE_ENV === "development") {
+        console.info("[GUTO_LOGIN] login success -> resolve onboarding stage")
+      }
       login(res)
       router.push("/")
     } catch (err) {
@@ -114,16 +125,17 @@ function LoginPageContent() {
     <div className="sala-guto flex min-h-dvh flex-col overflow-y-auto">
       <div className="flex flex-1 flex-col items-center justify-center px-8 py-12">
 
-        <div className="mb-12 flex flex-col items-center">
+        <div className="mb-12 flex w-full max-w-sm flex-col items-center px-1 text-center">
           <Image
             src="/assets/guto/logo_guto.png"
             alt="GUTO"
             width={180}
             height={60}
             priority
-            className="drop-shadow-sm"
+            className="h-auto w-[180px] max-w-[80%] drop-shadow-sm"
+            style={{ height: "auto" }}
           />
-          <p className="mt-4 font-mono text-[10px] font-black uppercase tracking-[0.3em] text-[var(--guto-navy)]">
+          <p className="mt-4 max-w-full text-center font-mono text-[10px] font-black uppercase leading-relaxed tracking-[0.22em] text-(--guto-navy)">
             {t.subtitle}
           </p>
         </div>
@@ -137,7 +149,7 @@ function LoginPageContent() {
               type="text"
               value={emailOrId}
               onChange={(e) => setEmailOrId(e.target.value)}
-              className="w-full border-none bg-transparent font-mono text-sm font-black text-[var(--guto-navy)] outline-none placeholder:text-[rgba(13,35,65,0.2)]"
+              className="w-full border-none bg-transparent font-mono text-sm font-black text-(--guto-navy) outline-none placeholder:text-[rgba(13,35,65,0.2)]"
               placeholder={t.userPlaceholder}
               required
               autoComplete="username"
@@ -152,7 +164,7 @@ function LoginPageContent() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full border-none bg-transparent font-mono text-sm font-black text-[var(--guto-navy)] outline-none placeholder:text-[rgba(13,35,65,0.2)]"
+              className="w-full border-none bg-transparent font-mono text-sm font-black text-(--guto-navy) outline-none placeholder:text-[rgba(13,35,65,0.2)]"
               placeholder={t.passPH}
               required
               autoComplete="current-password"
@@ -169,7 +181,7 @@ function LoginPageContent() {
             type="submit"
             onPointerDown={() => gutoAudio.playGutoFeedback("tap")}
             disabled={isLoading}
-            className="mt-2 flex h-14 w-full items-center justify-center rounded-full bg-[var(--guto-cyan)] font-mono text-xs font-black uppercase tracking-[0.2em] text-[var(--guto-navy)] shadow-[0_4px_20px_rgba(82,231,255,0.3)] transition-all active:scale-95 disabled:opacity-50"
+            className="mt-2 flex h-14 w-full items-center justify-center rounded-full bg-(--guto-cyan) font-mono text-xs font-black uppercase tracking-[0.2em] text-(--guto-navy) shadow-[0_4px_20px_rgba(82,231,255,0.3)] transition-all active:scale-95 disabled:opacity-50"
           >
             {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : t.cta}
           </button>
@@ -188,7 +200,7 @@ function LoginPageContent() {
 
 const LoadingFallback = () => (
   <div className="sala-guto flex min-h-dvh items-center justify-center">
-    <Loader2 className="h-8 w-8 animate-spin text-[var(--guto-cyan)]" />
+    <Loader2 className="h-8 w-8 animate-spin text-(--guto-cyan)" />
   </div>
 )
 

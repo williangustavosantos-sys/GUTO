@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
+import Image from "next/image"
 import { motion } from "framer-motion"
 import { AlertCircle, Check, Flame, Lock, Quote, Zap } from "lucide-react"
 
@@ -121,7 +122,6 @@ export function PathTab({ language, memory, workoutPlan, currentEvolution, valid
   const isAdaptedToday = Boolean(memory?.adaptedMissionToday)
   const xpReward = memory?.trainedToday ? "+100 XP" : isAdaptedToday ? "+50 XP" : "0 XP"
   const vitalState = useMemo(() => getGutoVitalState(memory), [memory])
-  const avatarEmotion = vitalState.isCritical ? "critical" : memory?.trainedToday ? "reward" : isAdaptedToday ? "alert" : vitalState.emotion
   const [selectedPoster, setSelectedPoster] = useState<string | null>(null)
 
   const validationSectionLabel = {
@@ -133,10 +133,10 @@ export function PathTab({ language, memory, workoutPlan, currentEvolution, valid
   return (
     <div className="flex h-full min-h-0 flex-col pb-3">
       <div className="px-1 pb-4 pt-2 text-center shrink-0">
-        <p className="font-mono text-[9px] font-black uppercase tracking-[0.22em] text-[var(--guto-cyan)] mb-1">
+        <p className="font-mono text-[9px] font-black uppercase tracking-[0.22em] text-(--guto-cyan) mb-1">
           {monthLabel}
         </p>
-        <h1 className="mx-auto max-w-[18rem] text-balance text-[1.25rem] font-black uppercase leading-tight tracking-[0.08em] text-[var(--guto-navy)]">
+        <h1 className="mx-auto max-w-[18rem] text-balance text-[1.25rem] font-black uppercase leading-tight tracking-[0.08em] text-(--guto-navy)">
           {locale.pathTitle}
         </h1>
       </div>
@@ -228,7 +228,7 @@ export function PathTab({ language, memory, workoutPlan, currentEvolution, valid
                 <span className="grid h-7 w-10 place-items-center rounded-full bg-[rgba(117,165,211,0.78)] text-sm font-black text-white">
                   {currentDay.day}
                 </span>
-                <h2 className="truncate text-sm font-black text-[var(--guto-navy)]">
+                <h2 className="truncate text-sm font-black text-(--guto-navy)">
                   {hasWorkoutPlan ? (workoutPlan?.focus || locale.pathDayLabel) : copy.waitingMission}
                 </h2>
               </div>
@@ -253,7 +253,7 @@ export function PathTab({ language, memory, workoutPlan, currentEvolution, valid
               </div>
             </div>
 
-            <span className="shrink-0 font-mono text-[11px] uppercase tracking-[0.18em] text-[var(--guto-cyan)]">
+            <span className="shrink-0 font-mono text-[11px] uppercase tracking-[0.18em] text-(--guto-cyan)">
               {xpReward}
             </span>
           </div>
@@ -288,16 +288,18 @@ export function PathTab({ language, memory, workoutPlan, currentEvolution, valid
                 className="shrink-0 text-left"
               >
                 <div className="h-[72px] w-[54px] overflow-hidden rounded-[0.85rem] border border-[rgba(82,231,255,0.35)] bg-white/40">
-                  <img
+                  <Image
                     src={`${API_URL}${record.thumbUrl}`}
                     alt={record.dateLabel}
+                    width={54}
+                    height={72}
                     className="h-full w-full object-cover"
                   />
                 </div>
                 <p className="mt-1 font-mono text-[8px] uppercase tracking-[0.08em] text-[rgba(13,35,65,0.5)]">
                   {record.dateLabel}
                 </p>
-                <p className="font-mono text-[8px] font-black text-[var(--guto-cyan)]">
+                <p className="font-mono text-[8px] font-black text-(--guto-cyan)">
                   +{record.xp} XP
                 </p>
               </button>
@@ -313,16 +315,18 @@ export function PathTab({ language, memory, workoutPlan, currentEvolution, valid
           style={{ background: "rgba(237,242,247,0.92)", backdropFilter: "blur(16px)" }}
           onClick={() => setSelectedPoster(null)}
         >
-          <img
+          <Image
             src={selectedPoster}
             alt="Validation poster"
-            className="max-h-[80vh] max-w-full rounded-[1.5rem] object-contain shadow-[0_8px_40px_rgba(13,35,65,0.18)]"
+            width={900}
+            height={1200}
+            className="max-h-[80vh] max-w-full rounded-3xl object-contain shadow-[0_8px_40px_rgba(13,35,65,0.18)]"
             onClick={(e) => e.stopPropagation()}
           />
           <button
             type="button"
             onClick={() => { gutoAudio.playGutoFeedback('tap'); setSelectedPoster(null) }}
-            className="mt-5 rounded-full border border-[rgba(82,231,255,0.4)] bg-white/70 px-8 py-2.5 font-mono text-[10px] font-black uppercase tracking-[0.2em] text-[var(--guto-navy)]"
+            className="mt-5 rounded-full border border-[rgba(82,231,255,0.4)] bg-white/70 px-8 py-2.5 font-mono text-[10px] font-black uppercase tracking-[0.2em] text-(--guto-navy)"
             style={{ boxShadow: "0 2px 12px rgba(13,35,65,0.08)" }}
           >
             {copy.close}

@@ -123,7 +123,7 @@ export function GutoOnlineRestMode({
             strokeDashoffset={2 * Math.PI * 46 * (1 - progress)}
           />
         </svg>
-        <span className="font-mono text-[2.2rem] font-black tracking-[0.04em] text-[var(--guto-navy)]">
+        <span className="font-mono text-[2.2rem] font-black tracking-[0.04em] text-(--guto-navy)">
           {format(remainingSeconds)}
         </span>
       </div>
@@ -134,7 +134,7 @@ export function GutoOnlineRestMode({
             {copy.next(currentExercise.name, nextSetNumber, totalSets)}
           </p>
           {remainingSetsInExercise > 0 && (
-            <p className="mt-1 font-mono text-[9px] font-black uppercase tracking-[0.14em] text-[var(--guto-cyan)]">
+            <p className="mt-1 font-mono text-[9px] font-black uppercase tracking-[0.14em] text-(--guto-cyan)">
               {copy.remaining(remainingSetsInExercise)}
             </p>
           )}
@@ -145,7 +145,7 @@ export function GutoOnlineRestMode({
         <button
           type="button"
           onClick={() => onExtend(15)}
-          className="flex h-12 items-center justify-center gap-1.5 rounded-[1rem] border border-white/70 bg-white/55 font-mono text-[10px] font-black uppercase tracking-[0.14em] active:scale-[0.98]"
+          className="flex h-12 items-center justify-center gap-1.5 rounded-2xl border border-white/70 bg-white/55 font-mono text-[10px] font-black uppercase tracking-[0.14em] active:scale-[0.98]"
         >
           <Plus className="h-3.5 w-3.5" />
           {copy.add}
@@ -153,7 +153,7 @@ export function GutoOnlineRestMode({
         <button
           type="button"
           onClick={onSkip}
-          className="flex h-12 items-center justify-center gap-1.5 rounded-[1rem] border border-[rgba(82,231,255,0.55)] bg-[rgba(82,231,255,0.16)] font-mono text-[10px] font-black uppercase tracking-[0.14em] text-[var(--guto-navy)] active:scale-[0.98]"
+          className="flex h-12 items-center justify-center gap-1.5 rounded-2xl border border-[rgba(82,231,255,0.55)] bg-[rgba(82,231,255,0.16)] font-mono text-[10px] font-black uppercase tracking-[0.14em] text-(--guto-navy) active:scale-[0.98]"
         >
           <SkipForward className="h-3.5 w-3.5" />
           {copy.skip}
@@ -161,7 +161,7 @@ export function GutoOnlineRestMode({
         <button
           type="button"
           onClick={onTalk}
-          className="flex h-12 items-center justify-center gap-1.5 rounded-[1rem] border border-white/70 bg-white/55 font-mono text-[10px] font-black uppercase tracking-[0.14em] active:scale-[0.98]"
+          className="flex h-12 items-center justify-center gap-1.5 rounded-2xl border border-white/70 bg-white/55 font-mono text-[10px] font-black uppercase tracking-[0.14em] active:scale-[0.98]"
         >
           <MessageCircle className="h-3.5 w-3.5" />
           {copy.talk}
