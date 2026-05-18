@@ -219,15 +219,15 @@ export function rejectAdminCustomExercise(
   )
 }
 
-export function createAdminUser(data: Partial<AdminUser> & { password?: string }): Promise<{ user: AdminUser; student?: AdminStudent; inviteLink: string }> {
-  return apiRequest<{ user: AdminUser; student?: AdminStudent; inviteLink: string }>("/admin/users", {
+export function createAdminUser(data: Partial<AdminUser> & { password?: string }): Promise<{ user: AdminUser; student?: AdminStudent; inviteLink: string; temporaryPassword?: string }> {
+  return apiRequest<{ user: AdminUser; student?: AdminStudent; inviteLink: string; temporaryPassword?: string }>("/admin/users", {
     method: "POST",
     body: JSON.stringify(data),
   })
 }
 
-export function createAdminStudent(data: Partial<AdminStudent> & { password?: string }): Promise<{ user: AdminUser; student: AdminStudent; inviteLink: string }> {
-  return apiRequest<{ user: AdminUser; student: AdminStudent; inviteLink: string }>("/admin/students", {
+export function createAdminStudent(data: Partial<AdminStudent> & { password?: string }): Promise<{ user: AdminUser; student: AdminStudent; inviteLink: string; temporaryPassword?: string }> {
+  return apiRequest<{ user: AdminUser; student: AdminStudent; inviteLink: string; temporaryPassword?: string }>("/admin/students", {
     method: "POST",
     body: JSON.stringify(data),
   })

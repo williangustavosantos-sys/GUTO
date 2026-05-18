@@ -31,6 +31,7 @@ interface GutoOnlineLightAvatarProps {
   isSpeaking?: boolean
   size?: "sm" | "md" | "lg" | "xl"
   className?: string
+  isActive?: boolean
 }
 
 const sizeClasses = {
@@ -38,6 +39,11 @@ const sizeClasses = {
   md: "w-32 h-32",
   lg: "w-40 h-40",
   xl: "w-[min(88vw,22rem)] h-[min(88vw,22rem)]",
+}
+
+function isCoarsePointerDevice() {
+  if (typeof window === "undefined") return false
+  return window.matchMedia?.("(pointer: coarse)")?.matches || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
 }
 
 // Detecta fundo da cena e remove em runtime (para iOS/Safari)
@@ -89,11 +95,13 @@ export function GutoOnlineLightAvatar({
   isSpeaking = false,
   size = "xl",
   className,
+  isActive = true,
 }: GutoOnlineLightAvatarProps) {
   const canvasRef       = useRef<HTMLCanvasElement | null>(null)
   const videoRef        = useRef<HTMLVideoElement | null>(null)
   const nativeVideoRef  = useRef<HTMLVideoElement | null>(null)
   const frameRef        = useRef<number | null>(null)
+  const canvasReadyRef  = useRef(false)
 
   const [isSafari,         setIsSafari]         = useState(false)
   const [canPlayWebmAlpha, setCanPlayWebmAlpha]  = useState(false)
@@ -116,8 +124,13 @@ export function GutoOnlineLightAvatar({
     if (!useNativeAlpha) { setNativeReady(false); return }
     const video = nativeVideoRef.current
     if (!video) return
+    if (!isActive) {
+      video.pause()
+      return
+    }
     let cancelled = false
     const play = async () => {
+      if (!isActive) return
       try {
         video.defaultMuted = true
         video.muted        = true
@@ -146,7 +159,7 @@ export function GutoOnlineLightAvatar({
       video.removeEventListener("pause",      play)
       document.removeEventListener("visibilitychange", onVis)
     }
-  }, [useNativeAlpha])
+  }, [isActive, useNativeAlpha])
 
   // ── Path 2 — Canvas matte: Safari / fallback ─────────────────────────────────
   useEffect(() => {
@@ -154,16 +167,36 @@ export function GutoOnlineLightAvatar({
     const video  = videoRef.current
     const canvas = canvasRef.current
     if (!video || !canvas) return
+    if (!isActive) {
+      video.pause()
+      if (frameRef.current) {
+        window.cancelAnimationFrame(frameRef.current)
+        frameRef.current = null
+      }
+      return
+    }
     const ctx = canvas.getContext("2d", { willReadFrequently: true })
     if (!ctx) return
 
     let cancelled = false
+    let lastFrameAt = 0
+    const isMobile = isCoarsePointerDevice()
+    const minFrameMs = isMobile ? 66 : 16
 
-    const draw = () => {
+    const draw = (timestamp = 0) => {
       if (cancelled || !video.videoWidth || !video.videoHeight) return
-      if (!canvasReady) setCanvasReady(true)
+      if (timestamp - lastFrameAt < minFrameMs) {
+        frameRef.current = window.requestAnimationFrame(draw)
+        return
+      }
+      lastFrameAt = timestamp
 
-      const pr = Math.min(window.devicePixelRatio || 1, 3)
+      if (!canvasReadyRef.current) {
+        canvasReadyRef.current = true
+        setCanvasReady(true)
+      }
+
+      const pr = isMobile ? Math.min(window.devicePixelRatio || 1, 1.25) : Math.min(window.devicePixelRatio || 1, 2)
       const cw = Math.round((canvas.clientWidth  || 360) * pr)
       const ch = Math.round((canvas.clientHeight || 360) * pr)
       if (canvas.width !== cw || canvas.height !== ch) {
@@ -189,6 +222,7 @@ export function GutoOnlineLightAvatar({
     }
 
     const playCanvas = async () => {
+      if (!isActive) return
       try {
         video.defaultMuted = true
         video.muted        = true
@@ -201,8 +235,8 @@ export function GutoOnlineLightAvatar({
         video.setAttribute("loop", "")
         video.removeAttribute("controls")
         await video.play()
-        draw()
-      } catch { draw() }
+        frameRef.current = window.requestAnimationFrame(draw)
+      } catch { frameRef.current = window.requestAnimationFrame(draw) }
     }
 
     const onReady = () => {
@@ -225,7 +259,7 @@ export function GutoOnlineLightAvatar({
       document.removeEventListener("visibilitychange", onVis)
       if (frameRef.current) { window.cancelAnimationFrame(frameRef.current); frameRef.current = null }
     }
-  }, [useNativeAlpha, nativeReady, canvasReady])
+  }, [isActive, useNativeAlpha, nativeReady])
 
   // ── Render ───────────────────────────────────────────────────────────────────
   return (

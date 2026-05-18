@@ -68,6 +68,7 @@ export function EvolutionsTab({ language, currentEvolution, memory }: Evolutions
                       size="md"
                       showPlatform={false}
                       className="w-full"
+                      interactive={false}
                     />
                   ) : (
                     <div className="relative flex h-20 w-20 items-center justify-center rounded-[1.4rem] bg-[rgba(191,199,208,0.24)] shadow-[inset_3px_3px_10px_rgba(124,136,152,0.18),inset_-4px_-4px_12px_rgba(255,255,255,0.72)]">

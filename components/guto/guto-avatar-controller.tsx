@@ -28,12 +28,16 @@ interface GutoAvatarControllerProps {
   className?: string
   showPlatform?: boolean
   onTap?: () => void
+  isActive?: boolean
+  interactive?: boolean
 }
 
 // Duração do crossfade entrada/saída (ms)
 const FADE_MS = 320
 // Duração do glow/ripple de feedback (ms)
 const REACT_MS = 850
+// Evita empilhar troca de vídeo/animação com taps repetidos no celular.
+const TAP_COOLDOWN_MS = 700
 // Máximo de inclinação 3D em graus (toque manual)
 const MAX_TILT_DEG = 16
 // Máximo de inclinação 3D em graus (giroscópio — mais sutil)
@@ -54,9 +58,13 @@ export function GutoAvatarController({
   className,
   showPlatform = true,
   onTap,
+  isActive = true,
+  interactive = true,
 }: GutoAvatarControllerProps) {
   const containerRef   = useRef<HTMLDivElement>(null)
   const glowTimerRef   = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const superUnmountTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const lastTapAtRef = useRef(0)
   const pointerDownRef = useRef<{ x: number; y: number } | null>(null)
 
   // Toggle: true = modo super (roupa) ativo
@@ -78,7 +86,9 @@ export function GutoAvatarController({
   // ── Giroscópio (DeviceOrientation) ──────────────────────────────────────────
   useEffect(() => {
     if (typeof window === "undefined") return
+    if (!interactive) return
     if (!("DeviceOrientationEvent" in window)) return
+    if (window.matchMedia?.("(pointer: coarse)")?.matches) return
 
     let active = true
 
@@ -97,7 +107,7 @@ export function GutoAvatarController({
       active = false
       window.removeEventListener("deviceorientation", onOrientation)
     }
-  }, [rawX, rawY])
+  }, [interactive, rawX, rawY])
 
   // ── Tilt por pointer (mouse/touch drag) ─────────────────────────────────────
   const updateTiltFromPointer = useCallback(
@@ -124,11 +134,16 @@ export function GutoAvatarController({
   // Tap 2 → super sai com crossfade natural
   // Squish + glow + ripple disparam nos dois taps
   const triggerToggle = useCallback(() => {
+    if (!interactive) return
+    const now = Date.now()
+    if (now - lastTapAtRef.current < TAP_COOLDOWN_MS) return
+    lastTapAtRef.current = now
+
     onTap?.()
 
     // Haptic feedback — vibra no celular (API Web Vibration, suportado no Android Chrome)
     if (typeof navigator !== "undefined" && "vibrate" in navigator) {
-      navigator.vibrate(superOn ? [30, 20, 30] : 45)
+      navigator.vibrate(superOn ? [18, 22, 28] : [28, 18, 36])
     }
 
     // Squish spring em ambos os sentidos
@@ -146,11 +161,21 @@ export function GutoAvatarController({
       const next = !prev
       if (next) {
         // Entrando em modo super: garante que o overlay está montado
+        if (superUnmountTimerRef.current) clearTimeout(superUnmountTimerRef.current)
         setSuperMounted(true)
       }
       return next
     })
-  }, [onTap, scaleV, superOn])
+  }, [interactive, onTap, scaleV, superOn])
+
+  useEffect(() => {
+    if (superOn || !superMounted) return
+    if (superUnmountTimerRef.current) clearTimeout(superUnmountTimerRef.current)
+    superUnmountTimerRef.current = setTimeout(() => setSuperMounted(false), FADE_MS)
+    return () => {
+      if (superUnmountTimerRef.current) clearTimeout(superUnmountTimerRef.current)
+    }
+  }, [superMounted, superOn])
 
   // ── Handlers de pointer ──────────────────────────────────────────────────────
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
@@ -158,7 +183,10 @@ export function GutoAvatarController({
   }, [])
 
   const handlePointerMove = useCallback(
-    (e: React.PointerEvent) => { updateTiltFromPointer(e.clientX, e.clientY) },
+    (e: React.PointerEvent) => {
+      if (!pointerDownRef.current) return
+      updateTiltFromPointer(e.clientX, e.clientY)
+    },
     [updateTiltFromPointer]
   )
 
@@ -186,6 +214,7 @@ export function GutoAvatarController({
   useEffect(() => {
     return () => {
       if (glowTimerRef.current) clearTimeout(glowTimerRef.current)
+      if (superUnmountTimerRef.current) clearTimeout(superUnmountTimerRef.current)
     }
   }, [])
 
@@ -197,31 +226,67 @@ export function GutoAvatarController({
         className
       )}
       style={{ perspective: "900px" }}
-      onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerUp}
-      onPointerLeave={handlePointerLeave}
+      onPointerDown={interactive ? handlePointerDown : undefined}
+      onPointerMove={interactive ? handlePointerMove : undefined}
+      onPointerUp={interactive ? handlePointerUp : undefined}
+      onPointerLeave={interactive ? handlePointerLeave : undefined}
     >
       {/* ── Bloco 3D: tilt + squish ─────────────────────────────────────────── */}
       <motion.div
+        animate={
+          glowActive
+            ? {
+                x: [0, -4, 4, -3, 3, 0],
+                rotateZ: [0, -1.2, 1.2, -0.8, 0.8, 0],
+              }
+            : { x: 0, rotateZ: 0 }
+        }
+        transition={{ duration: 0.28, ease: "easeOut" }}
         style={{
           rotateX: tiltX,
           rotateY: tiltY,
           scale: scaleV,
           transformStyle: "preserve-3d",
-          cursor: "pointer",
+          cursor: interactive ? "pointer" : "default",
         }}
       >
         <div className={cn("relative", sizeClasses[size])}>
+          <div
+            className="pointer-events-none absolute inset-[5%] z-0 rounded-full"
+            style={{
+              background:
+                "radial-gradient(circle at 50% 45%, rgba(255,255,255,0.72) 0%, rgba(82,231,255,0.22) 34%, rgba(82,231,255,0.08) 56%, transparent 74%)",
+              filter: "blur(10px)",
+              transform: "translateZ(0)",
+            }}
+          />
+          <div
+            className="pointer-events-none absolute bottom-[4%] left-[18%] z-0 h-[12%] w-[64%] rounded-full"
+            style={{
+              background:
+                "radial-gradient(ellipse, rgba(13,35,65,0.18) 0%, rgba(82,231,255,0.12) 44%, transparent 72%)",
+              filter: "blur(7px)",
+              transform: "translateZ(0)",
+            }}
+          />
 
           {/* Camada 1 — Avatar idle (normal branco/azul, qualidade máxima) */}
-          <GutoOfficialAvatar
-            size={size}
-            evolution={stage}
-            emotion="default"
-            showPlatform={false}
-            className="pointer-events-none h-full w-full"
-          />
+          <div
+            className="pointer-events-none absolute inset-0 z-10"
+            style={{
+              opacity: superOn ? 0 : 1,
+              transition: `opacity ${FADE_MS}ms cubic-bezier(0.4, 0, 0.2, 1)`,
+            }}
+          >
+            <GutoOfficialAvatar
+              size={size}
+              evolution={stage}
+              emotion="default"
+              showPlatform={false}
+              isActive={isActive && (!superOn || glowActive)}
+              className="pointer-events-none h-full w-full"
+            />
+          </div>
 
           {/* Camada 2 — GUTO de roupa (super) com crossfade natural
               Lazy mount: só renderiza após o primeiro tap.
@@ -241,27 +306,64 @@ export function GutoAvatarController({
                 evolution={stage}
                 emotion="super"
                 showPlatform={false}
+                isActive={isActive && (superOn || glowActive)}
                 className="pointer-events-none h-full w-full"
               />
             </div>
           )}
+
+          <div
+            className="pointer-events-none absolute inset-[6%] z-[25] rounded-full"
+            style={{
+              background:
+                "linear-gradient(128deg, rgba(255,255,255,0.42) 0%, rgba(255,255,255,0.12) 18%, transparent 38%, transparent 68%, rgba(82,231,255,0.16) 100%)",
+              mixBlendMode: "screen",
+              opacity: 0.5,
+            }}
+          />
 
           {/* Camada 3 — Glow azul no tap (entra e sai) */}
           <motion.div
             className="pointer-events-none absolute inset-0 z-30 rounded-full"
             animate={
               glowActive
-                ? { opacity: [0, 0.8, 0], scale: [0.85, 1.25, 1.55] }
+                ? { opacity: [0, 0.95, 0.35, 0], scale: [0.72, 1.08, 1.32, 1.55] }
                 : { opacity: 0, scale: 1 }
             }
-            transition={{ duration: 0.72, ease: "easeOut" }}
+            transition={{ duration: 0.52, ease: "easeOut" }}
             style={{
               background:
-                "radial-gradient(circle, rgba(82,231,255,0.55) 0%, rgba(82,231,255,0.2) 40%, transparent 68%)",
+                "radial-gradient(circle, rgba(255,255,255,0.86) 0%, rgba(82,231,255,0.52) 28%, rgba(82,231,255,0.18) 48%, transparent 70%)",
               boxShadow:
-                "0 0 50px rgba(82,231,255,0.55), 0 0 90px rgba(82,231,255,0.25)",
+                "0 0 48px rgba(255,255,255,0.72), 0 0 72px rgba(82,231,255,0.48), 0 0 110px rgba(82,231,255,0.22)",
             }}
           />
+          {glowActive && (
+            <motion.div
+              className="pointer-events-none absolute inset-[-2%] z-[35] rounded-full"
+              initial={{ opacity: 0, x: "-28%", scale: 0.94 }}
+              animate={{ opacity: [0, 0.7, 0], x: "28%", scale: 1.03 }}
+              transition={{ duration: 0.34, ease: "easeOut" }}
+              style={{
+                background:
+                  "linear-gradient(105deg, transparent 0%, rgba(255,255,255,0.72) 42%, rgba(82,231,255,0.34) 50%, transparent 62%)",
+                mixBlendMode: "screen",
+              }}
+            />
+          )}
+          {glowActive && (
+            <motion.div
+              className="pointer-events-none absolute inset-[10%] z-40 rounded-full"
+              initial={{ opacity: 0.9, scale: 0.7 }}
+              animate={{ opacity: 0, scale: 1.18 }}
+              transition={{ duration: 0.22, ease: "easeOut" }}
+              style={{
+                background:
+                  "radial-gradient(circle, rgba(255,255,255,0.95) 0%, rgba(82,231,255,0.62) 34%, transparent 66%)",
+                filter: "blur(8px)",
+              }}
+            />
+          )}
         </div>
 
         {/* Anel de ripple — dispara em tap de entrada E de saída */}

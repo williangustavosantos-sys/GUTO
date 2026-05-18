@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { AnimatePresence, motion } from "framer-motion"
-import { Activity, ArrowLeft, Check, CheckCircle2, Download, Dumbbell, Fingerprint, Globe, Languages, Loader2, MapPin, Scale, Send, Settings, Shield, Trash2, UserRound, Utensils, Volume2, Zap } from "lucide-react"
+import { Activity, ArrowLeft, Check, CheckCircle2, Download, Fingerprint, Languages, Loader2, Send, Settings, Shield, Trash2, UserRound, Volume2 } from "lucide-react"
 
 import { BottomNavigation, type TabType } from "./bottom-navigation"
 import { createGutoEffectRegistry } from "./effects"
@@ -38,15 +38,16 @@ import {
   isGenericGutoName,
   resolveGutoLanguage,
   defaultNoPainPathology,
+  defaultNoFoodRestriction,
   isNoPainPathology,
   resolveGutoProfile,
   type StoredGutoProfile,
 } from "@/lib/guto-profile"
-import { createLocalWorkoutPlan, getWorkoutMissingFields, localizeGutoWorkoutPlan } from "@/lib/workout-plan"
+import { getWorkoutMissingFields, localizeGutoWorkoutPlan } from "@/lib/workout-plan"
 import { resolveWorkoutValidationLocationMode } from "@/lib/workout-location"
 
 type AppStage = "intro" | "language" | "invite_claim" | "consent" | "naming" | "calibration" | "pact" | "system" | "settings"
-type SettingsMode = "menu" | "language" | "name" | "profile" | "goal" | "location" | "pathology" | "physicaldata" | "residence" | "food_restrictions" | "privacy"
+type SettingsMode = "menu" | "language" | "name" | "data" | "profile" | "goal" | "location" | "pathology" | "physicaldata" | "residence" | "food_restrictions" | "privacy"
 type IntroPlaybackState = "idle" | "starting" | "playing" | "finishing" | "finished"
 
 const PENDING_INVITE_TOKEN_KEY = "guto-pending-invite-token"
@@ -118,6 +119,7 @@ const stageCopy: Record<
     settingsTitle: string
     settingsLanguage: string
     settingsName: string
+    settingsData: string
     settingsNamePlaceholder: string
     settingsSaveName: string
     settingsClose: string
@@ -191,6 +193,7 @@ const stageCopy: Record<
     settingsTitle: "Ajustes",
     settingsLanguage: "Idioma",
     settingsName: "Nome",
+    settingsData: "Dados",
     settingsNamePlaceholder: "SEU NOME",
     settingsSaveName: "Salvar nome",
     settingsClose: "Fechar ajustes",
@@ -263,6 +266,7 @@ const stageCopy: Record<
     settingsTitle: "Settings",
     settingsLanguage: "Language",
     settingsName: "Name",
+    settingsData: "Data",
     settingsNamePlaceholder: "YOUR NAME",
     settingsSaveName: "Save name",
     settingsClose: "Close settings",
@@ -335,6 +339,7 @@ const stageCopy: Record<
     settingsTitle: "Impostazioni",
     settingsLanguage: "Lingua",
     settingsName: "Nome",
+    settingsData: "Dati",
     settingsNamePlaceholder: "IL TUO NOME",
     settingsSaveName: "Salva nome",
     settingsClose: "Chiudi impostazioni",
@@ -615,6 +620,7 @@ export function GutoApp({
   const [draftName, setDraftName] = useState("")
   const [committedName, setCommittedName] = useState("")
   const [activeTab, setActiveTab] = useState<TabType>("guto")
+  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false)
   const [evolution, setEvolution] = useState<EvolutionStage>("baby")
   const [activeLanguageGlow, setActiveLanguageGlow] = useState<SupportedLanguage | null>(null)
   const [rotatingLanguage, setRotatingLanguage] = useState(false)
@@ -782,6 +788,7 @@ export function GutoApp({
     if (!shell || typeof window === "undefined") return
 
     let frame = 0
+    let lastKeyboardOpen = false
 
     const syncViewport = () => {
       window.cancelAnimationFrame(frame)
@@ -801,6 +808,10 @@ export function GutoApp({
         shell.style.setProperty("--guto-viewport-width", `${viewportWidth}px`)
         shell.style.setProperty("--guto-keyboard-offset", `${keyboardOffset}px`)
         shell.toggleAttribute("data-keyboard-open", keyboardOpen)
+        if (keyboardOpen !== lastKeyboardOpen) {
+          lastKeyboardOpen = keyboardOpen
+          setIsKeyboardOpen(keyboardOpen)
+        }
       })
     }
 
@@ -1251,8 +1262,8 @@ export function GutoApp({
       await persistMemory({
         ...calibration,
         language: selectedLanguage,
-        foodRestrictions: calibration.foodRestrictions?.trim() || undefined,
-        foodIntolerances: calibration.foodIntolerances?.trim() || undefined,
+        foodRestrictions: calibration.foodRestrictions?.trim() || defaultNoFoodRestriction(selectedLanguage),
+        foodIntolerances: calibration.foodIntolerances?.trim() || defaultNoFoodRestriction(selectedLanguage),
         trainingPathology:
           calibration.trainingPathology?.trim() || defaultNoPainPathology(selectedLanguage),
       })
@@ -1597,6 +1608,18 @@ export function GutoApp({
     setStage("system")
   }, [persistMemory, settingsFoodRestrictionsDraft, showSavedToast])
 
+  const saveSettingsData = useCallback(
+    (calibration: Parameters<typeof saveGutoMemory>[0]) => {
+      persistProfile({ calibrationComplete: true, onboardingComplete: true })
+      persistMemory(calibration)
+      setMemory((prev) => (prev ? { ...prev, ...calibration } : prev))
+      showSavedToast()
+      setSettingsMode("menu")
+      setStage("system")
+    },
+    [persistMemory, persistProfile, showSavedToast]
+  )
+
   const handleDownloadData = useCallback(() => {
     if (typeof window === "undefined" || !user?.userId) return
     const stored = (() => {
@@ -1837,14 +1860,6 @@ export function GutoApp({
   }, [gutoUserId, user?.userId])
 
 
-  useEffect(() => {
-    if (!memory || workoutPlan?.exercises?.length) return
-    const localPlan = createLocalWorkoutPlan(memory, selectedLanguage)
-    if (!localPlan) return
-    setWorkoutPlan(localPlan)
-    void persistMemory({ lastWorkoutPlan: localPlan } as Parameters<typeof saveGutoMemory>[0]).catch(() => {})
-  }, [memory, persistMemory, selectedLanguage, workoutPlan])
-
   const stopHold = useCallback(() => {
     if (stage !== "pact" || pactProgress >= 100 || pactCompleteRef.current) return
     clearPactInterval()
@@ -2009,8 +2024,9 @@ export function GutoApp({
         setSettingsMode("privacy")
         setStage("settings")
       }}
+      isAvatarActive={activeTab === "guto" && !isKeyboardOpen}
     />
-  ), [evolution, gutoUserId, vitalState, memory, pendingExerciseQuestion, pendingFoodQuestion, persistMemory, persistProfile, selectedLanguage, updateUserProfileField, userLabel])
+  ), [activeTab, evolution, gutoUserId, isKeyboardOpen, vitalState, memory, pendingExerciseQuestion, pendingFoodQuestion, persistMemory, persistProfile, selectedLanguage, updateUserProfileField, userLabel])
 
   const validationLocationMode = useMemo(
     () =>
@@ -2619,7 +2635,9 @@ export function GutoApp({
                   ? locale.settingsLanguage
                   : settingsMode === "name"
                     ? locale.settingsName
-                    : settingsMode === "profile"
+                    : settingsMode === "data"
+                      ? locale.settingsData
+                      : settingsMode === "profile"
                       ? locale.settingsProfile
                       : settingsMode === "goal"
                         ? locale.settingsGoal
@@ -2641,21 +2659,18 @@ export function GutoApp({
             </div>
 
             {settingsMode === "menu" && (() => {
-              const cal = translations[selectedLanguage].calibration
               const langLabel = languages.find((l) => l.id === selectedLanguage)?.label ?? selectedLanguage
-              const humanGoal = memory?.trainingGoal ? (cal.objectiveChips[memory.trainingGoal] ?? null) : null
-              const humanLocation = memory?.preferredTrainingLocation ? (cal.locationOptions[memory.preferredTrainingLocation] ?? null) : null
-              const humanSex = memory?.biologicalSex === "male" ? cal.sexOptions.male : memory?.biologicalSex === "female" ? cal.sexOptions.female : null
-              const profileSummary = [humanSex, memory?.userAge ? String(memory.userAge) : null].filter(Boolean).join(" · ") || null
-              const physicalSummary = [memory?.weightKg ? `${memory.weightKg}kg` : null, memory?.heightCm ? `${memory.heightCm}cm` : null].filter(Boolean).join(" · ") || null
-              const foodLimitsSummary =
-                memory?.foodRestrictions?.trim() || memory?.foodIntolerances?.trim() || null
+              const dataSummary = [
+                memory?.userAge ? `${memory.userAge}` : null,
+                memory?.weightKg ? `${memory.weightKg}kg` : null,
+                memory?.country?.trim() || null,
+              ].filter(Boolean).join(" · ") || translations[selectedLanguage].calibration.subtitle
 
-              const cardClass = "guto-language-card guto-settings-choice-card group relative flex flex-col items-center justify-center gap-1 overflow-hidden rounded-[18px] p-4"
-              const valueClass = "mt-0.5 max-w-full truncate font-mono text-[9px] font-black uppercase tracking-[0.08em] text-(--guto-cyan) opacity-80"
+              const cardClass = "guto-settings-choice-card guto-settings-primary-card group relative flex flex-col items-center justify-center gap-1 overflow-hidden rounded-[22px] p-5"
+              const valueClass = "guto-settings-choice-value mt-0.5 max-w-full font-mono text-[9px] font-black uppercase tracking-[0.08em] text-(--guto-cyan) opacity-80"
 
               return (
-                <div className="guto-language-grid grid grid-cols-2 gap-3 pt-2 overflow-y-auto">
+                <div className="guto-settings-home flex min-h-0 flex-1 flex-col justify-center gap-3 overflow-y-auto pb-[max(env(safe-area-inset-bottom),1.25rem)] pt-3">
                   <motion.button type="button" whileTap={{ scale: 0.96 }} onClick={() => { gutoAudio.playGutoFeedback("tap"); setSettingsMode("language"); }} aria-label={locale.settingsLanguage} className={cardClass}>
                     <Languages className="guto-settings-choice-icon" strokeWidth={2.2} />
                     <span className="guto-settings-choice-label">{locale.settingsLanguage}</span>
@@ -2668,62 +2683,23 @@ export function GutoApp({
                     {committedName && <span className={valueClass}>{committedName}</span>}
                   </motion.button>
 
-                  <motion.button type="button" whileTap={{ scale: 0.96 }} onClick={() => { gutoAudio.playGutoFeedback("tap"); setSettingsMode("profile"); }} aria-label={locale.settingsProfile} className={cardClass}>
+                  <motion.button type="button" whileTap={{ scale: 0.96 }} onClick={() => { gutoAudio.playGutoFeedback("tap"); setSettingsMode("data"); }} aria-label={locale.settingsData} className={cardClass}>
                     <Activity className="guto-settings-choice-icon" strokeWidth={2.2} />
-                    <span className="guto-settings-choice-label">{locale.settingsProfile}</span>
-                    {profileSummary && <span className={valueClass}>{profileSummary}</span>}
+                    <span className="guto-settings-choice-label">{locale.settingsData}</span>
+                    <span className={valueClass}>{dataSummary}</span>
                   </motion.button>
 
-                  <motion.button type="button" whileTap={{ scale: 0.96 }} onClick={() => { gutoAudio.playGutoFeedback("tap"); setSettingsMode("goal"); }} aria-label={locale.settingsGoal} className={cardClass}>
-                    <Dumbbell className="guto-settings-choice-icon" strokeWidth={2.2} />
-                    <span className="guto-settings-choice-label">{locale.settingsGoal}</span>
-                    {humanGoal && <span className={valueClass}>{humanGoal}</span>}
-                  </motion.button>
-
-                  <motion.button type="button" whileTap={{ scale: 0.96 }} onClick={() => { gutoAudio.playGutoFeedback("tap"); setSettingsMode("location"); }} aria-label={locale.settingsLocation} className={cardClass}>
-                    <MapPin className="guto-settings-choice-icon" strokeWidth={2.2} />
-                    <span className="guto-settings-choice-label">{locale.settingsLocation}</span>
-                    {humanLocation && <span className={valueClass}>{humanLocation}</span>}
-                  </motion.button>
-
-                  <motion.button type="button" whileTap={{ scale: 0.96 }} onClick={() => { gutoAudio.playGutoFeedback("tap"); setSettingsMode("pathology"); }} aria-label={locale.settingsPathology} className={cardClass}>
-                    <Zap className="guto-settings-choice-icon" strokeWidth={2.2} />
-                    <span className="guto-settings-choice-label">{locale.settingsPathology}</span>
-                    {memory?.trainingPathology && !isNoPainPathology(memory.trainingPathology) && (
-                      <span className={valueClass}>{memory.trainingPathology}</span>
-                    )}
-                  </motion.button>
-
-                  <motion.button type="button" whileTap={{ scale: 0.96 }} onClick={() => { gutoAudio.playGutoFeedback("tap"); setSettingsMode("physicaldata"); }} aria-label={locale.settingsPhysicalData} className={cardClass}>
-                    <Scale className="guto-settings-choice-icon" strokeWidth={2.2} />
-                    <span className="guto-settings-choice-label">{locale.settingsPhysicalData}</span>
-                    {physicalSummary && <span className={valueClass}>{physicalSummary}</span>}
-                  </motion.button>
-
-                  <motion.button type="button" whileTap={{ scale: 0.96 }} onClick={() => { gutoAudio.playGutoFeedback("tap"); setSettingsMode("residence"); }} aria-label={locale.settingsResidence} className={cardClass}>
-                    <Globe className="guto-settings-choice-icon" strokeWidth={2.2} />
-                    <span className="guto-settings-choice-label">{locale.settingsResidence}</span>
-                    {memory?.country && <span className={valueClass}>{memory.country}</span>}
-                  </motion.button>
-
-                  <motion.button type="button" whileTap={{ scale: 0.96 }} onClick={() => { gutoAudio.playGutoFeedback("tap"); setSettingsMode("food_restrictions"); }} aria-label={cal.restrictionsLabel} className={cardClass}>
-                    <Utensils className="guto-settings-choice-icon" strokeWidth={2.2} />
-                    <span className="guto-settings-choice-label">{cal.restrictionsLabel}</span>
-                    {foodLimitsSummary && <span className={valueClass}>{foodLimitsSummary}</span>}
-                  </motion.button>
-
-                  <motion.button type="button" whileTap={{ scale: 0.96 }} onClick={() => { gutoAudio.playGutoFeedback("tap"); setPrivacyMsg(null); setPrivacyConfirm(null); setDeleteConfirmText(""); setSettingsMode("privacy"); }} aria-label={locale.settingsPrivacy} className={`${cardClass} col-span-2`}>
+                  <button type="button" onClick={() => { gutoAudio.playGutoFeedback("tap"); setPrivacyMsg(null); setPrivacyConfirm(null); setDeleteConfirmText(""); setSettingsMode("privacy"); }} aria-label={locale.settingsPrivacy} className="mx-auto mt-2 flex min-h-11 max-w-[18rem] items-center justify-center gap-2 rounded-full border border-[rgba(82,231,255,0.32)] bg-white/42 px-4 text-center font-mono text-[9px] font-black uppercase tracking-[0.14em] text-[rgba(13,35,65,0.52)] shadow-[inset_0_1px_0_rgba(255,255,255,0.88)]">
                     <Shield className="guto-settings-choice-icon" strokeWidth={2.2} />
-                    <span className="guto-settings-choice-label">{locale.settingsPrivacy}</span>
-                    <span className={valueClass}>{locale.settingsPrivacySubtext}</span>
-                  </motion.button>
+                    <span>{locale.settingsPrivacy}</span>
+                  </button>
                 </div>
               )
             })()}
 
             {settingsMode === "language" && (
-              <div className="guto-language-grid grid grid-cols-3">
-                {languages.map((lang) => (
+              <div className="guto-settings-language-list flex min-h-0 flex-1 flex-col justify-center gap-3.5 overflow-y-auto pb-[max(env(safe-area-inset-bottom),1.25rem)] pt-3">
+                {languages.map((lang, index) => (
                   <motion.button
                     key={lang.id}
                     type="button"
@@ -2738,19 +2714,93 @@ export function GutoApp({
                     onPointerLeave={() => setActiveLanguageGlow(null)}
                     onClick={() => handleSettingsLanguageSelect(lang.id)}
                     aria-label={lang.label}
-                    className="guto-language-card group relative flex items-center overflow-hidden rounded-[18px]"
+                    className="guto-settings-language-option relative flex w-full items-center gap-4 overflow-hidden rounded-[20px] px-3.5 py-3.5 text-left transition-all"
                     data-active={activeLanguageGlow === lang.id || selectedLanguage === lang.id}
+                    initial={{ x: -16, opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    transition={{ delay: 0.06 + index * 0.06 }}
                   >
-                    <Image
-                      src={lang.asset}
-                      alt=""
-                      aria-hidden="true"
-                      width={70}
-                      height={70}
-                      className="guto-language-vector"
-                    />
+                    <div className="relative h-[62px] w-[62px] shrink-0">
+                      {(activeLanguageGlow === lang.id || selectedLanguage === lang.id) && (
+                        <div
+                          className="absolute -inset-1 rounded-full"
+                          style={{
+                            background: "radial-gradient(circle, rgba(82,231,255,0.45), transparent 70%)",
+                            filter: "blur(6px)",
+                          }}
+                        />
+                      )}
+                      <svg className="absolute inset-0 h-full w-full" viewBox="0 0 120 120" aria-hidden="true">
+                        {Array.from({ length: 36 }).map((_, tickIndex) => {
+                          const active = activeLanguageGlow === lang.id || selectedLanguage === lang.id
+                          const angle = (tickIndex / 36) * Math.PI * 2 - Math.PI / 2
+                          const outerRadius = 58
+                          const innerRadius = tickIndex % 3 === 0 ? 52 : 55
+
+                          return (
+                            <line
+                              key={tickIndex}
+                              x1={60 + Math.cos(angle) * outerRadius}
+                              y1={60 + Math.sin(angle) * outerRadius}
+                              x2={60 + Math.cos(angle) * innerRadius}
+                              y2={60 + Math.sin(angle) * innerRadius}
+                              stroke={active ? "rgba(82,231,255,0.85)" : "rgba(90,124,168,0.28)"}
+                              strokeWidth={tickIndex % 3 === 0 ? 1.2 : 0.6}
+                            />
+                          )
+                        })}
+                        <circle
+                          cx="60"
+                          cy="60"
+                          r="50"
+                          fill="none"
+                          stroke={selectedLanguage === lang.id ? "#52e7ff" : "rgba(193,212,232,0.6)"}
+                          strokeWidth={selectedLanguage === lang.id ? 1.6 : 1}
+                        />
+                      </svg>
+                      <div className="absolute inset-[14%] grid place-items-center overflow-hidden rounded-full p-[3px] bg-[linear-gradient(180deg,rgba(255,255,255,0.95),rgba(214,228,244,0.7))] shadow-[inset_0_2px_4px_rgba(255,255,255,0.95),0_6px_16px_rgba(90,124,168,0.15)]">
+                        <Image src={lang.asset} alt="" aria-hidden="true" width={48} height={48} className="h-full w-full rounded-full object-cover" />
+                        <div className="pointer-events-none absolute left-[14%] top-[10%] h-[28%] w-[52%] rounded-full bg-[radial-gradient(ellipse,rgba(255,255,255,0.55),transparent_70%)]" />
+                      </div>
+                    </div>
+                    <span className="min-w-0 flex-1">
+                      <span className="block font-mono text-[18px] font-black uppercase leading-none tracking-normal text-(--guto-navy)">
+                        {lang.label}
+                      </span>
+                      <span className="mt-1 block font-mono text-[10px] font-black uppercase tracking-[0.18em] text-(--guto-cyan)">
+                        {lang.id}
+                      </span>
+                    </span>
+                    {selectedLanguage === lang.id && (
+                      <Check className="h-5 w-5 shrink-0 text-(--guto-cyan)" strokeWidth={2.8} />
+                    )}
                   </motion.button>
                 ))}
+              </div>
+            )}
+
+            {settingsMode === "data" && (
+              <div className="guto-settings-data-shell -mx-4 flex min-h-0 flex-1 flex-col">
+                <CalibrationScreen
+                  language={selectedLanguage}
+                  title={locale.settingsData}
+                  initialProfile={{
+                    userAge: memory?.userAge,
+                    biologicalSex: memory?.biologicalSex,
+                    trainingLevel: memory?.trainingLevel,
+                    trainingGoal: memory?.trainingGoal,
+                    preferredTrainingLocation: memory?.preferredTrainingLocation,
+                    trainingPathology: memory?.trainingPathology,
+                    country: memory?.country,
+                    countryCode: memory?.countryCode,
+                    city: memory?.city,
+                    heightCm: memory?.heightCm,
+                    weightKg: memory?.weightKg,
+                    foodRestrictions: memory?.foodRestrictions,
+                    foodIntolerances: memory?.foodIntolerances,
+                  }}
+                  onComplete={saveSettingsData}
+                />
               </div>
             )}
 

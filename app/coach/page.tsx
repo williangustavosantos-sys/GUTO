@@ -2076,7 +2076,8 @@ function CoachInner() {
             biologicalSex: studentDraft.sex || undefined,
             age: studentDraft.age ? parseInt(studentDraft.age) || undefined : undefined,
           });
-          if (result.inviteLink) setLastSecret(result.inviteLink);
+          if (result.temporaryPassword) setLastSecret(result.temporaryPassword);
+          else if (result.inviteLink) setLastSecret(result.inviteLink);
           setStudentDraft({ firstName: "", lastName: "", email: "", phone: "", password: "", active: false, coachId: "", teamId: "", sex: "", age: "" });
           setShowCreateStudent(false);
         }, copy.actions.studentCreated)}

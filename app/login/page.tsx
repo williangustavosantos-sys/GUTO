@@ -114,7 +114,7 @@ function LoginPageContent() {
       } else if (err instanceof ApiError && err.code === "CONNECTION_ERROR") {
         setError(t.connectionError)
       } else {
-        setError(getApiErrorMessage(err))
+        setError(getApiErrorMessage(err, lang))
       }
     } finally {
       setIsLoading(false)

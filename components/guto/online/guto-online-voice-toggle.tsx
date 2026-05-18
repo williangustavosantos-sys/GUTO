@@ -42,8 +42,8 @@ export function GutoOnlineVoiceToggle({ mode, onToggle, disabled, language }: Gu
       aria-pressed={isEnabled}
       aria-label={isEnabled ? copy.on : copy.off}
       className={[
-        "inline-flex h-9 items-center gap-2 rounded-full border px-3 transition-colors",
-        "font-mono text-[9px] font-black uppercase tracking-[0.16em]",
+        "inline-flex min-h-11 items-center gap-2 rounded-full border px-3.5 transition-colors",
+        "font-mono text-[9px] font-black uppercase tracking-[0.14em]",
         isEnabled
           ? "border-[rgba(82,231,255,0.55)] bg-[rgba(82,231,255,0.16)] text-(--guto-navy)"
           : "border-white/70 bg-white/55 text-[rgba(13,35,65,0.65)]",

@@ -7,28 +7,15 @@ import { Loader2, Mic, Send, TrendingUp, Volume2, VolumeX } from "lucide-react"
 
 import { getApiErrorMessage } from "@/lib/api/client"
 import {
-  cancelDiscardRequest,
-  confirmProactiveMemory,
-  discardProactiveMemory,
   extractProactivityEvents,
+  generateDietPlan,
   getGutoProactive,
-  openWeeklyConversation,
-  requestDiscardProactiveMemory,
   sendGutoMessage,
   trackGutoEvent,
-  updateProactiveMemory,
-  validateProactiveMemory,
 } from "@/lib/api/guto"
-import type { DietMeal, GutoAvatarEmotion, GutoExpectedResponse, GutoMemory, GutoProactiveMemoryAction, GutoWorkoutPlan } from "@/lib/api/guto"
+import type { DietMeal, GutoAvatarEmotion, GutoExpectedResponse, GutoMemory, GutoWorkoutPlan } from "@/lib/api/guto"
 import type { EvolutionStage, SupportedLanguage } from "@/types/contract"
 import type { GutoVitalStateResult } from "@/lib/guto-vital-state"
-import {
-  detectProfileUpdateIntent,
-  isConfirmationText,
-  isCancellationText,
-  profileUpdateCopy,
-  type ProfileUpdateIntent,
-} from "@/lib/profile-update-detector"
 
 import { GutoAvatarController } from "../guto-avatar-controller"
 import { getLanguage, translations } from "../translations"
@@ -61,6 +48,7 @@ interface ChatTabProps {
   onMemoryPatch?: (patch: Partial<GutoMemory>) => void
   onChangeLanguage?: (language: SupportedLanguage) => void
   onOpenPrivacySettings?: () => void
+  isAvatarActive?: boolean
 }
 
 interface Message {
@@ -131,6 +119,7 @@ const chatCopy: Record<
     connectionError: string
     xpRewardLabel: string
     opening: (name: string) => string
+    weeklyOpening: (name: string) => string
   }
 > = {
   "pt-BR": {
@@ -145,6 +134,7 @@ const chatCopy: Record<
     connectionError: "Ixi, deu um curto na conexão aqui. Aguenta aí e me manda de novo em 1 frase.",
     xpRewardLabel: "Prêmio Inicial • Guto Ativo",
     opening: (name) => `Finalmente${name ? `, ${name}` : ""}. Tava te esperando. Enquanto isso, já organizei nosso plano daqui pra frente. Estamos juntos — bora começar?`,
+    weeklyOpening: (name) => `${name ? `${name}, ` : ""}antes da gente sair no automático: como tá tua semana? Me fala se tem viagem, horário apertado, dor ou algum compromisso que pode mexer no treino.`,
   },
   "en-US": {
     channel: "Oracle channel",
@@ -158,6 +148,7 @@ const chatCopy: Record<
     connectionError: "Connection shorted out on my side for a moment. Hold on and send it again in 1 sentence.",
     xpRewardLabel: "Initial Reward • GUTO Active",
     opening: (name) => `Finally${name ? `, ${name}` : ""}. I was waiting for you. In the meantime, I already organized our plan from here. I'm with you — ready to start?`,
+    weeklyOpening: (name) => `${name ? `${name}, ` : ""}before we go on autopilot: how is your week looking? Tell me if there is travel, a tight schedule, pain, or anything that can affect training.`,
   },
   "it-IT": {
     channel: "Canale dell'oracolo",
@@ -171,6 +162,7 @@ const chatCopy: Record<
     connectionError: "Mi è saltata la connessione per un attimo. Aspetta un secondo e rimandamelo in 1 frase.",
     xpRewardLabel: "Premio Iniziale • GUTO Attivo",
     opening: (name) => `Finalmente${name ? `, ${name}` : ""}. Ti stavo aspettando. Nel frattempo ho già organizzato il nostro piano da qui in avanti. Sono con te — iniziamo?`,
+    weeklyOpening: (name) => `${name ? `${name}, ` : ""}prima di andare in automatico: com'è la tua settimana? Dimmi se hai viaggio, orari stretti, dolore o impegni che possono cambiare l'allenamento.`,
   },
 }
 
@@ -183,11 +175,10 @@ const FIRST_MESSAGE_SENT_KEY_PREFIX = "guto-first-message-sent"
 const CHAT_STATE_KEY_PREFIX = "guto-chat-state"
 const INITIAL_XP_REWARD_SEEN_KEY_PREFIX = "guto-initial-xp-reward-seen"
 const PROACTIVITY_EXTRACTION_KEY_PREFIX = "guto-proactivity-extracted"
-const PROACTIVITY_WEEKLY_OPENED_KEY_PREFIX = "guto-proactivity-weekly-opened"
-const PROACTIVITY_ACTION_KEY_PREFIX = "guto-proactivity-action"
 const GUTO_OPERATIONAL_TIME_ZONE = process.env.NEXT_PUBLIC_GUTO_TIME_ZONE || "Europe/Rome"
 // Minimum number of messages in chat (user + GUTO) before triggering extraction
 const PROACTIVITY_MIN_MESSAGES_FOR_EXTRACTION = 6
+const PROACTIVITY_SUPPRESS_AFTER_WORKOUT_MS = 10 * 60 * 1000
 
 function getGutoDateKey(date = new Date()): string {
   return new Intl.DateTimeFormat("en-CA", {
@@ -225,54 +216,6 @@ function markExtractedThisWeek(userId: string): void {
   try {
     const weekKey = getISOWeekKey()
     window.localStorage.setItem(`${PROACTIVITY_EXTRACTION_KEY_PREFIX}:${userId}:${weekKey}`, "1")
-  } catch {}
-}
-
-/** True if this week's proactivity opening has already been fired from this browser */
-function hasOpenedWeeklyThisWeek(userId: string): boolean {
-  if (typeof window === "undefined") return false
-  try {
-    const weekKey = getISOWeekKey()
-    return window.localStorage.getItem(`${PROACTIVITY_WEEKLY_OPENED_KEY_PREFIX}:${userId}:${weekKey}`) === "1"
-  } catch {
-    return false
-  }
-}
-
-function markOpenedWeeklyThisWeek(userId: string): void {
-  if (typeof window === "undefined") return
-  try {
-    const weekKey = getISOWeekKey()
-    window.localStorage.setItem(`${PROACTIVITY_WEEKLY_OPENED_KEY_PREFIX}:${userId}:${weekKey}`, "1")
-  } catch {}
-}
-
-function getProactivityActionKey(userId: string, action: GutoProactiveMemoryAction): string {
-  const outcome = action.type === "validate" ? action.outcome : "none"
-  const patchKey = action.type === "update" ? JSON.stringify(action.patch) : ""
-  return `${PROACTIVITY_ACTION_KEY_PREFIX}:${userId}:${action.type}:${action.memoryId}:${outcome}:${patchKey}`
-}
-
-function hasProcessedProactivityAction(storageKey: string): boolean {
-  if (typeof window === "undefined") return false
-  try {
-    return window.localStorage.getItem(storageKey) === "1"
-  } catch {
-    return false
-  }
-}
-
-function markProcessedProactivityAction(storageKey: string): void {
-  if (typeof window === "undefined") return
-  try {
-    window.localStorage.setItem(storageKey, "1")
-  } catch {}
-}
-
-function clearProcessedProactivityAction(storageKey: string): void {
-  if (typeof window === "undefined") return
-  try {
-    window.localStorage.removeItem(storageKey)
   } catch {}
 }
 
@@ -422,10 +365,10 @@ export function ChatTab({
   initialXpRewardSeen = false,
   onXpRewardSeen,
   memory,
-  onProfileUpdate,
   onMemoryPatch,
   onChangeLanguage,
   onOpenPrivacySettings,
+  isAvatarActive = true,
 }: ChatTabProps) {
   const validLang = getLanguage(language)
   const locale = translations[validLang]
@@ -469,8 +412,9 @@ export function ChatTab({
   const proactiveInFlightRef = useRef(false)
   const sendInFlightRef = useRef(false)
   const lastProactiveKeyRef = useRef<string | null>(null)
-  const processedProactiveActionKeysRef = useRef<Set<string>>(new Set())
   const arrivalBriefingRequestedRef = useRef(false)
+  const suppressProactivityUntilRef = useRef(0)
+  const dietGenerationAfterWorkoutRef = useRef(false)
   const shouldForceArrivalBriefingRef = useRef((() => {
     if (!storedChatState || storedChatState.messages.length === 0) return false
     const lastMsg = storedChatState.messages[storedChatState.messages.length - 1]
@@ -480,8 +424,6 @@ export function ChatTab({
   })())
   const pendingExpectedResponseRef = useRef<GutoExpectedResponse | null>(initialChatState.expectedResponse)
   const pendingExpectedResponseMessageIdRef = useRef<string | null>(initialChatState.expectedResponseMessageId)
-  const pendingProfileUpdateRef = useRef<ProfileUpdateIntent | null>(null)
-
   const previousMessagesLengthRef = useRef(messages.length)
 
   useEffect(() => {
@@ -550,21 +492,36 @@ export function ChatTab({
     }
   }, [])
 
-  const synthesizeAndPlay = useCallback(async (text: string, lang: SupportedLanguage) => {
-    console.info("[GUTO_VOICE] speak", { language: lang, textLength: text.length, source: "chat" })
-    await gutoVoice.speak({
-      text,
-      language: lang,
-      source: "chat",
-      preferStatic: false,
-      onStart: () => setIsSpeaking(true),
-      onEnd: () => setIsSpeaking(false),
-    })
+  const stopTypingLoop = useCallback(() => {
+    gutoAudio.stopGutoSound("guto_typing_loop")
+    setIsSending(false)
   }, [])
+
+  const synthesizeAndPlay = useCallback(async (text: string, lang: SupportedLanguage) => {
+    stopTypingLoop()
+    console.info("[GUTO_VOICE] speak", { language: lang, textLength: text.length, source: "chat" })
+    try {
+      await gutoVoice.speak({
+        text,
+        language: lang,
+        source: "chat",
+        preferStatic: false,
+        onStart: () => {
+          stopTypingLoop()
+          setIsSpeaking(true)
+        },
+        onEnd: () => setIsSpeaking(false),
+      })
+    } finally {
+      stopTypingLoop()
+      setIsSpeaking(false)
+    }
+  }, [stopTypingLoop])
 
   const checkProactiveMessage = useCallback(async (forceArrivalBriefing = false) => {
     if (proactiveInFlightRef.current || sendInFlightRef.current) return
     if (forceArrivalBriefing && arrivalBriefingRequestedRef.current) return
+    if (!forceArrivalBriefing && Date.now() < suppressProactivityUntilRef.current) return
 
     proactiveInFlightRef.current = true
     if (forceArrivalBriefing) {
@@ -757,50 +714,6 @@ export function ChatTab({
     setIsRecording(false)
   }
 
-  const handleProactiveMemoryAction = useCallback(async (action?: GutoProactiveMemoryAction | null) => {
-    if (!action?.memoryId) return
-
-    const storageKey = getProactivityActionKey(userId, action)
-    const memoryKey = storageKey
-
-    if (processedProactiveActionKeysRef.current.has(memoryKey) || hasProcessedProactivityAction(storageKey)) {
-      return
-    }
-    processedProactiveActionKeysRef.current.add(memoryKey)
-    markProcessedProactivityAction(storageKey)
-
-    try {
-      let ok = false
-      if (action.type === "confirm") {
-        ok = await confirmProactiveMemory(action.memoryId)
-      } else if (action.type === "discard") {
-        ok = await discardProactiveMemory(action.memoryId)
-      } else if (action.type === "update") {
-        ok = await updateProactiveMemory(action.memoryId, action.patch)
-      } else if (action.type === "request_discard") {
-        ok = await requestDiscardProactiveMemory(action.memoryId)
-      } else if (action.type === "cancel_discard_request") {
-        ok = await cancelDiscardRequest(action.memoryId)
-      } else {
-        ok = await validateProactiveMemory(action.memoryId, action.outcome)
-      }
-
-      if (!ok) {
-        processedProactiveActionKeysRef.current.delete(memoryKey)
-        clearProcessedProactivityAction(storageKey)
-        if (process.env.NODE_ENV !== "production") {
-          console.warn("[GUTO][proactivity] action failed", action)
-        }
-      }
-    } catch (error) {
-      processedProactiveActionKeysRef.current.delete(memoryKey)
-      clearProcessedProactivityAction(storageKey)
-      if (process.env.NODE_ENV !== "production") {
-        console.warn("[GUTO][proactivity] action error", { action, error })
-      }
-    }
-  }, [userId])
-
   const sendTextToGuto = useCallback(async (displayText: string, modelInput = displayText) => {
     if (sendInFlightRef.current) return
     sendInFlightRef.current = true
@@ -883,13 +796,18 @@ export function ChatTab({
       if (data.acao === "requestDeleteAccount") {
         onOpenPrivacySettings?.()
       }
-      void handleProactiveMemoryAction(data.proactiveMemoryAction)
-
-      // ── Proactivity: weekly opening signal ─────────────────────────────────
-      // The cycle opens the first time the user shows up in the week, not only Monday.
-      if (!hasOpenedWeeklyThisWeek(userId)) {
-        markOpenedWeeklyThisWeek(userId)
-        void openWeeklyConversation().catch(() => {})
+      stopTypingLoop()
+      const closedWorkoutFlow = data.acao === "updateWorkout" || Boolean(data.workoutPlan)
+      const dietReadyFromBackend = data.memoryPatch?.dietGenerationStatus === "ready_to_generate"
+      if (closedWorkoutFlow) {
+        suppressProactivityUntilRef.current = Date.now() + PROACTIVITY_SUPPRESS_AFTER_WORKOUT_MS
+        if (dietReadyFromBackend && !dietGenerationAfterWorkoutRef.current) {
+          dietGenerationAfterWorkoutRef.current = true
+          void generateDietPlan(safeLanguage).catch((error) => {
+            dietGenerationAfterWorkoutRef.current = false
+            console.warn(`Dieta do GUTO não foi gerada após fechar treino: ${getApiErrorMessage(error)}`)
+          })
+        }
       }
 
       // ── Proactivity: background event extraction ───────────────────────────
@@ -917,6 +835,7 @@ export function ChatTab({
     } catch {
       pendingExpectedResponseRef.current = null
       pendingExpectedResponseMessageIdRef.current = null
+      stopTypingLoop()
       setMessages((prev) => [
         ...prev,
         {
@@ -933,7 +852,6 @@ export function ChatTab({
     }
   }, [
     copy,
-    handleProactiveMemoryAction,
     isMuted,
     language,
     onChangeLanguage,
@@ -941,6 +859,7 @@ export function ChatTab({
     onOpenPrivacySettings,
     onWorkoutPlanUpdated,
     synthesizeAndPlay,
+    stopTypingLoop,
     userId,
     userName,
   ])
@@ -1004,86 +923,9 @@ export function ChatTab({
     })
   }, [isSending, onFoodQuestionHandled, pendingFoodQuestion, sendTextToGuto, memory, validLang])
 
-  const addGutoMessage = (text: string, emotion: GutoAvatarEmotion = "default") => {
-    const msg: Message = { id: `g-pu-${Date.now()}`, text, isGuto: true, timestamp: new Date(), avatarEmotion: emotion }
-    setMessages((prev) => appendMessagesWithoutDuplicateGuto(prev, [msg]))
-    return msg
-  }
-
   const handleSend = async () => {
     if (!input.trim() || isSending) return
     const text = input.trim()
-    const copy = profileUpdateCopy[validLang]
-
-    // ── Phase 4: profile update confirmation flow ────────────────────────────
-    const pending = pendingProfileUpdateRef.current
-    if (pending) {
-      const lower = text.toLowerCase()
-
-      if (isConfirmationText(lower)) {
-        // Show user's confirmation in chat
-        setMessages((prev) => [
-          ...prev,
-          { id: `u-confirm-${Date.now()}`, text, isGuto: false, timestamp: new Date() },
-        ])
-        setInput("")
-        pendingProfileUpdateRef.current = null
-
-        // Apply the profile change
-        try {
-          await onProfileUpdate?.(pending.field, pending.value)
-        } catch {
-          // persistência falhou silenciosamente; o toast de erro será exibido pelo parent
-        }
-        const successText = copy.success(pending.humanLabel, pending.humanValue)
-        addGutoMessage(successText, "reward")
-        if (!isMuted) void synthesizeAndPlay(successText, validLang)
-        return
-      }
-
-      if (isCancellationText(lower)) {
-        setMessages((prev) => [
-          ...prev,
-          { id: `u-cancel-${Date.now()}`, text, isGuto: false, timestamp: new Date() },
-        ])
-        setInput("")
-        pendingProfileUpdateRef.current = null
-        addGutoMessage(copy.cancelled)
-        if (!isMuted) void synthesizeAndPlay(copy.cancelled, validLang)
-        return
-      }
-
-      // Neither confirm nor cancel → clear pending and fall through to normal chat
-      pendingProfileUpdateRef.current = null
-    }
-
-    // ── Phase 4: detect new profile update intent ────────────────────────────
-    if (onProfileUpdate) {
-      const intent = detectProfileUpdateIntent(text, validLang)
-      if (intent) {
-        setMessages((prev) => [
-          ...prev,
-          { id: `u-intent-${Date.now()}`, text, isGuto: false, timestamp: new Date() },
-        ])
-        setInput("")
-
-        if (intent.blocked) {
-          addGutoMessage(copy.blocked, "alert")
-          if (!isMuted) void synthesizeAndPlay(copy.blocked, validLang)
-          return
-        }
-
-        const confirmText =
-          intent.confirmationLevel === "required"
-            ? copy.requiredConfirm(intent.humanLabel, intent.humanValue)
-            : copy.lightConfirm(intent.humanLabel, intent.humanValue)
-
-        pendingProfileUpdateRef.current = intent
-        addGutoMessage(confirmText)
-        if (!isMuted) void synthesizeAndPlay(confirmText, validLang)
-        return
-      }
-    }
 
     // ── Normal chat flow ─────────────────────────────────────────────────────
     const dietCtx = activeDietContextRef.current
@@ -1164,6 +1006,7 @@ export function ChatTab({
             stage={evolution}
             size="xl"
             showPlatform={false}
+            isActive={isAvatarActive}
           />
         </div>
       </div>

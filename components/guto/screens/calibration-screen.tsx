@@ -5,7 +5,7 @@ import Image from "next/image"
 import { motion } from "framer-motion"
 import { createPortal } from "react-dom"
 import { City, Country } from "country-state-city"
-import { defaultNoPainPathology } from "@/lib/guto-profile"
+import { defaultNoFoodRestriction, defaultNoPainPathology } from "@/lib/guto-profile"
 import { translations, type ValidLanguage } from "../translations"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -36,9 +36,13 @@ type SelectOption = { value: string; label: string }
 export function CalibrationScreen({
   language,
   onComplete,
+  initialProfile,
+  title,
 }: {
   language: ValidLanguage
   onComplete: (profile: CalibrationProfile) => void
+  initialProfile?: CalibrationProfile | null
+  title?: string
 }) {
   const t = translations[language].calibration
   const scanLabel = {
@@ -47,18 +51,18 @@ export function CalibrationScreen({
     "it-IT": "SCANSIONE GUTO",
   }[language]
 
-  const [biologicalSex, setBiologicalSex] = useState<"male" | "female" | "prefer_not_to_say" | null>(null)
-  const [ageInput, setAgeInput] = useState("")
-  const [trainingStatus, setTrainingStatus] = useState<TrainingStatus | null>(null)
-  const [pathology, setPathology] = useState("")
-  const [goal, setGoal] = useState<GoalKey | null>(null)
-  const [location, setLocation] = useState<LocationKey | null>(null)
-  const [country, setCountry] = useState("")
-  const [countryCode, setCountryCode] = useState("")
-  const [city, setCity] = useState("")
-  const [heightInput, setHeightInput] = useState("")
-  const [weightInput, setWeightInput] = useState("")
-  const [foodRestrictions, setFoodRestrictions] = useState("")
+  const [biologicalSex, setBiologicalSex] = useState<"male" | "female" | "prefer_not_to_say" | null>(initialProfile?.biologicalSex ?? null)
+  const [ageInput, setAgeInput] = useState(initialProfile?.userAge ? String(initialProfile.userAge) : "")
+  const [trainingStatus, setTrainingStatus] = useState<TrainingStatus | null>(initialProfile?.trainingLevel ?? null)
+  const [pathology, setPathology] = useState(initialProfile?.trainingPathology ?? "")
+  const [goal, setGoal] = useState<GoalKey | null>(initialProfile?.trainingGoal ?? null)
+  const [location, setLocation] = useState<LocationKey | null>(initialProfile?.preferredTrainingLocation ?? null)
+  const [country, setCountry] = useState(initialProfile?.country ?? "")
+  const [countryCode, setCountryCode] = useState(initialProfile?.countryCode ?? "")
+  const [city, setCity] = useState(initialProfile?.city ?? "")
+  const [heightInput, setHeightInput] = useState(initialProfile?.heightCm ? String(initialProfile.heightCm) : "")
+  const [weightInput, setWeightInput] = useState(initialProfile?.weightKg ? String(initialProfile.weightKg) : "")
+  const [foodRestrictions, setFoodRestrictions] = useState(initialProfile?.foodRestrictions ?? initialProfile?.foodIntolerances ?? "")
 
   const ageNum = parseInt(ageInput, 10)
   const isAgeValid = !isNaN(ageNum) && ageNum >= 14 && ageNum <= 90
@@ -72,7 +76,7 @@ export function CalibrationScreen({
 
   const handleSubmit = () => {
     if (!isComplete) return
-    const restrictions = foodRestrictions.trim()
+    const restrictions = foodRestrictions.trim() || defaultNoFoodRestriction(language)
 
     onComplete({
       biologicalSex: biologicalSex ?? undefined,
@@ -86,8 +90,8 @@ export function CalibrationScreen({
       city: city.trim(),
       heightCm: isHeightValid ? heightNum : undefined,
       weightKg: isWeightValid ? weightNum : undefined,
-      foodRestrictions: restrictions || undefined,
-      foodIntolerances: restrictions || undefined,
+      foodRestrictions: restrictions,
+      foodIntolerances: restrictions,
     })
   }
 
@@ -190,7 +194,7 @@ export function CalibrationScreen({
             {scanLabel}
           </p>
           <h1 className="mt-0.5 text-[18px] font-black uppercase leading-none tracking-[0.16em] text-(--guto-navy)">
-            {scanTitle}
+            {title ?? scanTitle}
           </h1>
           <p className="mx-auto mt-0.5 max-w-[19rem] text-[10px] font-semibold leading-tight text-[rgba(13,35,65,0.56)]">
             {t.subtitle}

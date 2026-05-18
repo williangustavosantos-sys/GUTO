@@ -14,6 +14,7 @@ interface GutoOfficialAvatarProps {
   emotion?: GutoAvatarEmotion
   className?: string
   onTap?: () => void
+  isActive?: boolean
 }
 
 type AvatarVideoSources = {
@@ -67,6 +68,11 @@ const sizeClasses = {
   md: "w-32 h-32",
   lg: "w-40 h-40",
   xl: "w-[min(96vw,34rem)] h-[min(96vw,34rem)]",
+}
+
+function isCoarsePointerDevice() {
+  if (typeof window === "undefined") return false
+  return window.matchMedia?.("(pointer: coarse)")?.matches || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
 }
 
 function stripVideoMatte(
@@ -133,6 +139,7 @@ export function GutoOfficialAvatar({
   evolution = "baby",
   emotion,
   className,
+  isActive = true,
 }: GutoOfficialAvatarProps) {
   const effectiveEmotion: GutoAvatarEmotion = emotion ?? "default"
   const sources = EVOLUTION_VIDEOS[evolution]?.[effectiveEmotion] ?? EVOLUTION_VIDEOS.baby.default
@@ -141,6 +148,7 @@ export function GutoOfficialAvatar({
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const nativeVideoRef = useRef<HTMLVideoElement | null>(null)
   const frameRef = useRef<number | null>(null)
+  const canvasReadyRef = useRef(false)
   const [canUseAppleHvc1Video, setCanUseAppleHvc1Video] = useState(false)
   const [canUseAppleQuickTimeVideo, setCanUseAppleQuickTimeVideo] = useState(false)
   const [canUseWebmAlphaVideo, setCanUseWebmAlphaVideo] = useState(false)
@@ -182,6 +190,7 @@ export function GutoOfficialAvatar({
   useEffect(() => {
     setNativeVideoReady(false)
     setCanvasReady(false)
+    canvasReadyRef.current = false
     if (process.env.NODE_ENV === "development") {
       console.info("[GUTO_AVATAR] loading without visual fallback:", assetKey)
     }
@@ -196,9 +205,15 @@ export function GutoOfficialAvatar({
     const video = nativeVideoRef.current
     if (!video) return
 
+    if (!isActive) {
+      video.pause()
+      return
+    }
+
     let cancelled = false
 
     const playNativeVideo = async () => {
+      if (!isActive) return
       try {
         video.defaultMuted = true
         video.muted = true
@@ -226,7 +241,7 @@ export function GutoOfficialAvatar({
     }
 
     const handleVisibility = () => {
-      if (document.visibilityState === "visible") {
+      if (document.visibilityState === "visible" && isActive) {
         void playNativeVideo()
       }
     }
@@ -244,7 +259,7 @@ export function GutoOfficialAvatar({
       video.removeEventListener("pause", playNativeVideo)
       document.removeEventListener("visibilitychange", handleVisibility)
     }
-  }, [assetKey, canUseNativeAlphaVideo])
+  }, [assetKey, canUseNativeAlphaVideo, isActive])
 
   useEffect(() => {
     if (canUseNativeAlphaVideo && nativeVideoReady) return
@@ -253,14 +268,33 @@ export function GutoOfficialAvatar({
     const canvas = canvasRef.current
     if (!video || !canvas) return
 
+    if (!isActive) {
+      video.pause()
+      if (frameRef.current) {
+        window.cancelAnimationFrame(frameRef.current)
+        frameRef.current = null
+      }
+      return
+    }
+
     const ctx = canvas.getContext("2d", { willReadFrequently: !canUseNativeAlphaVideo })
     if (!ctx) return
 
     let cancelled = false
+    let lastFrameAt = 0
+    const isMobile = isCoarsePointerDevice()
+    const minFrameMs = isMobile ? 66 : 16
 
-    const draw = () => {
+    const draw = (timestamp = 0) => {
       if (cancelled || !video.videoWidth || !video.videoHeight) return
-      if (!canvasReady) {
+      if (timestamp - lastFrameAt < minFrameMs) {
+        frameRef.current = window.requestAnimationFrame(draw)
+        return
+      }
+      lastFrameAt = timestamp
+
+      if (!canvasReadyRef.current) {
+        canvasReadyRef.current = true
         setCanvasReady(true)
         if (process.env.NODE_ENV === "development") {
           console.info("[GUTO_AVATAR] real avatar ready:", assetKey)
@@ -269,7 +303,7 @@ export function GutoOfficialAvatar({
 
       const cssWidth = Math.round(canvas.clientWidth || 360)
       const cssHeight = Math.round(canvas.clientHeight || 360)
-      const pixelRatio = Math.min(window.devicePixelRatio || 1, 3)
+      const pixelRatio = isMobile ? Math.min(window.devicePixelRatio || 1, 1.35) : Math.min(window.devicePixelRatio || 1, 2)
       const width = Math.max(1, Math.round(cssWidth * pixelRatio))
       const height = Math.max(1, Math.round(cssHeight * pixelRatio))
       if (canvas.width !== width || canvas.height !== height) {
@@ -296,6 +330,7 @@ export function GutoOfficialAvatar({
     }
 
     const playVideo = async () => {
+      if (!isActive) return
       try {
         video.defaultMuted = true
         video.muted = true
@@ -328,7 +363,7 @@ export function GutoOfficialAvatar({
     video.addEventListener("loadeddata", handleReady)
     video.addEventListener("canplay", handleReady)
     video.addEventListener("pause", handleReady)
-    const handleVisibility = () => { if (document.visibilityState === "visible") handleReady() }
+    const handleVisibility = () => { if (document.visibilityState === "visible" && isActive) handleReady() }
     document.addEventListener("visibilitychange", handleVisibility)
     handleReady()
 
@@ -342,8 +377,9 @@ export function GutoOfficialAvatar({
         window.cancelAnimationFrame(frameRef.current)
         frameRef.current = null
       }
+      video.pause()
     }
-  }, [assetKey, canvasReady, canUseNativeAlphaVideo, nativeVideoReady, sources.alphaApple, sources.preferCanvas])
+  }, [assetKey, canUseNativeAlphaVideo, isActive, nativeVideoReady, sources.alphaApple, sources.preferCanvas])
 
   if (canUseNativeAlphaVideo && nativeAlphaSource) {
     return (

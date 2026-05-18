@@ -19,6 +19,22 @@ export interface WorkoutValidationRecord {
   status: "validated"
   gutoMessage: string
 }
+export type WorkoutFeedbackDifficulty = "easy" | "ok" | "hard" | "pain"
+export type WorkoutFeedbackEnergy = "low" | "normal" | "high"
+
+export interface WorkoutFeedbackRecord {
+  id: string
+  userId: string
+  createdAt: string
+  workoutFocus: WorkoutFocus
+  workoutLabel: string
+  locationMode: WorkoutLocationMode
+  difficulty: WorkoutFeedbackDifficulty
+  energy?: WorkoutFeedbackEnergy
+  painArea?: string
+  note?: string
+  exerciseIds: string[]
+}
 export type GutoAvatarEmotion = "default" | "alert" | "critical" | "reward"
 export type GutoTelemetryEvent =
   | "user_created"
@@ -178,6 +194,7 @@ export interface GutoMemory {
   }[]
   lastLimitationCheckAt?: string
   lastWorkoutPlan?: GutoWorkoutPlan | null
+  dietGenerationStatus?: "idle" | "ready_to_generate" | "generating" | "generated" | "needs_clarification" | "failed"
   weeklyWorkoutPlan?: {
     studentId: string
     updatedAt: string
@@ -202,6 +219,7 @@ export interface GutoMemory {
   proactiveSent: Record<string, string[]>
   initialXpRewardSeen: boolean
   validationHistory?: WorkoutValidationRecord[]
+  workoutFeedbackHistory?: WorkoutFeedbackRecord[]
 }
 
 export interface GutoProactiveResponse {
@@ -347,8 +365,14 @@ export async function validateWorkout(payload: {
   locationMode: WorkoutLocationMode
   language: SupportedLanguage
   workoutPlan?: GutoWorkoutPlan | null
+  feedback?: {
+    difficulty: WorkoutFeedbackDifficulty
+    energy?: WorkoutFeedbackEnergy
+    painArea?: string
+    note?: string
+  }
 }) {
-  return apiRequest<{ success: true; validation: WorkoutValidationRecord; validationHistory: WorkoutValidationRecord[]; arena?: ArenaAwardResult }>(
+  return apiRequest<{ success: true; validation: WorkoutValidationRecord; validationHistory: WorkoutValidationRecord[]; workoutFeedback?: WorkoutFeedbackRecord; arena?: ArenaAwardResult }>(
     "/guto/validate-workout",
     {
       method: "POST",

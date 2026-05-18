@@ -8,7 +8,8 @@ export function normalizeWorkoutLocationMode(value: unknown): WorkoutLocationMod
     .trim()
     .toLowerCase()
 
-  if (!normalized || normalized === "mixed") return null
+  if (!normalized) return null
+  if (normalized === "mixed") return "home"
   const hasAny = (terms: string[]) => terms.some((term) => normalized === term || normalized.includes(term))
 
   if (hasAny(["gym", "academia", "palestra", "gimnasio", "fitness", "box"])) return "gym"

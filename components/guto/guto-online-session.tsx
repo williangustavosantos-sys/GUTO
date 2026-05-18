@@ -503,6 +503,7 @@ export function GutoOnlineSession({
 
       // Despacha o evento de domínio se for o caso (pain/swap/fatigue).
       const now = Date.now()
+      let nonExecutiveCommandReply: string | null = null
       if (classification.intent === "pain") {
         dispatch({
           type: "PAIN_REPORTED",
@@ -535,43 +536,34 @@ export function GutoOnlineSession({
           source: mode === "voice" ? "voice" : "button",
         })
       } else if (classification.intent === "command_set_done") {
-        // Comando: fecha a Quick Talk e dispara série feita
-        handleCloseQuickTalk()
-        handleSetDone()
-        return
+        nonExecutiveCommandReply = pickLine(language, {
+          pt: "Entendi. Para registrar com certeza, toca em Série feita.",
+          en: "Got it. To log it with certainty, tap Set done.",
+          it: "Capito. Per registrarla con certezza, tocca Serie fatta.",
+        })
       } else if (classification.intent === "command_finish") {
-        handleCloseQuickTalk()
-        dispatch({
-          type: "SESSION_FINISHED",
-          eventId: makeEventId("finish"),
-          at: now,
-          source: "button",
+        nonExecutiveCommandReply = pickLine(language, {
+          pt: "Se é para fechar o treino, confirma no botão Finalizar. Eu não encerro por frase solta.",
+          en: "If we're closing the workout, confirm with the Finish button. I don't end it from a loose phrase.",
+          it: "Se chiudiamo l'allenamento, conferma col pulsante Fine. Non lo chiudo da una frase al volo.",
         })
-        return
       } else if (classification.intent === "command_pause") {
-        handleCloseQuickTalk()
-        dispatch({
-          type: "PAUSED",
-          eventId: makeEventId("pause"),
-          at: now,
-          source: mode === "voice" ? "voice" : "button",
+        nonExecutiveCommandReply = pickLine(language, {
+          pt: "Fechado. Toca em Pausar para eu segurar a sessão do jeito certo.",
+          en: "Got it. Tap Pause so I hold the session the right way.",
+          it: "Va bene. Tocca Pausa così blocco la sessione nel modo giusto.",
         })
-        return
       } else if (classification.intent === "command_resume") {
-        // Resume volta para fase anterior; mesmo trabalho do botão "Entendi".
-        handleCloseQuickTalk()
-        dispatch({
-          type: "RESUMED",
-          eventId: makeEventId("resume"),
-          at: now,
-          source: mode === "voice" ? "voice" : "button",
+        nonExecutiveCommandReply = pickLine(language, {
+          pt: "Te ouvi. Confirma no botão para voltar sem eu bagunçar teu treino.",
+          en: "I hear you. Confirm with the button so I don't mess up your workout.",
+          it: "Ti ho sentito. Conferma col pulsante così non incasino l'allenamento.",
         })
-        return
       }
 
       // Resposta padrão da classificação. Se vier vazia (intenção tratada
       // por evento de domínio), usamos a linha intent.
-      const reply = classification.reply || intentLine(classification.intentKey, language, { name: userName, exerciseName: currentExercise?.name })
+      const reply = nonExecutiveCommandReply || classification.reply || intentLine(classification.intentKey, language, { name: userName, exerciseName: currentExercise?.name })
 
       setQuickTalkResponse(reply)
       speak(classification.intentKey, reply, { priority: "interrupt" })
@@ -585,7 +577,7 @@ export function GutoOnlineSession({
         source: "ai",
       })
     },
-    [currentExercise, dispatch, handleCloseQuickTalk, handleSetDone, language, speak, userName],
+    [currentExercise, dispatch, language, speak, userName],
   )
 
   const handleQuickTalkResume = useCallback(() => {
@@ -655,20 +647,20 @@ export function GutoOnlineSession({
   const isVoiceEnabled = state.voiceMode === "enabled"
 
   return (
-    <div className="fixed inset-0 z-9999 flex bg-[radial-gradient(circle_at_top,rgba(82,231,255,0.18),transparent_34%),linear-gradient(180deg,#f8fcff_0%,#eaf4fb_54%,#dbe8f2_100%)] text-(--guto-navy)">
+    <div className="fixed inset-0 z-9999 flex bg-[radial-gradient(circle_at_top,rgba(82,231,255,0.22),transparent_34%),linear-gradient(180deg,#f8fcff_0%,#eaf4fb_54%,#dbe8f2_100%)] text-(--guto-navy)">
       <div className="mx-auto flex h-full w-full max-w-md flex-col px-4 pb-5 pt-[max(1rem,env(safe-area-inset-top))]">
         {/* ─── Header ──────────────────────────────────────────────── */}
-        <header className="flex items-start justify-between gap-3">
+        <header className="guto-premium-card flex items-start justify-between gap-3 px-4 py-3">
           <div className="min-w-0">
-            <p className="font-mono text-[9px] font-black uppercase tracking-[0.24em] text-(--guto-cyan)">
+            <p className="guto-tab-kicker">
               GUTO ONLINE
             </p>
-            <h1 className="mt-1 truncate text-[1rem] font-black uppercase tracking-[0.08em]">
+            <h1 className="mt-1 truncate text-[1.15rem] font-black uppercase tracking-[0.06em]">
               {state.phase === "finished"
                 ? pickLine(language, { pt: "Treino fechado", en: "Workout done", it: "Allenamento finito" })
                 : pickLine(language, { pt: "Presença ativa", en: "Active presence", it: "Presenza attiva" })}
             </h1>
-            <p className="mt-1 flex items-center gap-1.5 font-mono text-[9px] font-black uppercase tracking-[0.18em] text-[rgba(13,35,65,0.5)]">
+            <p className="guto-readable-label mt-1 flex items-center gap-1.5">
               <Clock className="h-3 w-3" />
               {formatElapsed(state.startedAt, now)}
             </p>
@@ -683,7 +675,7 @@ export function GutoOnlineSession({
             <button
               type="button"
               onClick={onClose}
-              className="relative z-10000 grid h-10 w-10 place-items-center rounded-full border border-white/70 bg-white/48 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]"
+              className="guto-slot relative z-10000 grid h-11 w-11 place-items-center rounded-full border border-white/70 bg-white/48"
               aria-label={pickCloseLabel(language)}
             >
               <X className="h-4 w-4" />
@@ -693,8 +685,8 @@ export function GutoOnlineSession({
 
         {/* ─── Resume prompt (15min–12h) ───────────────────────────── */}
         {pendingResume && (
-          <section className="mt-3 rounded-[1.2rem] border border-[rgba(82,231,255,0.45)] bg-[rgba(82,231,255,0.12)] p-3">
-            <p className="text-[12px] font-bold leading-snug text-[rgba(13,35,65,0.84)]">
+          <section className="guto-premium-card mt-3 p-3">
+            <p className="guto-readable-body">
               {intentLine("session.resume.prompt", language)}{" "}
               {pendingResume.ageMinutes >= 60
                 ? `${Math.floor(pendingResume.ageMinutes / 60)}h${pendingResume.ageMinutes % 60 ? ` ${pendingResume.ageMinutes % 60}min` : ""}`
@@ -705,14 +697,14 @@ export function GutoOnlineSession({
               <button
                 type="button"
                 onClick={acceptResume}
-                className="h-10 rounded-[0.9rem] border border-[rgba(82,231,255,0.55)] bg-[rgba(82,231,255,0.18)] font-mono text-[10px] font-black uppercase tracking-[0.14em] text-(--guto-navy)"
+                className="guto-cta-compact"
               >
                 {resumeCopy.keep}
               </button>
               <button
                 type="button"
                 onClick={declineResume}
-                className="h-10 rounded-[0.9rem] border border-white/70 bg-white/55 font-mono text-[10px] font-black uppercase tracking-[0.14em]"
+                className="guto-cta-compact border-white/70 bg-white/55 text-[rgba(13,35,65,0.72)]"
               >
                 {resumeCopy.reset}
               </button>
@@ -721,12 +713,13 @@ export function GutoOnlineSession({
         )}
 
         {/* ─── Corpo ──────────────────────────────────────────────── */}
-        <main className="flex min-h-0 flex-1 flex-col gap-3 py-3">
+        <main className="flex min-h-0 flex-1 flex-col gap-2.5 py-2.5">
           {/* GUTO luz falante — transparente em Safari e Chrome */}
           <section className="flex w-full flex-col items-center">
             <div className="relative flex items-center justify-center">
               <GutoOnlineLightAvatar
-                size="xl"
+                size="lg"
+                isActive={!showQuickTalk}
                 isSpeaking={
                   state.phase === "thinking" ||
                   state.phase === "quick_talk" ||
@@ -737,12 +730,12 @@ export function GutoOnlineSession({
               />
             </div>
             {state.lastGutoLine && (
-              <p className="mt-2 max-w-sm text-center text-[13px] font-bold leading-snug text-[rgba(13,35,65,0.84)]">
+              <p className="guto-readable-body mt-1.5 max-w-sm text-center font-bold">
                 {state.lastGutoLine}
               </p>
             )}
             {!isVoiceEnabled && (
-              <p className="mt-1 font-mono text-[8px] font-black uppercase tracking-[0.18em] text-[rgba(13,35,65,0.42)]">
+              <p className="guto-readable-label mt-1 text-center">
                 {pickLine(language, {
                   pt: "Modo texto · vibra no fim do descanso",
                   en: "Text mode · vibrates at rest end",
@@ -767,22 +760,22 @@ export function GutoOnlineSession({
               onTalk={handleOpenQuickTalk}
             />
           ) : (
-            <section className="w-full rounded-[1.35rem] border border-white/75 bg-white/52 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.92),0_18px_60px_rgba(13,35,65,0.08)]">
+            <section className="guto-premium-card w-full p-3.5">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="font-mono text-[8px] font-black uppercase tracking-[0.18em] text-[rgba(13,35,65,0.42)]">
+                  <p className="guto-readable-label">
                     {pickLine(language, { pt: "Exercício", en: "Exercise", it: "Esercizio" })}{" "}
                     {state.phase === "warmup"
                       ? pickLine(language, { pt: "aquecimento", en: "warm-up", it: "riscaldamento" })
                       : `${Math.min(state.exerciseIndex + 1, totalExercises)}/${totalExercises}`}
                   </p>
-                  <h2 className="mt-1 text-[1.1rem] font-black uppercase leading-tight tracking-[0.04em]">
+                  <h2 className="mt-1 text-[1.25rem] font-black uppercase leading-tight tracking-[0.03em]">
                     {state.phase === "warmup"
                       ? pickLine(language, { pt: "Aquecimento", en: "Warm-up", it: "Riscaldamento" })
                       : currentExercise?.name || workoutPlan.focus}
                   </h2>
                   {state.phase !== "warmup" && currentExercise && (
-                    <p className="mt-1 text-[12px] font-semibold text-[rgba(13,35,65,0.58)]">
+                    <p className="mt-2 text-[13px] font-semibold text-[rgba(13,35,65,0.62)]">
                       {pickLine(language, { pt: "Série", en: "Set", it: "Serie" })}{" "}
                       {Math.min(state.currentSet, totalSets)} {pickLine(language, { pt: "de", en: "of", it: "di" })}{" "}
                       {totalSets} · {currentExercise.reps || ""} · {currentExercise.load || ""}
@@ -819,7 +812,7 @@ export function GutoOnlineSession({
             type="button"
             onClick={undo}
             disabled={actionHistory.length === 0}
-            className="flex h-10 items-center justify-center gap-2 rounded-[0.9rem] border border-white/70 bg-white/40 font-mono text-[9px] font-black uppercase tracking-[0.14em] disabled:opacity-30"
+            className="guto-cta-compact h-11 border-white/70 bg-white/45 text-[rgba(13,35,65,0.62)] disabled:opacity-30"
           >
             <Undo2 className="h-3.5 w-3.5" />
             {pickLine(language, { pt: "Desfazer", en: "Undo", it: "Annulla" })}
@@ -837,7 +830,7 @@ export function GutoOnlineSession({
                 declineResume()
               }
             }}
-            className="flex h-10 items-center justify-center gap-2 rounded-[0.9rem] border border-white/70 bg-white/40 font-mono text-[9px] font-black uppercase tracking-[0.14em]"
+            className="guto-cta-compact h-11 border-white/70 bg-white/45 text-[rgba(13,35,65,0.62)]"
             aria-label="Reiniciar sessão"
           >
             <RotateCcw className="h-3.5 w-3.5" />

@@ -211,14 +211,14 @@ export function MissionTab({
   if (!workoutPlan?.exercises?.length) {
     return (
       <div className="relative grid h-full min-h-0 place-items-center pb-2">
-        <div className="mx-auto max-w-[18rem] text-center">
-          <p className="font-mono text-[9px] uppercase tracking-[0.22em] text-[rgba(13,35,65,0.42)]">
+        <div className="guto-premium-card mx-auto max-w-[19rem] px-5 py-6 text-center">
+          <p className="guto-tab-kicker">
             {copy.execution}
           </p>
-          <h1 className="mt-2 text-[1.2rem] font-black uppercase leading-tight tracking-[0.08em] text-(--guto-navy)">
+          <h1 className="guto-tab-title">
             {copy.emptyTitle}
           </h1>
-          <p className="mt-3 text-[12px] leading-relaxed text-[rgba(13,35,65,0.62)]">
+          <p className="guto-tab-subtitle">
             {missingLabels.length ? `${copy.missingPrefix}: ${missingLabels.join(", ")}.` : copy.emptyBody}
           </p>
         </div>
@@ -244,30 +244,30 @@ export function MissionTab({
     return (
       <motion.div
         key={`${exercise.id}-${index}`}
-        className="guto-frost-panel overflow-hidden rounded-[1.25rem] p-3"
+        className="guto-premium-card overflow-hidden p-3.5"
         initial={{ opacity: 0, y: 6 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: exerciseIndex * 0.025 }}
       >
         {/* Card header: checkbox + name + ? */}
-        <div className="flex items-center gap-2 mb-2.5">
+        <div className="mb-3 flex items-center gap-3">
           <button
             type="button"
             onClick={() => { gutoAudio.playGutoFeedback('select'); toggleExercise(exercise.id) }}
-            className="guto-slot grid h-8 w-8 shrink-0 place-items-center rounded-full"
+            className="guto-slot guto-big-touch grid shrink-0 place-items-center rounded-full"
             aria-label={`${copy.completed}: ${exercise.name}`}
             aria-pressed={isDone}
           >
             <CheckCircle2
-              className={isDone ? "h-[18px] w-[18px] text-(--guto-cyan)" : "h-[18px] w-[18px] text-[rgba(13,35,65,0.22)]"}
+              className={isDone ? "h-6 w-6 text-(--guto-cyan)" : "h-6 w-6 text-[rgba(13,35,65,0.22)]"}
             />
           </button>
 
           <div className="flex min-w-0 flex-1 flex-col">
-            <h2 className="text-[13px] font-black uppercase leading-tight tracking-[0.05em] text-(--guto-navy)">
+            <h2 className="text-[15px] font-black uppercase leading-tight tracking-[0.02em] text-(--guto-navy)">
               {exercise.name}
             </h2>
-            <span className="mt-0.5 rounded-full bg-[rgba(117,165,211,0.16)] px-2 py-0.5 font-mono text-[8px] font-black uppercase tracking-widest text-[rgba(13,35,65,0.48)] inline-block w-fit">
+            <span className="guto-status-pill mt-1 w-fit">
               {categoryLabel}
             </span>
           </div>
@@ -275,44 +275,42 @@ export function MissionTab({
           <button
             type="button"
             onClick={() => { gutoAudio.playGutoFeedback('tap'); onAskExercise(exercise) }}
-            className="guto-slot grid h-8 w-8 shrink-0 place-items-center rounded-full border border-[rgba(82,231,255,0.35)] bg-[rgba(82,231,255,0.08)]"
+            className="guto-slot guto-big-touch grid shrink-0 place-items-center rounded-full border border-[rgba(82,231,255,0.45)] bg-[rgba(82,231,255,0.10)]"
             aria-label={`${copy.doubt}: ${exercise.name}`}
           >
-            <span className="font-mono text-[11px] font-black text-(--guto-cyan)">?</span>
+            <span className="font-mono text-[15px] font-black text-(--guto-cyan)">?</span>
           </button>
         </div>
 
         {/* Card body: metrics (left) + video (right) */}
-        <div className="flex items-start gap-2.5">
+        <div className="flex items-start gap-3">
           {/* Metrics + obs */}
           <div className="min-w-0 flex-1">
-            <div className="flex items-end gap-3 mb-2">
-              <div className="text-center">
-                <div className="text-[18px] font-black leading-none text-(--guto-navy)">{exercise.sets}</div>
-                <div className="mt-0.5 font-mono text-[8px] uppercase tracking-[0.12em] text-[rgba(13,35,65,0.42)]">{copy.series}</div>
+            <div className="mb-2 grid grid-cols-3 gap-1.5">
+              <div className="rounded-[14px] bg-white/55 px-2 py-2 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]">
+                <div className="text-[20px] font-black leading-none text-(--guto-navy)">{exercise.sets}</div>
+                <div className="guto-readable-label mt-1 text-[8px]">{copy.series}</div>
               </div>
-              <div className="h-6 w-px bg-[rgba(13,35,65,0.08)]" />
-              <div className="text-center">
-                <div className="text-[18px] font-black leading-none text-(--guto-navy)">{exercise.reps}</div>
-                <div className="mt-0.5 font-mono text-[8px] uppercase tracking-[0.12em] text-[rgba(13,35,65,0.42)]">{copy.reps}</div>
+              <div className="rounded-[14px] bg-white/55 px-2 py-2 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]">
+                <div className="text-[20px] font-black leading-none text-(--guto-navy)">{exercise.reps}</div>
+                <div className="guto-readable-label mt-1 text-[8px]">{copy.reps}</div>
               </div>
-              <div className="h-6 w-px bg-[rgba(13,35,65,0.08)]" />
-              <div className="text-center">
-                <div className="text-[14px] font-black leading-none text-(--guto-navy)">{exercise.rest}</div>
-                <div className="mt-0.5 font-mono text-[8px] uppercase tracking-[0.12em] text-[rgba(13,35,65,0.42)]">{copy.rest}</div>
+              <div className="rounded-[14px] bg-white/55 px-2 py-2 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]">
+                <div className="text-[15px] font-black leading-none text-(--guto-navy)">{exercise.rest}</div>
+                <div className="guto-readable-label mt-1 text-[8px]">{copy.rest}</div>
               </div>
             </div>
 
             {exercise.note && (
-              <p className="text-[10px] leading-snug text-[rgba(13,35,65,0.55)] line-clamp-2">
-                <span className="font-mono text-[8px] uppercase tracking-[0.08em] text-[rgba(13,35,65,0.32)]">{copy.observation}: </span>
+              <p className="guto-readable-body line-clamp-2 text-[12px]">
+                <span className="guto-readable-label text-[8px]">{copy.observation}: </span>
                 {exercise.note}
               </p>
             )}
           </div>
 
           {/* Video thumbnail */}
-          <div className="h-[88px] w-[88px] shrink-0 overflow-hidden rounded-[0.85rem] border border-[rgba(82,231,255,0.4)] bg-white/60">
+          <div className="h-[96px] w-[96px] shrink-0 overflow-hidden rounded-[1rem] border border-[rgba(82,231,255,0.45)] bg-white/65 shadow-[inset_0_1px_0_rgba(255,255,255,0.86)]">
             {exercise.videoUrl ? (
               <video
                 src={exercise.videoUrl}
@@ -336,24 +334,24 @@ export function MissionTab({
   }
 
   return (
-    <div className="relative flex h-full min-h-0 flex-col pb-2">
+    <div className="guto-tab-shell pb-2">
       {/* Header */}
-      <div className="px-1 pb-4 pt-2 text-center shrink-0">
-        <p className="font-mono text-[9px] font-black uppercase tracking-[0.22em] text-(--guto-cyan) mb-1">
+      <div className="guto-tab-header">
+        <p className="guto-tab-kicker">
           {copy.execution} • {workoutPlan?.dateLabel || locale.workoutDate}
         </p>
-        <h1 className="mx-auto max-w-[18rem] text-balance text-[1.25rem] font-black uppercase leading-tight tracking-[0.08em] text-(--guto-navy)">
+        <h1 className="guto-tab-title">
           {workoutPlan?.focus || locale.workoutFocus}
         </h1>
         {(planSourceLabel || workoutPlan?.lockedByCoach) && (
           <div className="mt-2 flex flex-wrap items-center justify-center gap-1.5">
             {planSourceLabel && (
-              <span className="rounded-full bg-[rgba(82,231,255,0.13)] px-2 py-0.5 font-mono text-[7px] font-black uppercase tracking-[0.12em] text-(--guto-cyan)">
+              <span className="guto-status-pill">
                 {planSourceLabel}
               </span>
             )}
             {workoutPlan?.lockedByCoach && (
-              <span className="rounded-full bg-[rgba(13,35,65,0.08)] px-2 py-0.5 font-mono text-[7px] font-black uppercase tracking-[0.12em] text-[rgba(13,35,65,0.52)]">
+              <span className="guto-status-pill bg-[rgba(13,35,65,0.08)] text-[rgba(13,35,65,0.58)]">
                 {copy.lockedPlan}
               </span>
             )}
@@ -362,9 +360,9 @@ export function MissionTab({
       </div>
 
       {/* Progress bar + start/reset */}
-      <div className="mb-2.5 grid grid-cols-[1fr_auto] items-center gap-3 rounded-2xl border border-white/70 bg-white/36 px-3 py-1.5">
+      <div className="guto-premium-card mb-3 grid grid-cols-[1fr_auto] items-center gap-3 px-3.5 py-3">
         <div>
-          <p className="font-mono text-[8px] uppercase tracking-[0.16em] text-[rgba(13,35,65,0.38)]">
+          <p className="guto-readable-label">
             {copy.progress}
           </p>
           <div className="mt-1 h-2 overflow-hidden rounded-full bg-[rgba(13,35,65,0.08)]">
@@ -387,7 +385,7 @@ export function MissionTab({
             }
             setStarted(true)
           }}
-          className="guto-slot grid h-9 w-9 place-items-center rounded-full disabled:opacity-45"
+          className="guto-slot guto-big-touch grid place-items-center rounded-full disabled:opacity-45"
           disabled={trainedToday || adaptedMissionToday}
           aria-label={started ? copy.reset : copy.start}
         >
@@ -403,7 +401,7 @@ export function MissionTab({
           setOnlineOpen(true)
         }}
         disabled={trainedToday || adaptedMissionToday}
-        className="mb-2.5 flex h-11 w-full items-center justify-center gap-2 rounded-[1.05rem] border border-[rgba(82,231,255,0.55)] bg-[rgba(82,231,255,0.12)] font-mono text-[10px] font-black uppercase tracking-[0.16em] text-(--guto-cyan) shadow-[inset_0_1px_0_rgba(255,255,255,0.74)] disabled:opacity-30"
+        className="guto-cta-ghost mb-3 disabled:opacity-30"
       >
         <Radio className="h-4 w-4" />
         {copy.gutoOnline}
@@ -411,7 +409,7 @@ export function MissionTab({
 
       {/* Exercise sections */}
       <div className="flex min-h-0 flex-1 flex-col">
-        <div className="no-scrollbar min-h-0 flex-1 space-y-2 overflow-y-auto pb-3 pt-0.5">
+        <div className="guto-tab-scroll space-y-2.5 pb-3 pt-0.5">
           {warmupExercises.length > 0 && (
             <section className="space-y-2">
               {renderSectionHeader(copy.warmup)}
@@ -431,7 +429,7 @@ export function MissionTab({
       {/* Action — único botão final */}
       <div className="mt-2">
         {invalidWorkoutVideo && (
-          <p className="mb-2 rounded-[0.85rem] border border-[rgba(157,43,43,0.16)] bg-[rgba(157,43,43,0.06)] px-3 py-2 text-center font-mono text-[9px] font-black uppercase tracking-widest text-destructive">
+          <p className="mb-2 rounded-[0.85rem] border border-[rgba(157,43,43,0.16)] bg-[rgba(157,43,43,0.06)] px-3 py-2 text-center font-mono text-[10px] font-black uppercase tracking-widest text-destructive">
             {copy.incompleteWorkout}
           </p>
         )}
@@ -443,7 +441,7 @@ export function MissionTab({
             onValidateWorkout()
           }}
           disabled={invalidWorkoutVideo || (!canComplete && !trainedToday)}
-          className="guto-deboss-deep h-11 w-full rounded-[1.05rem] border border-[rgba(82,231,255,0.5)] font-mono text-[10px] font-black uppercase tracking-[0.16em] text-(--guto-cyan) disabled:opacity-30"
+          className="guto-cta-primary disabled:opacity-30"
         >
           {copy.validateWorkout}
         </button>

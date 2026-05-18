@@ -103,8 +103,8 @@ export function GutoOnlineRestMode({
   const halfwayPassed = remainingSeconds <= Math.round(planned / 2)
 
   return (
-    <section className="flex w-full flex-col items-center gap-4 rounded-[1.35rem] border border-white/75 bg-white/55 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.92),0_18px_60px_rgba(13,35,65,0.08)]">
-      <p className="font-mono text-[9px] font-black uppercase tracking-[0.32em] text-[rgba(13,35,65,0.5)]">
+    <section className="guto-premium-card flex w-full flex-col items-center gap-4 p-5">
+      <p className="guto-tab-kicker text-[10px] text-(--guto-navy)">
         {copy.label}
       </p>
 
@@ -130,22 +130,22 @@ export function GutoOnlineRestMode({
 
       {currentExercise && (
         <div className="text-center">
-          <p className="text-[14px] font-bold text-[rgba(13,35,65,0.84)]">
+          <p className="text-[15px] font-bold leading-snug text-[rgba(13,35,65,0.84)]">
             {copy.next(currentExercise.name, nextSetNumber, totalSets)}
           </p>
           {remainingSetsInExercise > 0 && (
-            <p className="mt-1 font-mono text-[9px] font-black uppercase tracking-[0.14em] text-(--guto-cyan)">
+            <p className="guto-readable-label mt-1 text-(--guto-cyan)">
               {copy.remaining(remainingSetsInExercise)}
             </p>
           )}
         </div>
       )}
 
-      <div className="grid w-full grid-cols-3 gap-2">
+      <div className="grid w-full grid-cols-1 gap-2 min-[390px]:grid-cols-3">
         <button
           type="button"
           onClick={() => onExtend(15)}
-          className="flex h-12 items-center justify-center gap-1.5 rounded-2xl border border-white/70 bg-white/55 font-mono text-[10px] font-black uppercase tracking-[0.14em] active:scale-[0.98]"
+          className="guto-cta-compact h-12 border-white/70 bg-white/55 text-[rgba(13,35,65,0.72)]"
         >
           <Plus className="h-3.5 w-3.5" />
           {copy.add}
@@ -153,7 +153,7 @@ export function GutoOnlineRestMode({
         <button
           type="button"
           onClick={onSkip}
-          className="flex h-12 items-center justify-center gap-1.5 rounded-2xl border border-[rgba(82,231,255,0.55)] bg-[rgba(82,231,255,0.16)] font-mono text-[10px] font-black uppercase tracking-[0.14em] text-(--guto-navy) active:scale-[0.98]"
+          className="guto-cta-compact h-12"
         >
           <SkipForward className="h-3.5 w-3.5" />
           {copy.skip}
@@ -161,7 +161,7 @@ export function GutoOnlineRestMode({
         <button
           type="button"
           onClick={onTalk}
-          className="flex h-12 items-center justify-center gap-1.5 rounded-2xl border border-white/70 bg-white/55 font-mono text-[10px] font-black uppercase tracking-[0.14em] active:scale-[0.98]"
+          className="guto-cta-compact h-12 border-white/70 bg-white/55 text-[rgba(13,35,65,0.72)]"
         >
           <MessageCircle className="h-3.5 w-3.5" />
           {copy.talk}

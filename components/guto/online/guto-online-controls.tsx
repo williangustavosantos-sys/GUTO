@@ -95,7 +95,7 @@ export function GutoOnlineControls({
         <button
           type="button"
           onClick={onValidate}
-          className="guto-deboss-deep flex h-14 items-center justify-center gap-2 rounded-[1.1rem] border border-[rgba(82,231,255,0.6)] bg-[rgba(82,231,255,0.16)] font-mono text-[11px] font-black uppercase tracking-[0.18em] text-(--guto-navy) active:scale-[0.99]"
+          className="guto-cta-primary"
         >
           <Flame className="h-4 w-4" />
           {copy.validate}
@@ -106,11 +106,11 @@ export function GutoOnlineControls({
 
   if (phase === "warmup") {
     return (
-      <div className="grid grid-cols-[1fr_auto] gap-2">
+      <div className="grid grid-cols-1 gap-2 min-[390px]:grid-cols-[minmax(0,1fr)_auto]">
         <button
           type="button"
           onClick={onWarmupDone}
-          className="flex h-14 items-center justify-center gap-2 rounded-[1.1rem] border border-[rgba(82,231,255,0.55)] bg-[rgba(82,231,255,0.16)] font-mono text-[10px] font-black uppercase tracking-[0.14em] text-(--guto-navy) active:scale-[0.98]"
+          className="guto-cta-primary min-w-0"
         >
           <CheckCircle2 className="h-4 w-4" />
           {copy.warmupDone}
@@ -118,7 +118,7 @@ export function GutoOnlineControls({
         <button
           type="button"
           onClick={onTalk}
-          className="flex h-14 items-center justify-center gap-2 rounded-[1.1rem] border border-white/70 bg-white/55 px-4 font-mono text-[10px] font-black uppercase tracking-[0.14em] active:scale-[0.98]"
+          className="guto-cta-ghost min-w-0 px-4"
         >
           <MessageCircle className="h-4 w-4" />
           {copy.talk}
@@ -132,12 +132,12 @@ export function GutoOnlineControls({
     const handler = isLastSet ? onExerciseDone : onSetDone
     return (
       <div className="flex flex-col gap-2">
-        <div className="grid grid-cols-[1fr_auto] gap-2">
+        <div className="grid grid-cols-1 gap-2 min-[390px]:grid-cols-[minmax(0,1fr)_auto]">
           <button
             type="button"
             onClick={handler}
             disabled={phase === "paused"}
-            className="flex h-14 items-center justify-center gap-2 rounded-[1.1rem] border border-[rgba(82,231,255,0.55)] bg-[rgba(82,231,255,0.16)] font-mono text-[10px] font-black uppercase tracking-[0.14em] text-(--guto-navy) active:scale-[0.98] disabled:opacity-40"
+            className="guto-cta-primary min-w-0 disabled:opacity-40"
           >
             <CheckCircle2 className="h-4 w-4" />
             {primary}
@@ -145,7 +145,7 @@ export function GutoOnlineControls({
           <button
             type="button"
             onClick={onTalk}
-            className="flex h-14 items-center justify-center gap-2 rounded-[1.1rem] border border-white/70 bg-white/55 px-4 font-mono text-[10px] font-black uppercase tracking-[0.14em] active:scale-[0.98]"
+            className="guto-cta-ghost min-w-0 px-4"
           >
             <MessageCircle className="h-4 w-4" />
             {copy.talk}
@@ -155,7 +155,7 @@ export function GutoOnlineControls({
         <button
           type="button"
           onClick={onMoreOptions}
-          className="flex h-10 items-center justify-center gap-2 rounded-[0.9rem] border border-white/60 bg-white/35 font-mono text-[9px] font-black uppercase tracking-[0.14em] text-[rgba(13,35,65,0.6)] active:scale-[0.98]"
+          className="guto-cta-compact h-11 border-white/70 bg-white/45 text-[rgba(13,35,65,0.62)]"
         >
           <MoreHorizontal className="h-3.5 w-3.5" />
           {copy.more}
@@ -171,7 +171,7 @@ export function GutoOnlineControls({
         <button
           type="button"
           onClick={onTalk}
-          className="flex h-12 items-center justify-center gap-2 rounded-2xl border border-white/70 bg-white/55 font-mono text-[10px] font-black uppercase tracking-[0.14em] active:scale-[0.98]"
+          className="guto-cta-ghost"
         >
           <MessageCircle className="h-4 w-4" />
           {copy.talk}

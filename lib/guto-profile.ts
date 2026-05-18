@@ -29,12 +29,22 @@ export const NO_PAIN_PATHOLOGY_BY_LANGUAGE: Record<GutoLanguage, string> = {
   "it-IT": "nessun dolore",
 }
 
+export const NO_FOOD_RESTRICTION_BY_LANGUAGE: Record<GutoLanguage, string> = {
+  "pt-BR": "nenhuma",
+  "en-US": "none",
+  "it-IT": "nessuna",
+}
+
 const NO_PAIN_PATHOLOGY_VALUES = new Set(
   Object.values(NO_PAIN_PATHOLOGY_BY_LANGUAGE).map((value) => value.toLocaleLowerCase("en-US"))
 )
 
 export function defaultNoPainPathology(language?: string | null): string {
   return isSupportedGutoLanguage(language) ? NO_PAIN_PATHOLOGY_BY_LANGUAGE[language] : NO_PAIN_PATHOLOGY_BY_LANGUAGE["pt-BR"]
+}
+
+export function defaultNoFoodRestriction(language?: string | null): string {
+  return isSupportedGutoLanguage(language) ? NO_FOOD_RESTRICTION_BY_LANGUAGE[language] : NO_FOOD_RESTRICTION_BY_LANGUAGE["pt-BR"]
 }
 
 export function isNoPainPathology(value?: string | null): boolean {

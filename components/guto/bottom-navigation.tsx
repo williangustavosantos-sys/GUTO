@@ -40,7 +40,7 @@ export function BottomNavigation({ activeTab, onTabChange, language }: BottomNav
     <div className="guto-bottom-navigation px-0 pt-3">
       <nav
         aria-label={safeLanguage === "it-IT" ? "Navigazione principale" : safeLanguage === "en-US" ? "Main navigation" : "Navegação principal"}
-        className="mx-auto grid w-[91.54%] max-w-[400px] grid-cols-6 gap-[clamp(2px,1.5vw,6px)]"
+        className="mx-auto grid w-[94%] max-w-[410px] grid-cols-6 gap-[clamp(3px,1.5vw,7px)]"
       >
         {tabs.map((tab) => {
           const Icon = tab.icon
@@ -58,7 +58,7 @@ export function BottomNavigation({ activeTab, onTabChange, language }: BottomNav
               aria-current={isActive ? "page" : undefined}
               aria-label={tabLabels[safeLanguage][tab.labelKey]}
               className={cn(
-                "guto-action-tile relative grid h-[var(--guto-nav-tile-size)] min-w-0 place-items-center overflow-hidden rounded-[16px] text-[rgba(13,35,65,0.56)]",
+                "guto-action-tile guto-big-touch relative flex h-[var(--guto-nav-tile-size)] min-w-0 flex-col items-center justify-center gap-1 overflow-hidden rounded-[18px] px-1 text-[rgba(13,35,65,0.56)]",
                 isActive && "text-(--guto-navy)"
               )}
               whileTap={{ scale: 0.96 }}
@@ -73,10 +73,18 @@ export function BottomNavigation({ activeTab, onTabChange, language }: BottomNav
 
               <Icon
                 className={cn(
-                  "relative z-10 h-[22px] w-[22px] stroke-[2.4]",
+                  "relative z-10 h-[21px] w-[21px] stroke-[2.45]",
                   isActive ? "text-(--guto-cyan)" : "text-[rgba(82,231,255,0.86)]"
                 )}
               />
+              <span
+                className={cn(
+                  "relative z-10 max-w-full truncate text-[7.5px] font-black uppercase leading-none tracking-[0.04em]",
+                  isActive ? "text-(--guto-navy)" : "text-[rgba(13,35,65,0.48)]"
+                )}
+              >
+                {tabLabels[safeLanguage][tab.labelKey]}
+              </span>
             </motion.button>
           )
         })}

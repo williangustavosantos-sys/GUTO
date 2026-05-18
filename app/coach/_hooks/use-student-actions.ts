@@ -77,7 +77,8 @@ export function useStudentActions({
           biologicalSex: studentDraft.sex || undefined,
           age: studentDraft.age ? parseInt(studentDraft.age) || undefined : undefined,
         })
-        if (result.inviteLink) setLastSecret(result.inviteLink)
+        if (result.temporaryPassword) setLastSecret(result.temporaryPassword)
+        else if (result.inviteLink) setLastSecret(result.inviteLink)
         setStudentDraft({ name: "", email: "", phone: "", password: "", active: false, coachId: "", teamId: selectedTeamId || "", sex: "", age: "" })
         setShowCreateStudent(false)
         void onSuccess

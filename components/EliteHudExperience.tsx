@@ -90,6 +90,7 @@ const EliteHudExperience: React.FC = () => {
           size="xl"
           showPlatform={false}
           className="guto-video"
+          interactive={false}
         />
 
         <div className="hud-overlay">

@@ -210,6 +210,7 @@ export function PathTab({ language, memory, workoutPlan, currentEvolution, valid
             size="lg"
             showPlatform
             className="relative z-10"
+            interactive={false}
           />
           <div className="guto-slot relative z-10 mt-[-0.4rem] rounded-full px-4 py-1.5 font-mono text-[10px] uppercase tracking-[0.18em] text-[rgba(13,35,65,0.58)]">
             {copy.unlocked}

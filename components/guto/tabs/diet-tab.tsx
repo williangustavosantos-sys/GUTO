@@ -1,8 +1,8 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { motion } from "framer-motion"
-import { Flame, Zap, Wheat, Droplets, RefreshCw, ChevronDown, ChevronUp } from "lucide-react"
+import { Apple, ChevronDown, ChevronUp, ClipboardList, Coffee, Droplets, Flame, Moon, RefreshCw, Salad, Utensils, Wheat, Zap, type LucideIcon } from "lucide-react"
 
 import { getDietPlan, generateDietPlan, type DietPlan, type DietMeal, type DietFood } from "@/lib/api/guto"
 import { ApiError } from "@/lib/api/client"
@@ -136,13 +136,12 @@ const dietCopy = {
   },
 } as const
 
-// Emoji per meal ID
-const MEAL_EMOJI: Record<string, string> = {
-  cafe: "☕",
-  lanche1: "🍎",
-  almoco: "🍽️",
-  lanche2: "🥜",
-  jantar: "🌙",
+const MEAL_ICON: Record<string, LucideIcon> = {
+  cafe: Coffee,
+  lanche1: Apple,
+  almoco: Utensils,
+  lanche2: Apple,
+  jantar: Moon,
 }
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -199,7 +198,7 @@ function MealCard({
 }) {
   const [expanded, setExpanded] = useState(false)
   const cardRef = useRef<HTMLDivElement | null>(null)
-  const emoji = MEAL_EMOJI[meal.id] ?? "🥗"
+  const MealIcon = MEAL_ICON[meal.id] ?? Salad
 
   useEffect(() => {
     if (!expanded) return
@@ -211,7 +210,7 @@ function MealCard({
   return (
     <motion.div
       ref={cardRef}
-      className="rounded-[1.1rem] border border-white/60 bg-white/30"
+      className="guto-premium-card"
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05, duration: 0.22 }}
@@ -220,27 +219,28 @@ function MealCard({
       <button
         type="button"
         onClick={() => { gutoAudio.playGutoFeedback('tap'); setExpanded((v) => !v) }}
-        className="w-full flex items-center gap-2.5 px-3.5 py-3"
+        className="flex w-full items-center gap-3 px-3.5 py-3.5 text-left"
         aria-expanded={expanded}
       >
-        {/* Emoji */}
-        <span className="text-[16px] shrink-0">{emoji}</span>
+        <span className="guto-slot grid h-11 w-11 shrink-0 place-items-center rounded-full text-(--guto-cyan)">
+          <MealIcon className="h-5 w-5" />
+        </span>
 
         {/* Time */}
-        <span className="font-mono text-[9px] font-black tracking-[0.06em] text-(--guto-cyan) shrink-0">
+        <span className="guto-readable-label shrink-0 text-(--guto-cyan)">
           {meal.time}
         </span>
 
         {/* Name */}
-        <h2 className="min-w-0 flex-1 wrap-break-word text-left text-[12px] font-black uppercase leading-tight tracking-[0.05em] text-(--guto-navy)">
+        <h2 className="min-w-0 flex-1 wrap-break-word text-left text-[15px] font-black uppercase leading-tight tracking-[0.02em] text-(--guto-navy)">
           {meal.name}
         </h2>
 
         {/* Total kcal + chevron */}
         <div className="flex items-center gap-1.5 shrink-0">
-          <span className="font-mono text-[11px] font-black text-(--guto-navy)/55">
+          <span className="font-mono text-[13px] font-black text-(--guto-navy)/70">
             {meal.totalKcal}
-            <span className="text-[8px] font-normal ml-0.5 text-(--guto-navy)/35">kcal</span>
+            <span className="ml-0.5 text-[9px] font-bold text-(--guto-navy)/42">kcal</span>
           </span>
           {expanded
             ? <ChevronUp className="h-3.5 w-3.5 text-(--guto-cyan)" />
@@ -263,15 +263,15 @@ function MealCard({
           {meal.foods.map((food, i) => (
             <div
               key={i}
-              className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-2 gap-y-1 py-2 border-b border-[rgba(13,35,65,0.06)] last:border-0 max-[360px]:grid-cols-[minmax(0,1fr)_auto]"
+              className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-2 gap-y-1 border-b border-[rgba(13,35,65,0.06)] py-2.5 last:border-0 max-[360px]:grid-cols-[minmax(0,1fr)_auto]"
             >
               {/* Food name */}
-              <span className="min-w-0 wrap-break-word text-[12px] leading-snug text-(--guto-navy)/85">
+              <span className="guto-readable-body min-w-0 wrap-break-word">
                 {food.name}
               </span>
 
               {/* Quantity badge */}
-              <span className="justify-self-end font-mono text-[9px] font-black text-(--guto-navy)/50 bg-[rgba(82,231,255,0.12)] px-2 py-0.5 rounded-full whitespace-nowrap max-[360px]:col-start-1 max-[360px]:row-start-2 max-[360px]:justify-self-start">
+              <span className="guto-status-pill justify-self-end whitespace-nowrap text-(--guto-navy)/60 max-[360px]:col-start-1 max-[360px]:row-start-2 max-[360px]:justify-self-start">
                 {food.quantity}
               </span>
 
@@ -284,7 +284,7 @@ function MealCard({
                   onFoodDoubt(food, meal)
                 }}
                 aria-label={`${foodQuestionLabel} ${food.name}`}
-                className="h-7 w-7 rounded-full border border-[rgba(82,231,255,0.45)] bg-[rgba(82,231,255,0.10)] text-(--guto-cyan) font-black text-[12px] flex items-center justify-center active:scale-90 transition-transform touch-manipulation max-[360px]:col-start-2 max-[360px]:row-span-2"
+                className="guto-big-touch flex items-center justify-center rounded-full border border-[rgba(82,231,255,0.45)] bg-[rgba(82,231,255,0.10)] text-[15px] font-black text-(--guto-cyan) transition-transform active:scale-90 max-[360px]:col-start-2 max-[360px]:row-span-2"
               >
                 ?
               </button>
@@ -293,7 +293,7 @@ function MealCard({
 
           {/* Guto note */}
           {meal.gutoNote && (
-            <p className="text-[10px] leading-snug text-[rgba(13,35,65,0.50)] italic pt-2">
+            <p className="guto-readable-body pt-2 text-[12px] italic">
               <span className="not-italic font-black text-(--guto-cyan) mr-1">GUTO</span>
               {meal.gutoNote}
             </p>
@@ -331,19 +331,21 @@ interface CoachDietCopy {
   coachProtein: string
 }
 
-function CoachMealCard({ emoji, label, text, index }: { emoji: string; label: string; text: string; index: number }) {
+function CoachMealCard({ icon: Icon, label, text, index }: { icon: LucideIcon; label: string; text: string; index: number }) {
   return (
     <motion.div
-      className="rounded-[1.1rem] border border-white/60 bg-white/30 px-3.5 py-3"
+      className="guto-premium-card px-3.5 py-3"
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05, duration: 0.22 }}
     >
-      <div className="flex items-start gap-2.5">
-        <span className="text-[16px] shrink-0 mt-0.5">{emoji}</span>
+      <div className="flex items-start gap-3">
+        <span className="guto-slot mt-0.5 grid h-11 w-11 shrink-0 place-items-center rounded-full text-(--guto-cyan)">
+          <Icon className="h-5 w-5" />
+        </span>
         <div className="min-w-0 flex-1">
-          <h3 className="text-[10px] font-black uppercase tracking-[0.06em] text-(--guto-cyan) mb-1">{label}</h3>
-          <p className="text-[12px] leading-relaxed text-(--guto-navy)/80 whitespace-pre-wrap">{text}</p>
+          <h3 className="guto-readable-label mb-1 text-(--guto-cyan)">{label}</h3>
+          <p className="guto-readable-body whitespace-pre-wrap">{text}</p>
         </div>
       </div>
     </motion.div>
@@ -352,20 +354,20 @@ function CoachMealCard({ emoji, label, text, index }: { emoji: string; label: st
 
 function CoachDietView({ coachDiet, copy }: { coachDiet: CoachDietDay; copy: CoachDietCopy }) {
   const meals = [
-    { key: "breakfast", emoji: "☕", label: copy.coachBreakfast, text: coachDiet.breakfast },
-    { key: "lunch", emoji: "🍽️", label: copy.coachLunch, text: coachDiet.lunch },
-    { key: "dinner", emoji: "🌙", label: copy.coachDinner, text: coachDiet.dinner },
-    { key: "snacks", emoji: "🍎", label: copy.coachSnacks, text: coachDiet.snacks },
-  ].filter((m): m is { key: string; emoji: string; label: string; text: string } => Boolean(m.text))
+    { key: "breakfast", icon: Coffee, label: copy.coachBreakfast, text: coachDiet.breakfast },
+    { key: "lunch", icon: Utensils, label: copy.coachLunch, text: coachDiet.lunch },
+    { key: "dinner", icon: Moon, label: copy.coachDinner, text: coachDiet.dinner },
+    { key: "snacks", icon: Apple, label: copy.coachSnacks, text: coachDiet.snacks },
+  ].filter((m): m is { key: string; icon: LucideIcon; label: string; text: string } => Boolean(m.text))
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      <div className="shrink-0 pb-2.5 pt-0.5 text-center">
-        <h1 className="text-[1.1rem] font-black uppercase leading-tight tracking-[0.08em] text-(--guto-navy)">
+    <div className="guto-tab-shell">
+      <div className="guto-tab-header">
+        <h1 className="guto-tab-title">
           {copy.coachDietTitle}
         </h1>
         <div className="mt-2 flex items-center justify-center">
-          <span className="rounded-full bg-[rgba(82,231,255,0.13)] px-2 py-0.5 font-mono text-[7px] font-black uppercase tracking-[0.12em] text-(--guto-cyan)">
+          <span className="guto-status-pill">
             {copy.coachDietBadge}
           </span>
         </div>
@@ -373,7 +375,7 @@ function CoachDietView({ coachDiet, copy }: { coachDiet: CoachDietDay; copy: Coa
 
       {(coachDiet.caloriesEstimate || coachDiet.proteinEstimate) && (
         <motion.div
-          className="shrink-0 mb-3 rounded-[1.1rem] border border-white/60 bg-white/30 flex items-center px-4 py-2.5"
+          className="guto-premium-card mb-3 flex shrink-0 items-center px-4 py-3"
           initial={{ opacity: 0, y: -6 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.28 }}
@@ -398,37 +400,41 @@ function CoachDietView({ coachDiet, copy }: { coachDiet: CoachDietDay; copy: Coa
         </motion.div>
       )}
 
-      <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto flex flex-col gap-2 pb-[calc(8rem+env(safe-area-inset-bottom))] overscroll-contain scroll-pb-[calc(8rem+env(safe-area-inset-bottom))] [-webkit-overflow-scrolling:touch]">
+      <div className="guto-tab-scroll flex flex-col gap-2.5 pb-[calc(8rem+env(safe-area-inset-bottom))] scroll-pb-[calc(8rem+env(safe-area-inset-bottom))]">
         {meals.map((m, i) => (
-          <CoachMealCard key={m.key} emoji={m.emoji} label={m.label} text={m.text} index={i} />
+          <CoachMealCard key={m.key} icon={m.icon} label={m.label} text={m.text} index={i} />
         ))}
 
         {coachDiet.hydration && (
           <motion.div
-            className="rounded-[1.1rem] border border-white/60 bg-white/30 px-3.5 py-3 flex items-start gap-2.5"
+            className="guto-premium-card flex items-start gap-3 px-3.5 py-3"
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: meals.length * 0.05, duration: 0.22 }}
           >
-            <span className="text-[16px] shrink-0 mt-0.5">💧</span>
+            <span className="guto-slot mt-0.5 grid h-11 w-11 shrink-0 place-items-center rounded-full text-(--guto-cyan)">
+              <Droplets className="h-5 w-5" />
+            </span>
             <div className="min-w-0 flex-1">
-              <h3 className="text-[10px] font-black uppercase tracking-[0.06em] text-(--guto-cyan) mb-1">{copy.coachHydration}</h3>
-              <p className="text-[12px] leading-relaxed text-(--guto-navy)/80">{coachDiet.hydration}</p>
+              <h3 className="guto-readable-label mb-1 text-(--guto-cyan)">{copy.coachHydration}</h3>
+              <p className="guto-readable-body">{coachDiet.hydration}</p>
             </div>
           </motion.div>
         )}
 
         {coachDiet.notes && (
           <motion.div
-            className="rounded-[1.1rem] border border-[rgba(82,231,255,0.25)] bg-[rgba(82,231,255,0.06)] px-3.5 py-3 flex items-start gap-2.5"
+            className="guto-premium-card flex items-start gap-3 px-3.5 py-3"
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: (meals.length + (coachDiet.hydration ? 1 : 0)) * 0.05, duration: 0.22 }}
           >
-            <span className="text-[16px] shrink-0 mt-0.5">📋</span>
+            <span className="guto-slot mt-0.5 grid h-11 w-11 shrink-0 place-items-center rounded-full text-(--guto-cyan)">
+              <ClipboardList className="h-5 w-5" />
+            </span>
             <div className="min-w-0 flex-1">
-              <h3 className="text-[10px] font-black uppercase tracking-[0.06em] text-(--guto-cyan) mb-1">{copy.coachNotes}</h3>
-              <p className="text-[12px] leading-relaxed text-(--guto-navy)/80 italic">{coachDiet.notes}</p>
+              <h3 className="guto-readable-label mb-1 text-(--guto-cyan)">{copy.coachNotes}</h3>
+              <p className="guto-readable-body italic">{coachDiet.notes}</p>
             </div>
           </motion.div>
         )}
@@ -447,9 +453,37 @@ export function DietTab({ userId, language, onFoodDoubt, memory }: DietTabProps)
   const [status, setStatus] = useState<"loading" | "generating" | "error" | "ready">("loading")
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [retrying, setRetrying] = useState(false)
+  const latestMemoryRef = useRef(memory)
 
   const weekDaysOrder = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"] as const
   const todayCoachDiet = memory?.weeklyDietPlan?.days?.[weekDaysOrder[new Date().getDay()]] ?? null
+  const dietProfileKey = useMemo(() => JSON.stringify({
+    heightCm: memory?.heightCm ?? null,
+    weightKg: memory?.weightKg ?? null,
+    trainingGoal: memory?.trainingGoal ?? null,
+    biologicalSex: memory?.biologicalSex ?? null,
+    userAge: memory?.userAge ?? null,
+    trainingLevel: memory?.trainingLevel ?? null,
+    trainingStatus: memory?.trainingStatus ?? null,
+    foodRestrictions: memory?.foodRestrictions ?? null,
+    foodIntolerances: memory?.foodIntolerances ?? null,
+    country: memory?.country ?? null,
+  }), [
+    memory?.heightCm,
+    memory?.weightKg,
+    memory?.trainingGoal,
+    memory?.biologicalSex,
+    memory?.userAge,
+    memory?.trainingLevel,
+    memory?.trainingStatus,
+    memory?.foodRestrictions,
+    memory?.foodIntolerances,
+    memory?.country,
+  ])
+
+  useEffect(() => {
+    latestMemoryRef.current = memory
+  }, [memory])
 
   function isPlanStale(generatedAt: string): boolean {
     const planDate = new Date(generatedAt)
@@ -460,16 +494,20 @@ export function DietTab({ userId, language, onFoodDoubt, memory }: DietTabProps)
     return planDate < lastSunday
   }
 
-  function isProfileComplete(): boolean {
-    if (!memory) return false
+  const isProfileCompleteFor = useCallback((profile: typeof memory): boolean => {
+    if (!profile) return false
     return Boolean(
-      memory.heightCm && memory.heightCm > 0 &&
-      memory.weightKg && memory.weightKg > 0 &&
-      memory.trainingGoal &&
-      memory.biologicalSex &&
-      memory.userAge &&
-      (memory.trainingLevel || memory.trainingStatus)
+      profile.heightCm && profile.heightCm > 0 &&
+      profile.weightKg && profile.weightKg > 0 &&
+      profile.trainingGoal &&
+      profile.biologicalSex &&
+      profile.userAge &&
+      (profile.trainingLevel || profile.trainingStatus)
     )
+  }, [])
+
+  function isProfileComplete(): boolean {
+    return isProfileCompleteFor(memory)
   }
 
   useEffect(() => {
@@ -487,7 +525,7 @@ export function DietTab({ userId, language, onFoodDoubt, memory }: DietTabProps)
         setStatus("error")
         setErrorMsg(copy.timeoutError)
       }
-    }, 50_000)
+    }, 30_000)
 
     const run = async () => {
       setStatus("loading")
@@ -499,12 +537,18 @@ export function DietTab({ userId, language, onFoodDoubt, memory }: DietTabProps)
         if (fetched && isPlanStale(fetched.generatedAt)) fetched = null
 
         if (!fetched) {
+          if (!isProfileCompleteFor(latestMemoryRef.current)) {
+            setPlan(null)
+            setStatus("error")
+            setErrorMsg(null)
+            return
+          }
           setStatus("generating")
           fetched = await generateDietPlan(validLang)
           if (cancelled) return
         }
 
-        setPlan(sanitizeDietPlan(fetched, memory, validLang))
+        setPlan(sanitizeDietPlan(fetched, latestMemoryRef.current, validLang))
         setStatus("ready")
       } catch (err: unknown) {
         if (cancelled) return
@@ -523,7 +567,7 @@ export function DietTab({ userId, language, onFoodDoubt, memory }: DietTabProps)
       cancelled = true
       clearTimeout(hardTimeout)
     }
-  }, [userId, validLang, memory, copy, todayCoachDiet])
+  }, [userId, validLang, dietProfileKey, copy, isProfileCompleteFor, todayCoachDiet])
 
   const handleRetry = async () => {
     if (retrying) return
@@ -534,8 +578,14 @@ export function DietTab({ userId, language, onFoodDoubt, memory }: DietTabProps)
     setRetrying(true)
     setErrorMsg(null)
     try {
+      if (!isProfileCompleteFor(latestMemoryRef.current)) {
+        setPlan(null)
+        setStatus("error")
+        setErrorMsg(null)
+        return
+      }
       const newPlan = await generateDietPlan(validLang)
-      setPlan(sanitizeDietPlan(newPlan, memory, validLang))
+      setPlan(sanitizeDietPlan(newPlan, latestMemoryRef.current, validLang))
       setStatus("ready")
     } catch (err: unknown) {
       setStatus("error")
@@ -587,30 +637,40 @@ export function DietTab({ userId, language, onFoodDoubt, memory }: DietTabProps)
     const bodyText = !profileComplete ? copy.emptyBody : errorMsg || retryLabel[validLang]
 
     return (
-      <div className="flex h-full min-h-0 flex-col">
-        <div className="shrink-0 pb-3 pt-1 text-center">
-          <h1 className="text-[1.15rem] font-black uppercase leading-tight tracking-[0.08em] text-(--guto-navy)">
+      <div className="guto-tab-shell">
+        <div className="guto-tab-header">
+          <h1 className="guto-tab-title">
             {copy.title}
           </h1>
         </div>
         <div className="flex-1 flex flex-col items-center justify-center gap-5 pb-4">
-          <div className="relative w-20 h-20 flex items-center justify-center">
+          <div className="relative flex h-20 w-20 items-center justify-center">
             <div className="absolute inset-0 rounded-full bg-[rgba(82,231,255,0.10)] blur-xl" />
             <motion.div
               animate={{ rotate: [0, 8, -8, 0], scale: [1, 1.04, 1] }}
               transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-              className="relative text-4xl"
+              className="guto-slot relative grid h-16 w-16 place-items-center rounded-full text-(--guto-cyan)"
             >
-              🥗
+              <Salad className="h-8 w-8" />
             </motion.div>
           </div>
           <div className="text-center max-w-[240px]">
-            <h2 className="text-[0.95rem] font-black uppercase leading-tight tracking-[0.06em] text-(--guto-navy) mb-2">
+            <h2 className="mb-2 text-[1.05rem] font-black uppercase leading-tight tracking-[0.04em] text-(--guto-navy)">
               {copy.emptyTitle}
             </h2>
-            <p className="text-[12px] leading-relaxed text-[rgba(13,35,65,0.60)]">{bodyText}</p>
+            <p className="guto-readable-body">{bodyText}</p>
           </div>
-          {/* Students request diet changes via chat, not by regenerating directly */}
+          {profileComplete && status === "error" && (
+            <motion.button
+              type="button"
+              whileTap={{ scale: 0.97 }}
+              onClick={() => { gutoAudio.playGutoFeedback("tap"); void handleRetry() }}
+              disabled={retrying}
+              className="guto-secondary-button min-w-[180px]"
+            >
+              {retrying ? copy.generatingLabel : copy.regenerateButton}
+            </motion.button>
+          )}
         </div>
       </div>
     )
@@ -630,25 +690,25 @@ export function DietTab({ userId, language, onFoodDoubt, memory }: DietTabProps)
           : null
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div className="guto-tab-shell">
 
       {/* ── Header ── */}
-      <div className="shrink-0 pb-2.5 pt-0.5 text-center">
-        <h1 className="text-[1.1rem] font-black uppercase leading-tight tracking-[0.08em] text-(--guto-navy)">
+      <div className="guto-tab-header">
+        <h1 className="guto-tab-title">
           {copy.title}
         </h1>
-        <p className="font-mono text-[8px] uppercase tracking-[0.12em] text-[rgba(13,35,65,0.40)] mt-0.5">
+        <p className="guto-readable-label mt-2">
           {weekRange}
         </p>
         {(planSourceLabel || plan.lockedByCoach) && (
           <div className="mt-2 flex flex-wrap items-center justify-center gap-1.5">
             {planSourceLabel && (
-              <span className="rounded-full bg-[rgba(82,231,255,0.13)] px-2 py-0.5 font-mono text-[7px] font-black uppercase tracking-[0.12em] text-(--guto-cyan)">
+              <span className="guto-status-pill">
                 {planSourceLabel}
               </span>
             )}
             {plan.lockedByCoach && (
-              <span className="rounded-full bg-[rgba(13,35,65,0.08)] px-2 py-0.5 font-mono text-[7px] font-black uppercase tracking-[0.12em] text-[rgba(13,35,65,0.52)]">
+              <span className="guto-status-pill bg-[rgba(13,35,65,0.08)] text-[rgba(13,35,65,0.58)]">
                 {copy.lockedPlan}
               </span>
             )}
@@ -658,13 +718,13 @@ export function DietTab({ userId, language, onFoodDoubt, memory }: DietTabProps)
 
       {/* ── Summary card ── */}
       <motion.div
-        className="shrink-0 mb-3 rounded-[1.1rem] border border-white/60 bg-white/30"
+        className="guto-premium-card mb-3 shrink-0"
         initial={{ opacity: 0, y: -6 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.28 }}
       >
         {/* Kcal row */}
-        <div className="flex items-center justify-between px-4 pt-3 pb-2">
+        <div className="flex items-center justify-between px-4 pb-2 pt-3.5">
           <div className="flex items-end gap-1.5">
             <Flame className="h-4 w-4 text-(--guto-cyan) mb-px shrink-0" />
             <span className="text-[24px] font-black leading-none text-(--guto-navy)">
@@ -675,7 +735,7 @@ export function DietTab({ userId, language, onFoodDoubt, memory }: DietTabProps)
               <span className="font-mono text-[7px] leading-none text-(--guto-navy)/30">{copy.perDay}</span>
             </div>
           </div>
-          <span className="font-mono text-[8px] font-black uppercase tracking-widest text-(--guto-navy) bg-[rgba(82,231,255,0.15)] px-2.5 py-1 rounded-full">
+          <span className="guto-status-pill text-(--guto-navy)">
             {goalName}
           </span>
         </div>
@@ -694,7 +754,7 @@ export function DietTab({ userId, language, onFoodDoubt, memory }: DietTabProps)
       </motion.div>
 
       {/* ── Scrollable meals ── */}
-      <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto flex flex-col gap-2 pb-[calc(8rem+env(safe-area-inset-bottom))] overscroll-contain scroll-pb-[calc(8rem+env(safe-area-inset-bottom))] [-webkit-overflow-scrolling:touch]">
+      <div className="guto-tab-scroll flex flex-col gap-2.5 pb-[calc(8rem+env(safe-area-inset-bottom))] scroll-pb-[calc(8rem+env(safe-area-inset-bottom))]">
         {meals.map((meal, i) => (
           <MealCard
             key={meal.id}
@@ -711,13 +771,13 @@ export function DietTab({ userId, language, onFoodDoubt, memory }: DietTabProps)
           whileTap={{ scale: 0.97 }}
           onClick={() => { gutoAudio.playGutoFeedback('tap'); handleRetry() }}
           disabled={retrying}
-          className="mt-1 flex items-center justify-center gap-2 w-full h-9 rounded-[0.85rem] border border-[rgba(82,231,255,0.25)] bg-transparent text-(--guto-cyan)/60 font-mono text-[8px] font-black uppercase tracking-[0.14em] disabled:opacity-40"
+          className="guto-cta-ghost mt-1 disabled:opacity-40"
         >
           <RefreshCw className="h-3 w-3" />
           {copy.regenerateButton}
         </motion.button>
 
-        <p className="mt-2 text-center font-mono text-[7px] uppercase tracking-widest text-[rgba(13,35,65,0.30)] px-4">
+        <p className="guto-readable-label mt-2 px-4 text-center text-[8px] text-[rgba(13,35,65,0.38)]">
           {copy.disclaimer}
         </p>
       </div>
@@ -740,10 +800,10 @@ function MacroPill({
 }) {
   const colorMap = { cyan: "text-(--guto-cyan)", amber: "text-amber-500", sky: "text-sky-400" }
   return (
-    <div className="flex flex-col items-center gap-0.5 flex-1">
+    <div className="flex flex-1 flex-col items-center gap-0.5">
       <div className={colorMap[color]}>{icon}</div>
-      <span className="text-[14px] font-black leading-none text-(--guto-navy)">{value}</span>
-      <span className="font-mono text-[7px] uppercase tracking-widest text-[rgba(13,35,65,0.38)] mt-0.5">{label}</span>
+      <span className="text-[15px] font-black leading-none text-(--guto-navy)">{value}</span>
+      <span className="guto-readable-label mt-0.5 text-[8px]">{label}</span>
     </div>
   )
 }

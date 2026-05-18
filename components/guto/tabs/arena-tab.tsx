@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Swords, Flame, TrendingUp, Star, Trophy } from "lucide-react"
+import { Flame, Medal, Swords, Star, TrendingUp, Trophy } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
   getArenaWeekly,
@@ -86,7 +86,7 @@ function RankingCard({
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay: (item.position - 1) * 0.06 }}
-      className="guto-deboss relative overflow-hidden rounded-[1.6rem] px-5 py-4"
+      className="guto-premium-card relative overflow-hidden px-4 py-4"
     >
       {/* top-3 glow accent */}
       {item.position <= 3 && (
@@ -101,9 +101,9 @@ function RankingCard({
         />
       )}
 
-      <div className="relative flex items-center gap-4">
+      <div className="relative flex items-center gap-3.5">
         {/* Position icon */}
-        <div className="flex w-8 shrink-0 flex-col items-center">
+        <div className="guto-slot flex h-12 w-12 shrink-0 items-center justify-center rounded-full">
           {PositionIcon ? (
             <PositionIcon
               className={cn(
@@ -116,7 +116,7 @@ function RankingCard({
               )}
             />
           ) : (
-            <span className="text-sm font-black text-[rgba(13,35,65,0.32)]">#{item.position}</span>
+            <span className="text-sm font-black text-[rgba(13,35,65,0.52)]">#{item.position}</span>
           )}
         </div>
 
@@ -124,16 +124,16 @@ function RankingCard({
           <div className="flex items-center justify-between gap-2">
             {/* Name */}
             <div className="min-w-0 flex-1 flex flex-col">
-              <p className="truncate text-[15px] font-black tracking-widest text-(--guto-navy)">
+              <p className="truncate text-[16px] font-black tracking-[0.04em] text-(--guto-navy)">
                 {displayName}
               </p>
-              <p className="text-[8px] font-black uppercase tracking-widest text-[rgba(13,35,65,0.42)]">
+              <p className="guto-readable-label mt-0.5">
                 {t.arena.pairWithGuto}
               </p>
             </div>
             {/* XP */}
             <div className="shrink-0 text-right">
-              <p className="text-[15px] font-black leading-none text-(--guto-cyan)">
+              <p className="text-[17px] font-black leading-none text-(--guto-cyan)">
                 {item.xp.toLocaleString()}{" "}
                 <span className="text-[10px] font-black tracking-widest">{t.arena.xp}</span>
               </p>
@@ -142,11 +142,11 @@ function RankingCard({
 
           <div className="flex items-center justify-between gap-2 mt-2">
             {/* Stage */}
-            <p className={cn("text-[10px] font-black tracking-widest", stageColor)}>
+            <p className={cn("guto-readable-label", stageColor)}>
               {stageName}
             </p>
             {/* Workouts */}
-            <p className="text-[10px] text-[rgba(13,35,65,0.42)] font-black uppercase tracking-widest">
+            <p className="guto-readable-label text-right">
               {item.validatedWorkouts} {t.arena.workoutsValidated}
             </p>
           </div>
@@ -154,18 +154,18 @@ function RankingCard({
       </div>
 
       {/* Status row */}
-      <div className="relative mt-3 flex items-center gap-1.5">
+      <div className="relative mt-3 flex min-h-8 items-center gap-2 rounded-full bg-white/42 px-3">
         {isOnFire ? (
-          <Flame className="h-3 w-3 text-orange-500" />
+          <Flame className="h-4 w-4 text-orange-500" />
         ) : (
-          <TrendingUp className="h-3 w-3 text-[rgba(82,231,255,0.6)]" />
+          <TrendingUp className="h-4 w-4 text-[rgba(82,231,255,0.76)]" />
         )}
-        <span className="font-mono text-[9px] font-black uppercase tracking-[0.18em] text-[rgba(13,35,65,0.42)]">
+        <span className="guto-readable-label">
           {translatedStatus}
         </span>
         {item.currentStreak !== undefined && item.currentStreak > 0 && (
-          <span className="ml-auto font-mono text-[9px] text-[rgba(13,35,65,0.32)]">
-            🔥 {item.currentStreak}d
+          <span className="ml-auto inline-flex items-center gap-1 font-mono text-[10px] font-black text-[rgba(13,35,65,0.48)]">
+            <Flame className="h-3.5 w-3.5 text-orange-500" /> {item.currentStreak}d
           </span>
         )}
       </div>
@@ -173,7 +173,7 @@ function RankingCard({
       {/* XP to next evolution (individual tab) */}
       {item.xpToNextEvolution !== null && item.xpToNextEvolution !== undefined && (
         <div className="relative mt-3">
-          <div className="mb-1.5 flex justify-between font-mono text-[8px] uppercase tracking-[0.12em] text-[rgba(13,35,65,0.38)]">
+          <div className="guto-readable-label mb-1.5 flex justify-between text-[8px]">
             <span>{t.arena.nextEvolution}</span>
             <span>
               {item.xpToNextEvolution.toLocaleString()} {t.arena.xpMissing}
@@ -197,9 +197,9 @@ function RankingCard({
 
 function EmptyState({ message }: { message: string }) {
   return (
-    <div className="flex flex-col items-center gap-3 py-16 text-center">
-      <Swords className="h-10 w-10 text-[rgba(82,231,255,0.35)]" />
-      <p className="max-w-[200px] text-[12px] leading-relaxed text-[rgba(13,35,65,0.42)]">{message}</p>
+    <div className="guto-premium-card flex flex-col items-center gap-3 px-5 py-10 text-center">
+      <Swords className="h-11 w-11 text-[rgba(82,231,255,0.58)]" />
+      <p className="guto-readable-body max-w-[220px]">{message}</p>
     </div>
   )
 }
@@ -210,7 +210,7 @@ function LoadingState() {
       {[1, 2, 3].map((i) => (
         <div
           key={i}
-          className="h-24 animate-pulse rounded-[1.6rem] bg-[rgba(13,35,65,0.05)]"
+          className="h-28 animate-pulse rounded-[1.6rem] bg-[rgba(13,35,65,0.05)]"
         />
       ))}
     </div>
@@ -267,31 +267,28 @@ export function ArenaTab({ userId, language, translations: t, refreshKey, curren
       : null
 
   return (
-    <div className="flex h-full flex-col overflow-hidden">
+    <div className="guto-tab-shell">
       {/* Header */}
-      <div className="px-1 pb-4 pt-2 text-center shrink-0">
-        <p className="font-mono text-[9px] font-black uppercase tracking-[0.22em] text-(--guto-cyan) mb-1">
+      <div className="guto-tab-header">
+        <p className="guto-tab-kicker">
           {t.arena.subtitle}
         </p>
-        <h1 className="mx-auto max-w-[18rem] text-balance text-[1.25rem] font-black uppercase leading-tight tracking-[0.08em] text-(--guto-navy)">
+        <h1 className="guto-tab-title">
           {t.arena.tab}
         </h1>
       </div>
 
       {/* Sub-tab strip */}
-      <div className="shrink-0 px-5 pb-3">
-        <div className="flex gap-1 rounded-2xl bg-[rgba(13,35,65,0.06)] p-1">
+      <div className="shrink-0 px-1 pb-3">
+        <div className="guto-segmented-control grid-cols-3">
           {subTabs.map((sub) => (
             <button
               key={sub.id}
               type="button"
               onClick={() => { gutoAudio.playGutoFeedback('tap'); setActiveSubTab(sub.id) }}
-              className={cn(
-                "flex-1 rounded-[0.7rem] py-2 font-mono text-[10px] font-black tracking-widest transition-all",
-                activeSubTab === sub.id
-                  ? "bg-(--guto-cyan) text-(--guto-navy) shadow-sm"
-                  : "text-[rgba(13,35,65,0.42)] hover:text-[rgba(13,35,65,0.65)]"
-              )}
+              className="guto-segment-button"
+              data-active={activeSubTab === sub.id}
+              aria-pressed={activeSubTab === sub.id}
             >
               {sub.label}
             </button>
@@ -300,17 +297,24 @@ export function ArenaTab({ userId, language, translations: t, refreshKey, curren
       </div>
 
       {/* Headline */}
-      <div className="shrink-0 px-5 pb-3">
-        <p className="font-mono text-[9px] font-black uppercase tracking-[0.18em] text-[rgba(13,35,65,0.38)]">
-          {headline}
-        </p>
-        {resetLabel && (
-          <p className="mt-0.5 font-mono text-[9px] text-[rgba(13,35,65,0.28)]">{resetLabel}</p>
-        )}
+      <div className="guto-premium-card mb-3 shrink-0 px-4 py-3">
+        <div className="flex items-center gap-3">
+          <span className="guto-slot grid h-11 w-11 shrink-0 place-items-center rounded-full text-(--guto-cyan)">
+            {activeSubTab === "individual" ? <Medal className="h-5 w-5" /> : <Trophy className="h-5 w-5" />}
+          </span>
+          <div className="min-w-0">
+            <p className="guto-readable-label text-(--guto-navy)">
+              {headline}
+            </p>
+            {resetLabel && (
+              <p className="mt-1 text-[12px] font-semibold leading-snug text-[rgba(13,35,65,0.52)]">{resetLabel}</p>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Ranking list */}
-      <div className="flex-1 overflow-y-auto px-5 pb-6">
+      <div className="guto-tab-scroll pb-6">
         <AnimatePresence mode="wait">
           {loading ? (
             <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>

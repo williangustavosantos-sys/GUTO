@@ -4,7 +4,15 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { X, Zap } from "lucide-react"
 
-import type { ArenaAwardResult, GutoWorkoutPlan, SupportedLanguage, WorkoutLocationMode, WorkoutValidationRecord } from "@/lib/api/guto"
+import type {
+  ArenaAwardResult,
+  GutoWorkoutPlan,
+  SupportedLanguage,
+  WorkoutFeedbackDifficulty,
+  WorkoutFeedbackEnergy,
+  WorkoutLocationMode,
+  WorkoutValidationRecord,
+} from "@/lib/api/guto"
 import { validateWorkout } from "@/lib/api/guto"
 
 interface WorkoutValidationFlowProps {
@@ -18,7 +26,7 @@ interface WorkoutValidationFlowProps {
   onClose: () => void
 }
 
-type FlowStep = "intro" | "ready" | "camera" | "countdown" | "speaking" | "uploading" | "success"
+type FlowStep = "intro" | "ready" | "camera" | "countdown" | "speaking" | "feedback" | "uploading" | "success"
 
 const copy = {
   "pt-BR": {
@@ -49,6 +57,19 @@ const copy = {
     errorTitle: "Algo deu errado",
     missingLocation: "Local do treino não está fechado. Volte e ajuste o local antes de validar.",
     incompleteWorkout: "Este treino está incompleto. GUTO precisa corrigir os exercícios antes de validar.",
+    feedbackTitle: "Como foi o treino?",
+    feedbackSubtitle: "Responde curto. O GUTO usa isso para ajustar o próximo.",
+    feedbackOptions: {
+      easy: "Foi leve",
+      ok: "Na medida",
+      hard: "Pesado",
+      pain: "Senti dor",
+    },
+    energyLabel: "Energia",
+    energyOptions: { low: "Baixa", normal: "Normal", high: "Alta" },
+    painPlaceholder: "Onde doeu? Ex: joelho, lombar, ombro",
+    notePlaceholder: "Algum detalhe rápido? Opcional.",
+    feedbackContinue: "FECHAR MISSÃO",
   },
   "en-US": {
     title: "Validate workout",
@@ -78,6 +99,19 @@ const copy = {
     errorTitle: "Something went wrong",
     missingLocation: "Workout location is not locked. Go back and set the location before validating.",
     incompleteWorkout: "This workout is incomplete. GUTO must fix the exercises before validation.",
+    feedbackTitle: "How did it feel?",
+    feedbackSubtitle: "Keep it short. GUTO uses this to adjust the next one.",
+    feedbackOptions: {
+      easy: "Too easy",
+      ok: "Right dose",
+      hard: "Heavy",
+      pain: "Pain",
+    },
+    energyLabel: "Energy",
+    energyOptions: { low: "Low", normal: "Normal", high: "High" },
+    painPlaceholder: "Where did it hurt? Knee, back, shoulder...",
+    notePlaceholder: "Any quick detail? Optional.",
+    feedbackContinue: "CLOSE MISSION",
   },
   "it-IT": {
     title: "Valida allenamento",
@@ -107,6 +141,19 @@ const copy = {
     errorTitle: "Qualcosa è andato storto",
     missingLocation: "Il luogo dell'allenamento non è definito. Torna indietro e impostalo prima di validare.",
     incompleteWorkout: "Questo allenamento è incompleto. GUTO deve correggere gli esercizi prima di validare.",
+    feedbackTitle: "Com'è andata?",
+    feedbackSubtitle: "Risposta corta. GUTO la usa per regolare il prossimo.",
+    feedbackOptions: {
+      easy: "Leggero",
+      ok: "Giusto",
+      hard: "Pesante",
+      pain: "Dolore",
+    },
+    energyLabel: "Energia",
+    energyOptions: { low: "Bassa", normal: "Normale", high: "Alta" },
+    painPlaceholder: "Dove hai sentito dolore? Ginocchio, schiena...",
+    notePlaceholder: "Dettaglio rapido? Opzionale.",
+    feedbackContinue: "CHIUDI MISSIONE",
   },
 } as const
 
@@ -143,6 +190,10 @@ export function WorkoutValidationFlow({
   const [faceProgress, setFaceProgress] = useState(0) // 0-100, progresso de detecção
   const [cameraError, setCameraError] = useState<string | null>(null)
   const [uploadError, setUploadError] = useState<string | null>(null)
+  const [feedbackDifficulty, setFeedbackDifficulty] = useState<WorkoutFeedbackDifficulty>("ok")
+  const [feedbackEnergy, setFeedbackEnergy] = useState<WorkoutFeedbackEnergy>("normal")
+  const [feedbackPainArea, setFeedbackPainArea] = useState("")
+  const [feedbackNote, setFeedbackNote] = useState("")
   const [validationResult, setValidationResult] = useState<{
     validation: WorkoutValidationRecord
     validationHistory: WorkoutValidationRecord[]
@@ -251,7 +302,7 @@ export function WorkoutValidationFlow({
           const dataUrl = capturePhoto()
           imageBase64Ref.current = dataUrl
           stopCamera()
-          setStep("uploading")
+          setStep("feedback")
         }, 3000)
       }
     }
@@ -422,6 +473,12 @@ export function WorkoutValidationFlow({
       locationMode,
       language,
       workoutPlan,
+      feedback: {
+        difficulty: feedbackDifficulty,
+        energy: feedbackEnergy,
+        painArea: feedbackDifficulty === "pain" ? feedbackPainArea.trim() : undefined,
+        note: feedbackNote.trim() || undefined,
+      },
     })
       .then((result) => {
         if (cancelled) return
@@ -434,7 +491,7 @@ export function WorkoutValidationFlow({
         setUploadError(err instanceof Error ? err.message : "Erro ao validar missão.")
       })
     return () => { cancelled = true }
-  }, [step, userId, workoutFocus, workoutLabel, locationMode, language, locale.missingLocation, locale.incompleteWorkout, workoutPlan])
+  }, [step, userId, workoutFocus, workoutLabel, locationMode, language, locale.missingLocation, locale.incompleteWorkout, workoutPlan, feedbackDifficulty, feedbackEnergy, feedbackPainArea, feedbackNote])
 
   return (
     <div
@@ -698,7 +755,7 @@ export function WorkoutValidationFlow({
                       // P0 FIX: do NOT set imageBase64 — send undefined so backend
                       // processes validation without image (skip-camera path).
                       imageBase64Ref.current = ""
-                      setStep("uploading")
+                      setStep("feedback")
                     }}
                     className="rounded-full border border-[rgba(82,231,255,0.25)] bg-[rgba(5,13,26,0.7)] px-5 py-2 font-mono text-[8px] font-black uppercase tracking-[0.16em] text-[rgba(82,231,255,0.55)]"
                   >
@@ -766,6 +823,96 @@ export function WorkoutValidationFlow({
                 </button>
               </div>
             )}
+          </motion.div>
+        )}
+
+        {/* ── FEEDBACK ──────────────────────────────────────────────────── */}
+        {step === "feedback" && (
+          <motion.div
+            key="feedback"
+            className="relative flex h-full flex-col justify-center px-5"
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.28 }}
+          >
+            <div className="guto-frost-panel mx-auto w-full max-w-[23rem] rounded-[2rem] p-5">
+              <p className="font-mono text-[9px] font-black uppercase tracking-[0.22em] text-(--guto-cyan)">
+                {locale.badge}
+              </p>
+              <h2 className="mt-2 text-[1.35rem] font-black uppercase leading-tight tracking-[0.04em] text-(--guto-navy)">
+                {locale.feedbackTitle}
+              </h2>
+              <p className="mt-2 text-[13px] font-semibold leading-relaxed text-[rgba(13,35,65,0.62)]">
+                {locale.feedbackSubtitle}
+              </p>
+
+              <div className="mt-5 grid grid-cols-2 gap-2">
+                {(Object.entries(locale.feedbackOptions) as [WorkoutFeedbackDifficulty, string][]).map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setFeedbackDifficulty(value)}
+                    className={[
+                      "min-h-12 rounded-[1rem] border px-3 py-2 font-mono text-[10px] font-black uppercase tracking-[0.12em] transition",
+                      feedbackDifficulty === value
+                        ? "border-[rgba(82,231,255,0.7)] bg-[rgba(82,231,255,0.18)] text-(--guto-navy)"
+                        : "border-white/70 bg-white/45 text-[rgba(13,35,65,0.55)]",
+                    ].join(" ")}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="mt-4">
+                <p className="font-mono text-[9px] font-black uppercase tracking-[0.18em] text-[rgba(13,35,65,0.45)]">
+                  {locale.energyLabel}
+                </p>
+                <div className="mt-2 grid grid-cols-3 gap-2">
+                  {(Object.entries(locale.energyOptions) as [WorkoutFeedbackEnergy, string][]).map(([value, label]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => setFeedbackEnergy(value)}
+                      className={[
+                        "min-h-10 rounded-[0.9rem] border px-2 py-2 font-mono text-[9px] font-black uppercase tracking-[0.1em] transition",
+                        feedbackEnergy === value
+                          ? "border-[rgba(82,231,255,0.65)] bg-[rgba(82,231,255,0.14)] text-(--guto-navy)"
+                          : "border-white/70 bg-white/42 text-[rgba(13,35,65,0.5)]",
+                      ].join(" ")}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {feedbackDifficulty === "pain" && (
+                <input
+                  value={feedbackPainArea}
+                  onChange={(event) => setFeedbackPainArea(event.target.value)}
+                  placeholder={locale.painPlaceholder}
+                  className="mt-4 min-h-12 w-full rounded-[1rem] border border-[rgba(157,43,43,0.16)] bg-white/68 px-4 text-[16px] font-bold text-(--guto-navy) outline-none placeholder:text-[rgba(13,35,65,0.38)]"
+                />
+              )}
+
+              <textarea
+                value={feedbackNote}
+                onChange={(event) => setFeedbackNote(event.target.value)}
+                placeholder={locale.notePlaceholder}
+                rows={2}
+                className="mt-4 w-full resize-none rounded-[1rem] border border-white/70 bg-white/58 px-4 py-3 text-[16px] font-semibold leading-snug text-(--guto-navy) outline-none placeholder:text-[rgba(13,35,65,0.38)]"
+              />
+
+              <button
+                type="button"
+                onClick={() => setStep("uploading")}
+                className="guto-cta-primary mt-5"
+              >
+                {locale.feedbackContinue}
+              </button>
+            </div>
           </motion.div>
         )}
 
