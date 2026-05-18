@@ -1,3 +1,6 @@
+/** Backend Render (produção). Override com NEXT_PUBLIC_API_URL no .env.local ou Vercel. */
+const PRODUCTION_API_URL = "https://cerebroguto.onrender.com"
+
 function shouldUsePreviewProxy() {
   if (typeof window === "undefined") return false
   const host = window.location.hostname
@@ -8,9 +11,27 @@ const RAW_API_URL =
   shouldUsePreviewProxy()
     ? "/api/guto"
     : process.env.NEXT_PUBLIC_API_URL ||
-      (process.env.NODE_ENV === "production" ? "" : "http://localhost:3001")
+      (process.env.NODE_ENV === "production" ? PRODUCTION_API_URL : "http://localhost:3001")
 
 export const API_URL = RAW_API_URL.replace(/\/+$/, "")
+
+function readAuthToken() {
+  if (typeof window === "undefined") return undefined
+  try {
+    return window.localStorage.getItem("guto-auth-token") ?? undefined
+  } catch {
+    return undefined
+  }
+}
+
+function removeAuthToken() {
+  if (typeof window === "undefined") return
+  try {
+    window.localStorage.removeItem("guto-auth-token")
+  } catch {
+    // Storage is optional; redirect below still recovers the user session.
+  }
+}
 
 function isQaDemoMode() {
   const demoEnv = process.env.NEXT_PUBLIC_VERCEL_ENV
@@ -41,14 +62,71 @@ function isApiErrorBody(value: unknown): value is { message?: string; error?: st
   return typeof value === "object" && value !== null
 }
 
-export function getApiErrorMessage(error: unknown): string {
+type GutoErrorLanguage = "pt-BR" | "en-US" | "it-IT"
+
+function readErrorLanguage(language?: string): GutoErrorLanguage {
+  if (language === "en-US" || language === "it-IT" || language === "pt-BR") return language
+  if (typeof window === "undefined") return "pt-BR"
+  try {
+    const stored =
+      window.localStorage.getItem("guto-selected-language") ||
+      window.localStorage.getItem("guto-onboarding-language")
+    return stored === "en-US" || stored === "it-IT" || stored === "pt-BR" ? stored : "pt-BR"
+  } catch {
+    return "pt-BR"
+  }
+}
+
+const gutoApiErrorCopy: Record<GutoErrorLanguage, {
+  timeout: string
+  connection: string
+  unknown: string
+  missingApiUrl: string
+  invalidCredentials: string
+  accessDenied: string
+  accessPaused: string
+}> = {
+  "pt-BR": {
+    timeout: "Ixi, demorei demais pra responder. Aguenta aí e tenta de novo.",
+    connection: "Perdi a conexão por um instante. Confere a internet e me chama de novo.",
+    unknown: "Deu um curto aqui no meu sistema. Aguenta aí e tenta de novo.",
+    missingApiUrl: "Ixi, meu cérebro não está conectado aqui. Configura a URL do Cérebro do GUTO e eu volto.",
+    invalidCredentials: "Credenciais inválidas.",
+    accessDenied: "Acesso negado.",
+    accessPaused: "Teu acesso está pausado ou expirado. Resolve isso e eu volto contigo.",
+  },
+  "en-US": {
+    timeout: "My system took too long to answer. Hold on and try again.",
+    connection: "I lost connection for a moment. Check the internet and call me again.",
+    unknown: "My system shorted out here. Hold on and try again.",
+    missingApiUrl: "My brain is not connected here. Configure the GUTO Brain URL and I will be back.",
+    invalidCredentials: "Invalid credentials.",
+    accessDenied: "Access denied.",
+    accessPaused: "Your access is paused or expired. Fix that and I will be back with you.",
+  },
+  "it-IT": {
+    timeout: "Il mio sistema ci ha messo troppo a rispondere. Aspetta un attimo e riprova.",
+    connection: "Ho perso la connessione per un attimo. Controlla internet e richiamami.",
+    unknown: "Mi si è inceppato il sistema qui. Aspetta un attimo e riprova.",
+    missingApiUrl: "Il mio cervello non è collegato qui. Configura l'URL del Cervello GUTO e torno.",
+    invalidCredentials: "Credenziali non valide.",
+    accessDenied: "Accesso negato.",
+    accessPaused: "Il tuo accesso è in pausa o scaduto. Sistema questo e torno con te.",
+  },
+}
+
+export function getApiErrorMessage(error: unknown, language?: string): string {
+  const copy = gutoApiErrorCopy[readErrorLanguage(language)]
   if (error instanceof ApiError) {
-    if (error.code === "TIMEOUT") return "Request timed out. Please try again."
-    if (error.code === "CONNECTION_ERROR") return "Connection failed. Check your internet connection."
+    if (error.code === "TIMEOUT") return copy.timeout
+    if (error.code === "CONNECTION_ERROR") return copy.connection
+    if (error.code === "ACCESS_PAUSED") return copy.accessPaused
+    if (error.status === 401) return copy.invalidCredentials
+    if (error.status === 403) return copy.accessDenied
     return error.message
   }
   if (error instanceof Error) return error.message
-  return "Connection failed."
+  return copy.unknown
 }
 
 interface RequestOptions extends RequestInit {
@@ -61,14 +139,14 @@ export async function apiRequest<T>(
   { timeoutMs = 15000, token, ...init }: RequestOptions = {}
 ): Promise<T> {
   if (!API_URL) {
-    throw new ApiError("NEXT_PUBLIC_API_URL ausente. Configure a URL pública do Cérebro do GUTO.")
+    throw new ApiError(gutoApiErrorCopy[readErrorLanguage()].missingApiUrl)
   }
 
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), timeoutMs)
 
   // Tenta pegar token do localStorage se não foi passado explicitamente
-  const activeToken = token || (typeof window !== "undefined" ? window.localStorage.getItem("guto-auth-token") : undefined)
+  const activeToken = token || readAuthToken()
 
   try {
     const res = await fetch(`${API_URL}${path}`, {
@@ -87,13 +165,13 @@ export async function apiRequest<T>(
       const suppressAuthRedirect = isQaDemoMode()
 
       if (!isLoginEndpoint && typeof window !== "undefined" && !suppressAuthRedirect) {
-        window.localStorage.removeItem("guto-auth-token")
+        removeAuthToken()
         if (!window.location.pathname.includes("/login") && !window.location.pathname.includes("/convite")) {
           window.location.href = "/login"
         }
       }
 
-      throw new ApiError(isApiErrorBody(body) ? body.message || "Credenciais inválidas." : "Credenciais inválidas.", 401)
+      throw new ApiError(isApiErrorBody(body) ? body.message || "Credenciais inválidas." : "Credenciais inválidas.", 401, body, isApiErrorBody(body) ? body.code : undefined)
     }
 
     if (res.status === 403) {
@@ -103,7 +181,7 @@ export async function apiRequest<T>(
           window.location.href = "/acesso-pausado"
         }
       }
-      throw new ApiError(isApiErrorBody(body) ? body.message || "Acesso negado." : "Acesso negado.", 403, body)
+      throw new ApiError(isApiErrorBody(body) ? body.message || "Acesso negado." : "Acesso negado.", 403, body, isApiErrorBody(body) ? body.code : undefined)
     }
 
     if (!res.ok) {
@@ -124,7 +202,7 @@ export async function apiRequest<T>(
       throw new ApiError("timeout", undefined, undefined, "TIMEOUT")
     }
     if (err instanceof ApiError) throw err
-    throw new ApiError(`connection_error: ${API_URL}`, undefined, undefined, "CONNECTION_ERROR")
+    throw new ApiError("connection_error", undefined, undefined, "CONNECTION_ERROR")
   } finally {
     clearTimeout(timeout)
   }
