@@ -5,7 +5,7 @@ const PREVIEW_HOST_SUFFIX = ".vercel.app"
 const PRODUCTION_HOSTS = new Set(["corpoguto.vercel.app"])
 
 type RouteContext = {
-  params: Promise<{ path?: string[] }> | { path?: string[] }
+  params: Promise<{ path?: string[] }>
 }
 
 function isProxyHostAllowed(hostHeader: string | null) {
