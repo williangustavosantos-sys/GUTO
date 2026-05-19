@@ -1355,29 +1355,35 @@ export function ChatTab({
       {/* Mensagens — z-30 flutua sobre o avatar/cápsula como camada holográfica */}
       <div
         ref={scrollRef}
-        className="absolute left-0 right-0 top-[54%] bottom-[calc(var(--guto-chat-input-bottom)+72px)] z-30 overflow-y-auto px-5 pb-3"
+        className="guto-chat-list absolute left-0 right-0 top-[54%] bottom-[calc(var(--guto-chat-input-bottom)+72px)] z-30 overflow-y-auto px-5 pb-3"
       >
         <motion.div className="flex min-h-full flex-col justify-end gap-3">
           {showInitialXpCard && (
             <motion.div
               initial={{ opacity: 0, y: 12, scale: 0.96 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
-              className="mx-auto w-full max-w-[20rem] rounded-[22px] border-2 border-[rgba(82,231,255,0.85)] px-5 py-4 text-center shadow-[0_16px_40px_rgba(82,231,255,0.18)]"
+              className="guto-xp-card mx-auto w-full max-w-[20rem] rounded-[22px] border-2 border-[rgba(82,231,255,0.85)] px-5 py-5 text-center shadow-[0_16px_40px_rgba(82,231,255,0.22)]"
               style={{
                 background:
-                  "linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(240,252,255,0.92) 100%)",
+                  "linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(228,248,255,0.94) 100%)",
               }}
             >
               <div className="mb-2 flex justify-center text-(--guto-cyan)">
-                <TrendingUp className="h-10 w-10 stroke-[2.5]" />
+                <TrendingUp className="h-12 w-12 stroke-[2.6]" aria-hidden />
               </div>
-              <div className="guto-chrome-text text-[clamp(28px,8vw,36px)] font-black italic leading-none tracking-tighter text-(--guto-navy)">
+              <div
+                className="text-[clamp(36px,11vw,48px)] font-black italic leading-none tracking-tight text-(--guto-cyan)"
+                style={{
+                  textShadow:
+                    "0 0 18px rgba(82,231,255,0.42), 0 2px 0 rgba(13,35,65,0.06)",
+                }}
+              >
                 {copy.xpCardTitle}
               </div>
-              <p className="mt-3 font-mono text-[clamp(10px,2.6vw,12px)] font-bold leading-snug text-[rgba(13,35,65,0.72)]">
+              <p className="mt-3 font-mono text-[clamp(11px,2.8vw,13px)] font-bold leading-snug text-(--guto-navy)">
                 {copy.xpCardBody}
               </p>
-              <div className="mt-2 font-mono text-[9px] uppercase tracking-[0.18em] text-(--guto-cyan)">
+              <div className="mt-2 font-mono text-[9px] font-black uppercase tracking-[0.22em] text-[rgba(13,35,65,0.55)]">
                 {copy.xpRewardLabel}
               </div>
               <button
@@ -1386,7 +1392,7 @@ export function ChatTab({
                   gutoAudio.playGutoFeedback("tap")
                   dismissInitialXpCard()
                 }}
-                className="guto-big-touch mt-4 w-full rounded-full border border-[rgba(82,231,255,0.55)] bg-[rgba(82,231,255,0.14)] px-4 py-2.5 font-mono text-[11px] font-black uppercase tracking-[0.14em] text-(--guto-navy)"
+                className="guto-big-touch mt-4 w-full rounded-full border border-[rgba(82,231,255,0.55)] bg-[rgba(82,231,255,0.16)] px-4 py-2.5 font-mono text-[12px] font-black uppercase tracking-[0.16em] text-(--guto-navy)"
               >
                 {copy.xpCardDismiss}
               </button>

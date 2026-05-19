@@ -1192,6 +1192,14 @@ body.guto-online-active .guto-settings-trigger-shell {
   z-index: 50;
 }
 
+/* Lista de mensagens precisa abrir espaço quando teclado abre.
+   Sem isto, top:54% (calculado contra o viewport encolhido) deixa
+   só um filete espremido entre o avatar e o input. */
+.sala-guto[data-keyboard-open] .guto-chat-list {
+  top: clamp(64px, 14%, 104px);
+  bottom: calc(max(env(safe-area-inset-bottom), 8px) + 76px);
+}
+
 .sala-guto[data-keyboard-open] .guto-chat-sound-toggle {
   opacity: 0;
   pointer-events: none;
