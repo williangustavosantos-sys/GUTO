@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Image from "next/image"
-import { motion } from "framer-motion"
+import { AnimatePresence, motion } from "framer-motion"
 import { Loader2, Mic, Send, TrendingUp, Volume2, VolumeX } from "lucide-react"
 
 import { getApiErrorMessage } from "@/lib/api/client"
@@ -649,6 +649,7 @@ export function ChatTab({
 
 
   const showInitialXpCardRef = useRef(false)
+  const dismissInitialXpCardRef = useRef<(() => void) | null>(null)
 
   const refreshProactiveMemories = useCallback(async () => {
     const memories = await getProactiveMemories()
@@ -725,10 +726,20 @@ export function ChatTab({
     if (!initialXpGranted) return
     if (initialXpRewardSeen || readInitialXpRewardSeen(userId)) return
     setShowInitialXpCard(true)
-    const timer = window.setTimeout(() => {
+    const successTimer = window.setTimeout(() => {
       gutoAudio.playGutoFeedback("success")
     }, 400)
-    return () => window.clearTimeout(timer)
+    // Auto-dismiss em 6s — card de premiação não deve ficar travando o chat.
+    // O dismiss aciona o ciclo arrival/weeklyOpening em seguida.
+    const autoDismissTimer = window.setTimeout(() => {
+      if (showInitialXpCardRef.current) {
+        dismissInitialXpCardRef.current?.()
+      }
+    }, 6000)
+    return () => {
+      window.clearTimeout(successTimer)
+      window.clearTimeout(autoDismissTimer)
+    }
   }, [initialXpGranted, initialXpRewardSeen, userId])
 
   const clearActiveContext = useCallback(() => {
@@ -885,14 +896,24 @@ export function ChatTab({
     }
   }, [brandName, copy, isMuted, language, synthesizeAndPlay, userId])
 
+  // GUTO_ESTRUTURA_INTERNA §17 — proatividade: o GUTO conduz a semana
+  // numa frase só. Não disparamos abertura semanal + arrival no mesmo turno
+  // (era a "mensagem dupla" reportada). Se a abertura semanal ainda não
+  // rolou, ela tem prioridade; caso contrário, segue o arrival do dia.
   const dismissInitialXpCard = useCallback(() => {
     setShowInitialXpCard(false)
     writeInitialXpRewardSeen(userId)
     onXpRewardSeen?.()
-    void deliverWeeklyOpeningIfNeeded().then(() => {
+    if (!hasOpenedWeeklyThisWeek(userId)) {
+      void deliverWeeklyOpeningIfNeeded()
+    } else {
       void checkProactiveMessage(true)
-    })
+    }
   }, [checkProactiveMessage, deliverWeeklyOpeningIfNeeded, onXpRewardSeen, userId])
+
+  useEffect(() => {
+    dismissInitialXpCardRef.current = dismissInitialXpCard
+  }, [dismissInitialXpCard])
 
   const xpCardWasVisibleRef = useRef(false)
 
@@ -903,18 +924,21 @@ export function ChatTab({
     }
     if (!xpCardWasVisibleRef.current) return
     xpCardWasVisibleRef.current = false
-    void deliverWeeklyOpeningIfNeeded().then(() => {
+    if (!hasOpenedWeeklyThisWeek(userId)) {
+      void deliverWeeklyOpeningIfNeeded()
+    } else {
       void checkProactiveMessage(true)
-    })
-  }, [checkProactiveMessage, deliverWeeklyOpeningIfNeeded, showInitialXpCard])
+    }
+  }, [checkProactiveMessage, deliverWeeklyOpeningIfNeeded, showInitialXpCard, userId])
 
   useEffect(() => {
-    if (showInitialXpCard) return
-    if (!initialXpGranted) return
-    void deliverWeeklyOpeningIfNeeded()
-  }, [deliverWeeklyOpeningIfNeeded, initialXpGranted, showInitialXpCard])
-
-  useEffect(() => {
+    // Não dispara arrival/proatividade no mount se o card +100 XP ainda
+    // precisa aparecer — senão o user vê 2 mensagens em cima uma da outra
+    // (premiação inicial + arrival). O ciclo arrival/weekly opening é
+    // retomado em `dismissInitialXpCard`.
+    if (initialXpGranted && !initialXpRewardSeen && !readInitialXpRewardSeen(userId)) {
+      return
+    }
     const shouldForceArrivalBriefing = shouldForceArrivalBriefingRef.current
     shouldForceArrivalBriefingRef.current = false
 
@@ -924,7 +948,7 @@ export function ChatTab({
     }, PROACTIVE_CHECK_INTERVAL_MS)
 
     return () => window.clearInterval(timer)
-  }, [checkProactiveMessage])
+  }, [checkProactiveMessage, initialXpGranted, initialXpRewardSeen, userId])
 
   useEffect(() => {
     if (showInitialXpCard) return
@@ -1337,6 +1361,65 @@ export function ChatTab({
         {isMuted ? <VolumeX className="h-[18px] w-[18px]" /> : <Volume2 className="h-[18px] w-[18px]" />}
       </button>
 
+      {/* Card +100 XP — overlay centralizado em cima do avatar. */}
+      <AnimatePresence>
+        {showInitialXpCard && (
+          <motion.div
+            key="initial-xp-card"
+            className="absolute inset-x-0 top-[clamp(96px,18%,160px)] z-[60] flex justify-center px-6 pointer-events-none"
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8, transition: { duration: 0.32 } }}
+            transition={{ duration: 0.42, ease: [0.4, 0, 0.2, 1] }}
+          >
+            <motion.div
+              role="dialog"
+              aria-live="polite"
+              aria-label={copy.xpCardTitle}
+              className="guto-xp-card pointer-events-auto w-full max-w-[20rem] rounded-[26px] border-2 border-[rgba(82,231,255,0.85)] px-6 py-5 text-center shadow-[0_24px_60px_rgba(82,231,255,0.32)]"
+              style={{
+                background:
+                  "linear-gradient(180deg, rgba(255,255,255,0.97) 0%, rgba(228,248,255,0.95) 100%)",
+                backdropFilter: "blur(18px)",
+                WebkitBackdropFilter: "blur(18px)",
+              }}
+              initial={{ scale: 0.86 }}
+              animate={{ scale: 1 }}
+              transition={{ duration: 0.36, ease: [0.34, 1.56, 0.64, 1] }}
+            >
+              <div className="mb-2 flex justify-center text-(--guto-cyan)">
+                <TrendingUp className="h-12 w-12 stroke-[2.6]" aria-hidden />
+              </div>
+              <div
+                className="text-[clamp(36px,11vw,52px)] font-black italic leading-none tracking-tight text-(--guto-cyan)"
+                style={{
+                  textShadow:
+                    "0 0 18px rgba(82,231,255,0.46), 0 2px 0 rgba(13,35,65,0.06)",
+                }}
+              >
+                {copy.xpCardTitle}
+              </div>
+              <p className="mt-3 font-mono text-[clamp(11px,2.8vw,13px)] font-bold leading-snug text-(--guto-navy)">
+                {copy.xpCardBody}
+              </p>
+              <div className="mt-2 font-mono text-[9px] font-black uppercase tracking-[0.22em] text-[rgba(13,35,65,0.55)]">
+                {copy.xpRewardLabel}
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  gutoAudio.playGutoFeedback("tap")
+                  dismissInitialXpCard()
+                }}
+                className="guto-big-touch mt-4 w-full rounded-full border border-[rgba(82,231,255,0.6)] bg-[rgba(82,231,255,0.18)] px-4 py-2.5 font-mono text-[12px] font-black uppercase tracking-[0.16em] text-(--guto-navy)"
+              >
+                {copy.xpCardDismiss}
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Avatar — ancorado na base. Opacidade reduz conforme dias de ausência (Tamagotchi). */}
       <div className="guto-chat-avatar-stage absolute z-10 flex flex-col items-center justify-end pb-[clamp(16px,4vh,32px)]">
         <div
@@ -1358,46 +1441,6 @@ export function ChatTab({
         className="guto-chat-list absolute left-0 right-0 top-[54%] bottom-[calc(var(--guto-chat-input-bottom)+72px)] z-30 overflow-y-auto px-5 pb-3"
       >
         <motion.div className="flex min-h-full flex-col justify-end gap-3">
-          {showInitialXpCard && (
-            <motion.div
-              initial={{ opacity: 0, y: 12, scale: 0.96 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              className="guto-xp-card mx-auto w-full max-w-[20rem] rounded-[22px] border-2 border-[rgba(82,231,255,0.85)] px-5 py-5 text-center shadow-[0_16px_40px_rgba(82,231,255,0.22)]"
-              style={{
-                background:
-                  "linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(228,248,255,0.94) 100%)",
-              }}
-            >
-              <div className="mb-2 flex justify-center text-(--guto-cyan)">
-                <TrendingUp className="h-12 w-12 stroke-[2.6]" aria-hidden />
-              </div>
-              <div
-                className="text-[clamp(36px,11vw,48px)] font-black italic leading-none tracking-tight text-(--guto-cyan)"
-                style={{
-                  textShadow:
-                    "0 0 18px rgba(82,231,255,0.42), 0 2px 0 rgba(13,35,65,0.06)",
-                }}
-              >
-                {copy.xpCardTitle}
-              </div>
-              <p className="mt-3 font-mono text-[clamp(11px,2.8vw,13px)] font-bold leading-snug text-(--guto-navy)">
-                {copy.xpCardBody}
-              </p>
-              <div className="mt-2 font-mono text-[9px] font-black uppercase tracking-[0.22em] text-[rgba(13,35,65,0.55)]">
-                {copy.xpRewardLabel}
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  gutoAudio.playGutoFeedback("tap")
-                  dismissInitialXpCard()
-                }}
-                className="guto-big-touch mt-4 w-full rounded-full border border-[rgba(82,231,255,0.55)] bg-[rgba(82,231,255,0.16)] px-4 py-2.5 font-mono text-[12px] font-black uppercase tracking-[0.16em] text-(--guto-navy)"
-              >
-                {copy.xpCardDismiss}
-              </button>
-            </motion.div>
-          )}
           {visibleMessages.map((message) => (
             <motion.div
               key={message.id}

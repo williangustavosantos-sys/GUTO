@@ -1194,10 +1194,16 @@ body.guto-online-active .guto-settings-trigger-shell {
 
 /* Lista de mensagens precisa abrir espaço quando teclado abre.
    Sem isto, top:54% (calculado contra o viewport encolhido) deixa
-   só um filete espremido entre o avatar e o input. */
+   só um filete espremido entre o avatar e o input.
+   Usamos !important porque o utility do Tailwind (top-[54%]) é gerado
+   como classe simples e ganha por especificidade igual + ordem do bundle. */
 .sala-guto[data-keyboard-open] .guto-chat-list {
-  top: clamp(64px, 14%, 104px);
-  bottom: calc(max(env(safe-area-inset-bottom), 8px) + 76px);
+  top: clamp(56px, 12%, 96px) !important;
+  bottom: calc(max(env(safe-area-inset-bottom), 8px) + 78px) !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.42) 14%, rgba(255, 255, 255, 0.66) 100%);
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
 }
 
 .sala-guto[data-keyboard-open] .guto-chat-sound-toggle {
