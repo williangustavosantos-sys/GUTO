@@ -46,7 +46,9 @@ const copy = {
     phraseHint: "Fale em voz alta",
     uploading: "Validando missão...",
     validated: "VALIDADO",
+    pending: "PENDENTE",
     xpLabel: "XP conquistado",
+    pendingXpLabel: "Sem XP pleno",
     seeInJourney: "VER NO PERCURSO",
     faceStable: "Segure firme...",
     noCamera: "Câmera não autorizada. Permita o acesso nas configurações do dispositivo.",
@@ -88,7 +90,9 @@ const copy = {
     phraseHint: "Say it out loud",
     uploading: "Validating mission...",
     validated: "VALIDATED",
+    pending: "PENDING",
     xpLabel: "XP earned",
+    pendingXpLabel: "No full XP",
     seeInJourney: "SEE IN JOURNEY",
     faceStable: "Hold still...",
     noCamera: "Camera not allowed. Enable access in your device settings.",
@@ -130,7 +134,9 @@ const copy = {
     phraseHint: "Dillo ad alta voce",
     uploading: "Convalidando missione...",
     validated: "VALIDATO",
+    pending: "PENDENTE",
     xpLabel: "XP guadagnato",
+    pendingXpLabel: "Niente XP pieno",
     seeInJourney: "VEDI NEL PERCORSO",
     faceStable: "Tieni fermo...",
     noCamera: "Fotocamera non autorizzata. Abilita l'accesso nelle impostazioni del dispositivo.",
@@ -199,6 +205,7 @@ export function WorkoutValidationFlow({
     validationHistory: WorkoutValidationRecord[]
   } | null>(null)
   const [arenaResult, setArenaResult] = useState<ArenaAwardResult | null>(null)
+  const isPendingValidation = validationResult?.validation.status === "pending"
 
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
@@ -1048,10 +1055,10 @@ export function WorkoutValidationFlow({
                 className="font-mono text-[2.1rem] font-black uppercase leading-none tracking-widest text-(--guto-navy)"
                 style={{ textShadow: "0 0 32px rgba(82,231,255,0.22)" }}
               >
-                {locale.validated}
+                {isPendingValidation ? locale.pending : locale.validated}
               </h1>
               <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.22em] text-[rgba(13,35,65,0.45)]">
-                {locale.xpLabel}
+                {isPendingValidation ? locale.pendingXpLabel : locale.xpLabel}
               </p>
             </motion.div>
 

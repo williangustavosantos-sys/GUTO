@@ -37,8 +37,6 @@ import {
   hasCompleteGutoCalibration,
   isGenericGutoName,
   resolveGutoLanguage,
-  defaultNoPainPathology,
-  defaultNoFoodRestriction,
   isNoPainPathology,
   resolveGutoProfile,
   type StoredGutoProfile,
@@ -640,6 +638,7 @@ export function GutoApp({
   const [settingsHeightDraft, setSettingsHeightDraft] = useState("")
   const [settingsCountryDraft, setSettingsCountryDraft] = useState("")
   const [settingsFoodRestrictionsDraft, setSettingsFoodRestrictionsDraft] = useState("")
+  const [settingsFoodIntolerancesDraft, setSettingsFoodIntolerancesDraft] = useState("")
   const [settingsPhoneDraft, setSettingsPhoneDraft] = useState("")
   const [settingsSavedToast, setSettingsSavedToast] = useState(false)
   const [privacyConfirm, setPrivacyConfirm] = useState<"revoke" | "delete-step1" | "delete-step2" | "delete-done" | null>(null)
@@ -804,10 +803,18 @@ export function GutoApp({
           activeElement.matches("input, textarea, [contenteditable='true']")
         const keyboardOpen = isTextInput && (keyboardOffset > 60 || window.innerHeight - viewportHeight > 60)
 
-        shell.style.setProperty("--guto-viewport-height", keyboardOpen ? `${viewportHeight}px` : "100dvh")
+        const viewportHeightValue = keyboardOpen ? `${viewportHeight}px` : "100dvh"
+        shell.style.setProperty("--guto-viewport-height", viewportHeightValue)
         shell.style.setProperty("--guto-viewport-width", `${viewportWidth}px`)
         shell.style.setProperty("--guto-keyboard-offset", `${keyboardOffset}px`)
         shell.toggleAttribute("data-keyboard-open", keyboardOpen)
+        // Mirror viewport vars on <html> so portals (selects, modals) renderizados fora de
+        // .sala-guto também respondem ao teclado iOS sem cair no fallback 100dvh.
+        const root = document.documentElement
+        root.style.setProperty("--guto-viewport-height", viewportHeightValue)
+        root.style.setProperty("--guto-viewport-width", `${viewportWidth}px`)
+        root.style.setProperty("--guto-keyboard-offset", `${keyboardOffset}px`)
+        root.toggleAttribute("data-keyboard-open", keyboardOpen)
         if (keyboardOpen !== lastKeyboardOpen) {
           lastKeyboardOpen = keyboardOpen
           setIsKeyboardOpen(keyboardOpen)
@@ -831,6 +838,11 @@ export function GutoApp({
       window.removeEventListener("focusout", syncViewport)
       window.visualViewport?.removeEventListener("resize", syncViewport)
       window.visualViewport?.removeEventListener("scroll", syncViewport)
+      const root = document.documentElement
+      root.style.removeProperty("--guto-viewport-height")
+      root.style.removeProperty("--guto-viewport-width")
+      root.style.removeProperty("--guto-keyboard-offset")
+      root.removeAttribute("data-keyboard-open")
     }
   }, [])
 
@@ -1262,10 +1274,9 @@ export function GutoApp({
       await persistMemory({
         ...calibration,
         language: selectedLanguage,
-        foodRestrictions: calibration.foodRestrictions?.trim() || defaultNoFoodRestriction(selectedLanguage),
-        foodIntolerances: calibration.foodIntolerances?.trim() || defaultNoFoodRestriction(selectedLanguage),
-        trainingPathology:
-          calibration.trainingPathology?.trim() || defaultNoPainPathology(selectedLanguage),
+        foodRestrictions: calibration.foodRestrictions?.trim(),
+        foodIntolerances: calibration.foodIntolerances?.trim(),
+        trainingPathology: calibration.trainingPathology?.trim(),
       })
       trackBehaviorEvent("calibration_completed", { ...calibration })
       
@@ -1346,12 +1357,8 @@ export function GutoApp({
       if (typeof window === "undefined" || !settingsUserId) return null
       try { return JSON.parse(window.localStorage.getItem(`${STORAGE_KEY}-${settingsUserId}`) ?? "null") as StoredProfile | null } catch { return null }
     })()
-    const mergedFoodLimits =
-      memory?.foodRestrictions?.trim() ||
-      memory?.foodIntolerances?.trim() ||
-      stored?.foodIntolerances?.trim() ||
-      ""
-    setSettingsFoodRestrictionsDraft(mergedFoodLimits)
+    setSettingsFoodRestrictionsDraft(memory?.foodRestrictions?.trim() || "")
+    setSettingsFoodIntolerancesDraft(memory?.foodIntolerances?.trim() || stored?.foodIntolerances?.trim() || "")
     setSettingsPhoneDraft(stored?.phone ?? "")
     setSettingsMode("menu")
     setSettingsSavedToast(false)
@@ -1555,13 +1562,14 @@ export function GutoApp({
   }, [persistMemory, settingsLocationDraft, showSavedToast])
 
   const savePathologySettings = useCallback(() => {
-    const val = settingsPathologyDraft.trim() || defaultNoPainPathology(selectedLanguage)
+    const val = settingsPathologyDraft.trim()
+    if (!val) return
     persistMemory({ trainingPathology: val })
     setMemory((prev) => prev ? { ...prev, trainingPathology: val } : prev)
     showSavedToast()
     setSettingsMode("menu")
     setStage("system")
-  }, [persistMemory, selectedLanguage, settingsPathologyDraft, showSavedToast])
+  }, [persistMemory, settingsPathologyDraft, showSavedToast])
 
   const savePhysicalDataSettings = useCallback(() => {
     const wNum = parseFloat(settingsWeightDraft)
@@ -1589,24 +1597,26 @@ export function GutoApp({
   }, [persistMemory, settingsCountryDraft, showSavedToast])
 
   const saveFoodRestrictionsSettings = useCallback(() => {
-    const val = settingsFoodRestrictionsDraft.trim()
+    const restrictions = settingsFoodRestrictionsDraft.trim()
+    const intolerances = settingsFoodIntolerancesDraft.trim()
+    if (!restrictions && !intolerances) return
     persistMemory({
-      foodRestrictions: val || undefined,
-      foodIntolerances: val || undefined,
+      foodRestrictions: restrictions || undefined,
+      foodIntolerances: intolerances || undefined,
     })
     setMemory((prev) =>
       prev
         ? {
             ...prev,
-            foodRestrictions: val || undefined,
-            foodIntolerances: val || undefined,
+            foodRestrictions: restrictions || undefined,
+            foodIntolerances: intolerances || undefined,
           }
         : prev
     )
     showSavedToast()
     setSettingsMode("menu")
     setStage("system")
-  }, [persistMemory, settingsFoodRestrictionsDraft, showSavedToast])
+  }, [persistMemory, settingsFoodIntolerancesDraft, settingsFoodRestrictionsDraft, showSavedToast])
 
   const saveSettingsData = useCallback(
     (calibration: Parameters<typeof saveGutoMemory>[0]) => {
@@ -1646,7 +1656,10 @@ export function GutoApp({
         preferredTrainingLocation: memory?.preferredTrainingLocation ?? null,
         trainingPathology: memory?.trainingPathology ?? null,
         country: memory?.country ?? null,
+        countryCode: memory?.countryCode ?? null,
+        city: memory?.city ?? null,
         foodRestrictions: memory?.foodRestrictions ?? null,
+        foodIntolerances: memory?.foodIntolerances ?? null,
       },
       progress: {
         totalXp: memory?.totalXp ?? null,
@@ -1739,23 +1752,27 @@ export function GutoApp({
           setMemory((prev) => prev ? { ...prev, preferredTrainingLocation: value as "gym" | "home" | "park" | "mixed" } : prev)
           break
         case "pathology":
-          persistMemory({ trainingPathology: String(value) || defaultNoPainPathology(selectedLanguage) })
-          setMemory((prev) =>
-            prev
-              ? { ...prev, trainingPathology: String(value) || defaultNoPainPathology(selectedLanguage) }
-              : prev
-          )
+          {
+            const pathologyValue = String(value).trim()
+            if (!pathologyValue) return
+            persistMemory({ trainingPathology: pathologyValue })
+            setMemory((prev) =>
+              prev
+                ? { ...prev, trainingPathology: pathologyValue }
+                : prev
+            )
+          }
           break
         case "country":
           persistMemory({ country: String(value) || undefined })
           setMemory((prev) => prev ? { ...prev, country: String(value) || undefined } : prev)
           break
         case "foodRestrictions": {
-          const foodValue = String(value) || undefined
-          persistMemory({ foodRestrictions: foodValue, foodIntolerances: foodValue })
+          const foodValue = String(value).trim() || undefined
+          persistMemory({ foodRestrictions: foodValue })
           setMemory((prev) =>
             prev
-              ? { ...prev, foodRestrictions: foodValue, foodIntolerances: foodValue }
+              ? { ...prev, foodRestrictions: foodValue }
               : prev
           )
           break
@@ -1765,8 +1782,12 @@ export function GutoApp({
           persistMemory({ phone: String(value) || undefined })
           break
         case "foodIntolerances":
-          persistProfile({ foodIntolerances: String(value) || undefined })
-          persistMemory({ foodIntolerances: String(value) || undefined })
+          {
+            const intoleranceValue = String(value).trim() || undefined
+            persistProfile({ foodIntolerances: intoleranceValue })
+            persistMemory({ foodIntolerances: intoleranceValue })
+            setMemory((prev) => prev ? { ...prev, foodIntolerances: intoleranceValue } : prev)
+          }
           break
         case "language": {
           const lang = value as SupportedLanguage
@@ -1782,7 +1803,7 @@ export function GutoApp({
           break
       }
     },
-    [persistMemory, persistProfile, selectedLanguage]
+    [persistMemory, persistProfile]
   )
 
   useEffect(() => {
@@ -2002,6 +2023,7 @@ export function GutoApp({
       pendingFoodQuestion={pendingFoodQuestion}
       onFoodQuestionHandled={() => setPendingFoodQuestion(null)}
       onWorkoutPlanUpdated={setWorkoutPlan}
+      workoutPlan={localizedWorkoutPlan}
       vitalState={vitalState}
       initialXpGranted={memory?.initialXpGranted}
       initialXpRewardSeen={memory?.initialXpRewardSeen}
@@ -2102,12 +2124,22 @@ export function GutoApp({
       default:
         return null
     }
-  }, [activeTab, arenaRefreshKey, evolution, gutoUserId, handleAdaptedMissionComplete, handleExerciseQuestion, handleFoodDoubt, handleMissionComplete, localizedWorkoutPlan, memory, selectedLanguage, userLabel, workoutMissingFields])
+  }, [activeTab, arenaRefreshKey, evolution, gutoUserId, handleAdaptedMissionComplete, handleExerciseQuestion, handleFoodDoubt, handleMissionComplete, localizedWorkoutPlan, memory, selectedLanguage, updateUserProfileField, userLabel, vitalState, workoutMissingFields])
 
   if (authLoading || !isHydrated || (user && user.role !== "student")) {
     return (
-      <div className="sala-guto flex min-h-dvh items-center justify-center">
-        <div className="guto-chrome-text text-5xl font-black tracking-[0.28em]">GUTO</div>
+      <div className="sala-guto flex min-h-dvh flex-col items-center justify-center gap-5 bg-white px-8">
+        <Image
+          src="/assets/guto/logo_guto.png"
+          alt="GUTO"
+          width={180}
+          height={60}
+          priority
+          className="h-auto w-[min(180px,72vw)] object-contain"
+          style={{ height: "auto" }}
+        />
+        <Loader2 className="h-8 w-8 animate-spin text-(--guto-cyan)" aria-hidden />
+        <p className="sr-only">GUTO</p>
       </div>
     )
   }
@@ -2146,8 +2178,17 @@ export function GutoApp({
             </video>
 
             {introNeedsActivation && (
-              <div className="absolute inset-0 z-10 grid place-items-center bg-white/8 backdrop-blur-[1px]">
-                <div className="flex flex-col items-center gap-3 relative z-50 pointer-events-auto">
+              <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white px-8">
+                <div className="flex max-w-sm flex-col items-center gap-6 pointer-events-auto">
+                  <Image
+                    src="/assets/guto/logo_guto.png"
+                    alt="GUTO"
+                    width={180}
+                    height={60}
+                    priority
+                    className="h-auto w-[min(180px,72vw)] object-contain"
+                    style={{ height: "auto" }}
+                  />
                   <button
                     type="button"
                     id="guto-start-button"
@@ -2400,7 +2441,7 @@ export function GutoApp({
         {stage === "calibration" && (
           <motion.section
             key="calibration"
-            className="guto-main-screen absolute inset-0 z-30 flex flex-col items-center"
+            className="guto-main-screen guto-main-screen--calibration absolute inset-0 z-30 flex h-full min-h-0 w-full flex-col items-center overflow-hidden"
             initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 1.02 }}
@@ -2786,7 +2827,10 @@ export function GutoApp({
                   title={locale.settingsData}
                   initialProfile={{
                     userAge: memory?.userAge,
-                    biologicalSex: memory?.biologicalSex,
+                    biologicalSex:
+                      memory?.biologicalSex === "male" || memory?.biologicalSex === "female"
+                        ? memory.biologicalSex
+                        : undefined,
                     trainingLevel: memory?.trainingLevel,
                     trainingGoal: memory?.trainingGoal,
                     preferredTrainingLocation: memory?.preferredTrainingLocation,
@@ -3154,6 +3198,19 @@ export function GutoApp({
                       value={settingsFoodRestrictionsDraft}
                       onChange={(e) => setSettingsFoodRestrictionsDraft(e.target.value)}
                       placeholder={cal.restrictionsPlaceholder}
+                      autoComplete="off"
+                      autoCorrect="off"
+                      spellCheck={false}
+                      className="w-full rounded-full border border-[rgba(82,231,255,0.45)] bg-white px-4 py-2.5 font-mono text-[12px] text-(--guto-navy) placeholder-[rgba(13,35,65,0.3)] outline-none"
+                    />
+                  </div>
+                  <div className="guto-slot rounded-3xl px-5 py-4">
+                    <p className="mb-2 font-mono text-[8px] font-black uppercase tracking-[0.2em] text-[rgba(13,35,65,0.42)]">{cal.intolerancesLabel}</p>
+                    <input
+                      type="text"
+                      value={settingsFoodIntolerancesDraft}
+                      onChange={(e) => setSettingsFoodIntolerancesDraft(e.target.value)}
+                      placeholder={cal.intolerancesPlaceholder}
                       autoComplete="off"
                       autoCorrect="off"
                       spellCheck={false}

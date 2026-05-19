@@ -109,6 +109,7 @@ export function firstRealGutoName(...values: Array<string | null | undefined>) {
 
 export function getMissingCalibrationFields(memory?: GutoMemory | null) {
   const missing: string[] = []
+  const hasText = (value?: string | null) => typeof value === "string" && value.trim().length > 0
   if (!memory?.userAge) missing.push("idade")
   if (!memory?.biologicalSex) missing.push("sexo")
   if (!memory?.trainingGoal) missing.push("objetivo")
@@ -116,7 +117,13 @@ export function getMissingCalibrationFields(memory?: GutoMemory | null) {
   if (!memory?.preferredTrainingLocation) missing.push("local")
   if (!memory?.heightCm) missing.push("altura")
   if (!memory?.weightKg) missing.push("peso")
-  if (!memory?.country) missing.push("país")
+  if (!hasText(memory?.country)) missing.push("país")
+  if (!hasText(memory?.countryCode)) missing.push("código do país")
+  if (!hasText(memory?.city)) missing.push("cidade")
+  if (!hasText(memory?.trainingPathology) && !hasText(memory?.trainingLimitations)) missing.push("dor ou limitação")
+  if (!hasText(memory?.foodRestrictions) && !hasText(memory?.foodIntolerances)) {
+    missing.push("restrição alimentar")
+  }
   return missing
 }
 

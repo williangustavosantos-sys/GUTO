@@ -16,7 +16,7 @@ export interface WorkoutValidationRecord {
   posterUrl: string
   thumbUrl: string
   xp: number
-  status: "validated"
+  status: "validated" | "pending"
   gutoMessage: string
 }
 export type WorkoutFeedbackDifficulty = "easy" | "ok" | "hard" | "pain"

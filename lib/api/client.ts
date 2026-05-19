@@ -1,17 +1,21 @@
 /** Backend Render (produção). Override com NEXT_PUBLIC_API_URL no .env.local ou Vercel. */
 const PRODUCTION_API_URL = "https://cerebroguto.onrender.com"
 
-function shouldUsePreviewProxy() {
+function shouldUseApiProxy() {
   if (typeof window === "undefined") return false
   const host = window.location.hostname
-  return host.endsWith(".vercel.app") && host !== "corpoguto.vercel.app"
+  if (host.endsWith(".vercel.app") && host !== "corpoguto.vercel.app") return true
+  // Dev local: same-origin proxy evita CORS com Render ou backend na :3001
+  if (process.env.NODE_ENV === "development") {
+    return host === "localhost" || host === "127.0.0.1" || host === "0.0.0.0"
+  }
+  return false
 }
 
-const RAW_API_URL =
-  shouldUsePreviewProxy()
-    ? "/api/guto"
-    : process.env.NEXT_PUBLIC_API_URL ||
-      (process.env.NODE_ENV === "production" ? PRODUCTION_API_URL : "http://localhost:3001")
+const RAW_API_URL = shouldUseApiProxy()
+  ? "/api/guto"
+  : process.env.NEXT_PUBLIC_API_URL ||
+    (process.env.NODE_ENV === "production" ? PRODUCTION_API_URL : "http://localhost:3001")
 
 export const API_URL = RAW_API_URL.replace(/\/+$/, "")
 

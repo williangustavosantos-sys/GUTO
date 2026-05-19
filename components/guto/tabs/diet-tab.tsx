@@ -468,6 +468,7 @@ export function DietTab({ userId, language, onFoodDoubt, memory }: DietTabProps)
     foodRestrictions: memory?.foodRestrictions ?? null,
     foodIntolerances: memory?.foodIntolerances ?? null,
     country: memory?.country ?? null,
+    countryCode: memory?.countryCode ?? null,
   }), [
     memory?.heightCm,
     memory?.weightKg,
@@ -479,6 +480,7 @@ export function DietTab({ userId, language, onFoodDoubt, memory }: DietTabProps)
     memory?.foodRestrictions,
     memory?.foodIntolerances,
     memory?.country,
+    memory?.countryCode,
   ])
 
   useEffect(() => {
@@ -502,7 +504,9 @@ export function DietTab({ userId, language, onFoodDoubt, memory }: DietTabProps)
       profile.trainingGoal &&
       profile.biologicalSex &&
       profile.userAge &&
-      (profile.trainingLevel || profile.trainingStatus)
+      (profile.trainingLevel || profile.trainingStatus) &&
+      profile.country &&
+      profile.countryCode
     )
   }, [])
 

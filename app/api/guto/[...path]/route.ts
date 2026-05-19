@@ -10,7 +10,7 @@ type RouteContext = {
 
 function isProxyHostAllowed(hostHeader: string | null) {
   const host = (hostHeader || "").split(":")[0]?.toLowerCase() || ""
-  if (host === "localhost" || host === "127.0.0.1") return true
+  if (host === "localhost" || host === "127.0.0.1" || host === "0.0.0.0") return true
   return host.endsWith(PREVIEW_HOST_SUFFIX) && !PRODUCTION_HOSTS.has(host)
 }
 
@@ -20,7 +20,7 @@ async function proxyToBackend(request: NextRequest, context: RouteContext) {
   }
 
   if (!isProxyHostAllowed(request.headers.get("host"))) {
-    return Response.json({ message: "Proxy disponível apenas para previews do painel." }, { status: 404 })
+    return Response.json({ message: "Proxy GUTO indisponível neste host." }, { status: 404 })
   }
 
   const params = await context.params

@@ -1,18 +1,17 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import Image from "next/image"
 import { motion } from "framer-motion"
 import { createPortal } from "react-dom"
 import { City, Country } from "country-state-city"
-import { defaultNoFoodRestriction, defaultNoPainPathology } from "@/lib/guto-profile"
 import { translations, type ValidLanguage } from "../translations"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface CalibrationProfile {
   userAge?: number
-  biologicalSex?: "female" | "male" | "prefer_not_to_say"
+  biologicalSex?: "female" | "male"
   trainingLevel?: "beginner" | "returning" | "consistent" | "advanced"
   trainingGoal?: "consistency" | "fat_loss" | "muscle_gain" | "conditioning" | "mobility_health"
   preferredTrainingLocation?: "gym" | "home" | "park" | "mixed"
@@ -51,7 +50,10 @@ export function CalibrationScreen({
     "it-IT": "SCANSIONE GUTO",
   }[language]
 
-  const [biologicalSex, setBiologicalSex] = useState<"male" | "female" | "prefer_not_to_say" | null>(initialProfile?.biologicalSex ?? null)
+  const [biologicalSex, setBiologicalSex] = useState<"male" | "female" | null>(() => {
+    const saved = initialProfile?.biologicalSex
+    return saved === "male" || saved === "female" ? saved : null
+  })
   const [ageInput, setAgeInput] = useState(initialProfile?.userAge ? String(initialProfile.userAge) : "")
   const [trainingStatus, setTrainingStatus] = useState<TrainingStatus | null>(initialProfile?.trainingLevel ?? null)
   const [pathology, setPathology] = useState(initialProfile?.trainingPathology ?? "")
@@ -62,7 +64,9 @@ export function CalibrationScreen({
   const [city, setCity] = useState(initialProfile?.city ?? "")
   const [heightInput, setHeightInput] = useState(initialProfile?.heightCm ? String(initialProfile.heightCm) : "")
   const [weightInput, setWeightInput] = useState(initialProfile?.weightKg ? String(initialProfile.weightKg) : "")
-  const [foodRestrictions, setFoodRestrictions] = useState(initialProfile?.foodRestrictions ?? initialProfile?.foodIntolerances ?? "")
+  const [foodRestrictions, setFoodRestrictions] = useState(
+    () => initialProfile?.foodRestrictions?.trim() || initialProfile?.foodIntolerances?.trim() || ""
+  )
 
   const ageNum = parseInt(ageInput, 10)
   const isAgeValid = !isNaN(ageNum) && ageNum >= 14 && ageNum <= 90
@@ -72,11 +76,25 @@ export function CalibrationScreen({
   const isWeightValid = !isNaN(weightNum) && weightNum >= 40 && weightNum <= 190
   const hasCountry = country.trim().length >= 2
   const hasCity = city.trim().length >= 2
-  const isComplete = Boolean(biologicalSex && isAgeValid && trainingStatus && goal && location && isHeightValid && isWeightValid && hasCountry && hasCity)
+  const hasPathologyAnswer = pathology.trim().length >= 2
+  const hasFoodAnswer = foodRestrictions.trim().length >= 2
+  const isComplete = Boolean(
+    biologicalSex &&
+    isAgeValid &&
+    trainingStatus &&
+    goal &&
+    location &&
+    isHeightValid &&
+    isWeightValid &&
+    hasCountry &&
+    countryCode &&
+    hasCity &&
+    hasPathologyAnswer &&
+    hasFoodAnswer
+  )
 
   const handleSubmit = () => {
     if (!isComplete) return
-    const restrictions = foodRestrictions.trim() || defaultNoFoodRestriction(language)
 
     onComplete({
       biologicalSex: biologicalSex ?? undefined,
@@ -84,14 +102,15 @@ export function CalibrationScreen({
       trainingLevel: trainingStatus ?? undefined,
       trainingGoal: goal ?? undefined,
       preferredTrainingLocation: location ?? undefined,
-      trainingPathology: pathology.trim() || defaultNoPainPathology(language),
+      trainingPathology: pathology.trim(),
       country: country.trim(),
       countryCode,
       city: city.trim(),
       heightCm: isHeightValid ? heightNum : undefined,
       weightKg: isWeightValid ? weightNum : undefined,
-      foodRestrictions: restrictions,
-      foodIntolerances: restrictions,
+      foodRestrictions: foodRestrictions.trim(),
+      // Um único campo na UI; backend mantém os dois slots com o mesmo valor.
+      foodIntolerances: foodRestrictions.trim(),
     })
   }
 
@@ -144,6 +163,16 @@ export function CalibrationScreen({
     "en-US": "Intolerance, allergy or dislike",
     "it-IT": "Intolleranza, allergia o non mi piace",
   }[language]
+  const noPainLabel = {
+    "pt-BR": "SEM DOR",
+    "en-US": "NO PAIN",
+    "it-IT": "NESSUN DOLORE",
+  }[language]
+  const noFoodRestrictionLabel = {
+    "pt-BR": "COMO DE TUDO",
+    "en-US": "I EAT EVERYTHING",
+    "it-IT": "MANGIO TUTTO",
+  }[language]
   const scanTitle = {
     "pt-BR": "CALIBRAGEM INICIAL",
     "en-US": "INITIAL CALIBRATION",
@@ -180,6 +209,23 @@ export function CalibrationScreen({
     "it-IT": "Nessuna opzione trovata",
   }[language]
   const objectiveEntries = Object.entries(t.objectiveChips) as [GoalKey, string][]
+  const calibrationBodyRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const scrollHost = calibrationBodyRef.current
+    if (!scrollHost) return
+
+    const scrollFocusedFieldIntoView = (event: FocusEvent) => {
+      const target = event.target
+      if (!(target instanceof HTMLElement) || !scrollHost.contains(target)) return
+      window.requestAnimationFrame(() => {
+        target.scrollIntoView({ block: "center", behavior: "smooth" })
+      })
+    }
+
+    scrollHost.addEventListener("focusin", scrollFocusedFieldIntoView)
+    return () => scrollHost.removeEventListener("focusin", scrollFocusedFieldIntoView)
+  }, [])
 
   return (
     <div className="guto-calibration-stage relative h-full min-h-0 w-full overflow-hidden px-3.5 pb-[max(env(safe-area-inset-bottom),0.55rem)] pt-[max(env(safe-area-inset-top),0.5rem)] font-tech">
@@ -202,7 +248,8 @@ export function CalibrationScreen({
         </motion.header>
 
         <motion.div
-          className="guto-calibration-body flex min-h-0 flex-1 flex-col gap-1.5 overflow-hidden"
+          ref={calibrationBodyRef}
+          className="guto-calibration-body flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto overscroll-contain pb-4 pr-0.5 [-webkit-overflow-scrolling:touch]"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.36, delay: 0.08 }}
@@ -243,12 +290,18 @@ export function CalibrationScreen({
                 onChange={setFoodRestrictions}
                 placeholder={t.restrictionsPlaceholder}
               />
+              <MiniChip
+                label={noFoodRestrictionLabel}
+                active={foodRestrictions.trim() === noFoodRestrictionLabel}
+                onClick={() => setFoodRestrictions(noFoodRestrictionLabel)}
+                className="mt-1 w-full"
+              />
             </div>
           </CalibrationPlate>
 
           <div className="grid shrink-0 grid-cols-[92px_minmax(0,1fr)_92px] items-stretch gap-1.5 min-[390px]:grid-cols-[98px_minmax(0,1fr)_98px]">
             <CalibrationPlate className="flex min-w-0 flex-col justify-center gap-2 p-2">
-              <div className="grid gap-1">
+              <div className="grid grid-cols-1 gap-1">
                 <MiniChip label={t.sexOptions.female} active={biologicalSex === "female"} onClick={() => setBiologicalSex("female")} />
                 <MiniChip label={t.sexOptions.male} active={biologicalSex === "male"} onClick={() => setBiologicalSex("male")} />
               </div>
@@ -265,7 +318,7 @@ export function CalibrationScreen({
               />
             </CalibrationPlate>
 
-            <div className="relative grid min-h-[clamp(168px,31dvh,208px)] min-w-0 place-items-center overflow-hidden rounded-[24px]">
+            <div className="guto-calibration-hero relative grid min-h-[clamp(168px,31dvh,208px)] min-w-0 place-items-center overflow-hidden rounded-[24px]">
               <div className="absolute inset-0 bg-[radial-gradient(60%_55%_at_50%_55%,rgba(82,231,255,0.32),transparent_72%)] blur-[8px]" />
               <div className="absolute bottom-2 left-1/2 h-2.5 w-[130px] -translate-x-1/2 rounded-full bg-[radial-gradient(ellipse,rgba(82,231,255,0.6),transparent_70%)] blur-[3px]" />
               <motion.div
@@ -326,6 +379,12 @@ export function CalibrationScreen({
               value={pathology}
               onChange={setPathology}
               placeholder={t.pathologyPlaceholder}
+            />
+            <MiniChip
+              label={noPainLabel}
+              active={pathology.trim() === noPainLabel}
+              onClick={() => setPathology(noPainLabel)}
+              className="w-full"
             />
 
             <div>
@@ -477,6 +536,17 @@ function SearchSelect({
 }) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState("")
+  const panelRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+    return () => {
+      document.body.style.overflow = previousOverflow
+    }
+  }, [open])
+
   const filteredOptions = useMemo(() => {
     const normalizedQuery = normalizeSearchText(query.trim())
     const matches = normalizedQuery
@@ -514,8 +584,19 @@ function SearchSelect({
 
       {open && typeof document !== "undefined" &&
         createPortal(
-          <div className="fixed inset-0 z-[9999] flex items-start justify-center bg-[rgba(13,35,65,0.24)] px-4 pb-[max(env(safe-area-inset-bottom),1rem)] pt-[max(env(safe-area-inset-top),1rem)] backdrop-blur-[2px]">
-            <div className="flex max-h-[calc(var(--guto-viewport-height,100dvh)-2rem)] w-full max-w-[398px] flex-col rounded-[28px] border border-white/80 bg-white/95 p-3 shadow-[0_24px_60px_rgba(13,35,65,0.24)]">
+          <motion.div
+            className="guto-calibration-select-overlay fixed inset-0 z-[9999] flex flex-col justify-end bg-[rgba(13,35,65,0.28)] px-3 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-[max(env(safe-area-inset-top),0.5rem)] backdrop-blur-[2px] sm:justify-center sm:px-4 sm:pb-[max(env(safe-area-inset-bottom),1rem)]"
+            role="presentation"
+            onClick={close}
+          >
+            <div
+              ref={panelRef}
+              role="dialog"
+              aria-modal="true"
+              aria-label={label}
+              className="mx-auto flex w-full max-w-[398px] min-h-0 max-h-[min(92dvh,calc(var(--guto-viewport-height,100dvh)-max(env(safe-area-inset-top),0.75rem)-max(env(safe-area-inset-bottom),0.75rem)))] flex-col rounded-[28px] border border-white/80 bg-white/95 p-3 shadow-[0_24px_60px_rgba(13,35,65,0.24)] sm:max-h-[calc(var(--guto-viewport-height,100dvh)-2rem)]"
+              onClick={(event) => event.stopPropagation()}
+            >
               <div className="mb-2 flex items-center justify-between gap-3">
                 <CyanLabel text={label} />
                 <button
@@ -532,9 +613,16 @@ function SearchSelect({
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder={searchPlaceholder}
                 autoFocus
-                className="h-10 w-full rounded-full border border-[rgba(82,231,255,0.55)] bg-white px-4 font-mono text-[12px] font-bold text-(--guto-navy) outline-none placeholder:text-[rgba(13,35,65,0.28)]"
+                enterKeyHint="search"
+                autoComplete="off"
+                className="h-10 w-full shrink-0 rounded-full border border-[rgba(82,231,255,0.55)] bg-white px-4 font-mono text-[12px] font-bold text-(--guto-navy) outline-none placeholder:text-[rgba(13,35,65,0.28)]"
+                onFocus={(event) => {
+                  window.requestAnimationFrame(() => {
+                    event.currentTarget.scrollIntoView({ block: "nearest", behavior: "smooth" })
+                  })
+                }}
               />
-              <div className="mt-2 min-h-0 flex-1 overflow-y-auto pr-1">
+              <div className="mt-2 min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1 [-webkit-overflow-scrolling:touch]">
                 {filteredOptions.map((option, index) => (
                   <button
                     key={`${label}-${option.value}-${option.label}-${index}`}
@@ -559,7 +647,7 @@ function SearchSelect({
                 )}
               </div>
             </div>
-          </div>,
+          </motion.div>,
           document.body
         )}
     </div>
@@ -598,6 +686,7 @@ function CompactTextInput({
         autoComplete={autoComplete || "off"}
         autoCorrect="off"
         spellCheck={false}
+        enterKeyHint="done"
         className="mt-1 h-7 w-full min-w-0 rounded-full border bg-white/80 px-3 font-mono text-[10px] font-bold text-(--guto-navy) outline-none placeholder:text-[rgba(13,35,65,0.25)]"
         style={{
           borderColor: "var(--guto-cyan)",

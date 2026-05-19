@@ -78,10 +78,23 @@ function addDays(date: Date, amount: number) {
   return next
 }
 
-function buildPathDays(language: string, memory?: GutoMemory | null): PathDay[] {
+function buildPathDays(
+  language: string,
+  memory?: GutoMemory | null,
+  validationHistory?: WorkoutValidationRecord[]
+): PathDay[] {
   const today = new Date()
   const todayKey = toDateKey(today)
   const completedDays = new Set(memory?.completedWorkoutDates || [])
+  const validatedDays = new Set(
+    (validationHistory || [])
+      .filter((record) => record.status === "validated")
+      .map((record) => {
+        const createdAt = new Date(record.createdAt)
+        return Number.isNaN(createdAt.getTime()) ? null : toDateKey(createdAt)
+      })
+      .filter((day): day is string => Boolean(day))
+  )
   const adaptedDays = new Set(memory?.adaptedMissionDates || [])
   const missedDays = new Set(memory?.missedMissionDates || [])
 
@@ -90,7 +103,7 @@ function buildPathDays(language: string, memory?: GutoMemory | null): PathDay[] 
     const dateKey = toDateKey(date)
     let status: PathDayStatus = "locked"
 
-    if (completedDays.has(dateKey) || (offset === 0 && memory?.trainedToday)) {
+    if (completedDays.has(dateKey) || validatedDays.has(dateKey) || (offset === 0 && memory?.trainedToday)) {
       status = "completed"
     } else if (adaptedDays.has(dateKey) || (offset === 0 && memory?.adaptedMissionToday)) {
       status = "adapted"
@@ -112,7 +125,7 @@ export function PathTab({ language, memory, workoutPlan, currentEvolution, valid
   const validLang = getLanguage(language)
   const locale = translations[validLang]
   const copy = pathCopy[validLang]
-  const pathDays = useMemo(() => buildPathDays(validLang, memory), [memory, validLang])
+  const pathDays = useMemo(() => buildPathDays(validLang, memory, validationHistory), [memory, validLang, validationHistory])
   const currentDay = pathDays[2] ?? pathDays[0]
   const completedCount = pathDays.filter((day) => day.status === "completed").length
   const monthLabel = new Intl.DateTimeFormat(validLang, { month: "long", year: "numeric" }).format(new Date()).toUpperCase()
@@ -120,7 +133,17 @@ export function PathTab({ language, memory, workoutPlan, currentEvolution, valid
   const focus = workoutPlan?.focus || copy.waitingMission
   const streak = memory?.streak ?? 0
   const isAdaptedToday = Boolean(memory?.adaptedMissionToday)
-  const xpReward = memory?.trainedToday ? "+100 XP" : isAdaptedToday ? "+50 XP" : "0 XP"
+  const todayKey = toDateKey(new Date())
+  const hasValidatedToday = Boolean(
+    memory?.trainedToday ||
+    memory?.completedWorkoutDates?.includes(todayKey) ||
+    validationHistory?.some((record) => {
+      if (record.status !== "validated") return false
+      const createdAt = new Date(record.createdAt)
+      return !Number.isNaN(createdAt.getTime()) && toDateKey(createdAt) === todayKey
+    })
+  )
+  const xpReward = hasValidatedToday ? "+100 XP" : isAdaptedToday ? "+50 XP" : "0 XP"
   const vitalState = useMemo(() => getGutoVitalState(memory), [memory])
   const [selectedPoster, setSelectedPoster] = useState<string | null>(null)
 
@@ -239,13 +262,15 @@ export function PathTab({ language, memory, workoutPlan, currentEvolution, valid
                   <Check className="h-4 w-4 rounded-full bg-[rgba(117,165,211,0.8)] p-[2px] text-white" />
                   {isAdaptedToday && !memory?.trainedToday
                     ? copy.adapted
-                    : hasWorkoutPlan
+                    : hasValidatedToday
                       ? `${locale.pathWorkoutDone} ${focus}`
+                      : hasWorkoutPlan
+                        ? `${copy.active}: ${focus}`
                       : copy.waitingMissionBody}
                 </p>
                 <p className="flex items-center gap-2">
                   <Zap className="h-4 w-4 text-[rgba(117,165,211,0.95)]" />
-                  {memory?.trainedToday ? copy.xpFull : isAdaptedToday ? copy.xpAdapted : copy.noXp}
+                  {hasValidatedToday ? copy.xpFull : isAdaptedToday ? copy.xpAdapted : copy.noXp}
                 </p>
                 <p className="flex items-center gap-2">
                   <Flame className="h-4 w-4 text-[rgba(117,165,211,0.95)]" />

@@ -185,6 +185,15 @@
   overscroll-behavior: contain;
 }
 
+/* Calibragem: um único scroll interno — evita conflito com teclado no iOS */
+.guto-main-screen--calibration {
+  overflow: hidden;
+  overscroll-behavior: none;
+  height: 100%;
+  min-height: 0;
+  max-height: 100%;
+}
+
 /* Calibration screen: inputs must not trigger white background flash on iOS */
 .guto-main-screen input[type="text"],
 .guto-main-screen input[type="number"] {
@@ -827,7 +836,21 @@ body.guto-online-active .guto-settings-trigger-shell {
 
 .sala-guto[data-keyboard-open] .guto-calibration-body {
   overflow-y: auto;
-  scroll-padding-bottom: max(env(safe-area-inset-bottom), 1rem);
+  scroll-padding-bottom: calc(max(env(safe-area-inset-bottom), 1rem) + 3.5rem);
+  -webkit-overflow-scrolling: touch;
+}
+
+.sala-guto[data-keyboard-open] .guto-calibration-hero {
+  min-height: clamp(112px, 22dvh, 168px);
+}
+
+.sala-guto[data-keyboard-open] .guto-calibration-hero img {
+  height: clamp(120px, 24dvh, 168px) !important;
+}
+
+.guto-calibration-select-overlay {
+  touch-action: manipulation;
+  overscroll-behavior: contain;
 }
 
 .guto-seal-plate {
