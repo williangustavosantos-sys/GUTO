@@ -197,6 +197,21 @@ export function GutoOfficialAvatar({
   }, [assetKey])
 
   useEffect(() => {
+    if (typeof document === "undefined") return
+    const warmupHref = sources.apple || sources.mp4 || sources.fallback
+    if (!warmupHref) return
+    const warmup = document.createElement("video")
+    warmup.preload = "auto"
+    warmup.muted = true
+    warmup.playsInline = true
+    warmup.src = warmupHref
+    warmup.load()
+    return () => {
+      warmup.src = ""
+    }
+  }, [assetKey, sources.apple, sources.fallback, sources.mp4])
+
+  useEffect(() => {
     if (!canUseNativeAlphaVideo) {
       setNativeVideoReady(false)
       return

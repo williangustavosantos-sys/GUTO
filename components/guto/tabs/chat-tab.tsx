@@ -44,7 +44,7 @@ import { GutoAvatarController } from "../guto-avatar-controller"
 import { getLanguage, translations } from "../translations"
 import type { MissionExercise } from "../view-models"
 import { gutoAudio } from "@/lib/audio-haptics"
-import { firstRealGutoName } from "@/lib/guto-profile"
+import { firstRealGutoName, hasCompleteGutoCalibration } from "@/lib/guto-profile"
 import { gutoVoice } from "@/lib/guto-voice/guto-voice-service"
 
 interface PendingExerciseQuestion {
@@ -147,6 +147,8 @@ const chatCopy: Record<
     xpCardDismiss: string
     exerciseContextHint: (name: string) => string
     mealContextHint: (name: string) => string
+    exerciseDoubtTrigger: (name: string) => string
+    mealDoubtTrigger: (name: string) => string
     exerciseInputPlaceholder: string
     mealInputPlaceholder: string
     contextClear: string
@@ -173,6 +175,8 @@ const chatCopy: Record<
       `Fala tua dúvida sobre ${name}. Equipamento ocupado, execução ou troca — eu já sei qual exercício é.`,
     mealContextHint: (name) =>
       `Fala o que precisa sobre ${name}. Troca, porção ou substituição — eu já tenho o contexto da refeição.`,
+    exerciseDoubtTrigger: (name) => `Tenho uma dúvida sobre ${name}.`,
+    mealDoubtTrigger: (name) => `Tenho uma dúvida sobre ${name} na refeição.`,
     exerciseInputPlaceholder: "Ex.: equipamento ocupado, como executar, trocar exercício…",
     mealInputPlaceholder: "Ex.: não tenho isso, quanto de substituto, trocar alimento…",
     contextClear: "Sair do contexto",
@@ -198,6 +202,8 @@ const chatCopy: Record<
       `Ask your question about ${name}. Busy equipment, form, or swap — I already know which exercise this is.`,
     mealContextHint: (name) =>
       `Say what you need about ${name}. Swap, portion, or substitute — I already have this meal's context.`,
+    exerciseDoubtTrigger: (name) => `I have a question about ${name}.`,
+    mealDoubtTrigger: (name) => `I have a question about ${name} in this meal.`,
     exerciseInputPlaceholder: "E.g. equipment busy, how to perform, swap exercise…",
     mealInputPlaceholder: "E.g. don't have this, how much substitute, swap food…",
     contextClear: "Clear context",
@@ -223,6 +229,8 @@ const chatCopy: Record<
       `Dimmi il dubbio su ${name}. Attrezzo occupato, esecuzione o sostituzione — so già quale esercizio è.`,
     mealContextHint: (name) =>
       `Dimmi cosa ti serve su ${name}. Sostituzione, porzione o cambio — ho già il contesto del pasto.`,
+    exerciseDoubtTrigger: (name) => `Ho un dubbio su ${name}.`,
+    mealDoubtTrigger: (name) => `Ho un dubbio su ${name} in questo pasto.`,
     exerciseInputPlaceholder: "Es.: attrezzo occupato, come eseguire, cambiare esercizio…",
     mealInputPlaceholder: "Es.: non ce l'ho, quanto sostituto, cambiare alimento…",
     contextClear: "Esci dal contesto",
@@ -241,6 +249,7 @@ const CHAT_STATE_KEY_PREFIX = "guto-chat-state"
 const INITIAL_XP_REWARD_SEEN_KEY_PREFIX = "guto-initial-xp-reward-seen"
 const PROACTIVITY_EXTRACTION_KEY_PREFIX = "guto-proactivity-extracted"
 const PROACTIVITY_WEEKLY_OPENED_KEY_PREFIX = "guto-proactivity-weekly-opened"
+const ARRIVAL_BRIEFING_DELIVERED_KEY_PREFIX = "guto-arrival-delivered"
 const PROACTIVITY_ACTION_KEY_PREFIX = "guto-proactivity-action"
 const GUTO_OPERATIONAL_TIME_ZONE = process.env.NEXT_PUBLIC_GUTO_TIME_ZONE || "Europe/Rome"
 // Minimum number of messages in chat (user + GUTO) before triggering extraction
@@ -301,6 +310,22 @@ function markOpenedWeeklyThisWeek(userId: string): void {
   try {
     const weekKey = getISOWeekKey()
     window.localStorage.setItem(`${PROACTIVITY_WEEKLY_OPENED_KEY_PREFIX}:${userId}:${weekKey}`, "1")
+  } catch {}
+}
+
+function hasDeliveredArrivalBriefing(userId: string): boolean {
+  if (typeof window === "undefined") return false
+  try {
+    return window.localStorage.getItem(`${ARRIVAL_BRIEFING_DELIVERED_KEY_PREFIX}:${userId}`) === "1"
+  } catch {
+    return false
+  }
+}
+
+function markDeliveredArrivalBriefing(userId: string): void {
+  if (typeof window === "undefined") return
+  try {
+    window.localStorage.setItem(`${ARRIVAL_BRIEFING_DELIVERED_KEY_PREFIX}:${userId}`, "1")
   } catch {}
 }
 
@@ -559,15 +584,32 @@ export function ChatTab({
     }),
     [brandName, copy, userId, validLang]
   )
-  const initialChatState = useMemo(
-    () =>
-      storedChatState || {
-        messages: [localOpeningMessage],
+  const calibrationComplete = hasCompleteGutoCalibration(memory)
+  const initialChatState = useMemo(() => {
+    if (storedChatState) return storedChatState
+    if (
+      calibrationComplete ||
+      memory?.hasSeenChatOpening ||
+      hasDeliveredArrivalBriefing(userId)
+    ) {
+      return {
+        messages: [],
         expectedResponse: null,
         expectedResponseMessageId: null,
-      },
-    [localOpeningMessage, storedChatState]
-  )
+      }
+    }
+    return {
+      messages: [localOpeningMessage],
+      expectedResponse: null,
+      expectedResponseMessageId: null,
+    }
+  }, [
+    calibrationComplete,
+    localOpeningMessage,
+    memory?.hasSeenChatOpening,
+    storedChatState,
+    userId,
+  ])
 
   const [messages, setMessages] = useState<Message[]>(initialChatState.messages)
   const [input, setInput] = useState("")
@@ -595,6 +637,7 @@ export function ChatTab({
   const sendInFlightRef = useRef(false)
   const lastProactiveKeyRef = useRef<string | null>(null)
   const arrivalBriefingRequestedRef = useRef(false)
+  const weeklyDeferredThisSessionRef = useRef(false)
   const suppressProactivityUntilRef = useRef(0)
   const dietGenerationAfterWorkoutRef = useRef(false)
   const shouldForceArrivalBriefingRef = useRef((() => {
@@ -850,6 +893,11 @@ export function ChatTab({
         onWorkoutPlanUpdated?.(data.workoutPlan)
       }
 
+      if (data.slot === "arrival" || forceArrivalBriefing) {
+        markDeliveredArrivalBriefing(userId)
+        weeklyDeferredThisSessionRef.current = true
+      }
+
       if (!isMuted) {
         await synthesizeAndPlay(fala, safeLanguage)
       }
@@ -861,6 +909,8 @@ export function ChatTab({
   }, [isMuted, language, onWorkoutPlanUpdated, synthesizeAndPlay])
 
   const deliverWeeklyOpeningIfNeeded = useCallback(async () => {
+    if (weeklyDeferredThisSessionRef.current) return
+    if (!hasDeliveredArrivalBriefing(userId) && !memory?.hasSeenChatOpening) return
     if (weeklyOpeningInFlightRef.current || hasOpenedWeeklyThisWeek(userId)) return
     weeklyOpeningInFlightRef.current = true
 
@@ -894,61 +944,63 @@ export function ChatTab({
     } finally {
       weeklyOpeningInFlightRef.current = false
     }
-  }, [brandName, copy, isMuted, language, synthesizeAndPlay, userId])
+  }, [brandName, copy, isMuted, language, memory?.hasSeenChatOpening, synthesizeAndPlay, userId])
 
-  // GUTO_ESTRUTURA_INTERNA §17 — proatividade: o GUTO conduz a semana
-  // numa frase só. Não disparamos abertura semanal + arrival no mesmo turno
-  // (era a "mensagem dupla" reportada). Se a abertura semanal ainda não
-  // rolou, ela tem prioridade; caso contrário, segue o arrival do dia.
+  // Após o card +100 XP: só arrival (treino pronto). Abertura semanal fica
+  // para outra sessão — nunca no mesmo turno que "já montei o treino".
   const dismissInitialXpCard = useCallback(() => {
     setShowInitialXpCard(false)
     writeInitialXpRewardSeen(userId)
     onXpRewardSeen?.()
-    if (!hasOpenedWeeklyThisWeek(userId)) {
-      void deliverWeeklyOpeningIfNeeded()
-    } else {
-      void checkProactiveMessage(true)
-    }
-  }, [checkProactiveMessage, deliverWeeklyOpeningIfNeeded, onXpRewardSeen, userId])
+    void checkProactiveMessage(true)
+  }, [checkProactiveMessage, onXpRewardSeen, userId])
 
   useEffect(() => {
     dismissInitialXpCardRef.current = dismissInitialXpCard
   }, [dismissInitialXpCard])
 
-  const xpCardWasVisibleRef = useRef(false)
-
   useEffect(() => {
-    if (showInitialXpCard) {
-      xpCardWasVisibleRef.current = true
-      return
-    }
-    if (!xpCardWasVisibleRef.current) return
-    xpCardWasVisibleRef.current = false
-    if (!hasOpenedWeeklyThisWeek(userId)) {
-      void deliverWeeklyOpeningIfNeeded()
-    } else {
-      void checkProactiveMessage(true)
-    }
-  }, [checkProactiveMessage, deliverWeeklyOpeningIfNeeded, showInitialXpCard, userId])
-
-  useEffect(() => {
-    // Não dispara arrival/proatividade no mount se o card +100 XP ainda
-    // precisa aparecer — senão o user vê 2 mensagens em cima uma da outra
-    // (premiação inicial + arrival). O ciclo arrival/weekly opening é
-    // retomado em `dismissInitialXpCard`.
     if (initialXpGranted && !initialXpRewardSeen && !readInitialXpRewardSeen(userId)) {
       return
     }
     const shouldForceArrivalBriefing = shouldForceArrivalBriefingRef.current
     shouldForceArrivalBriefingRef.current = false
+    const needsFirstArrival =
+      calibrationComplete &&
+      !hasDeliveredArrivalBriefing(userId) &&
+      !memory?.hasSeenChatOpening
 
-    void checkProactiveMessage(shouldForceArrivalBriefing)
+    if (
+      !shouldForceArrivalBriefing &&
+      !needsFirstArrival &&
+      hasDeliveredArrivalBriefing(userId) &&
+      !hasOpenedWeeklyThisWeek(userId)
+    ) {
+      void deliverWeeklyOpeningIfNeeded()
+    } else {
+      void checkProactiveMessage(shouldForceArrivalBriefing || needsFirstArrival)
+    }
+
     const timer = window.setInterval(() => {
       void checkProactiveMessage()
     }, PROACTIVE_CHECK_INTERVAL_MS)
 
     return () => window.clearInterval(timer)
-  }, [checkProactiveMessage, initialXpGranted, initialXpRewardSeen, userId])
+  }, [
+    calibrationComplete,
+    checkProactiveMessage,
+    deliverWeeklyOpeningIfNeeded,
+    initialXpGranted,
+    initialXpRewardSeen,
+    memory?.hasSeenChatOpening,
+    userId,
+  ])
+
+  useEffect(() => {
+    if (memory?.hasSeenChatOpening) {
+      markDeliveredArrivalBriefing(userId)
+    }
+  }, [memory?.hasSeenChatOpening, userId])
 
   useEffect(() => {
     if (showInitialXpCard) return
@@ -1079,7 +1131,11 @@ export function ChatTab({
     setIsRecording(false)
   }
 
-  const sendTextToGuto = useCallback(async (displayText: string, modelInput = displayText) => {
+  const sendTextToGuto = useCallback(async (
+    displayText: string,
+    modelInput = displayText,
+    options?: { hideUserBubble?: boolean }
+  ) => {
     if (sendInFlightRef.current) return
     sendInFlightRef.current = true
 
@@ -1092,7 +1148,9 @@ export function ChatTab({
       timestamp: new Date(),
     }
 
-    setMessages((prev) => [...prev, userMessage])
+    if (!options?.hideUserBubble) {
+      setMessages((prev) => [...prev, userMessage])
+    }
     setInput("")
     setIsSending(true)
 
@@ -1228,13 +1286,14 @@ export function ChatTab({
     activeExerciseContextRef.current = buildExerciseModelContext(exercise, memory, lang, workoutPlan)
     setContextChip({ type: "exercise", label: exercise.name })
 
+    const hintText = copy.exerciseContextHint(exercise.name)
     const hintId = `g-exercise-ctx-${pendingExerciseQuestion.id}`
     setMessages((prev) => {
       if (prev.some((message) => message.id === hintId)) return prev
       return appendMessagesWithoutDuplicateGuto(prev, [
         {
           id: hintId,
-          text: copy.exerciseContextHint(exercise.name),
+          text: hintText,
           isGuto: true,
           timestamp: new Date(),
           avatarEmotion: "default",
@@ -1243,8 +1302,26 @@ export function ChatTab({
     })
 
     onExerciseQuestionHandled?.()
+    void (async () => {
+      if (!isMuted) {
+        await synthesizeAndPlay(hintText, lang)
+      }
+      const trigger = copy.exerciseDoubtTrigger(exercise.name)
+      await sendTextToGuto(trigger, wrapWithActiveContext(trigger), { hideUserBubble: true })
+    })()
     window.setTimeout(() => inputRef.current?.focus(), 120)
-  }, [copy, memory, onExerciseQuestionHandled, pendingExerciseQuestion, validLang, workoutPlan])
+  }, [
+    copy,
+    isMuted,
+    memory,
+    onExerciseQuestionHandled,
+    pendingExerciseQuestion,
+    sendTextToGuto,
+    synthesizeAndPlay,
+    validLang,
+    workoutPlan,
+    wrapWithActiveContext,
+  ])
 
   useEffect(() => {
     if (!pendingFoodQuestion) return
@@ -1258,13 +1335,14 @@ export function ChatTab({
     activeDietContextRef.current = buildDietModelContext(food, meal, memory, lang)
     setContextChip({ type: "meal", label: food.name })
 
+    const hintText = copy.mealContextHint(food.name)
     const hintId = `g-meal-ctx-${meal.id}-${food.name}`
     setMessages((prev) => {
       if (prev.some((message) => message.id === hintId)) return prev
       return appendMessagesWithoutDuplicateGuto(prev, [
         {
           id: hintId,
-          text: copy.mealContextHint(food.name),
+          text: hintText,
           isGuto: true,
           timestamp: new Date(),
           avatarEmotion: "default",
@@ -1273,8 +1351,25 @@ export function ChatTab({
     })
 
     onFoodQuestionHandled?.()
+    void (async () => {
+      if (!isMuted) {
+        await synthesizeAndPlay(hintText, lang)
+      }
+      const trigger = copy.mealDoubtTrigger(food.name)
+      await sendTextToGuto(trigger, wrapWithActiveContext(trigger), { hideUserBubble: true })
+    })()
     window.setTimeout(() => inputRef.current?.focus(), 120)
-  }, [copy, memory, onFoodQuestionHandled, pendingFoodQuestion, validLang])
+  }, [
+    copy,
+    isMuted,
+    memory,
+    onFoodQuestionHandled,
+    pendingFoodQuestion,
+    sendTextToGuto,
+    synthesizeAndPlay,
+    validLang,
+    wrapWithActiveContext,
+  ])
 
   const handleSend = async () => {
     if (!input.trim() || isSending) return

@@ -585,7 +585,8 @@ function SearchSelect({
       {open && typeof document !== "undefined" &&
         createPortal(
           <motion.div
-            className="guto-calibration-select-overlay fixed inset-0 z-[9999] flex flex-col justify-end bg-[rgba(13,35,65,0.28)] px-3 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-[max(env(safe-area-inset-top),0.5rem)] backdrop-blur-[2px] sm:justify-center sm:px-4 sm:pb-[max(env(safe-area-inset-bottom),1rem)]"
+            className="guto-calibration-select-overlay fixed top-0 left-0 right-0 z-[9999] flex flex-col justify-end bg-[rgba(13,35,65,0.28)] px-3 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-[max(env(safe-area-inset-top),0.5rem)] backdrop-blur-[2px] sm:justify-center sm:px-4 sm:pb-[max(env(safe-area-inset-bottom),1rem)]"
+            style={{ height: "var(--guto-viewport-height, 100dvh)" }}
             role="presentation"
             onClick={close}
           >
@@ -617,8 +618,9 @@ function SearchSelect({
                 autoComplete="off"
                 className="h-10 w-full shrink-0 rounded-full border border-[rgba(82,231,255,0.55)] bg-white px-4 font-mono text-[12px] font-bold text-(--guto-navy) outline-none placeholder:text-[rgba(13,35,65,0.28)]"
                 onFocus={(event) => {
+                  const el = event.currentTarget
                   window.requestAnimationFrame(() => {
-                    event.currentTarget.scrollIntoView({ block: "nearest", behavior: "smooth" })
+                    el?.scrollIntoView({ block: "nearest", behavior: "smooth" })
                   })
                 }}
               />

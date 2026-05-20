@@ -590,7 +590,14 @@ function resolveAuthenticatedStage(
     return "naming"
   }
 
-  if (!profile?.calibrationComplete && !hasMemoryCalibration(memory)) {
+  // Santo Graal §7.6 — backend é a fonte de verdade da calibragem.
+  // NÃO confiar só no flag local `calibrationComplete`: o localStorage pode
+  // estar poluído (mesmo navegador, multi-conta, aluno cadastrado pelo coach).
+  // Se a memória do backend carregou e NÃO tem a calibragem, força a tela —
+  // mesmo que o profile local diga completo. Só caímos no flag local quando a
+  // memória não carregou (memory == null), pra não prender quem já calibrou.
+  const calibrationMissing = memory ? !hasMemoryCalibration(memory) : !profile?.calibrationComplete
+  if (calibrationMissing) {
     return "calibration"
   }
 
@@ -1277,6 +1284,8 @@ export function GutoApp({
         foodRestrictions: calibration.foodRestrictions?.trim(),
         foodIntolerances: calibration.foodIntolerances?.trim(),
         trainingPathology: calibration.trainingPathology?.trim(),
+        trainingStatus: calibration.trainingLevel,
+        trainingLimitations: calibration.trainingPathology?.trim(),
       })
       trackBehaviorEvent("calibration_completed", { ...calibration })
       

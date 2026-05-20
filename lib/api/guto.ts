@@ -218,6 +218,7 @@ export interface GutoMemory {
   } | null
   proactiveSent: Record<string, string[]>
   initialXpRewardSeen: boolean
+  hasSeenChatOpening?: boolean
   validationHistory?: WorkoutValidationRecord[]
   workoutFeedbackHistory?: WorkoutFeedbackRecord[]
 }
