@@ -269,7 +269,7 @@ const ADMIN_PANEL_COPY = {
       endurance: "Resistência", flexibility: "Flexibilidade", general_fitness: "Condicionamento geral", rehabilitation: "Reabilitação",
       gym: "Academia", home: "Em casa", park: "Ao ar livre", mixed: "Variado",
       start: "GUTO Time Start", pro: "GUTO Time Pro", elite: "GUTO Time Elite", custom: "Custom",
-      male: "Masculino", female: "Feminino", other: "Outro", prefer_not_to_say: "Prefiro não dizer",
+      male: "Masculino", female: "Feminino", other: "Outro",
     },
     errors: {
       planLimit: "Limite do plano GUTO Time atingido.", forbidden: "Você não tem acesso a este aluno.",
@@ -435,7 +435,7 @@ const ADMIN_PANEL_COPY = {
       endurance: "Resistenza", flexibility: "Flessibilità", general_fitness: "Fitness generale", rehabilitation: "Riabilitazione",
       gym: "Palestra", home: "Casa", park: "All'aperto", mixed: "Misto",
       start: "GUTO Time Start", pro: "GUTO Time Pro", elite: "GUTO Time Elite", custom: "Personalizzato",
-      male: "Maschile", female: "Femminile", other: "Altro", prefer_not_to_say: "Preferisco non dirlo",
+      male: "Maschile", female: "Femminile", other: "Altro",
     },
     errors: {
       planLimit: "Limite del piano GUTO Time raggiunto.", forbidden: "Non hai accesso a questo studente.",
@@ -601,7 +601,7 @@ const ADMIN_PANEL_COPY = {
       endurance: "Endurance", flexibility: "Flexibility", general_fitness: "General fitness", rehabilitation: "Rehabilitation",
       gym: "Gym", home: "Home", park: "Outdoors", mixed: "Mixed",
       start: "GUTO Time Start", pro: "GUTO Time Pro", elite: "GUTO Time Elite", custom: "Custom",
-      male: "Male", female: "Female", other: "Other", prefer_not_to_say: "Prefer not to say",
+      male: "Male", female: "Female", other: "Other",
     },
     errors: {
       planLimit: "GUTO Time plan limit reached.", forbidden: "You do not have access to this student.",
@@ -1503,7 +1503,7 @@ function CoachInner() {
                 )}
                 <select value={genderFilter} onChange={(event) => setGenderFilter(event.target.value)} className="h-10 rounded-md border border-white/10 bg-white/5 px-3 text-sm text-white">
                   <option value="" className="bg-[#0d1426]">{copy.filters.sexAll}</option>
-                  {["male", "female", "other", "prefer_not_to_say"].map((code) => (
+                  {["male", "female", "other"].map((code) => (
                     <option key={code} value={code} className="bg-[#0d1426]">{formatHuman(code, copy)}</option>
                   ))}
                 </select>
@@ -3561,7 +3561,6 @@ function CreateStudentDialog({
               <option value="" className="bg-[#0d1426]">{copy.dialogs.sex}</option>
               <option value="male" className="bg-[#0d1426]">{copy.dialogs.male}</option>
               <option value="female" className="bg-[#0d1426]">{copy.dialogs.female}</option>
-              <option value="prefer_not_to_say" className="bg-[#0d1426]">{copy.dialogs.preferNot}</option>
             </select>
             <Field label={copy.dialogs.age} value={draft.age} onChange={(age) => onDraftChange({ ...draft, age })} />
           </div>

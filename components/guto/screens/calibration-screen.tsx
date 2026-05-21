@@ -69,11 +69,11 @@ export function CalibrationScreen({
   )
 
   const ageNum = parseInt(ageInput, 10)
-  const isAgeValid = !isNaN(ageNum) && ageNum >= 14 && ageNum <= 90
+  const isAgeValid = !isNaN(ageNum) && ageNum >= 14 && ageNum <= 99
   const heightNum = parseInt(heightInput, 10)
   const isHeightValid = !isNaN(heightNum) && heightNum >= 100 && heightNum <= 250
   const weightNum = parseFloat(weightInput.replace(",", "."))
-  const isWeightValid = !isNaN(weightNum) && weightNum >= 40 && weightNum <= 190
+  const isWeightValid = !isNaN(weightNum) && weightNum >= 30 && weightNum <= 300
   const hasCountry = country.trim().length >= 2
   const hasCity = city.trim().length >= 2
   const hasPathologyAnswer = pathology.trim().length >= 2
@@ -135,14 +135,14 @@ export function CalibrationScreen({
       .sort((a, b) => a.label.localeCompare(b.label, language))
   }, [countryCode, language])
   const ageOptions = useMemo(() => {
-    return Array.from({ length: 77 }, (_, index) => {
+    return Array.from({ length: 86 }, (_, index) => {
       const age = String(index + 14)
       return { value: age, label: age }
     })
   }, [])
   const weightOptions = useMemo(() => {
-    return Array.from({ length: 1501 }, (_, index) => {
-      const value = (40 + index / 10).toFixed(1)
+    return Array.from({ length: 2701 }, (_, index) => {
+      const value = (30 + index / 10).toFixed(1)
       const label = language === "en-US" ? value : value.replace(".", ",")
       return { value, label }
     })

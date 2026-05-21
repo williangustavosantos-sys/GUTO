@@ -50,7 +50,7 @@ export interface TranslationDictionary {
     subtitle: string;
     ageLabel: string;
     sexLabel: string;
-    sexOptions: { female: string; male: string; prefer_not_to_say: string };
+    sexOptions: { female: string; male: string };
     levelLabel: string;
     levelOptions: { beginner: string; returning: string; consistent: string; advanced: string };
     pathologyLabel: string;
@@ -192,7 +192,7 @@ export const translations: Record<ValidLanguage, TranslationDictionary> = {
       subtitle: "Antes de eu te puxar, preciso entender o teu corpo.",
       ageLabel: "Idade",
       sexLabel: "Sexo biológico",
-      sexOptions: { female: "Feminino", male: "Masculino", prefer_not_to_say: "Prefiro não informar" },
+      sexOptions: { female: "Feminino", male: "Masculino" },
       levelLabel: "Nível atual de treino",
       levelOptions: { beginner: "Começando", returning: "Voltando", consistent: "Mantendo ritmo", advanced: "Avançado" },
       pathologyLabel: "Dor, limitação ou patologia",
@@ -323,7 +323,7 @@ export const translations: Record<ValidLanguage, TranslationDictionary> = {
       subtitle: "Prima di spingerti, devo capire il tuo corpo.",
       ageLabel: "Età",
       sexLabel: "Sesso biologico",
-      sexOptions: { female: "Femminile", male: "Maschile", prefer_not_to_say: "Preferisco non dirlo" },
+      sexOptions: { female: "Femminile", male: "Maschile" },
       levelLabel: "Livello attuale di allenamento",
       levelOptions: { beginner: "Inizio", returning: "Rientro", consistent: "Tengo il ritmo", advanced: "Avanzato" },
       pathologyLabel: "Dolore, limite o patologia",
@@ -454,7 +454,7 @@ export const translations: Record<ValidLanguage, TranslationDictionary> = {
       subtitle: "Before I push you, I need to read your body.",
       ageLabel: "Age",
       sexLabel: "Biological sex",
-      sexOptions: { female: "Female", male: "Male", prefer_not_to_say: "Prefer not to say" },
+      sexOptions: { female: "Female", male: "Male" },
       levelLabel: "Current training level",
       levelOptions: { beginner: "Starting", returning: "Returning", consistent: "Keeping rhythm", advanced: "Advanced" },
       pathologyLabel: "Pain, limitation or condition",

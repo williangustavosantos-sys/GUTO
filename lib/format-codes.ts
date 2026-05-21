@@ -31,7 +31,6 @@ export const BIOLOGICAL_SEX_LABELS: Record<string, string> = {
   male: "Masculino",
   female: "Feminino",
   other: "Outro",
-  prefer_not_to_say: "Prefiro não dizer",
 }
 
 export const TRAINING_LEVEL_LABELS: Record<string, string> = {

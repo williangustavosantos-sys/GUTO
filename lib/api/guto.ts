@@ -168,7 +168,7 @@ export interface GutoMemory {
   trainingLimitations?: string
   trainingAge?: number
   userAge?: number
-  biologicalSex?: "female" | "male" | "prefer_not_to_say"
+  biologicalSex?: "female" | "male"
   trainingLevel?: "beginner" | "returning" | "consistent" | "advanced"
   trainingGoal?: "consistency" | "fat_loss" | "muscle_gain" | "conditioning" | "mobility_health"
   preferredTrainingLocation?: "gym" | "home" | "park" | "mixed"
@@ -329,7 +329,7 @@ export async function saveGutoMemory(payload: {
   trainingStatus?: string
   trainingLimitations?: string
   userAge?: number
-  biologicalSex?: "female" | "male" | "prefer_not_to_say"
+  biologicalSex?: "female" | "male"
   trainingLevel?: "beginner" | "returning" | "consistent" | "advanced"
   trainingGoal?: "consistency" | "fat_loss" | "muscle_gain" | "conditioning" | "mobility_health"
   preferredTrainingLocation?: "gym" | "home" | "park" | "mixed"
