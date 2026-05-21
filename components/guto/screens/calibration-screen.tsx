@@ -22,7 +22,6 @@ interface CalibrationProfile {
   heightCm?: number
   weightKg?: number
   foodRestrictions?: string
-  foodIntolerances?: string
 }
 
 type TrainingStatus = "beginner" | "returning" | "consistent" | "advanced"
@@ -65,7 +64,7 @@ export function CalibrationScreen({
   const [heightInput, setHeightInput] = useState(initialProfile?.heightCm ? String(initialProfile.heightCm) : "")
   const [weightInput, setWeightInput] = useState(initialProfile?.weightKg ? String(initialProfile.weightKg) : "")
   const [foodRestrictions, setFoodRestrictions] = useState(
-    () => initialProfile?.foodRestrictions?.trim() || initialProfile?.foodIntolerances?.trim() || ""
+    () => initialProfile?.foodRestrictions?.trim() || ""
   )
 
   const ageNum = parseInt(ageInput, 10)
@@ -109,8 +108,6 @@ export function CalibrationScreen({
       heightCm: isHeightValid ? heightNum : undefined,
       weightKg: isWeightValid ? weightNum : undefined,
       foodRestrictions: foodRestrictions.trim(),
-      // Um único campo na UI; backend mantém os dois slots com o mesmo valor.
-      foodIntolerances: foodRestrictions.trim(),
     })
   }
 

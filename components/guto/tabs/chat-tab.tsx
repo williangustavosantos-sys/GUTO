@@ -541,8 +541,7 @@ function buildDietModelContext(
     `Food in question: "${food.name}" (${food.quantity}, ${food.kcal ?? "?"} kcal).`,
     `Meal: "${meal.name}" (${meal.time}). Full meal: ${mealFoodsList}.`,
     `Goal: ${goalLabel}. Profile: ${profileStr || "unknown"}.`,
-    `Food restrictions (what they avoid eating): ${memory?.foodRestrictions?.trim() || "none"}.`,
-    `Intolerances/allergies: ${memory?.foodIntolerances?.trim() || "none"}.`,
+    `Food restrictions (what they avoid eating, incl. intolerances/allergies): ${memory?.foodRestrictions?.trim() || "none"}.`,
     `Limitations/pathology: ${memory?.trainingPathology?.trim() || "none"}.`,
     `Reply in ${language} with substitution, portion guidance, or macro impact for THIS food in THIS meal. Direct, max 2–3 short sentences.`,
   ].join(" ")

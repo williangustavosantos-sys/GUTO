@@ -48,7 +48,6 @@ const mockMemory = {
   userAge: 28,
   country: 'Brasil',
   foodRestrictions: 'nenhuma',
-  foodIntolerances: 'nenhuma',
   heightCm: 175,
   weightKg: 75,
   completedWorkoutDates: [],

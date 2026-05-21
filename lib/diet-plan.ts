@@ -205,7 +205,7 @@ function hasDietProfile(memory: GutoMemory): boolean {
     memory.biologicalSex &&
     memory.trainingGoal &&
     memory.country &&
-    (memory.foodRestrictions || memory.foodIntolerances)
+    memory.foodRestrictions
   )
 }
 
@@ -261,7 +261,7 @@ function buildMeals(targetKcal: number, language: SupportedLanguage, memory?: Gu
 }
 
 function getDietLimits(memory?: GutoMemory | null) {
-  const text = `${memory?.foodRestrictions ?? ""} ${memory?.foodIntolerances ?? ""}`.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+  const text = (memory?.foodRestrictions ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
   return {
     dairy: foodSafetyTerms.dairy.test(text),
     vegan: foodSafetyTerms.vegan.test(text),

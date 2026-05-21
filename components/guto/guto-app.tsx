@@ -62,7 +62,6 @@ interface StoredProfile extends StoredGutoProfile {
   calibrationComplete?: boolean
   pactAccepted?: boolean
   phone?: string
-  foodIntolerances?: string
   consentHealthFitness?: boolean
   acceptedTerms?: boolean
   consentAcceptedAt?: string
@@ -1282,7 +1281,6 @@ export function GutoApp({
         ...calibration,
         language: selectedLanguage,
         foodRestrictions: calibration.foodRestrictions?.trim(),
-        foodIntolerances: calibration.foodIntolerances?.trim(),
         trainingPathology: calibration.trainingPathology?.trim(),
         trainingStatus: calibration.trainingLevel,
         trainingLimitations: calibration.trainingPathology?.trim(),
@@ -1636,7 +1634,6 @@ export function GutoApp({
       language: stored?.language ?? selectedLanguage,
       userName: stored?.userName ?? committedName,
       phone: stored?.phone ?? null,
-      foodIntolerances: stored?.foodIntolerances ?? null,
       consents: {
         consentHealthFitness: stored?.consentHealthFitness ?? false,
         acceptedTerms: stored?.acceptedTerms ?? false,
@@ -1654,7 +1651,6 @@ export function GutoApp({
         countryCode: memory?.countryCode ?? null,
         city: memory?.city ?? null,
         foodRestrictions: memory?.foodRestrictions ?? null,
-        foodIntolerances: memory?.foodIntolerances ?? null,
       },
       progress: {
         totalXp: memory?.totalXp ?? null,
@@ -1775,14 +1771,6 @@ export function GutoApp({
         case "phone":
           persistProfile({ phone: String(value) || undefined })
           persistMemory({ phone: String(value) || undefined })
-          break
-        case "foodIntolerances":
-          {
-            const intoleranceValue = String(value).trim() || undefined
-            persistProfile({ foodIntolerances: intoleranceValue })
-            persistMemory({ foodIntolerances: intoleranceValue })
-            setMemory((prev) => prev ? { ...prev, foodIntolerances: intoleranceValue } : prev)
-          }
           break
         case "language": {
           const lang = value as SupportedLanguage
@@ -2836,7 +2824,6 @@ export function GutoApp({
                     heightCm: memory?.heightCm,
                     weightKg: memory?.weightKg,
                     foodRestrictions: memory?.foodRestrictions,
-                    foodIntolerances: memory?.foodIntolerances,
                   }}
                   onComplete={saveSettingsData}
                 />

@@ -466,7 +466,6 @@ export function DietTab({ userId, language, onFoodDoubt, memory }: DietTabProps)
     trainingLevel: memory?.trainingLevel ?? null,
     trainingStatus: memory?.trainingStatus ?? null,
     foodRestrictions: memory?.foodRestrictions ?? null,
-    foodIntolerances: memory?.foodIntolerances ?? null,
     country: memory?.country ?? null,
     countryCode: memory?.countryCode ?? null,
   }), [
@@ -478,7 +477,6 @@ export function DietTab({ userId, language, onFoodDoubt, memory }: DietTabProps)
     memory?.trainingLevel,
     memory?.trainingStatus,
     memory?.foodRestrictions,
-    memory?.foodIntolerances,
     memory?.country,
     memory?.countryCode,
   ])
