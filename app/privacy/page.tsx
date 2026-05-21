@@ -21,7 +21,7 @@ const privacyCopy: Record<Lang, {
     version: "Versão beta — maio 2026",
     back: "Voltar ao GUTO",
     sections: [
-      { heading: "1. Controlador dos dados", body: "Os dados coletados pelo GUTO são controlados por Willian Gustavo dos Santos. Contato: dj@toszan.com.br" },
+      { heading: "1. Controlador dos dados", body: "Os dados coletados pelo GUTO são controlados por Willian Gustavo dos Santos. Contato: app.guto.life@gmail.com" },
       {
         heading: "2. Quais dados são coletados",
         intro: "O GUTO coleta e processa os seguintes dados fornecidos por você:",
@@ -50,10 +50,10 @@ const privacyCopy: Record<Lang, {
           "Solicitar correção de dados incorretos",
           "Solicitar exclusão dos seus dados",
         ],
-        outro: "Para exercer esses direitos, entre em contato pelo e-mail: dj@toszan.com.br",
+        outro: "Para exercer esses direitos, entre em contato pelo e-mail: app.guto.life@gmail.com",
       },
       { heading: "7. Período beta", body: "O GUTO está em versão beta privada. Esta política pode ser atualizada durante esse período. Mudanças significativas serão comunicadas diretamente no app." },
-      { heading: "8. Contato", body: "Para qualquer dúvida sobre privacidade ou tratamento de dados: dj@toszan.com.br" },
+      { heading: "8. Contato", body: "Para qualquer dúvida sobre privacidade ou tratamento de dados: app.guto.life@gmail.com" },
     ],
   },
   "en-US": {
@@ -62,7 +62,7 @@ const privacyCopy: Record<Lang, {
     version: "Beta version — May 2026",
     back: "Back to GUTO",
     sections: [
-      { heading: "1. Data controller", body: "Data collected by GUTO is controlled by Willian Gustavo dos Santos. Contact: dj@toszan.com.br" },
+      { heading: "1. Data controller", body: "Data collected by GUTO is controlled by Willian Gustavo dos Santos. Contact: app.guto.life@gmail.com" },
       {
         heading: "2. What data is collected",
         intro: "GUTO collects and processes the following data provided by you:",
@@ -91,10 +91,10 @@ const privacyCopy: Record<Lang, {
           "Request correction of incorrect data",
           "Request deletion of your data",
         ],
-        outro: "To exercise these rights, contact: dj@toszan.com.br",
+        outro: "To exercise these rights, contact: app.guto.life@gmail.com",
       },
       { heading: "7. Beta period", body: "GUTO is in private beta. This policy may be updated during this period. Significant changes will be communicated directly in the app." },
-      { heading: "8. Contact", body: "For any questions about privacy or data processing: dj@toszan.com.br" },
+      { heading: "8. Contact", body: "For any questions about privacy or data processing: app.guto.life@gmail.com" },
     ],
   },
   "it-IT": {
@@ -103,7 +103,7 @@ const privacyCopy: Record<Lang, {
     version: "Versione beta — maggio 2026",
     back: "Torna a GUTO",
     sections: [
-      { heading: "1. Titolare del trattamento", body: "I dati raccolti da GUTO sono controllati da Willian Gustavo dos Santos. Contatto: dj@toszan.com.br" },
+      { heading: "1. Titolare del trattamento", body: "I dati raccolti da GUTO sono controllati da Willian Gustavo dos Santos. Contatto: app.guto.life@gmail.com" },
       {
         heading: "2. Quali dati vengono raccolti",
         intro: "GUTO raccoglie e tratta i seguenti dati forniti da te:",
@@ -132,10 +132,10 @@ const privacyCopy: Record<Lang, {
           "Richiedere la correzione di dati errati",
           "Richiedere la cancellazione dei tuoi dati",
         ],
-        outro: "Per esercitare questi diritti, contatta: dj@toszan.com.br",
+        outro: "Per esercitare questi diritti, contatta: app.guto.life@gmail.com",
       },
       { heading: "7. Periodo beta", body: "GUTO è in versione beta privata. Questa politica potrebbe essere aggiornata durante questo periodo. Le modifiche significative saranno comunicate direttamente nell'app." },
-      { heading: "8. Contatto", body: "Per qualsiasi domanda sulla privacy o sul trattamento dei dati: dj@toszan.com.br" },
+      { heading: "8. Contatto", body: "Per qualsiasi domanda sulla privacy o sul trattamento dei dati: app.guto.life@gmail.com" },
     ],
   },
 }
@@ -154,8 +154,8 @@ export default async function PrivacyPage({ searchParams }: Props) {
   const t = privacyCopy[resolved]
 
   return (
-    <div className="min-h-dvh bg-white px-6 py-10">
-      <div className="mx-auto max-w-prose">
+    <div className="h-full min-h-0 flex-1 overflow-y-auto overscroll-contain bg-white px-6 py-10 [-webkit-overflow-scrolling:touch]">
+      <div className="mx-auto max-w-prose pb-[max(env(safe-area-inset-bottom),1.5rem)]">
         <p className="font-mono text-[10px] font-black uppercase tracking-[0.2em] text-[rgba(13,35,65,0.35)]">GUTO</p>
         <h1 className="mt-2 text-2xl font-black tracking-tight text-[rgba(13,35,65,0.9)]">{t.heading}</h1>
         <p className="mt-1 text-xs text-[rgba(13,35,65,0.4)]">{t.version}</p>

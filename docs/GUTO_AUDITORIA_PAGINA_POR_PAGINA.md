@@ -808,7 +808,7 @@ A distancia entre o estado atual e o Santo Graal V3.1 esta concentrada em:
 **O que aparece visualmente:**
 - "Termos de Uso" — Versao beta — maio 2026
 - Secoes: O que e o GUTO, Nao e profissional de saude, Responsabilidade do usuario, Versao Beta, Uso Responsavel
-- Contato: Willian Gustavo dos Santos, dj@toszan.com.br
+- Contato: Willian Gustavo dos Santos, app.guto.life@gmail.com
 
 **Problemas:**
 - P2: Verificar se `/terms?lang=en-US` e `/terms?lang=it-IT` funcionam
