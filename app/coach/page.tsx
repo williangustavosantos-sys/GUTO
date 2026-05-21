@@ -186,6 +186,7 @@ type CalibrationDraft = {
   preferredTrainingLocation: string;
   trainingPathology: string;
   country: string;
+  city: string;
   heightCm: string;
   weightKg: string;
   foodRestrictions: string;
@@ -314,7 +315,7 @@ const ADMIN_PANEL_COPY = {
     },
     calibration: {
       age: "Idade", sex: "Sexo biológico", level: "Nível", goal: "Objetivo", location: "Local preferido",
-      country: "País", height: "Altura cm", weight: "Peso kg", pathology: "Dor ou limitação", foodRestrictions: "Restrições alimentares",
+      country: "País", city: "Cidade", height: "Altura cm", weight: "Peso kg", pathology: "Dor ou limitação", foodRestrictions: "Restrições alimentares",
     },
     workout: {
       weeklySaved: "Plano semanal salvo.", weeklySaveError: "Erro ao salvar plano semanal.", weeklyTitle: "Plano semanal",
@@ -480,7 +481,7 @@ const ADMIN_PANEL_COPY = {
     },
     calibration: {
       age: "Età", sex: "Sesso biologico", level: "Livello", goal: "Obiettivo", location: "Luogo preferito",
-      country: "Paese", height: "Altezza cm", weight: "Peso kg", pathology: "Dolore o limitazione", foodRestrictions: "Restrizioni alimentari",
+      country: "Paese", city: "Città", height: "Altezza cm", weight: "Peso kg", pathology: "Dolore o limitazione", foodRestrictions: "Restrizioni alimentari",
     },
     workout: {
       weeklySaved: "Piano settimanale salvato.", weeklySaveError: "Errore durante il salvataggio del piano settimanale.", weeklyTitle: "Piano settimanale",
@@ -646,7 +647,7 @@ const ADMIN_PANEL_COPY = {
     },
     calibration: {
       age: "Age", sex: "Biological sex", level: "Level", goal: "Goal", location: "Preferred location",
-      country: "Country", height: "Height cm", weight: "Weight kg", pathology: "Pain or limitation", foodRestrictions: "Food restrictions",
+      country: "Country", city: "City", height: "Height cm", weight: "Weight kg", pathology: "Pain or limitation", foodRestrictions: "Food restrictions",
     },
     workout: {
       weeklySaved: "Weekly plan saved.", weeklySaveError: "Error saving weekly plan.", weeklyTitle: "Weekly plan",
@@ -1014,6 +1015,7 @@ function calibrationFromMemory(memory: GutoMemory | null): CalibrationDraft {
     preferredTrainingLocation: memory?.preferredTrainingLocation || "",
     trainingPathology: memory?.trainingPathology || "",
     country: memory?.country || "",
+    city: memory?.city || "",
     heightCm: memory?.heightCm ? String(memory.heightCm) : "",
     weightKg: memory?.weightKg ? String(memory.weightKg) : "",
     foodRestrictions: memory?.foodRestrictions || "",
@@ -1830,6 +1832,7 @@ function CoachInner() {
                       <Field label={copy.calibration.goal} value={calibrationDraft.trainingGoal} onChange={(value) => setCalibrationDraft((draft) => ({ ...draft, trainingGoal: value }))} />
                       <Field label={copy.calibration.location} value={calibrationDraft.preferredTrainingLocation} onChange={(value) => setCalibrationDraft((draft) => ({ ...draft, preferredTrainingLocation: value }))} />
                       <Field label={copy.calibration.country} value={calibrationDraft.country} onChange={(value) => setCalibrationDraft((draft) => ({ ...draft, country: value }))} />
+                      <Field label={copy.calibration.city} value={calibrationDraft.city} onChange={(value) => setCalibrationDraft((draft) => ({ ...draft, city: value }))} />
                       <Field label={copy.calibration.height} value={calibrationDraft.heightCm} onChange={(value) => setCalibrationDraft((draft) => ({ ...draft, heightCm: value }))} />
                       <Field label={copy.calibration.weight} value={calibrationDraft.weightKg} onChange={(value) => setCalibrationDraft((draft) => ({ ...draft, weightKg: value }))} />
                       <Field label={copy.calibration.pathology} value={calibrationDraft.trainingPathology} onChange={(value) => setCalibrationDraft((draft) => ({ ...draft, trainingPathology: value }))} className="md:col-span-2" />

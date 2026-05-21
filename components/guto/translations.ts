@@ -70,6 +70,8 @@ export interface TranslationDictionary {
     objectiveChips: { fat_loss: string; muscle_gain: string; conditioning: string; mobility_health: string; consistency: string };
     countryLabel: string;
     countryPlaceholder: string;
+    cityLabel: string;
+    cityPlaceholder: string;
     heightLabel: string;
     weightLabel: string;
     restrictionsLabel: string;
@@ -212,6 +214,8 @@ export const translations: Record<ValidLanguage, TranslationDictionary> = {
       objectiveChips: { fat_loss: "Emagrecer", muscle_gain: "Hipertrofia", conditioning: "Condicionamento", mobility_health: "Saúde", consistency: "Consistência" },
       countryLabel: "ONDE MORA",
       countryPlaceholder: "Ex: Brasil, Itália, EUA...",
+      cityLabel: "CIDADE",
+      cityPlaceholder: "Ex: São Paulo, Roma, Lisboa...",
       heightLabel: "ALTURA (cm)",
       weightLabel: "PESO (kg)",
       restrictionsLabel: "RESTRIÇÕES / ALERGIAS",
@@ -343,6 +347,8 @@ export const translations: Record<ValidLanguage, TranslationDictionary> = {
       objectiveChips: { fat_loss: "Dimagrire", muscle_gain: "Ipertrofia", conditioning: "Condizionamento", mobility_health: "Salute", consistency: "Costanza" },
       countryLabel: "DOVE ABITI",
       countryPlaceholder: "Es: Italia, Brasile, USA...",
+      cityLabel: "CITTÀ",
+      cityPlaceholder: "Es: Roma, Milano, Lisbona...",
       heightLabel: "ALTEZZA (cm)",
       weightLabel: "PESO (kg)",
       restrictionsLabel: "RESTRIZIONI / ALLERGIE",
@@ -474,6 +480,8 @@ export const translations: Record<ValidLanguage, TranslationDictionary> = {
       objectiveChips: { fat_loss: "Lose Fat", muscle_gain: "Hypertrophy", conditioning: "Conditioning", mobility_health: "Health", consistency: "Consistency" },
       countryLabel: "WHERE YOU LIVE",
       countryPlaceholder: "E.g.: USA, Brazil, Italy...",
+      cityLabel: "CITY",
+      cityPlaceholder: "E.g.: New York, Lisbon, Rome...",
       heightLabel: "HEIGHT (cm)",
       weightLabel: "WEIGHT (kg)",
       restrictionsLabel: "RESTRICTIONS / ALLERGIES",

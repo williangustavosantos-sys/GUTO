@@ -644,8 +644,8 @@ export function GutoApp({
   const [settingsWeightDraft, setSettingsWeightDraft] = useState("")
   const [settingsHeightDraft, setSettingsHeightDraft] = useState("")
   const [settingsCountryDraft, setSettingsCountryDraft] = useState("")
+  const [settingsCityDraft, setSettingsCityDraft] = useState("")
   const [settingsFoodRestrictionsDraft, setSettingsFoodRestrictionsDraft] = useState("")
-  const [settingsFoodIntolerancesDraft, setSettingsFoodIntolerancesDraft] = useState("")
   const [settingsPhoneDraft, setSettingsPhoneDraft] = useState("")
   const [settingsSavedToast, setSettingsSavedToast] = useState(false)
   const [privacyConfirm, setPrivacyConfirm] = useState<"revoke" | "delete-step1" | "delete-step2" | "delete-done" | null>(null)
@@ -1288,14 +1288,6 @@ export function GutoApp({
         trainingLimitations: calibration.trainingPathology?.trim(),
       })
       trackBehaviorEvent("calibration_completed", { ...calibration })
-      
-      // Proactively trigger diet generation in background so it's ready when they open the tab
-      try {
-        const { generateDietPlan } = await import("@/lib/api/guto")
-        await generateDietPlan(selectedLanguage)
-      } catch (err) {
-        console.warn("[GUTO] Proactive diet generation failed:", err)
-      }
     },
     [persistMemory, persistProfile, selectedLanguage, trackBehaviorEvent]
   )
@@ -1362,12 +1354,12 @@ export function GutoApp({
     setSettingsWeightDraft(memory?.weightKg ? String(memory.weightKg) : "")
     setSettingsHeightDraft(memory?.heightCm ? String(memory.heightCm) : "")
     setSettingsCountryDraft(memory?.country ?? "")
+    setSettingsCityDraft(memory?.city ?? "")
     const stored = (() => {
       if (typeof window === "undefined" || !settingsUserId) return null
       try { return JSON.parse(window.localStorage.getItem(`${STORAGE_KEY}-${settingsUserId}`) ?? "null") as StoredProfile | null } catch { return null }
     })()
     setSettingsFoodRestrictionsDraft(memory?.foodRestrictions?.trim() || "")
-    setSettingsFoodIntolerancesDraft(memory?.foodIntolerances?.trim() || stored?.foodIntolerances?.trim() || "")
     setSettingsPhoneDraft(stored?.phone ?? "")
     setSettingsMode("menu")
     setSettingsSavedToast(false)
@@ -1597,35 +1589,29 @@ export function GutoApp({
   }, [persistMemory, settingsHeightDraft, settingsWeightDraft, showSavedToast])
 
   const saveResidenceSettings = useCallback(() => {
-    const val = settingsCountryDraft.trim()
-    persistMemory({ country: val || undefined })
-    setMemory((prev) => prev ? { ...prev, country: val || undefined } : prev)
+    const country = settingsCountryDraft.trim()
+    const city = settingsCityDraft.trim()
+    persistMemory({
+      country: country || undefined,
+      city: city || undefined,
+    })
+    setMemory((prev) => prev ? { ...prev, country: country || undefined, city: city || undefined } : prev)
     showSavedToast()
     setSettingsMode("menu")
     setStage("system")
-  }, [persistMemory, settingsCountryDraft, showSavedToast])
+  }, [persistMemory, settingsCityDraft, settingsCountryDraft, showSavedToast])
 
   const saveFoodRestrictionsSettings = useCallback(() => {
     const restrictions = settingsFoodRestrictionsDraft.trim()
-    const intolerances = settingsFoodIntolerancesDraft.trim()
-    if (!restrictions && !intolerances) return
-    persistMemory({
-      foodRestrictions: restrictions || undefined,
-      foodIntolerances: intolerances || undefined,
-    })
+    if (!restrictions) return
+    persistMemory({ foodRestrictions: restrictions || undefined })
     setMemory((prev) =>
-      prev
-        ? {
-            ...prev,
-            foodRestrictions: restrictions || undefined,
-            foodIntolerances: intolerances || undefined,
-          }
-        : prev
+      prev ? { ...prev, foodRestrictions: restrictions || undefined } : prev
     )
     showSavedToast()
     setSettingsMode("menu")
     setStage("system")
-  }, [persistMemory, settingsFoodIntolerancesDraft, settingsFoodRestrictionsDraft, showSavedToast])
+  }, [persistMemory, settingsFoodRestrictionsDraft, showSavedToast])
 
   const saveSettingsData = useCallback(
     (calibration: Parameters<typeof saveGutoMemory>[0]) => {
@@ -3185,6 +3171,19 @@ export function GutoApp({
                       className="w-full rounded-full border border-[rgba(82,231,255,0.45)] bg-white px-4 py-2.5 font-mono text-[12px] text-(--guto-navy) placeholder-[rgba(13,35,65,0.3)] outline-none"
                     />
                   </div>
+                  <div className="guto-slot rounded-3xl px-5 py-4">
+                    <p className="mb-2 font-mono text-[8px] font-black uppercase tracking-[0.2em] text-[rgba(13,35,65,0.42)]">{cal.cityLabel}</p>
+                    <input
+                      type="text"
+                      value={settingsCityDraft}
+                      onChange={(e) => setSettingsCityDraft(e.target.value)}
+                      placeholder={cal.cityPlaceholder}
+                      autoComplete="address-level2"
+                      autoCorrect="off"
+                      spellCheck={false}
+                      className="w-full rounded-full border border-[rgba(82,231,255,0.45)] bg-white px-4 py-2.5 font-mono text-[12px] text-(--guto-navy) placeholder-[rgba(13,35,65,0.3)] outline-none"
+                    />
+                  </div>
                   <button
                     type="button"
                     onClick={saveResidenceSettings}
@@ -3207,19 +3206,6 @@ export function GutoApp({
                       value={settingsFoodRestrictionsDraft}
                       onChange={(e) => setSettingsFoodRestrictionsDraft(e.target.value)}
                       placeholder={cal.restrictionsPlaceholder}
-                      autoComplete="off"
-                      autoCorrect="off"
-                      spellCheck={false}
-                      className="w-full rounded-full border border-[rgba(82,231,255,0.45)] bg-white px-4 py-2.5 font-mono text-[12px] text-(--guto-navy) placeholder-[rgba(13,35,65,0.3)] outline-none"
-                    />
-                  </div>
-                  <div className="guto-slot rounded-3xl px-5 py-4">
-                    <p className="mb-2 font-mono text-[8px] font-black uppercase tracking-[0.2em] text-[rgba(13,35,65,0.42)]">{cal.intolerancesLabel}</p>
-                    <input
-                      type="text"
-                      value={settingsFoodIntolerancesDraft}
-                      onChange={(e) => setSettingsFoodIntolerancesDraft(e.target.value)}
-                      placeholder={cal.intolerancesPlaceholder}
                       autoComplete="off"
                       autoCorrect="off"
                       spellCheck={false}
