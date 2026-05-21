@@ -536,14 +536,64 @@ function SearchSelect({
 }) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState("")
+  const [viewportHeight, setViewportHeight] = useState(0)
+  const [keyboardOffset, setKeyboardOffset] = useState(0)
   const panelRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!open) return
-    const previousOverflow = document.body.style.overflow
-    document.body.style.overflow = "hidden"
+    // Trava scroll do body sem usar overflow:hidden — no iOS Safari, overflow:hidden
+    // em <body> pode congelar o visualViewport e impedir o resize quando o teclado abre.
+    const scrollY = window.scrollY
+    const body = document.body
+    const previous = {
+      position: body.style.position,
+      top: body.style.top,
+      width: body.style.width,
+    }
+    body.style.position = "fixed"
+    body.style.top = `-${scrollY}px`
+    body.style.width = "100%"
+
+    const sync = () => {
+      const vv = window.visualViewport
+      if (!vv) {
+        setViewportHeight(window.innerHeight)
+        setKeyboardOffset(0)
+        return
+      }
+      const vh = Math.round(vv.height)
+      const offsetTop = Math.max(0, Math.round(vv.offsetTop))
+      const kbOffset = Math.max(0, Math.round(window.innerHeight - vh - offsetTop))
+      setViewportHeight(vh)
+      setKeyboardOffset(kbOffset)
+    }
+
+    sync()
+    const vv = window.visualViewport
+    vv?.addEventListener("resize", sync)
+    vv?.addEventListener("scroll", sync)
+    window.addEventListener("focusin", sync)
+    window.addEventListener("focusout", sync)
+    // iOS dispara visualViewport.resize com delay (até ~400ms) depois que o
+    // teclado começa a abrir. Polling curto garante que o painel encolhe antes
+    // da lista ficar atrás do teclado.
+    const pollId = window.setInterval(sync, 80)
+    const stopPollId = window.setTimeout(() => window.clearInterval(pollId), 1600)
+
     return () => {
-      document.body.style.overflow = previousOverflow
+      body.style.position = previous.position
+      body.style.top = previous.top
+      body.style.width = previous.width
+      window.scrollTo(0, scrollY)
+      vv?.removeEventListener("resize", sync)
+      vv?.removeEventListener("scroll", sync)
+      window.removeEventListener("focusin", sync)
+      window.removeEventListener("focusout", sync)
+      window.clearInterval(pollId)
+      window.clearTimeout(stopPollId)
+      setKeyboardOffset(0)
+      setViewportHeight(0)
     }
   }, [open])
 
@@ -563,6 +613,8 @@ function SearchSelect({
     setOpen(false)
     setQuery("")
   }
+
+  const keyboardOpen = keyboardOffset > 60
 
   return (
     <div className="block min-w-0">
@@ -585,8 +637,13 @@ function SearchSelect({
       {open && typeof document !== "undefined" &&
         createPortal(
           <motion.div
-            className="guto-calibration-select-overlay fixed top-0 left-0 right-0 z-[9999] flex flex-col justify-end bg-[rgba(13,35,65,0.28)] px-3 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-[max(env(safe-area-inset-top),0.5rem)] backdrop-blur-[2px] sm:justify-center sm:px-4 sm:pb-[max(env(safe-area-inset-bottom),1rem)]"
-            style={{ height: "var(--guto-viewport-height, 100dvh)" }}
+            className={`guto-calibration-select-overlay fixed inset-x-0 top-0 z-[9999] flex flex-col bg-[rgba(13,35,65,0.28)] px-3 pt-[max(env(safe-area-inset-top),0.5rem)] backdrop-blur-[2px] sm:px-4 ${
+              keyboardOpen ? "justify-start pb-3" : "justify-end pb-[max(env(safe-area-inset-bottom),0.5rem)] sm:justify-center sm:pb-[max(env(safe-area-inset-bottom),1rem)]"
+            }`}
+            style={{
+              // Altura medida pelo visualViewport — exclui o teclado iOS quando aberto.
+              height: viewportHeight ? `${viewportHeight}px` : "100dvh",
+            }}
             role="presentation"
             onClick={close}
           >
@@ -595,7 +652,13 @@ function SearchSelect({
               role="dialog"
               aria-modal="true"
               aria-label={label}
-              className="mx-auto flex w-full max-w-[398px] min-h-0 max-h-[min(92dvh,calc(var(--guto-viewport-height,100dvh)-max(env(safe-area-inset-top),0.75rem)-max(env(safe-area-inset-bottom),0.75rem)))] flex-col rounded-[28px] border border-white/80 bg-white/95 p-3 shadow-[0_24px_60px_rgba(13,35,65,0.24)] sm:max-h-[calc(var(--guto-viewport-height,100dvh)-2rem)]"
+              className="mx-auto flex w-full max-w-[398px] min-h-0 flex-col rounded-[28px] border border-white/80 bg-white/95 p-3 shadow-[0_24px_60px_rgba(13,35,65,0.24)]"
+              style={{
+                // Painel sempre cabe na área visível (sem teclado), com folgas pra safe-area.
+                maxHeight: viewportHeight
+                  ? `calc(${viewportHeight}px - max(env(safe-area-inset-top), 0.75rem) - max(env(safe-area-inset-bottom), 0.75rem))`
+                  : "92dvh",
+              }}
               onClick={(event) => event.stopPropagation()}
             >
               <div className="mb-2 flex items-center justify-between gap-3">
@@ -609,7 +672,7 @@ function SearchSelect({
                 </button>
               </div>
               <input
-                type="text"
+                type="search"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder={searchPlaceholder}
@@ -617,12 +680,6 @@ function SearchSelect({
                 enterKeyHint="search"
                 autoComplete="off"
                 className="h-10 w-full shrink-0 rounded-full border border-[rgba(82,231,255,0.55)] bg-white px-4 font-mono text-[12px] font-bold text-(--guto-navy) outline-none placeholder:text-[rgba(13,35,65,0.28)]"
-                onFocus={(event) => {
-                  const el = event.currentTarget
-                  window.requestAnimationFrame(() => {
-                    el?.scrollIntoView({ block: "nearest", behavior: "smooth" })
-                  })
-                }}
               />
               <div className="mt-2 min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1 [-webkit-overflow-scrolling:touch]">
                 {filteredOptions.map((option, index) => (
