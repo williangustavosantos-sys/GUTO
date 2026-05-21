@@ -905,7 +905,7 @@ export function ChatTab({
     } finally {
       proactiveInFlightRef.current = false
     }
-  }, [isMuted, language, onWorkoutPlanUpdated, synthesizeAndPlay])
+  }, [isMuted, language, onWorkoutPlanUpdated, synthesizeAndPlay, userId])
 
   const deliverWeeklyOpeningIfNeeded = useCallback(async () => {
     if (weeklyDeferredThisSessionRef.current) return
