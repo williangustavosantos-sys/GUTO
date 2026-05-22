@@ -1,32 +1,14 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { Globe2, Loader2, ShieldCheck, UserCog } from "lucide-react"
+import { Building2, Globe2, Loader2, ShieldCheck, UserCog } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 import { loginAdmin, loginCoach } from "@/lib/api/auth"
 import { getApiErrorMessage } from "@/lib/api/client"
 
 type AdminLang = "pt-BR" | "it-IT" | "en-US"
-type LoginMode = "admin" | "coach"
-
-const T = {
-  ink: "#04060f",
-  panel: "rgba(15,22,42,0.86)",
-  panelDp: "rgba(8,12,26,0.92)",
-  border: "rgba(82,231,255,0.10)",
-  borderHi: "rgba(82,231,255,0.26)",
-  fg: "#e8f4ff",
-  fg2: "rgba(232,244,255,0.60)",
-  fg3: "rgba(232,244,255,0.38)",
-  fg4: "rgba(232,244,255,0.18)",
-  cyan: "#52e7ff",
-  cyanSoft: "rgba(82,231,255,0.14)",
-  cyanLine: "rgba(82,231,255,0.24)",
-  bad: "#f87171",
-  badS: "rgba(248,113,113,0.13)",
-  mono: '"JetBrains Mono","SF Mono",Menlo,Monaco,Consolas,monospace',
-} as const
+type LoginRole = "super" | "empresa" | "coach"
 
 const LANGUAGES: Array<{ code: AdminLang; short: string; label: string }> = [
   { code: "pt-BR", short: "PT", label: "Português" },
@@ -34,89 +16,114 @@ const LANGUAGES: Array<{ code: AdminLang; short: string; label: string }> = [
   { code: "en-US", short: "EN", label: "English" },
 ]
 
-const COPY: Record<AdminLang, {
-  eyebrow: string
+type RoleCopy = {
+  title: string
+  sub: string
+  emailPh: string
+}
+
+interface Copy {
+  brandSub: string
   title: string
   subtitle: string
-  admin: string
-  coach: string
+  roleLabel: string
   email: string
   password: string
-  emailPlaceholder: string
   submit: string
   loading: string
   studentText: string
   studentLink: string
   restrictedStudent: string
   noAccess: string
-  language: string
-  opsTitle: string
-  opsOne: string
-  opsTwo: string
-  opsThree: string
-}> = {
+  demoNote: string
+  langLabel: string
+  roles: Record<LoginRole, RoleCopy>
+}
+
+const COPY: Record<AdminLang, Copy> = {
   "pt-BR": {
-    eyebrow: "SALA DE CONTROLE",
-    title: "Painel Operacional GUTO",
-    subtitle: "Entrada administrativa para empresas, coaches e operação. Navegador primeiro, leitura rápida, ação sem ruído.",
-    admin: "ADMIN",
-    coach: "COACH",
+    brandSub: "Sala de Controle",
+    title: "Entrar no painel",
+    subtitle: "Use sua conta GUTO para acessar o portal correspondente ao seu papel.",
+    roleLabel: "Eu sou",
     email: "E-mail",
     password: "Senha",
-    emailPlaceholder: "admin@guto.fit",
-    submit: "Entrar na Sala de Controle",
+    submit: "Entrar",
     loading: "Validando acesso",
-    studentText: "Aluno?",
+    studentText: "É aluno?",
     studentLink: "Login do app",
-    restrictedStudent: "Esta entrada é só para coaches e admin. Use a tela de aluno.",
-    noAccess: "Sua conta não tem acesso à Sala de Controle.",
-    language: "Idioma",
-    opsTitle: "Operação protegida",
-    opsOne: "Times isolados por permissão.",
-    opsTwo: "Ações burocráticas restritas a admin.",
-    opsThree: "Treino e dieta seguem sob controle do coach.",
+    restrictedStudent: "Esta entrada é só para coaches e admins. Use a tela do aplicativo.",
+    noAccess: "Sua conta não tem acesso ao painel.",
+    demoNote: "GUTO · v0.42.7 · sa-east-1",
+    langLabel: "Idioma",
+    roles: {
+      super: { title: "Super Admin", sub: "GUTO global", emailPh: "admin@guto.fit" },
+      empresa: { title: "Empresa", sub: "Academia / time", emailPh: "operacao@empresa.fit" },
+      coach: { title: "Coach", sub: "Treinador individual", emailPh: "coach@guto.fit" },
+    },
   },
   "it-IT": {
-    eyebrow: "SALA DI CONTROLLO",
-    title: "Pannello Operativo GUTO",
-    subtitle: "Accesso amministrativo per aziende, coach e operazione. Prima browser, lettura rapida, azione senza rumore.",
-    admin: "ADMIN",
-    coach: "COACH",
+    brandSub: "Sala di Controllo",
+    title: "Accedi al pannello",
+    subtitle: "Usa il tuo account GUTO per accedere al portale corrispondente al tuo ruolo.",
+    roleLabel: "Io sono",
     email: "E-mail",
     password: "Password",
-    emailPlaceholder: "admin@guto.fit",
-    submit: "Entra nella Sala di Controllo",
+    submit: "Accedi",
     loading: "Verifica accesso",
-    studentText: "Studente?",
+    studentText: "Sei studente?",
     studentLink: "Login app",
-    restrictedStudent: "Questo ingresso è solo per coach e admin. Usa la schermata studente.",
-    noAccess: "Il tuo account non ha accesso alla Sala di Controllo.",
-    language: "Lingua",
-    opsTitle: "Operazione protetta",
-    opsOne: "Team isolati per autorizzazione.",
-    opsTwo: "Azioni amministrative riservate agli admin.",
-    opsThree: "Allenamento e dieta restano sotto controllo del coach.",
+    restrictedStudent: "Questo ingresso è solo per coach e admin. Usa la schermata dell'app.",
+    noAccess: "Il tuo account non ha accesso al pannello.",
+    demoNote: "GUTO · v0.42.7 · sa-east-1",
+    langLabel: "Lingua",
+    roles: {
+      super: { title: "Super Admin", sub: "GUTO globale", emailPh: "admin@guto.fit" },
+      empresa: { title: "Azienda", sub: "Palestra / team", emailPh: "operazioni@azienda.fit" },
+      coach: { title: "Coach", sub: "Trainer individuale", emailPh: "coach@guto.fit" },
+    },
   },
   "en-US": {
-    eyebrow: "CONTROL ROOM",
-    title: "GUTO Operations Panel",
-    subtitle: "Administrative entry for companies, coaches and operations. Browser-first, fast reading, action without noise.",
-    admin: "ADMIN",
-    coach: "COACH",
+    brandSub: "Control Room",
+    title: "Sign in to the panel",
+    subtitle: "Use your GUTO account to access the portal that matches your role.",
+    roleLabel: "I am",
     email: "Email",
     password: "Password",
-    emailPlaceholder: "admin@guto.fit",
-    submit: "Enter Control Room",
+    submit: "Sign in",
     loading: "Validating access",
-    studentText: "Student?",
+    studentText: "Are you a student?",
     studentLink: "App login",
-    restrictedStudent: "This entry is only for coaches and admins. Use the student screen.",
-    noAccess: "Your account does not have access to the Control Room.",
-    language: "Language",
-    opsTitle: "Protected operation",
-    opsOne: "Teams isolated by permission.",
-    opsTwo: "Administrative actions restricted to admins.",
-    opsThree: "Workout and diet remain under coach control.",
+    restrictedStudent: "This entry is for coaches and admins only. Use the app screen instead.",
+    noAccess: "Your account does not have access to the panel.",
+    demoNote: "GUTO · v0.42.7 · sa-east-1",
+    langLabel: "Language",
+    roles: {
+      super: { title: "Super Admin", sub: "Global GUTO", emailPh: "admin@guto.fit" },
+      empresa: { title: "Company", sub: "Gym / team", emailPh: "ops@company.fit" },
+      coach: { title: "Coach", sub: "Individual trainer", emailPh: "coach@guto.fit" },
+    },
+  },
+}
+
+const ROLE_TONES: Record<LoginRole, { color: string; bg: string; bd: string; Icon: typeof ShieldCheck }> = {
+  super: {
+    color: "#52e7ff",
+    bg: "rgba(82,231,255,0.12)",
+    bd: "rgba(82,231,255,0.45)",
+    Icon: ShieldCheck,
+  },
+  empresa: {
+    color: "#a78bfa",
+    bg: "rgba(167,139,250,0.12)",
+    bd: "rgba(167,139,250,0.45)",
+    Icon: Building2,
+  },
+  coach: {
+    color: "#4ade80",
+    bg: "rgba(74,222,128,0.12)",
+    bd: "rgba(74,222,128,0.45)",
+    Icon: UserCog,
   },
 }
 
@@ -125,14 +132,16 @@ function isAdminLang(value: string | null): value is AdminLang {
 }
 
 export default function AdminLoginPage() {
+  // Start from pt-BR on both server and client to keep hydration deterministic;
+  // upgrade from localStorage once mounted.
+  const [language, setLanguage] = useState<AdminLang>("pt-BR")
+  useEffect(() => {
+    const stored = window.localStorage.getItem("guto-admin-language")
+    if (isAdminLang(stored)) setLanguage(stored)
+  }, [])
+  const [role, setRole] = useState<LoginRole>("super")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [mode, setMode] = useState<LoginMode>("admin")
-  const [language, setLanguage] = useState<AdminLang>(() => {
-    if (typeof window === "undefined") return "pt-BR"
-    const stored = window.localStorage.getItem("guto-admin-language")
-    return isAdminLang(stored) ? stored : "pt-BR"
-  })
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const { login } = useAuth()
@@ -143,6 +152,9 @@ export default function AdminLoginPage() {
     setLanguage(next)
     if (typeof window !== "undefined") {
       window.localStorage.setItem("guto-admin-language", next)
+      // The panel uses a different storage key; mirror the choice so it's consistent post-login.
+      const panelLang = next === "pt-BR" ? "pt" : next === "en-US" ? "en" : "it"
+      window.localStorage.setItem("guto-panel-lang", panelLang)
     }
   }
 
@@ -151,21 +163,16 @@ export default function AdminLoginPage() {
     setIsLoading(true)
     setError(null)
     try {
-      const res = mode === "admin" ? await loginAdmin(email, password) : await loginCoach(email, password)
+      // "super" and "empresa" share the admin login endpoint — the backend returns
+      // the actual role from the JWT. "coach" uses the coach login endpoint.
+      const res = role === "coach" ? await loginCoach(email, password) : await loginAdmin(email, password)
       login(res)
-
-      // Redirect por role:
-      //  - super_admin / admin → Sala de Controle (/coach é a rota host)
-      //  - coach              → /coach (a UI ajusta automaticamente, sidebar restrita)
-      //  - student            → erro: aluno deve usar /login
-      const role = res.role
-      if (role === "super_admin" || role === "admin" || role === "coach") {
-        router.push("/coach")
-      } else if (role === "student") {
-        setError(copy.restrictedStudent)
-      } else {
-        setError(copy.noAccess)
-      }
+      const actualRole = res.role
+      if (actualRole === "super_admin") router.push("/admin")
+      else if (actualRole === "admin") router.push("/empresa")
+      else if (actualRole === "coach") router.push("/coach")
+      else if (actualRole === "student") setError(copy.restrictedStudent)
+      else setError(copy.noAccess)
     } catch (err) {
       setError(getApiErrorMessage(err))
     } finally {
@@ -177,82 +184,146 @@ export default function AdminLoginPage() {
     <div
       className="fixed inset-0 z-50 overflow-y-auto"
       style={{
-        background: `
-          radial-gradient(80% 60% at 0% 0%, rgba(82,231,255,0.06) 0%, transparent 60%),
-          radial-gradient(60% 50% at 100% 100%, rgba(82,231,255,0.05) 0%, transparent 60%),
-          ${T.ink}
-        `,
-        color: T.fg,
-        fontFamily: T.mono,
+        background:
+          "radial-gradient(ellipse 120% 80% at 50% -10%, rgba(82,231,255,0.10) 0%, transparent 55%), #070D1B",
+        color: "#fff",
+        fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif',
       }}
     >
-      {/* scanlines */}
+      {/* Decorative grid */}
       <div
         aria-hidden
         style={{
           position: "fixed",
           inset: 0,
           pointerEvents: "none",
-          background:
-            "repeating-linear-gradient(0deg, rgba(82,231,255,0.018) 0px, rgba(82,231,255,0.018) 1px, transparent 1px, transparent 3px)",
-          mixBlendMode: "screen",
+          backgroundImage:
+            "linear-gradient(rgba(82,231,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(82,231,255,0.04) 1px, transparent 1px)",
+          backgroundSize: "60px 60px",
+          maskImage: "radial-gradient(ellipse 90% 80% at 50% 30%, #000 0%, transparent 80%)",
         }}
       />
 
-      <div className="relative z-10 mx-auto flex min-h-dvh w-full max-w-7xl flex-col px-6 py-5 lg:px-10">
-        <header className="flex items-center justify-between gap-4 border-b border-white/10 pb-5">
-          <div className="min-w-0">
-            <p className="font-mono text-[10px] font-black uppercase tracking-[0.34em] text-[#52e7ff]">{copy.eyebrow}</p>
-            <p className="mt-1 truncate font-mono text-lg font-black uppercase tracking-[0.24em] text-white">GUTO</p>
+      <div
+        className="relative z-10 mx-auto flex min-h-dvh w-full max-w-md flex-col px-5 py-5 sm:max-w-lg sm:px-6"
+        style={{ minHeight: "100dvh" }}
+      >
+        <header className="flex items-center justify-between gap-3 py-1">
+          <div
+            className="flex items-center gap-2"
+            style={{ color: "rgba(255,255,255,0.45)", fontSize: 11.5 }}
+          >
+            <Globe2 className="h-3.5 w-3.5" style={{ color: "#52e7ff" }} />
+            <span
+              style={{
+                fontSize: 10,
+                fontWeight: 600,
+                letterSpacing: "0.18em",
+                textTransform: "uppercase",
+              }}
+            >
+              {copy.langLabel}
+            </span>
           </div>
-          <LanguageSelector value={language} label={copy.language} onChange={changeLanguage} />
+          <LanguageSelector value={language} onChange={changeLanguage} />
         </header>
 
-        <main className="grid flex-1 items-center gap-8 py-8 lg:grid-cols-[1fr_460px] lg:py-12">
-          <section className="hidden lg:block">
-            <div className="max-w-2xl">
-              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[#52e7ff]/25 bg-[#52e7ff]/10 px-3 py-2">
-                <ShieldCheck className="h-4 w-4 text-[#52e7ff]" />
-                <span className="font-mono text-[10px] font-black uppercase tracking-[0.24em] text-[#9cf5ff]">{copy.opsTitle}</span>
+        <main className="flex flex-1 flex-col items-center justify-center py-8">
+          <div
+            className="w-full"
+            style={{ animation: "panel-fade-up 400ms ease forwards", maxWidth: 440 }}
+          >
+            {/* Brand */}
+            <div style={{ textAlign: "center", marginBottom: 28 }}>
+              <div
+                style={{
+                  width: 52,
+                  height: 52,
+                  borderRadius: 14,
+                  background: "linear-gradient(135deg, #52e7ff 0%, #0891B2 100%)",
+                  display: "grid",
+                  placeItems: "center",
+                  margin: "0 auto 14px",
+                  boxShadow: "0 0 32px rgba(82,231,255,0.35)",
+                  color: "#04131e",
+                }}
+              >
+                <ShieldCheck className="h-5 w-5" strokeWidth={2.4} />
               </div>
-              <h1 className="text-balance font-mono text-5xl font-black uppercase leading-tight tracking-normal text-white">
-                {copy.title}
-              </h1>
-              <p className="mt-5 max-w-xl font-mono text-sm leading-7 text-white/55">
-                {copy.subtitle}
-              </p>
-              <div className="mt-8 grid max-w-2xl gap-3">
-                {[copy.opsOne, copy.opsTwo, copy.opsThree].map((item, index) => (
-                  <div key={item} className="flex items-center gap-3 border-l border-[#52e7ff]/35 bg-white/[0.035] px-4 py-3">
-                    <span className="font-mono text-xs font-black text-[#52e7ff]">0{index + 1}</span>
-                    <span className="font-mono text-xs font-bold uppercase tracking-[0.12em] text-white/70">{item}</span>
-                  </div>
-                ))}
+              <div
+                style={{
+                  fontFamily: '"JetBrains Mono", "SF Mono", Menlo, Monaco, monospace',
+                  fontSize: 22,
+                  fontWeight: 600,
+                  color: "#fff",
+                  letterSpacing: "0.05em",
+                  marginBottom: 4,
+                }}
+              >
+                GUTO
               </div>
+              <div style={{ fontSize: 13, color: "rgba(255,255,255,0.45)" }}>{copy.brandSub}</div>
             </div>
-          </section>
 
-          <section className="w-full">
-            <div className="mb-5 lg:hidden">
-              <h1 className="font-mono text-2xl font-black uppercase tracking-normal text-white">{copy.title}</h1>
-              <p className="mt-2 font-mono text-xs leading-6 text-white/50">{copy.subtitle}</p>
-            </div>
+            {/* Glass card */}
             <div
-              className="w-full border border-[#52e7ff]/25 bg-[#080c1a]/95 p-5 shadow-[0_0_40px_rgba(82,231,255,0.10),0_4px_30px_rgba(0,0,0,0.5)] backdrop-blur md:p-8"
-              style={{ borderRadius: 8 }}
+              style={{
+                background: "rgba(255,255,255,0.04)",
+                border: "1px solid rgba(255,255,255,0.10)",
+                borderRadius: 20,
+                padding: "26px 22px 22px",
+                boxShadow:
+                  "0 24px 60px rgba(0,0,0,0.50), inset 0 1px 0 rgba(255,255,255,0.07)",
+                backdropFilter: "blur(20px)",
+                WebkitBackdropFilter: "blur(20px)",
+              }}
             >
-              <div className="mb-6 grid grid-cols-2 gap-2">
-                <ModeButton active={mode === "admin"} onClick={() => setMode("admin")}>
-                  <ShieldCheck style={{ width: 12, height: 12 }} />
-                  {copy.admin}
-                </ModeButton>
-                <ModeButton active={mode === "coach"} onClick={() => setMode("coach")}>
-                  <UserCog style={{ width: 12, height: 12 }} />
-                  {copy.coach}
-                </ModeButton>
+              <div style={{ marginBottom: 20 }}>
+                <div
+                  style={{
+                    fontSize: 19,
+                    fontWeight: 600,
+                    color: "#fff",
+                    marginBottom: 4,
+                    letterSpacing: "-0.01em",
+                  }}
+                >
+                  {copy.title}
+                </div>
+                <div style={{ fontSize: 13, color: "rgba(255,255,255,0.50)", lineHeight: 1.5 }}>
+                  {copy.subtitle}
+                </div>
               </div>
 
-              <form onSubmit={handleSubmit} className="grid gap-4">
+              {/* Role selector */}
+              <div style={{ marginBottom: 20 }}>
+                <div
+                  style={{
+                    fontSize: 10.5,
+                    fontWeight: 700,
+                    letterSpacing: "0.16em",
+                    textTransform: "uppercase",
+                    color: "rgba(255,255,255,0.45)",
+                    marginBottom: 10,
+                  }}
+                >
+                  {copy.roleLabel}
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  {(["super", "empresa", "coach"] as LoginRole[]).map((r) => (
+                    <RoleTile
+                      key={r}
+                      role={r}
+                      active={role === r}
+                      title={copy.roles[r].title}
+                      sub={copy.roles[r].sub}
+                      onClick={() => setRole(r)}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <form onSubmit={handleSubmit} className="flex flex-col gap-3">
                 <FormField label={copy.email}>
                   <input
                     type="email"
@@ -260,7 +331,7 @@ export default function AdminLoginPage() {
                     onChange={(e) => setEmail(e.target.value)}
                     autoComplete="email"
                     required
-                    placeholder={copy.emailPlaceholder}
+                    placeholder={copy.roles[role].emailPh}
                     style={fieldStyle}
                   />
                 </FormField>
@@ -278,7 +349,20 @@ export default function AdminLoginPage() {
                 </FormField>
 
                 {error && (
-                  <div className="border border-red-400/30 bg-red-400/10 px-4 py-3 text-center font-mono text-[10px] font-bold uppercase tracking-[0.10em] text-red-300">
+                  <div
+                    style={{
+                      marginTop: 4,
+                      padding: "10px 12px",
+                      borderRadius: 10,
+                      background: "rgba(248,113,113,0.10)",
+                      border: "1px solid rgba(248,113,113,0.35)",
+                      color: "#fda4a4",
+                      fontSize: 12.5,
+                      fontWeight: 500,
+                      lineHeight: 1.4,
+                    }}
+                    role="alert"
+                  >
                     {error}
                   </div>
                 )}
@@ -286,12 +370,31 @@ export default function AdminLoginPage() {
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="mt-2 flex h-12 items-center justify-center gap-2 bg-[#52e7ff] font-mono text-[11px] font-black uppercase tracking-[0.18em] text-[#04131e] shadow-[0_0_22px_rgba(82,231,255,0.30)] transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
-                  style={{ borderRadius: 8 }}
+                  style={{
+                    marginTop: 10,
+                    width: "100%",
+                    height: 46,
+                    borderRadius: 12,
+                    cursor: isLoading ? "not-allowed" : "pointer",
+                    background: isLoading
+                      ? "rgba(82,231,255,0.30)"
+                      : "linear-gradient(135deg, #52e7ff 0%, #0891B2 100%)",
+                    border: "none",
+                    color: "#04131e",
+                    fontSize: 14,
+                    fontWeight: 700,
+                    letterSpacing: "0.02em",
+                    boxShadow: isLoading ? "none" : "0 0 24px rgba(82,231,255,0.35)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 10,
+                    transition: "all 200ms ease",
+                  }}
                 >
                   {isLoading ? (
                     <>
-                      <Loader2 style={{ width: 18, height: 18 }} className="animate-spin" />
+                      <Loader2 className="h-4 w-4 animate-spin" />
                       {copy.loading}
                     </>
                   ) : (
@@ -300,85 +403,143 @@ export default function AdminLoginPage() {
                 </button>
               </form>
 
-              <div className="mt-6 border-t border-white/10 pt-5 text-center font-mono text-[10px] font-black uppercase tracking-[0.18em] text-white/25">
+              <div
+                style={{
+                  marginTop: 18,
+                  textAlign: "center",
+                  fontSize: 12,
+                  color: "rgba(255,255,255,0.50)",
+                }}
+              >
                 {copy.studentText}{" "}
-                <a href="/login" className="text-[#52e7ff] no-underline hover:text-white">
+                <a
+                  href="/login"
+                  style={{
+                    color: "#52e7ff",
+                    fontWeight: 600,
+                    textDecoration: "none",
+                  }}
+                >
                   {copy.studentLink}
                 </a>
               </div>
             </div>
-          </section>
+
+            <div
+              style={{
+                textAlign: "center",
+                marginTop: 20,
+                fontFamily: '"JetBrains Mono", "SF Mono", Menlo, Monaco, monospace',
+                fontSize: 10,
+                color: "rgba(255,255,255,0.20)",
+                letterSpacing: "0.18em",
+              }}
+            >
+              {copy.demoNote}
+            </div>
+          </div>
         </main>
       </div>
+
     </div>
   )
 }
 
 function LanguageSelector({
   value,
-  label,
   onChange,
 }: {
   value: AdminLang
-  label: string
   onChange: (value: AdminLang) => void
 }) {
   return (
-    <div className="flex items-center gap-2 rounded-md border border-white/10 bg-white/[0.035] p-1">
-      <div className="hidden items-center gap-2 px-2 font-mono text-[9px] font-black uppercase tracking-[0.2em] text-white/35 sm:flex">
-        <Globe2 className="h-3.5 w-3.5 text-[#52e7ff]" />
-        {label}
-      </div>
-      {LANGUAGES.map((lang) => (
-        <button
-          key={lang.code}
-          type="button"
-          onClick={() => onChange(lang.code)}
-          title={lang.label}
-          className={`h-8 min-w-9 rounded px-2 font-mono text-[10px] font-black uppercase transition ${
-            value === lang.code ? "bg-[#52e7ff] text-[#04131e]" : "text-white/45 hover:bg-white/10 hover:text-white"
-          }`}
-        >
-          {lang.short}
-        </button>
-      ))}
+    <div className="flex items-center gap-1.5">
+      {LANGUAGES.map((lang) => {
+        const active = value === lang.code
+        return (
+          <button
+            key={lang.code}
+            type="button"
+            onClick={() => onChange(lang.code)}
+            title={lang.label}
+            style={{
+              height: 30,
+              padding: "0 11px",
+              borderRadius: 8,
+              cursor: "pointer",
+              background: active ? "rgba(82,231,255,0.14)" : "transparent",
+              border: `1px solid ${active ? "rgba(82,231,255,0.40)" : "rgba(255,255,255,0.10)"}`,
+              color: active ? "#52e7ff" : "rgba(255,255,255,0.55)",
+              fontSize: 12,
+              fontWeight: active ? 600 : 500,
+              letterSpacing: "0.02em",
+            }}
+          >
+            {lang.short}
+          </button>
+        )
+      })}
     </div>
   )
 }
 
-function ModeButton({
+function RoleTile({
+  role,
   active,
+  title,
+  sub,
   onClick,
-  children,
 }: {
+  role: LoginRole
   active: boolean
+  title: string
+  sub: string
   onClick: () => void
-  children: React.ReactNode
 }) {
+  const tone = ROLE_TONES[role]
+  const { Icon } = tone
   return (
     <button
       type="button"
       onClick={onClick}
       style={{
-        flex: 1,
-        height: 36,
-        borderRadius: 10,
+        padding: "14px 8px",
+        borderRadius: 12,
         cursor: "pointer",
-        border: active ? `1px solid ${T.cyan}` : `1px solid ${T.border}`,
-        background: active ? T.cyanSoft : "transparent",
-        color: active ? T.cyan : T.fg3,
-        fontFamily: T.mono,
-        fontSize: 9,
-        fontWeight: 900,
-        letterSpacing: "0.22em",
-        textTransform: "uppercase",
-        display: "inline-flex",
+        background: active ? tone.bg : "rgba(255,255,255,0.03)",
+        border: `1px solid ${active ? tone.bd : "rgba(255,255,255,0.08)"}`,
+        color: active ? tone.color : "rgba(255,255,255,0.65)",
+        display: "flex",
+        flexDirection: "column",
         alignItems: "center",
-        justifyContent: "center",
         gap: 6,
+        transition: "all 160ms ease",
+        textAlign: "center",
+        minWidth: 0,
       }}
     >
-      {children}
+      <Icon className="h-[18px] w-[18px]" />
+      <div>
+        <div
+          style={{
+            fontSize: 12,
+            fontWeight: active ? 600 : 500,
+            lineHeight: 1.2,
+            marginBottom: 3,
+          }}
+        >
+          {title}
+        </div>
+        <div
+          style={{
+            fontSize: 10.5,
+            color: active ? `${tone.color}b3` : "rgba(255,255,255,0.32)",
+            lineHeight: 1.3,
+          }}
+        >
+          {sub}
+        </div>
+      </div>
     </button>
   )
 }
@@ -388,12 +549,10 @@ function FormField({ label, children }: { label: string; children: React.ReactNo
     <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
       <span
         style={{
-          fontFamily: T.mono,
-          fontSize: 9,
-          fontWeight: 900,
-          color: T.fg3,
-          letterSpacing: "0.22em",
-          textTransform: "uppercase",
+          fontSize: 11.5,
+          fontWeight: 500,
+          color: "rgba(255,255,255,0.55)",
+          letterSpacing: "0.02em",
         }}
       >
         {label}
@@ -406,12 +565,11 @@ function FormField({ label, children }: { label: string; children: React.ReactNo
 const fieldStyle: React.CSSProperties = {
   height: 44,
   padding: "0 14px",
-  background: "rgba(0,0,0,0.40)",
-  border: `1px solid ${T.border}`,
+  background: "rgba(0,0,0,0.30)",
+  border: "1px solid rgba(255,255,255,0.12)",
   borderRadius: 10,
-  boxShadow: "inset 0 2px 6px rgba(0,0,0,0.45)",
-  color: T.fg,
-  fontFamily: T.mono,
-  fontSize: 13,
+  color: "#fff",
+  fontSize: 14,
   outline: "none",
+  width: "100%",
 }

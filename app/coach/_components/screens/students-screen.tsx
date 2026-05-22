@@ -51,7 +51,46 @@ export function StudentsScreen() {
   }, [students, empresaFilter, riskFilter])
 
   return (
-    <div style={{ padding: "24px 28px" }}>
+    <>
+    <style>{`
+      .guto-students-screen {
+        padding: clamp(14px, 3vw, 28px);
+      }
+      .guto-students-row {
+        display: grid;
+        grid-template-columns: minmax(180px, 2fr) 110px 110px 90px 110px auto auto;
+        align-items: center;
+        gap: 14px;
+        padding: 12px 16px;
+        background: ${T.panel};
+        border: 1px solid ${T.border};
+        border-radius: 12px;
+      }
+      @media (max-width: 980px) {
+        .guto-students-row {
+          grid-template-columns: minmax(0, 1fr) auto;
+        }
+        .guto-students-row-meta {
+          display: none !important;
+        }
+      }
+      @media (max-width: 640px) {
+        .guto-students-row {
+          grid-template-columns: minmax(0, 1fr);
+          gap: 10px;
+        }
+        .guto-students-actions {
+          display: grid !important;
+          grid-template-columns: 1fr 1fr;
+          width: 100%;
+        }
+        .guto-students-actions button {
+          justify-content: center;
+          width: 100%;
+        }
+      }
+    `}</style>
+    <div className="guto-students-screen">
       {/* Search + filtros principais */}
       <div
         style={{
@@ -130,19 +169,7 @@ export function StudentsScreen() {
           const risk = studentRisk(s)
           const teamName = s.teamName ?? teams.find((t) => t.id === s.teamId)?.name ?? "—"
           return (
-            <div
-              key={s.userId}
-              style={{
-                display: "grid",
-                gridTemplateColumns: "minmax(180px,2fr) 110px 110px 90px 110px auto auto",
-                alignItems: "center",
-                gap: 14,
-                padding: "12px 16px",
-                background: T.panel,
-                border: `1px solid ${T.border}`,
-                borderRadius: 12,
-              }}
-            >
+            <div key={s.userId} className="guto-students-row">
               <button
                 onClick={() => openStudent(s)}
                 style={{
@@ -183,6 +210,7 @@ export function StudentsScreen() {
               </button>
               <Pill tone={riskTone(risk)}>{riskShortLabel(risk)}</Pill>
               <span
+                className="guto-students-row-meta"
                 style={{
                   fontFamily: T.mono,
                   fontSize: 10,
@@ -199,6 +227,7 @@ export function StudentsScreen() {
                 {s.weeklyXp} XP
               </span>
               <span
+                className="guto-students-row-meta"
                 style={{
                   fontFamily: T.mono,
                   fontSize: 10,
@@ -211,54 +240,60 @@ export function StudentsScreen() {
               >
                 {teamName}
               </span>
-              <button
-                title="Copiar convite"
-                onClick={async () => {
-                  try {
-                    const result = await getAdminStudentInvite(s.userId)
-                    const link =
-                      result.inviteLink ??
-                      (await regenerateAdminStudentInvite(s.userId)).inviteLink
-                    await navigator.clipboard.writeText(link)
-                    toast.success("Link copiado.")
-                  } catch {
-                    toast.error("Não foi possível copiar o convite.")
-                  }
-                }}
-                style={{
-                  height: 30,
-                  padding: "0 10px",
-                  borderRadius: 8,
-                  border: `1px solid ${T.border}`,
-                  background: "rgba(232,244,255,0.06)",
-                  color: T.fg3,
-                  cursor: "pointer",
-                  fontFamily: T.mono,
-                  fontSize: 9,
-                  fontWeight: 900,
-                  letterSpacing: "0.18em",
-                  textTransform: "uppercase",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 6,
-                }}
-              >
-                <Copy className="h-3 w-3" />
-                Convite
-              </button>
-              <button
-                onClick={() => openStudent(s)}
-                style={{
-                  background: "none",
-                  border: "none",
-                  color: T.fg4,
-                  cursor: "pointer",
-                  padding: 4,
-                }}
-                aria-label="Abrir aluno"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </button>
+              <div className="guto-students-actions" style={{ display: "flex", gap: 8 }}>
+                <button
+                  title="Copiar convite"
+                  onClick={async () => {
+                    try {
+                      const result = await getAdminStudentInvite(s.userId)
+                      const link =
+                        result.inviteLink ??
+                        (await regenerateAdminStudentInvite(s.userId)).inviteLink
+                      await navigator.clipboard.writeText(link)
+                      toast.success("Link copiado.")
+                    } catch {
+                      toast.error("Não foi possível copiar o convite.")
+                    }
+                  }}
+                  style={{
+                    height: 30,
+                    padding: "0 10px",
+                    borderRadius: 8,
+                    border: `1px solid ${T.border}`,
+                    background: "rgba(232,244,255,0.06)",
+                    color: T.fg3,
+                    cursor: "pointer",
+                    fontFamily: T.mono,
+                    fontSize: 9,
+                    fontWeight: 900,
+                    letterSpacing: "0.18em",
+                    textTransform: "uppercase",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                  }}
+                >
+                  <Copy className="h-3 w-3" />
+                  Convite
+                </button>
+                <button
+                  onClick={() => openStudent(s)}
+                  style={{
+                    minWidth: 30,
+                    height: 30,
+                    borderRadius: 8,
+                    border: `1px solid ${T.border}`,
+                    background: "rgba(232,244,255,0.06)",
+                    color: T.cyan,
+                    cursor: "pointer",
+                    display: "grid",
+                    placeItems: "center",
+                  }}
+                  aria-label="Abrir aluno"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
             </div>
           )
         })}
@@ -272,5 +307,6 @@ export function StudentsScreen() {
         )}
       </div>
     </div>
+    </>
   )
 }

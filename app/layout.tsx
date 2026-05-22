@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next"
 import { Inter, JetBrains_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { AuthProvider } from "@/components/auth-provider"
+import { RootFrame } from "@/components/root-frame"
 import "./globals.css"
 
 const inter = Inter({
@@ -87,9 +88,7 @@ export default function RootLayout({
     <html lang="pt-BR" className={`bg-background ${inter.variable} ${jetbrainsMono.variable}`}>
       <body className="font-sans text-foreground">
         <AuthProvider>
-          <main className="mx-auto flex h-dvh w-full max-w-[430px] flex-col overflow-hidden bg-white">
-            {children}
-          </main>
+          <RootFrame>{children}</RootFrame>
         </AuthProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>

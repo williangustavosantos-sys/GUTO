@@ -208,7 +208,7 @@ export function CreateStudentDialog() {
 
           {studentLimitReached && (
             <p style={{ fontFamily: T.mono, fontSize: 10, color: T.warn, fontWeight: 900, letterSpacing: "0.10em" }}>
-              ⚠ Limite do plano atingido.
+              LIMITE DO PLANO ATINGIDO.
             </p>
           )}
         </div>
@@ -339,7 +339,7 @@ export function CreateCoachDialog() {
 
           {coachLimitReached && (
             <p style={{ fontFamily: T.mono, fontSize: 10, color: T.warn, fontWeight: 900, letterSpacing: "0.10em" }}>
-              ⚠ Limite de coaches atingido.
+              LIMITE DE COACHES ATINGIDO.
             </p>
           )}
         </div>

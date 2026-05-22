@@ -43,14 +43,12 @@ export function HojeScreen() {
   )
 
   return (
-    <div style={{ padding: "24px 28px", display: "flex", flexDirection: "column", gap: 24 }}>
+    <div style={{ padding: "clamp(14px, 3vw, 28px)", display: "flex", flexDirection: "column", gap: 24 }}>
       {/* Stat cards */}
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: isSuperAdmin
-            ? "repeat(5, minmax(0, 1fr))"
-            : "repeat(4, minmax(0, 1fr))",
+          gridTemplateColumns: "repeat(auto-fit, minmax(156px, 1fr))",
           gap: 12,
         }}
       >
@@ -101,7 +99,9 @@ export function HojeScreen() {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: isSuperAdmin && empresasAtivas.length > 0 ? "1.3fr 1fr" : "1fr",
+          gridTemplateColumns: isSuperAdmin && empresasAtivas.length > 0
+            ? "repeat(auto-fit, minmax(min(100%, 360px), 1fr))"
+            : "1fr",
           gap: 18,
         }}
       >
@@ -212,7 +212,7 @@ function EmpresaRow({ team, onClick }: { team: AdminTeam; onClick: () => void })
       onClick={onClick}
       style={{
         display: "grid",
-        gridTemplateColumns: "1fr auto auto",
+        gridTemplateColumns: "minmax(0, 1fr) auto auto",
         alignItems: "center",
         gap: 12,
         padding: "12px 16px",

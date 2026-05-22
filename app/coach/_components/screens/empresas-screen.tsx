@@ -45,7 +45,49 @@ export function EmpresasScreen() {
   }, [teams, students, coaches])
 
   return (
-    <div style={{ padding: "24px 28px" }}>
+    <>
+    <style>{`
+      .guto-empresas-screen {
+        padding: clamp(14px, 3vw, 28px);
+      }
+      .guto-empresas-header,
+      .guto-empresas-row {
+        display: grid;
+        grid-template-columns: minmax(180px, 2fr) 110px 80px 110px 110px 90px auto;
+        gap: 14px;
+      }
+      .guto-empresas-row {
+        align-items: center;
+        padding: 14px 18px;
+        background: ${T.panel};
+        border: 1px solid ${T.border};
+        border-radius: 12px;
+        cursor: pointer;
+        text-align: left;
+      }
+      @media (max-width: 980px) {
+        .guto-empresas-header {
+          display: none;
+        }
+        .guto-empresas-row {
+          grid-template-columns: minmax(0, 1fr) auto;
+        }
+        .guto-empresas-row-meta {
+          display: none !important;
+        }
+      }
+      @media (max-width: 640px) {
+        .guto-empresas-row {
+          grid-template-columns: minmax(0, 1fr);
+          gap: 10px;
+        }
+        .guto-empresas-open {
+          justify-content: center;
+          width: 100%;
+        }
+      }
+    `}</style>
+    <div className="guto-empresas-screen">
       {/* Filtros */}
       <div
         style={{
@@ -68,10 +110,8 @@ export function EmpresasScreen() {
 
       {/* Header row */}
       <div
+        className="guto-empresas-header"
         style={{
-          display: "grid",
-          gridTemplateColumns: "minmax(180px,2fr) 110px 80px 110px 110px 90px auto",
-          gap: 14,
           padding: "0 18px 8px",
           fontFamily: T.mono,
           fontSize: 8,
@@ -97,18 +137,7 @@ export function EmpresasScreen() {
             <button
               key={team.id}
               onClick={() => openEmpresa(team)}
-              style={{
-                display: "grid",
-                gridTemplateColumns: "minmax(180px,2fr) 110px 80px 110px 110px 90px auto",
-                alignItems: "center",
-                gap: 14,
-                padding: "14px 18px",
-                background: T.panel,
-                border: `1px solid ${T.border}`,
-                borderRadius: 12,
-                cursor: "pointer",
-                textAlign: "left",
-              }}
+              className="guto-empresas-row"
             >
               <div style={{ minWidth: 0 }}>
                 <div
@@ -140,6 +169,7 @@ export function EmpresasScreen() {
               </div>
               <Pill tone={teamStatusTone(team.status)}>{teamStatusLabel(team.status)}</Pill>
               <span
+                className="guto-empresas-row-meta"
                 style={{
                   fontFamily: T.mono,
                   fontSize: 10,
@@ -150,9 +180,14 @@ export function EmpresasScreen() {
               >
                 {planLabel(team.plan)}
               </span>
-              <UsageBar value={stats.students} max={team.customLimits?.maxStudents ?? null} />
-              <UsageBar value={stats.coaches} max={team.customLimits?.maxCoaches ?? null} />
+              <span className="guto-empresas-row-meta">
+                <UsageBar value={stats.students} max={team.customLimits?.maxStudents ?? null} />
+              </span>
+              <span className="guto-empresas-row-meta">
+                <UsageBar value={stats.coaches} max={team.customLimits?.maxCoaches ?? null} />
+              </span>
               <span
+                className="guto-empresas-row-meta"
                 style={{
                   fontFamily: T.mono,
                   fontSize: 12,
@@ -163,6 +198,7 @@ export function EmpresasScreen() {
                 {stats.critical}
               </span>
               <span
+                className="guto-empresas-open"
                 style={{
                   padding: "6px 10px",
                   borderRadius: 8,
@@ -220,5 +256,6 @@ export function EmpresasScreen() {
         </p>
       </Plate>
     </div>
+    </>
   )
 }

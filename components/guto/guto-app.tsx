@@ -61,7 +61,6 @@ interface StoredProfile extends StoredGutoProfile {
   namingConfirmed?: boolean
   calibrationComplete?: boolean
   pactAccepted?: boolean
-  phone?: string
   consentHealthFitness?: boolean
   acceptedTerms?: boolean
   consentAcceptedAt?: string
@@ -128,7 +127,6 @@ const stageCopy: Record<
     settingsPhysicalData: string
     settingsResidence: string
     settingsFoodRestrictions: string
-    settingsPhoneLabel: string
     settingsSave: string
     settingsSavedMsg: string
     settingsFoodIntolerances: string
@@ -202,7 +200,6 @@ const stageCopy: Record<
     settingsPhysicalData: "Peso / Altura",
     settingsResidence: "Onde Mora",
     settingsFoodRestrictions: "Restrições",
-    settingsPhoneLabel: "Telefone",
     settingsSave: "Salvar",
     settingsSavedMsg: "Configurações salvas.",
     settingsFoodIntolerances: "Intolerâncias",
@@ -275,7 +272,6 @@ const stageCopy: Record<
     settingsPhysicalData: "Weight / Height",
     settingsResidence: "Where You Live",
     settingsFoodRestrictions: "Restrictions",
-    settingsPhoneLabel: "Phone",
     settingsSave: "Save",
     settingsSavedMsg: "Settings saved.",
     settingsFoodIntolerances: "Intolerances",
@@ -348,7 +344,6 @@ const stageCopy: Record<
     settingsPhysicalData: "Peso / Altezza",
     settingsResidence: "Dove Abiti",
     settingsFoodRestrictions: "Restrizioni",
-    settingsPhoneLabel: "Telefono",
     settingsSave: "Salva",
     settingsSavedMsg: "Impostazioni salvate.",
     settingsFoodIntolerances: "Intolleranze",
@@ -645,7 +640,6 @@ export function GutoApp({
   const [settingsCountryDraft, setSettingsCountryDraft] = useState("")
   const [settingsCityDraft, setSettingsCityDraft] = useState("")
   const [settingsFoodRestrictionsDraft, setSettingsFoodRestrictionsDraft] = useState("")
-  const [settingsPhoneDraft, setSettingsPhoneDraft] = useState("")
   const [settingsSavedToast, setSettingsSavedToast] = useState(false)
   const [privacyConfirm, setPrivacyConfirm] = useState<"revoke" | "delete-step1" | "delete-step2" | "delete-done" | null>(null)
   const [deleteConfirmText, setDeleteConfirmText] = useState("")
@@ -1332,11 +1326,6 @@ export function GutoApp({
     [commitOnboardingName, draftName, isValidatingName, selectedLanguage, gutoUserId]
   )
 
-  // Hoist `userId` para que o React Compiler enxergue apenas o primitivo
-  // dentro de `openSettings` — assim a dep inferida bate com a manual e
-  // mantemos a memoização granular (re-cria só quando o userId muda, não
-  // quando qualquer campo de `user` muda).
-  const settingsUserId = user?.userId
   const openSettings = useCallback(() => {
     gutoAudio.playGutoFeedback("tap")
     setSettingsNameDraft(committedName || formatGutoName(userName || ""))
@@ -1353,17 +1342,12 @@ export function GutoApp({
     setSettingsHeightDraft(memory?.heightCm ? String(memory.heightCm) : "")
     setSettingsCountryDraft(memory?.country ?? "")
     setSettingsCityDraft(memory?.city ?? "")
-    const stored = (() => {
-      if (typeof window === "undefined" || !settingsUserId) return null
-      try { return JSON.parse(window.localStorage.getItem(`${STORAGE_KEY}-${settingsUserId}`) ?? "null") as StoredProfile | null } catch { return null }
-    })()
     setSettingsFoodRestrictionsDraft(memory?.foodRestrictions?.trim() || "")
-    setSettingsPhoneDraft(stored?.phone ?? "")
     setSettingsMode("menu")
     setSettingsSavedToast(false)
     setNameGate(null)
     setStage("settings")
-  }, [committedName, memory, settingsUserId, userName])
+  }, [committedName, memory, userName])
 
   const handleSettingsBack = useCallback(() => {
     gutoAudio.playGutoFeedback("tap")
@@ -1534,11 +1518,10 @@ export function GutoApp({
       persistMemory({ biologicalSex: settingsSexDraft, userAge: ageNum })
       setMemory((prev) => prev ? { ...prev, biologicalSex: settingsSexDraft, userAge: ageNum } : prev)
     }
-    persistProfile({ phone: settingsPhoneDraft.trim() || undefined })
     showSavedToast()
     setSettingsMode("menu")
     setStage("system")
-  }, [persistMemory, persistProfile, settingsAgeDraft, settingsPhoneDraft, settingsSexDraft, showSavedToast])
+  }, [persistMemory, settingsAgeDraft, settingsSexDraft, showSavedToast])
 
   const saveGoalSettings = useCallback(() => {
     if (!settingsGoalDraft) return
@@ -1633,7 +1616,6 @@ export function GutoApp({
       userId: user.userId,
       language: stored?.language ?? selectedLanguage,
       userName: stored?.userName ?? committedName,
-      phone: stored?.phone ?? null,
       consents: {
         consentHealthFitness: stored?.consentHealthFitness ?? false,
         acceptedTerms: stored?.acceptedTerms ?? false,
@@ -1768,10 +1750,6 @@ export function GutoApp({
           )
           break
         }
-        case "phone":
-          persistProfile({ phone: String(value) || undefined })
-          persistMemory({ phone: String(value) || undefined })
-          break
         case "language": {
           const lang = value as SupportedLanguage
           if (!["pt-BR", "en-US", "it-IT"].includes(lang)) break
@@ -2917,7 +2895,7 @@ export function GutoApp({
               const t = translations[selectedLanguage].calibration
               const ageNum = parseInt(settingsAgeDraft, 10)
               const isAgeValid = !isNaN(ageNum) && ageNum >= 14 && ageNum <= 99
-              const canSave = Boolean((settingsSexDraft && isAgeValid) || settingsPhoneDraft.trim())
+              const canSave = Boolean(settingsSexDraft && isAgeValid)
               const inputClass = "w-full rounded-full border border-[rgba(82,231,255,0.45)] bg-white px-4 py-2.5 text-center font-mono text-[14px] font-black text-(--guto-navy) outline-none appearance-none [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               const labelClass = "mt-4 mb-2 font-mono text-[8px] font-black uppercase tracking-[0.2em] text-[rgba(13,35,65,0.42)]"
               return (
@@ -2952,16 +2930,6 @@ export function GutoApp({
                       onChange={(e) => setSettingsAgeDraft(e.target.value)}
                       placeholder="--"
                       autoComplete="off"
-                      className={inputClass}
-                    />
-                    <p className={labelClass}>{locale.settingsPhoneLabel}</p>
-                    <input
-                      type="tel"
-                      inputMode="tel"
-                      value={settingsPhoneDraft}
-                      onChange={(e) => setSettingsPhoneDraft(e.target.value)}
-                      placeholder="+55 11 99999-9999"
-                      autoComplete="tel"
                       className={inputClass}
                     />
                   </div>

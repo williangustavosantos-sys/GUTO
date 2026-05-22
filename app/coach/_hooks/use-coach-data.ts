@@ -24,6 +24,15 @@ export function useCoachData(
   isSuperAdmin: boolean,
   filters: CoachFilters
 ) {
+  const {
+    filter,
+    search,
+    coachFilter,
+    genderFilter,
+    minAgeFilter,
+    maxAgeFilter,
+    subscriptionStatusFilter,
+  } = filters
   const [students, setStudents] = useState<AdminStudent[]>([])
   const [coaches, setCoaches] = useState<AdminCoach[]>([])
   const [teams, setTeams] = useState<AdminTeam[]>([])
@@ -35,7 +44,6 @@ export function useCoachData(
   const [loading, setLoading] = useState(true)
 
   const fetchStudents = useCallback(async () => {
-    const { filter, search, coachFilter, genderFilter, minAgeFilter, maxAgeFilter, subscriptionStatusFilter } = filters
     const data = await getAdminStudents({
       search,
       coachId: isAdmin ? coachFilter : "",
@@ -49,8 +57,17 @@ export function useCoachData(
         "",
       subscriptionStatus: subscriptionStatusFilter,
     })
-    setStudents(data.students)
-  }, [filters, isAdmin])
+    setStudents(data.students ?? [])
+  }, [
+    coachFilter,
+    filter,
+    genderFilter,
+    isAdmin,
+    maxAgeFilter,
+    minAgeFilter,
+    search,
+    subscriptionStatusFilter,
+  ])
 
   const fetchTeamSummary = useCallback(async () => {
     try {
@@ -65,18 +82,18 @@ export function useCoachData(
   const fetchCoaches = useCallback(async () => {
     if (!isAdmin) return
     const data = await getAdminCoaches()
-    setCoaches(data.coaches)
+    setCoaches(data.coaches ?? [])
   }, [isAdmin])
 
   const fetchTeams = useCallback(async () => {
     if (!isSuperAdmin) return
     const data = await getAdminTeams()
-    setTeams(data.teams)
+    setTeams(data.teams ?? [])
   }, [isSuperAdmin])
 
   const fetchExerciseCatalog = useCallback(async () => {
     const data = await getAdminExerciseCatalog()
-    setExerciseCatalog(data.exercises)
+    setExerciseCatalog(data.exercises ?? [])
   }, [])
 
   const fetchRankings = useCallback(async () => {
@@ -87,7 +104,7 @@ export function useCoachData(
   const fetchGlobalLogs = useCallback(async () => {
     if (!isAdmin) return
     const data = await getAdminLogs()
-    setGlobalLogs(data.logs)
+    setGlobalLogs(data.logs ?? [])
   }, [isAdmin])
 
   const loadBase = useCallback(async () => {
