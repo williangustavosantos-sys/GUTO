@@ -179,7 +179,6 @@ export interface GutoMemory {
   heightCm?: number
   weightKg?: number
   foodRestrictions?: string
-  phone?: string
   lastWorkoutCompletedAt?: string
   completedWorkoutDates: string[]
   adaptedMissionDates: string[]
@@ -339,7 +338,6 @@ export async function saveGutoMemory(payload: {
   heightCm?: number
   weightKg?: number
   foodRestrictions?: string
-  phone?: string
   confirmedName?: boolean
   initialXpRewardSeen?: boolean
   lastWorkoutPlan?: GutoWorkoutPlan | null
