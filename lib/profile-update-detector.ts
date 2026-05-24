@@ -3,7 +3,6 @@ import type { SupportedLanguage } from "@/types/contract"
 export type ProfileField =
   | "name"
   | "language"
-  | "phone"
   | "country"
   | "age"
   | "weight"
@@ -100,17 +99,17 @@ const langLabels: Record<SupportedLanguage, string> = {
 
 const fieldHumanLabels: Record<SupportedLanguage, Record<ProfileField, string>> = {
   "pt-BR": {
-    name: "nome", language: "idioma", phone: "telefone", country: "cidade/país",
+    name: "nome", language: "idioma", country: "cidade/país",
     age: "idade", weight: "peso", height: "altura", goal: "objetivo",
     location: "local de treino", pathology: "limitação", foodRestrictions: "restrição alimentar",
   },
   "en-US": {
-    name: "name", language: "language", phone: "phone", country: "country/city",
+    name: "name", language: "language", country: "country/city",
     age: "age", weight: "weight", height: "height", goal: "goal",
     location: "training location", pathology: "limitation", foodRestrictions: "food restriction",
   },
   "it-IT": {
-    name: "nome", language: "lingua", phone: "telefono", country: "città/paese",
+    name: "nome", language: "lingua", country: "città/paese",
     age: "età", weight: "peso", height: "altezza", goal: "obiettivo",
     location: "luogo di allenamento", pathology: "limitazione", foodRestrictions: "restrizione alimentare",
   },
@@ -174,6 +173,7 @@ const blockedPatterns = [
   /(?:mudar?|trocar?|alterar?)\s+(?:meu\s+)?(?:coach|time|equipe|treinador)/i,
   /(?:apaga|exclui|remove|delete)\s+(?:tudo|everything|all)/i,
   /cancelar?\s+(?:minha\s+)?assinatura/i,
+  /(?:telefone|numero|número|celular|whatsapp|phone|number|cell|telefono)/i,
 ]
 
 // ─── Main detector ────────────────────────────────────────────────────────────
@@ -446,27 +446,6 @@ export function detectProfileUpdateIntent(
             humanLabel: labels.foodRestrictions,
             humanValue: val,
           }
-        }
-      }
-    }
-  }
-
-  // ── PHONE ────────────────────────────────────────────────────────────────────
-  {
-    const patterns: RegExp[] = [
-      /(?:meu\s+)?(?:telefone|numero|número|celular|whatsapp)\s+(?:é|agora\s+é)\s+([\+\d][\d\s\-\(\)]{5,})/i,
-      /(?:muda|atualiza|coloca)\s+(?:meu\s+)?(?:telefone|numero|número|celular)\s+(?:para|pra|to)\s+([\+\d][\d\s\-\(\)]{5,})/i,
-      /(?:my\s+)?(?:phone|number|cell)\s+(?:number\s+)?(?:is)\s+([\+\d][\d\s\-\(\)]{5,})/i,
-    ]
-    for (const p of patterns) {
-      const m = sl.match(p)
-      if (m?.[1]) {
-        return {
-          field: "phone",
-          value: m[1].trim(),
-          confirmationLevel: "light",
-          humanLabel: labels.phone,
-          humanValue: m[1].trim(),
         }
       }
     }
