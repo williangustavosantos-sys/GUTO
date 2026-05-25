@@ -734,7 +734,12 @@ export function GutoApp({
   const pactCompleteRef = useRef(false)
   const portalVideoRef = useRef<HTMLVideoElement | null>(null)
   const shellRef = useRef<HTMLDivElement | null>(null)
+  const memoryRef = useRef<GutoMemory | null>(null)
   const effectRegistry = useMemo(() => createGutoEffectRegistry(), [])
+
+  useEffect(() => {
+    memoryRef.current = memory
+  }, [memory])
 
   const schedule = useCallback((callback: () => void, delay: number) => {
     const timer = window.setTimeout(() => {
@@ -798,19 +803,36 @@ export function GutoApp({
   const persistMemory = useCallback(
     async (payload: GutoMemoryPayload, options?: { optimistic?: boolean }) => {
       const shouldOptimisticallyUpdate = options?.optimistic !== false
-      if (shouldOptimisticallyUpdate) {
-        setMemory((prev) => (prev ? { ...prev, ...payload } : (payload as import("@/lib/api/guto").GutoMemory)))
+      const memoryBeforeSave = memoryRef.current
+      const rollbackOptimisticUpdate = () => {
+        if (shouldOptimisticallyUpdate) {
+          memoryRef.current = memoryBeforeSave
+          setMemory(memoryBeforeSave)
+        }
       }
-      if (!user?.userId) return null
+
+      if (shouldOptimisticallyUpdate) {
+        const optimisticMemory = memoryBeforeSave ? { ...memoryBeforeSave, ...payload } : (payload as GutoMemory)
+        memoryRef.current = optimisticMemory
+        setMemory(optimisticMemory)
+      }
+
+      if (!user?.userId) {
+        rollbackOptimisticUpdate()
+        return null
+      }
+
       try {
         const updated = await saveGutoMemory({
           userId: gutoUserId,
           language: selectedLanguage,
           ...payload,
         })
+        memoryRef.current = updated
         setMemory(updated)
         return updated
       } catch (error) {
+        rollbackOptimisticUpdate()
         console.warn(`Memória do GUTO não sincronizada: ${getApiErrorMessage(error)}`)
         return null
       }
