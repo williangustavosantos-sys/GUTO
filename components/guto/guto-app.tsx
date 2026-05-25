@@ -5,6 +5,7 @@ import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { AnimatePresence, motion } from "framer-motion"
 import { Activity, ArrowLeft, Check, CheckCircle2, Download, Fingerprint, Languages, Loader2, Send, Settings, Shield, Trash2, UserRound, Volume2 } from "lucide-react"
+import { Country } from "country-state-city"
 
 import { BottomNavigation, type TabType } from "./bottom-navigation"
 import { createGutoEffectRegistry } from "./effects"
@@ -565,6 +566,54 @@ function hasStoredName(profile?: StoredProfile | null) {
 
 function hasMemoryName(memory?: GutoMemory | null) {
   return Boolean(firstRealGutoName(memory?.name))
+}
+
+function normalizeCountryLookup(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("pt-BR")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim()
+}
+
+function resolveCountryCodeFromDraft(country: string, language: SupportedLanguage): string | undefined {
+  const raw = country.trim()
+  if (!raw) return undefined
+
+  const directCode = raw.toUpperCase()
+  if (/^[A-Z]{2}$/.test(directCode) && Country.getCountryByCode(directCode)) return directCode
+
+  const aliases: Record<string, string> = {
+    brasil: "BR",
+    brazil: "BR",
+    italia: "IT",
+    italy: "IT",
+    usa: "US",
+    eua: "US",
+    "estados unidos": "US",
+    "united states": "US",
+    portugal: "PT",
+    espanha: "ES",
+    spain: "ES",
+    franca: "FR",
+    france: "FR",
+    alemanha: "DE",
+    germany: "DE",
+    argentina: "AR",
+  }
+  const normalizedRaw = normalizeCountryLookup(raw)
+  const alias = aliases[normalizedRaw]
+  if (alias) return alias
+
+  const locales = Array.from(new Set([language, "pt-BR", "en-US", "it-IT"]))
+  const displayNames = locales.map((locale) => new Intl.DisplayNames([locale], { type: "region" }))
+
+  return Country.getAllCountries().find((countryOption) => {
+    if (normalizeCountryLookup(countryOption.isoCode) === normalizedRaw) return true
+    if (normalizeCountryLookup(countryOption.name) === normalizedRaw) return true
+    return displayNames.some((names) => normalizeCountryLookup(names.of(countryOption.isoCode) ?? "") === normalizedRaw)
+  })?.isoCode
 }
 
 function hasMemoryCalibration(memory?: GutoMemory | null) {
@@ -1618,15 +1667,21 @@ export function GutoApp({
   const saveResidenceSettings = useCallback(async () => {
     const country = settingsCountryDraft.trim()
     const city = settingsCityDraft.trim()
+    const countryCode = resolveCountryCodeFromDraft(country, selectedLanguage)
+    if (!country || !countryCode || !city) {
+      showProfileSaveError()
+      return
+    }
     const updated = await persistSettingsMemory({
-      country: country || undefined,
-      city: city || undefined,
+      country,
+      countryCode,
+      city,
     })
     if (!updated) return
     showSavedToast()
     setSettingsMode("menu")
     setStage("system")
-  }, [persistSettingsMemory, settingsCityDraft, settingsCountryDraft, showSavedToast])
+  }, [persistSettingsMemory, selectedLanguage, settingsCityDraft, settingsCountryDraft, showProfileSaveError, showSavedToast])
 
   const saveFoodRestrictionsSettings = useCallback(async () => {
     const restrictions = settingsFoodRestrictionsDraft.trim()
