@@ -6,7 +6,7 @@ import { Apple, ChevronDown, ChevronUp, ClipboardList, Coffee, Droplets, Flame, 
 
 import { getDietPlan, generateDietPlan, type DietPlan, type DietMeal, type DietFood } from "@/lib/api/guto"
 import { ApiError } from "@/lib/api/client"
-import { sanitizeDietPlan } from "@/lib/diet-plan"
+import { DietPlanValidationError, sanitizeDietPlan } from "@/lib/diet-plan"
 import { getLanguage } from "../translations"
 import type { ValidLanguage } from "../translations"
 import { gutoAudio } from "@/lib/audio-haptics"
@@ -46,6 +46,7 @@ const dietCopy = {
     disclaimer: "Orientação fitness. Não substitui consulta médica ou nutricional.",
     timeoutError: "Ixi, meu sistema demorou demais pra calcular tua dieta. Aguenta aí e tenta de novo.",
     connectionError: "Perdi o fio com o cérebro por um instante. Confere a conexão e me chama de novo.",
+    invalidPlanError: "A dieta que voltou do cérebro falhou na checagem final. Não vou mostrar um plano duvidoso. Tente gerar de novo.",
     goalNames: {
       fat_loss: "Emagrecer",
       muscle_gain: "Hipertrofia",
@@ -86,6 +87,7 @@ const dietCopy = {
     disclaimer: "Fitness guidance only. Not a substitute for medical or nutritional advice.",
     timeoutError: "My system took too long to calculate your diet. Hold on and try again.",
     connectionError: "I lost the line to my brain for a moment. Check the connection and call me again.",
+    invalidPlanError: "The diet returned by the brain failed the final check. I will not show a doubtful plan. Generate it again.",
     goalNames: {
       fat_loss: "Fat Loss",
       muscle_gain: "Hypertrophy",
@@ -126,6 +128,7 @@ const dietCopy = {
     disclaimer: "Solo orientamento fitness. Non sostituisce la consulenza medica o nutrizionale.",
     timeoutError: "Il mio sistema ci ha messo troppo a calcolare la tua dieta. Aspetta un attimo e riprova.",
     connectionError: "Ho perso il filo col mio cervello per un attimo. Controlla la connessione e richiamami.",
+    invalidPlanError: "La dieta tornata dal cervello non ha superato il controllo finale. Non mostro un piano dubbio. Generala di nuovo.",
     goalNames: {
       fat_loss: "Dimagrire",
       muscle_gain: "Ipertrofia",
@@ -173,8 +176,9 @@ function isMissingProfileError(error: unknown) {
 
 function getDietErrorMessage(
   error: unknown,
-  copy: { timeoutError: string; connectionError: string }
+  copy: { timeoutError: string; connectionError: string; invalidPlanError: string }
 ): string {
+  if (error instanceof DietPlanValidationError) return copy.invalidPlanError
   if (error instanceof ApiError) {
     if (error.code === "TIMEOUT") return copy.timeoutError
     if (error.code === "CONNECTION_ERROR") return copy.connectionError
@@ -550,7 +554,7 @@ export function DietTab({ userId, language, onFoodDoubt, memory }: DietTabProps)
           if (cancelled) return
         }
 
-        setPlan(sanitizeDietPlan(fetched, latestMemoryRef.current, validLang))
+        setPlan(sanitizeDietPlan(fetched, latestMemoryRef.current))
         setStatus("ready")
       } catch (err: unknown) {
         if (cancelled) return
@@ -587,7 +591,7 @@ export function DietTab({ userId, language, onFoodDoubt, memory }: DietTabProps)
         return
       }
       const newPlan = await generateDietPlan(validLang)
-      setPlan(sanitizeDietPlan(newPlan, latestMemoryRef.current, validLang))
+      setPlan(sanitizeDietPlan(newPlan, latestMemoryRef.current))
       setStatus("ready")
     } catch (err: unknown) {
       setStatus("error")
