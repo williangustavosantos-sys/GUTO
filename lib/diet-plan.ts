@@ -114,7 +114,14 @@ export function validateDietPlan(plan: DietPlan) {
   }
 }
 
-export function sanitizeDietPlan(plan: DietPlan, memory: GutoMemory | null, language: SupportedLanguage): DietPlan {
+export class DietPlanValidationError extends Error {
+  constructor(public readonly reason: "calorie_mismatch" | "restriction_violation") {
+    super("A dieta recebida do cérebro não passou na validação final. Vou pedir uma nova versão antes de mostrar isso para você.")
+    this.name = "DietPlanValidationError"
+  }
+}
+
+export function sanitizeDietPlan(plan: DietPlan, memory: GutoMemory | null): DietPlan {
   if (plan.lockedByCoach || plan.manualOverride || plan.source === "coach_manual" || plan.source === "mixed") {
     return plan
   }
@@ -124,14 +131,7 @@ export function sanitizeDietPlan(plan: DietPlan, memory: GutoMemory | null, lang
   const violatesDietLimits = memory ? planViolatesDietLimits(plan, memory) : false
   if (validation.valid && !violatesDietLimits) return plan
 
-  if (memory && hasDietProfile(memory)) {
-    const corrected = createCalculatedDietPlan(memory, language, plan.userId, plan.generatedAt)
-    const correctedValidation = validateDietPlan(corrected)
-    logValidation(correctedValidation)
-    return corrected
-  }
-
-  return reconcileDietPlan(plan)
+  throw new DietPlanValidationError(violatesDietLimits ? "restriction_violation" : "calorie_mismatch")
 }
 
 export function createCalculatedDietPlan(
@@ -195,18 +195,6 @@ export function createCalculatedDietPlan(
     },
     meals,
   }
-}
-
-function hasDietProfile(memory: GutoMemory): boolean {
-  return Boolean(
-    memory.heightCm &&
-    memory.weightKg &&
-    memory.userAge &&
-    memory.biologicalSex &&
-    memory.trainingGoal &&
-    memory.country &&
-    memory.foodRestrictions
-  )
 }
 
 function getActivityFactor(memory: GutoMemory): number {
@@ -341,31 +329,6 @@ function foodFromKcal(template: FoodTemplate, kcal: number, language: SupportedL
     carbsG: Math.round(((template.carbsPer100G ?? 0) * grams) / 100),
     fatG: Math.round(((template.fatPer100G ?? 0) * grams) / 100),
   }
-}
-
-function reconcileDietPlan(plan: DietPlan): DietPlan {
-  let allocatedMeals = 0
-  const meals = plan.meals.map((meal, index) => {
-    const totalKcal =
-      index === plan.meals.length - 1
-        ? plan.macros.targetKcal - allocatedMeals
-        : Math.round(plan.macros.targetKcal * (MEAL_DISTRIBUTION[index] ?? 1 / plan.meals.length))
-    allocatedMeals += totalKcal
-
-    let allocatedFoods = 0
-    const foods = meal.foods.map((food, foodIndex) => {
-      const kcal =
-        foodIndex === meal.foods.length - 1
-          ? totalKcal - allocatedFoods
-          : Math.round(totalKcal / meal.foods.length)
-      allocatedFoods += kcal
-      return { ...food, kcal }
-    })
-
-    return { ...meal, totalKcal, foods }
-  })
-
-  return { ...plan, meals }
 }
 
 function logValidation(validation: ReturnType<typeof validateDietPlan>) {
