@@ -179,6 +179,10 @@ export interface GutoMemory {
   heightCm?: number
   weightKg?: number
   foodRestrictions?: string
+  consentHealthFitness?: boolean
+  acceptedTerms?: boolean
+  consentAcceptedAt?: string
+  consentRevokedAt?: string
   lastWorkoutCompletedAt?: string
   completedWorkoutDates: string[]
   adaptedMissionDates: string[]
@@ -351,6 +355,14 @@ export async function saveGutoMemory(payload: {
 export async function getGutoMemory() {
   return apiRequest<GutoMemory>(`/guto/memory`, {
     method: "GET",
+  })
+}
+
+// Fase 2A — persiste o ACEITE de consentimento no backend (fonte de verdade).
+// Retorna a memória atualizada (com consentHealthFitness/acceptedTerms/consentAcceptedAt).
+export async function acceptGutoConsent() {
+  return apiRequest<GutoMemory>(`/guto/consent/accept`, {
+    method: "POST",
   })
 }
 

@@ -21,7 +21,7 @@ import { LanguageScreen } from "./screens/language-screen"
 import type { MissionExercise } from "./view-models"
 import { WorkoutValidationFlow } from "./validation/workout-validation-flow"
 import { getApiErrorMessage } from "@/lib/api/client"
-import { getGutoMemory, saveGutoMemory, trackGutoEvent, validateGutoName, type DietFood, type DietMeal, type GutoMemory, type GutoNameValidation, type GutoTelemetryEvent, type GutoWorkoutPlan } from "@/lib/api/guto"
+import { acceptGutoConsent, getGutoMemory, saveGutoMemory, trackGutoEvent, validateGutoName, type DietFood, type DietMeal, type GutoMemory, type GutoNameValidation, type GutoTelemetryEvent, type GutoWorkoutPlan } from "@/lib/api/guto"
 import { useAuth } from "@/components/auth-provider"
 import { getInvite, claimInvite, logout, deleteOwnAccount, revokeConsent, type InvitePreview } from "@/lib/api/auth"
 import type { EvolutionStage, SupportedLanguage } from "@/types/contract"
@@ -620,6 +620,10 @@ function hasMemoryCalibration(memory?: GutoMemory | null) {
   return hasCompleteGutoCalibration(memory)
 }
 
+function hasMemoryConsent(memory?: GutoMemory | null) {
+  return Boolean(memory?.consentHealthFitness && memory?.acceptedTerms)
+}
+
 function resolveAuthenticatedStage(
   user: { userId: string } | null | undefined,
   profile?: StoredProfile | null,
@@ -628,7 +632,14 @@ function resolveAuthenticatedStage(
   if (!user) return "intro"
 
 
-  if (!profile?.consentHealthFitness || !profile?.acceptedTerms) {
+  // Fase 2A — backend é a fonte de verdade do consentimento (igual à calibragem).
+  // Se a memória do backend carregou, ela manda; localStorage é só cache/UX.
+  // Assim, consentimento revogado em outro device força a tela de consent mesmo
+  // que o cache local diga o contrário.
+  const consentMissing = memory
+    ? !hasMemoryConsent(memory)
+    : (!profile?.consentHealthFitness || !profile?.acceptedTerms)
+  if (consentMissing) {
     return "consent"
   }
 
@@ -1177,19 +1188,35 @@ export function GutoApp({
     [effectRegistry, persistMemory, persistProfile, schedule, setMemory, trackBehaviorEvent]
   )
 
-  const handleConsentAccepted = useCallback(() => {
+  const handleConsentAccepted = useCallback(async () => {
+    // Fase 2A — o aceite tem de ser gravado no backend (fonte de verdade).
+    // Se o backend falhar, NÃO avança nem finge que salvou.
+    setProfileSaveError(null)
+    let updated: GutoMemory | null = null
+    try {
+      updated = await acceptGutoConsent()
+    } catch {
+      updated = null
+    }
+    if (!updated) {
+      gutoAudio.playGutoFeedback("error")
+      setProfileSaveError(stageCopy[selectedLanguage].profileSaveError)
+      return
+    }
+    // Backend confirmou: espelha no estado em memória + cache local (UX), e avança.
+    memoryRef.current = updated
+    setMemory(updated)
     persistProfile({
       language: selectedLanguage,
       consentHealthFitness: true,
       acceptedTerms: true,
-      consentAcceptedAt: new Date().toISOString(),
+      consentAcceptedAt: updated.consentAcceptedAt ?? new Date().toISOString(),
     })
-    void persistMemory({ language: selectedLanguage })
     const storedRaw = readStorageItem(`${STORAGE_KEY}-${user?.userId}`)
     let stored: StoredProfile | null = null
     try { stored = storedRaw ? JSON.parse(storedRaw) as StoredProfile : null } catch { stored = null }
-    setStage(resolveAuthenticatedStage(user, stored, memory))
-  }, [memory, persistMemory, persistProfile, selectedLanguage, user])
+    setStage(resolveAuthenticatedStage(user, stored, updated))
+  }, [persistProfile, selectedLanguage, user])
 
   // ── Unique completer: ONLY sets stage to language, never decides login/invite ─
   const completeIntroToLanguage = useCallback(() => {
@@ -2426,6 +2453,7 @@ export function GutoApp({
             key="consent"
             language={selectedLanguage}
             onComplete={handleConsentAccepted}
+            errorMessage={profileSaveError}
           />
         )}
 
