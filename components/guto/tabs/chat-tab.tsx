@@ -805,6 +805,30 @@ export function ChatTab({
     })
   }, [messages, showInitialXpCard, contextChip])
 
+  // BUG 3 (mobile): quando o teclado do iOS abre/fecha, o visualViewport encolhe
+  // mas a lista de mensagens não re-rola sozinha — a última resposta pode ficar
+  // escondida atrás do input. Re-rola ao fim em toda mudança de visualViewport
+  // para manter a última mensagem visível. Seguro: só mexe no scroll da própria
+  // lista, não altera layout/estrutura. (Validação final no iPhone — ver
+  // docs/QA_IPHONE_FASE3.md.)
+  useEffect(() => {
+    const vv = typeof window !== "undefined" ? window.visualViewport : null
+    if (!vv) return
+    let frame = 0
+    const scrollToLatest = () => {
+      window.cancelAnimationFrame(frame)
+      frame = window.requestAnimationFrame(() => {
+        const el = scrollRef.current
+        if (el) el.scrollTop = el.scrollHeight
+      })
+    }
+    vv.addEventListener("resize", scrollToLatest)
+    return () => {
+      window.cancelAnimationFrame(frame)
+      vv.removeEventListener("resize", scrollToLatest)
+    }
+  }, [])
+
   useEffect(() => {
     return () => {
       gutoVoice.stop()

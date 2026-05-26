@@ -29,6 +29,23 @@ Teclado **aberto** (tocar no input):
 Notch / home indicator:
 - [ ] Nada fica colado na borda inferior (home indicator) nem sob o notch.
 
+### Correções aplicadas (Fase 3H)
+- `viewport-fit=cover` (PR #20) → habilita `env(safe-area-inset-*)` no iPhone.
+- Re-scroll automático no `visualViewport.resize` (chat-tab) → ao abrir/fechar o
+  teclado, a lista re-rola para a última mensagem, mantendo-a visível.
+
+### Medições a capturar no iPhone (para iterar com segurança)
+Como Playwright não simula o teclado iOS, preciso destes dados do device real
+(Safari, DevTools remoto ou prints) para ajustar sem chutar:
+- [ ] Modelo do iPhone + versão do iOS/Safari.
+- [ ] Com teclado fechado: print da aba GUTO (chat) com 4–5 mensagens.
+- [ ] Com teclado aberto: print mostrando input + última mensagem + se algo sobrepõe.
+- [ ] No console do Safari (com chat aberto e teclado aberto), valores de:
+      `window.innerHeight`, `window.visualViewport.height`,
+      `getComputedStyle(document.querySelector('.sala-guto')).getPropertyValue('--guto-viewport-height')`,
+      e se `.sala-guto` tem o atributo `data-keyboard-open`.
+- [ ] Confirmar se a bottom-nav some quando o teclado abre.
+
 ## BUG 3 — "Troca" no contexto de exercício
 No treino do dia, tocar no **"?"** de um exercício (ex.: "Cadeira abdutora"):
 - [ ] Digitar **"Troca"** → o GUTO **pergunta o motivo** ("Trocar por quê: dor, equipamento ocupado ou dificuldade de execução?") — **não** dá dica de execução.
