@@ -9,7 +9,7 @@ Verificar se o sistema principal do GUTO funciona de forma conectada, usando Gut
 Auditoria de diagnóstico. Nenhum código de implementação foi alterado. Escopo restrito à Fase 3.
 
 > **Estado dos repos:** ambos os submódulos em `guto/fase-2a-consent`, **working tree limpo** (nada pendente). O código de chat/treino/dieta auditado é o de `fix/hard-stabilization-p0` (= base desta branch; a Fase 2A só adicionou consentimento). Backend de consentimento já mergeado/deployado (Render: `POST /guto/consent/accept` → 401). Nenhuma branch criada, nenhum commit, nenhum push.
-> **Veredito rápido:** o sistema principal é **conectado e real** — o chat é o GUTO (memória + contrato + ações), o treino vem do backend com gate de vídeo, a dieta vem do backend com restrições. **Não é chatbot genérico.** Ressalvas P1 herdadas (patologia "mole" no treino) + lacunas de teste/mobile. **Sem P0.**
+> **Veredito rápido:** o sistema principal é **conectado e real** — o chat é o GUTO (memória + contrato + ações), o treino vem do backend com gate de vídeo, a dieta vem do backend com restrições. **Não é chatbot genérico.** **Sem P0.** A ressalva original P1 (patologia "mole" no treino) foi **corrigida na 3C** (ver bloco abaixo / PR backend #20); a pendência que permanece é **e2e/mobile autenticado** (P1 de QA).
 
 ---
 
@@ -27,6 +27,17 @@ Auditoria de diagnóstico. Nenhum código de implementação foi alterado. Escop
 >
 > **Arquivos:** `guto-backend/exercise-catalog.ts` (`getExerciseRiskTags`, `toSafetyRegion`, `SafetyRegion`, reescrita de `filterExercisesBySafety`); `guto-backend/tests/guto-workout-safety-filter.test.ts` (**novo, 19 testes**).
 > **Testes:** `tsc --noEmit` ✅ · `node scripts/run-guto-tests.mjs` → **27 suítes / 332 testes verdes** (era ~313; +19). Sem regressão.
+
+---
+
+> ## 📑 Como ler este relatório (convenção pós-3C)
+>
+> Os achados originais da auditoria foram **preservados** (histórico). Onde a 3C mudou o estado, o texto traz `Achado original` + `Status pós-3C` — não há, em nenhuma seção, afirmação do estado antigo como se fosse o atual.
+>
+> - **Achado original da auditoria:** patologia/lesão entrava como **contexto do LLM** (curador), sem filtro determinístico confiável → classificada como **P1 de segurança** no treino.
+> - **Correção 3C aplicada:** filtro determinístico por região no **backend** (`getExerciseRiskTags` + `filterExercisesBySafety`), rodando em todos os caminhos de geração + substituição segura. Entregue no **PR backend #20** (`guto/fase-3c-pathology-filter`).
+> - **Status após correção:** o **P1 de patologia do treino está corrigido** (regiões detectáveis: joelho, lombar, ombro, punho, cotovelo, tornozelo, quadril). O LLM ajuda, mas **não é mais a única proteção**.
+> - **Pendências restantes:** **validação manual mobile/teclado/vídeo no iPhone** + **e2e autenticado da Fase 3** (P1 de QA), além de P2/P3 (swap persistido, teste `lockedByCoach` do treino, range de peso, dívida técnica, screenshots). A Fase 3 pode seguir para **teste manual no iPhone após o merge/deploy do backend (PR #20)**.
 
 ---
 
@@ -79,7 +90,7 @@ Auditoria de diagnóstico. Nenhum código de implementação foi alterado. Escop
 | Cenário | Detecta/atende | Evidência |
 |---|---|---|
 | "Não como lactose" | ✅ memoryPatch `foodRestrictions` (ambíguo→pergunta) + invalida dieta | `dirty-data-resolver`; `DIET_INVALIDATION_FIELDS` |
-| "Dor no joelho" | 🟡 patch `trainingPathology` + contexto ao curador (não filtro duro) | §4 |
+| "Dor no joelho" | ✅ (pós-3C) patch `trainingPathology` + **filtro determinístico** remove/substitui alto estresse da região. *Achado original:* era só contexto do curador. | §4 / bloco 3C |
 | "Hoje só tenho 20 minutos" | ✅ contexto/adaptação (proatividade/treino reduzido) | `server.ts` mensagens de treino reduzido |
 | "Estou sem academia" | ✅ patch `preferredTrainingLocation`→home (filtro duro) | `workout-curator` location |
 | "Quero emagrecer" | ✅ patch `trainingGoal=fat_loss` + invalida dieta/treino | `DIET_INVALIDATION_FIELDS` |
@@ -94,7 +105,7 @@ Auditoria de diagnóstico. Nenhum código de implementação foi alterado. Escop
 - **Altera o sistema ou só conversa?** Altera de verdade (`memoryPatch` com auditoria, invalidação de dieta, ações estruturadas).
 - **Respeita a raiz?** Sim (contrato, idioma, persona, honestidade, lockedByCoach).
 - **GUTO ou chatbot genérico?** **GUTO.** Não é chatbot solto.
-- **Risco de resposta sem efeito real?** Baixo — persistência honesta + rollback; o ponto fraco é a patologia como contexto (não efeito determinístico no treino).
+- **Risco de resposta sem efeito real?** Baixo — persistência honesta + rollback. *Achado original:* o ponto fraco era a patologia como contexto; **resolvido na 3C** (efeito determinístico no treino).
 
 ---
 
@@ -103,8 +114,8 @@ Auditoria de diagnóstico. Nenhum código de implementação foi alterado. Escop
 | Campo | Pode alterar via chat? | Precisa confirmação? | Invalida dieta/treino? | Status | Evidência | Risco |
 |---|---|---|---|---|---|---|
 | foodRestrictions | ✅ | se ambíguo | dieta ✅ | ✅ OK | `server.ts:3351`; `DIET_INVALIDATION_FIELDS` | Baixo |
-| trainingPathology | ✅ | se ambíguo | treino (contexto) | 🟡 PARCIAL | `dirty-data-resolver`; curador contexto | Médio (segurança) |
-| trainingLimitations | ✅ | se ambíguo | treino (contexto) | 🟡 PARCIAL | idem | Médio |
+| trainingPathology | ✅ | se ambíguo | treino ✅ (filtro determinístico, pós-3C) | ✅ OK (3C) | `dirty-data-resolver`; `filterExercisesBySafety` | Baixo |
+| trainingLimitations | ✅ | se ambíguo | treino ✅ (filtro determinístico, pós-3C) | ✅ OK (3C) | idem | Baixo |
 | preferredTrainingLocation | ✅ | com confirmação | treino ✅ (filtro duro) | ✅ OK | memoryPatch fields | Baixo |
 | trainingGoal | ✅ | com confirmação | dieta+treino ✅ | ✅ OK | `DIET_INVALIDATION_FIELDS` | Baixo |
 | trainingLevel/trainingStatus | ✅ | com confirmação | dieta+treino ✅ | ✅ OK | `DIET_INVALIDATION_FIELDS` | Baixo |
@@ -150,17 +161,17 @@ Auditoria de diagnóstico. Nenhum código de implementação foi alterado. Escop
 **Cenários:**
 - home não recebe máquina ✅ (filtro duro); gym recebe ✅.
 - iniciante x volume ✅ (curador usa level).
-- **dor no joelho x treino agressivo** → 🟡 **depende do curador (LLM) + flag conservadora**, não há filtro determinístico que remova exercícios de alto estresse patelar do pool.
+- **dor no joelho x treino agressivo** → ✅ (pós-3C) **filtro determinístico** (`getExerciseRiskTags`+`filterExercisesBySafety`) remove/substitui agachamento, afundo, búlgaro, leg extension, leg press e impacto; alternativas seguras (hip thrust, leg curl, glúteo) permanecem. *Achado original:* dependia só do curador (LLM) + flag conservadora.
 - muscle_gain/fat_loss mudam estrutura ✅.
 - exercício sem vídeo não aparece ✅ (gate duplo).
 - lockedByCoach não sobrescrito ✅.
 
-**Respostas:**
-- **Pronto para aprovar?** Sim na geração/local/vídeo; **com ressalva de segurança** na patologia.
-- **Maior risco:** patologia/lesão tratada como contexto, não filtro duro → possível exercício de alto estresse na região lesionada.
-- **Filtro determinístico para dor?** **Não** — depende do LLM (curador) + conservadorismo.
-- **Pode gerar algo perigoso?** Risco médio só na dimensão lesão; local/nível são seguros.
-- **Respeita a raiz?** Em quase tudo; a raiz pede *remoção do catálogo* por região lesionada, que hoje não é determinística (divergência registrada — corrigir quando o módulo Treino for aberto).
+**Respostas (atualizadas pós-3C):**
+- **Pronto para aprovar?** Sim — geração/local/vídeo **e** segurança de patologia (filtro determinístico).
+- **Filtro determinístico para dor?** **Sim (3C)** — `getExerciseRiskTags`+`filterExercisesBySafety` removem/substituem alto estresse por região; o LLM ajuda mas **não é a única proteção**.
+- **Pode gerar algo perigoso?** Risco baixo nas regiões detectáveis (joelho/lombar/ombro/punho/cotovelo/tornozelo/quadril); local/nível seguros.
+- **Respeita a raiz?** Sim — a raiz pede *remoção por região lesionada*, agora feita de forma **determinística**.
+- *Achado original (pré-3C):* patologia era contexto do curador, não filtro duro → **corrigido no PR backend #20**. Limites honestos remanescentes: limitação genérica sem região (`"general"`) segue como contexto + deload; sintoma torácico/cardíaco vai para escalada aguda (não troca de exercício).
 
 ---
 
@@ -218,7 +229,7 @@ Auditoria de diagnóstico. Nenhum código de implementação foi alterado. Escop
 |---|---|---|---|---|---|---|
 | Chat explica exercício atual | ✅ | ✅ | n/a (leitura) | ✅ OK | `exerciseDoubtTrigger`/`planLine` | Baixo |
 | Chat sabe o treino do dia | ✅ | ✅ | n/a | ✅ OK | `chat-tab.tsx:499 planLine` | Baixo |
-| Chat adapta treino com segurança | 🟡 | ✅ | ✅ | 🟡 PARCIAL | patologia contexto (§4) | Médio |
+| Chat adapta treino com segurança | ✅ | ✅ | ✅ | ✅ OK (3C) | filtro determinístico de patologia (§4) | Baixo |
 | Chat sugere substituição | 🟡 | ✅ | parcial | 🟡 PARCIAL | updateWorkout; swap dedicado não confirmado | Baixo |
 | Substituição respeita vídeo local | ✅ | ✅ | n/a | ✅ OK | gate duplo | Baixo |
 | Chat sabe a dieta atual | ✅ | ✅ | n/a | ✅ OK | memória/`weeklyDietPlan` | Baixo |
@@ -275,7 +286,7 @@ Auditoria de diagnóstico. Nenhum código de implementação foi alterado. Escop
 | integração chat→treino | 🟡 | `guto.history-context.integration` (5) | contexto | 🟡 | P2 |
 | integração chat→dieta | 🟡 | `guto-diet-invalidation` | invalidação | 🟡 | P2 |
 
-> Backend total: 26 suítes / ~318 testes verdes. Lacuna real: **e2e/mobile autenticado da Fase 3** (os 09–20 existem mas estão vermelhos por travar no intro em headless — pré-existente).
+> Backend total (pós-3C): **27 suítes / 332 testes verdes** (+19 da 3C). Lacuna real: **e2e/mobile autenticado da Fase 3** (os 09–20 existem mas estão vermelhos por travar no intro em headless — pré-existente).
 
 ---
 
@@ -288,7 +299,7 @@ Will, pt-BR, 30, male, muscle_gain, intermediate→`consistent`, home, 178, 82, 
 | 1. Chat chama como dupla | ✅ OK | `memory.name` no prompt/UI | Baixo |
 | 2. Chat sabe objetivo/local/dor/restrição | ✅ OK | perfil + summary | Baixo |
 | 3. Treino respeita home | ✅ OK | filtro duro de local | Baixo |
-| 4. Treino respeita joelho | 🟡 PARCIAL | contexto do curador, não filtro duro | **Médio** |
+| 4. Treino respeita joelho | ✅ OK (3C) | filtro determinístico por região + substituição segura | Baixo |
 | 5. Treino tem vídeo local | ✅ OK | gate duplo | Baixo |
 | 6. Dieta evita lactose | ✅ OK | `avoidIf` | Baixo |
 | 7. Dieta usa Itália/Milano sem mudar idioma | ✅ OK | país=comida, idioma=texto | Baixo |
@@ -321,17 +332,17 @@ Will, pt-BR, 30, male, muscle_gain, intermediate→`consistent`, home, 178, 82, 
 3. **Chat usa GutoMemory?** Sim, autoritativa do backend.
 4. **MemoryPatch é seguro?** Sim — whitelist, confirmação de ambíguos, auditoria, rollback, invalidação, respeita lockedByCoach.
 5. **Treino vem do backend?** Sim (`curateWorkout`); frontend não inventa.
-6. **Treino usa calibragem?** Sim (local/nível/objetivo/histórico); patologia parcial.
-7. **Respeita local/nível/objetivo/dor?** Local/nível/objetivo: sim (duro). **Dor: parcial (contexto, não filtro).**
+6. **Treino usa calibragem?** Sim (local/nível/objetivo/histórico); **patologia determinística (3C)**.
+7. **Respeita local/nível/objetivo/dor?** Local/nível/objetivo: sim (duro). **Dor: sim — filtro determinístico (3C).**
 8. **Vídeos locais garantidos?** Sim — gate backend + frontend.
 9. **Dieta vem do backend?** Sim (sem fallback local).
 10. **Dieta usa calibragem?** Sim (BMR + país + restrições).
 11. **Respeita foodRestrictions?** Sim (`avoidIf` + invalidação).
 12. **Chat/treino/dieta conversam?** Sim (planLine, dúvidas, invalidação).
 13. **Mobile seguro?** Por código sim; **falta prova em iPhone real**.
-14. **P0/P1:** P0 nenhum. P1: patologia não-determinística no treino; ausência de e2e/mobile da Fase 3.
+14. **P0/P1:** P0 nenhum. **P1 de patologia: corrigido na 3C** (PR backend #20). P1 restante: **e2e/mobile autenticado** da Fase 3.
 15. **P2/P3:** swap persistido; teste lockedByCoach treino; range peso; dívida técnica de campos duplicados; screenshots.
-16. **Menor correção segura:** nenhuma é obrigatória **dentro da Fase 3 de coleta/conexão** (está aprovada). A correção de maior valor (patologia determinística) é do **módulo Treino** — não fazer agora.
+16. **Menor correção segura:** a de maior valor (patologia determinística) **já foi feita na 3C** (PR backend #20). Resta apenas QA: **e2e/mobile autenticado**.
 17. **Bloco único ou subfases?** **Subfases** — a Fase 3 está majoritariamente aprovada; as correções são localizadas e independentes.
 18. **Subfases recomendadas:**
     - **3A — Chat/contrato:** ✅ aprovado.
@@ -342,14 +353,15 @@ Will, pt-BR, 30, male, muscle_gain, intermediate→`consistent`, home, 178, 82, 
     - **3F — Integração:** ✅ aprovado (swap persistido = P2).
     - **3G — Mobile:** 🟡 pendente de validação manual iPhone + e2e.
 19. **O Will precisa testar:** chat (memória/idioma/contexto de exercício), missão (treino home + vídeo), dieta (lactose evitada, contexto Itália) — no iPhone.
-20. **NÃO mexer ainda:** XP/morte, GUTO Online, Arena/Percurso/Evoluir, painel admin/coach, Fase 4, e a correção de patologia do Treino (registrada, não implementada).
+20. **NÃO mexer ainda:** XP/morte, GUTO Online, Arena/Percurso/Evoluir, painel admin/coach, Fase 4. (A correção de patologia do treino **já foi implementada na 3C** — PR backend #20.)
 
 ---
 
 ## Quando o Will deve conferir no app
 
 - **Exige validação manual agora?** Sim, para **mobile/teclado/vídeo** (Playwright não prova teclado iOS). A camada de **dados/conexão** já está provada por testes backend verdes + evidência de código.
-- **Via qual canal?** **Vercel Preview da branch `fix/hard-stabilization-p0`** (onde o sistema principal + Fase 2A estão; aponta para o Render de produção, que já tem o backend atual). Alternativa: Dev Tunnel local. **Não** usar `corpoguto.vercel.app` (main não tem o Fase 2A).
+- **Via qual canal?** **Vercel Preview da branch `fix/hard-stabilization-p0`** (onde o sistema principal + Fase 2A estão; aponta para o Render de produção). Alternativa: Dev Tunnel local. **Não** usar `corpoguto.vercel.app` (main não tem o Fase 2A).
+- ⚠️ **Dependência da 3C:** o **filtro determinístico de patologia** (joelho/ombro/punho etc.) só fica visível no app **após o merge/deploy do PR backend #20** no Render. Antes disso, o backend de produção ainda usa o filtro antigo (faminto de dados).
 - **Branch/link:** preview de `fix/hard-stabilization-p0` (pegar nos checks do PR/commit ou no dashboard Vercel).
 - **Abas a abrir:** GUTO (chat) → Missão → Dieta.
 - **Mensagens no chat:** "me explica esse exercício" (após tocar "?"), "agora treino em casa", "não como lactose", "quero emagrecer" — observar se o GUTO responde com memória, pede confirmação quando ambíguo, e **não** diz "salvei" sem efeito.
