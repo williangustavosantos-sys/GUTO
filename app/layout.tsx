@@ -77,6 +77,11 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   themeColor: '#e8eef5',
+  // iPhone (notch/home-indicator): sem viewport-fit=cover, env(safe-area-inset-*)
+  // resolve 0 e o layout do chat/nav (que depende desses insets para ancorar o
+  // input e dimensionar a bottom-nav) calcula errado — input sobre mensagens,
+  // balões atrás do input, nav cobrindo. Cobre a tela e habilita os safe-areas.
+  viewportFit: 'cover',
 }
 
 export default function RootLayout({

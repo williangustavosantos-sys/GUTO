@@ -126,12 +126,18 @@ export function sanitizeDietPlan(plan: DietPlan, memory: GutoMemory | null): Die
     return plan
   }
 
-  const validation = validateDietPlan(plan)
-  logValidation(validation)
+  // O backend é a fonte de verdade da dieta: ele já valida calorias/macros
+  // (tolerância ±80 kcal/dia + soma exata por refeição) e estrutura antes de
+  // devolver 200. O front NÃO pode re-rejeitar por uma tolerância mais apertada
+  // (±10 kcal) — isso barrava planos válidos com o falso "falhou na checagem
+  // final". Mantemos validateDietPlan só como telemetria (dev) e preservamos o
+  // bloqueio de RESTRIÇÃO ALIMENTAR como rede de segurança real.
+  logValidation(validateDietPlan(plan))
   const violatesDietLimits = memory ? planViolatesDietLimits(plan, memory) : false
-  if (validation.valid && !violatesDietLimits) return plan
-
-  throw new DietPlanValidationError(violatesDietLimits ? "restriction_violation" : "calorie_mismatch")
+  if (violatesDietLimits) {
+    throw new DietPlanValidationError("restriction_violation")
+  }
+  return plan
 }
 
 export function createCalculatedDietPlan(
