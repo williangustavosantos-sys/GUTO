@@ -2208,6 +2208,7 @@ export function GutoApp({
             onAdaptedMissionComplete={handleAdaptedMissionComplete}
             onValidateWorkout={() => setShowValidationFlow(true)}
             missingProfileFields={workoutMissingFields}
+            memory={memory}
           />
         )
       case "arena":

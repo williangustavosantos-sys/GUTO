@@ -223,6 +223,29 @@ export interface GutoMemory {
   hasSeenChatOpening?: boolean
   validationHistory?: WorkoutValidationRecord[]
   workoutFeedbackHistory?: WorkoutFeedbackRecord[]
+  // Classificação semântica dos 3 campos livres (país/patologia/restrição) feita
+  // pelo backend. Usada pelos badges de contexto (Fase 3K) para distinguir
+  // cuidado físico ativo (status "clear" + bodyRegion) de cuidado pendente.
+  resolvedFields?: GutoResolvedProfileFields
+}
+
+export interface GutoResolvedField {
+  field: "country" | "pathology" | "foodRestriction"
+  rawValue: string
+  normalizedValue?: string
+  possibleMeaning?: string
+  bodyRegion?: string
+  riskTags?: string[]
+  confidence?: number
+  status: "clear" | "needs_confirmation" | "unknown" | "risky_unclear" | "needs_clarification"
+  resolvedAt?: string
+}
+
+export interface GutoResolvedProfileFields {
+  country?: GutoResolvedField
+  pathology?: GutoResolvedField
+  foodRestriction?: GutoResolvedField
+  acknowledged?: string[]
 }
 
 export interface GutoProactiveResponse {

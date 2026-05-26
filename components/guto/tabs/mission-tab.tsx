@@ -4,11 +4,12 @@ import { useEffect, useMemo, useState } from "react"
 import { motion } from "framer-motion"
 import { CheckCircle2, RotateCcw, Play, Radio } from "lucide-react"
 
-import type { GutoWorkoutPlan } from "@/lib/api/guto"
+import type { GutoMemory, GutoWorkoutPlan } from "@/lib/api/guto"
 import type { EvolutionStage } from "@/types/contract"
 import { getLanguage, translations } from "../translations"
 import type { MissionExercise } from "../view-models"
 import { GutoOnlineSession } from "../guto-online-session"
+import { WorkoutCareNotice } from "../memory-context/workout-care-notice"
 import { gutoAudio } from "@/lib/audio-haptics"
 
 interface MissionTabProps {
@@ -25,6 +26,7 @@ interface MissionTabProps {
   onAdaptedMissionComplete: () => Promise<void> | void
   onValidateWorkout: () => void
   missingProfileFields?: string[]
+  memory?: GutoMemory | null
 }
 
 const MUSCLE_GROUP_LABEL: Record<string, Record<string, string>> = {
@@ -160,6 +162,7 @@ export function MissionTab({
   adaptedMissionToday = false,
   onValidateWorkout,
   missingProfileFields = [],
+  memory = null,
 }: MissionTabProps) {
   const validLang = getLanguage(language)
   const locale = translations[validLang]
@@ -358,6 +361,9 @@ export function MissionTab({
           </div>
         )}
       </div>
+
+      {/* Cuidados do treino — memória visível (Fase 3K) */}
+      <WorkoutCareNotice memory={memory} language={validLang} />
 
       {/* Progress bar + start/reset */}
       <div className="guto-premium-card mb-3 grid grid-cols-[1fr_auto] items-center gap-3 px-3.5 py-3">
