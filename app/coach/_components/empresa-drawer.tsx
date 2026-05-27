@@ -11,11 +11,11 @@ import { coachLabel, relativeTime, studentRisk } from "./utils"
 import type { AdminCoach, AdminStudent, AdminTeam } from "@/lib/api/admin"
 
 const EMPRESA_TABS: { id: EmpresaTab; label: string; icon: React.ReactNode }[] = [
-  { id: "resumo", label: "RESUMO", icon: <Building2 className="h-3 w-3" /> },
-  { id: "coaches", label: "COACHES", icon: <Shield className="h-3 w-3" /> },
-  { id: "alunos", label: "ALUNOS", icon: <Users className="h-3 w-3" /> },
-  { id: "plano", label: "PLANO", icon: <CreditCard className="h-3 w-3" /> },
-  { id: "logs", label: "LOGS", icon: <ScrollText className="h-3 w-3" /> },
+  { id: "resumo", label: "Resumo", icon: <Building2 className="h-3.5 w-3.5" /> },
+  { id: "coaches", label: "Coaches", icon: <Shield className="h-3.5 w-3.5" /> },
+  { id: "alunos", label: "Alunos", icon: <Users className="h-3.5 w-3.5" /> },
+  { id: "plano", label: "Plano", icon: <CreditCard className="h-3.5 w-3.5" /> },
+  { id: "logs", label: "Logs", icon: <ScrollText className="h-3.5 w-3.5" /> },
 ]
 
 // ─── Helpers para filtrar dados por empresa ──────────────────────────────────
@@ -42,19 +42,17 @@ export function EmpresaDrawer() {
     <Sheet open={!!selectedEmpresa} onOpenChange={(open) => { if (!open) closeEmpresa() }}>
       <SheetContent
         side="right"
-        className="w-full overflow-y-auto p-0 sm:max-w-3xl"
-        style={{
-          background: T.ink,
-          borderLeft: `1px solid ${T.border}`,
-          color: T.fg,
-          fontFamily: T.mono,
-        }}
+        showClose={false}
+        className="w-full gap-0 border-l border-slate-200 p-0 text-slate-900 sm:max-w-3xl"
+        style={{ fontFamily: T.ui, background: T.bg }}
       >
         {selectedEmpresa && (
-          <div className="flex min-h-full flex-col">
+          // Layout em coluna: header e tabs fixos (shrink-0), só o corpo rola.
+          // Garante que as abas/ações fiquem SEMPRE visíveis (desktop/Safari/iPad).
+          <div className="flex h-full min-h-0 flex-col">
             <DrawerHeader empresa={selectedEmpresa} onClose={closeEmpresa} />
             <DrawerTabBar activeTab={empresaTab} onChange={setEmpresaTab} />
-            <div style={{ padding: 24 }}>
+            <div className="min-h-0 flex-1 overflow-y-auto" style={{ padding: 24 }}>
               {empresaTab === "resumo" && <TabResumo empresa={selectedEmpresa} />}
               {empresaTab === "coaches" && <TabCoaches empresa={selectedEmpresa} />}
               {empresaTab === "alunos" && <TabAlunos empresa={selectedEmpresa} />}
@@ -68,51 +66,80 @@ export function EmpresaDrawer() {
   )
 }
 
-// ─── Header / Tab bar ────────────────────────────────────────────────────────
+// ─── Header / Tab bar (light, handoff design) ────────────────────────────────
 
 function DrawerHeader({ empresa, onClose }: { empresa: AdminTeam; onClose: () => void }) {
   return (
     <header
       style={{
-        padding: "20px 24px",
+        flexShrink: 0,
+        padding: "16px 24px",
         borderBottom: `1px solid ${T.border}`,
-        background: "linear-gradient(180deg, rgba(8,14,28,0.96) 0%, rgba(4,7,16,0.84) 100%)",
+        background: T.surface,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 16,
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-        <Pill tone="cyan">EMPRESA</Pill>
+      <div style={{ display: "flex", alignItems: "center", gap: 14, minWidth: 0 }}>
+        <div
+          style={{
+            width: 42,
+            height: 42,
+            borderRadius: 10,
+            background: T.brandSoft,
+            color: T.brand,
+            border: `1px solid ${T.brandLine}`,
+            display: "grid",
+            placeItems: "center",
+            flexShrink: 0,
+          }}
+        >
+          <Building2 className="h-[18px] w-[18px]" />
+        </div>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontFamily: T.ui, fontSize: 11.5, fontWeight: 500, color: T.fg4, letterSpacing: "0.02em" }}>
+            Empresa · <span style={{ fontFamily: T.mono, fontSize: 11 }}>{empresa.id}</span>
+          </div>
+          <SheetTitle
+            style={{
+              fontFamily: T.ui,
+              fontSize: 20,
+              fontWeight: 600,
+              color: T.fg,
+              letterSpacing: "-0.015em",
+              marginTop: 2,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
+            {empresa.name}
+          </SheetTitle>
+        </div>
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+        <Pill tone={teamStatusTone(empresa.status)}>{teamStatusLabel(empresa.status)}</Pill>
+        <Pill tone="neutral">{planLabel(empresa.plan)}</Pill>
         <button
           onClick={onClose}
-          style={{ background: "none", border: "none", color: T.fg3, cursor: "pointer", padding: 4 }}
           aria-label="Fechar"
+          style={{
+            width: 32,
+            height: 32,
+            borderRadius: 8,
+            border: `1px solid ${T.border}`,
+            background: T.surface,
+            color: T.fg3,
+            cursor: "pointer",
+            display: "grid",
+            placeItems: "center",
+            flexShrink: 0,
+          }}
         >
           <X className="h-4 w-4" />
         </button>
-      </div>
-      <SheetTitle
-        style={{
-          fontFamily: T.mono,
-          fontSize: 22,
-          fontWeight: 900,
-          color: T.fg,
-          letterSpacing: "-0.01em",
-        }}
-      >
-        {empresa.name}
-      </SheetTitle>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
-        <Pill tone={teamStatusTone(empresa.status)}>{teamStatusLabel(empresa.status)}</Pill>
-        <Pill tone="neutral">{planLabel(empresa.plan)}</Pill>
-        <span
-          style={{
-            fontFamily: T.mono,
-            fontSize: 10,
-            color: T.fg4,
-            letterSpacing: "0.10em",
-          }}
-        >
-          ID · {empresa.id}
-        </span>
       </div>
     </header>
   )
@@ -128,16 +155,13 @@ function DrawerTabBar({
   return (
     <div
       style={{
-        position: "sticky",
-        top: 0,
-        zIndex: 5,
+        flexShrink: 0,
         display: "flex",
-        gap: 4,
+        gap: 2,
         overflowX: "auto",
-        padding: "12px 16px",
-        background: "rgba(4,7,16,0.92)",
+        padding: "0 16px",
+        background: T.surface,
         borderBottom: `1px solid ${T.border}`,
-        backdropFilter: "blur(10px)",
       }}
     >
       {EMPRESA_TABS.map((tab) => {
@@ -147,21 +171,19 @@ function DrawerTabBar({
             key={tab.id}
             onClick={() => onChange(tab.id)}
             style={{
-              height: 32,
-              padding: "0 14px",
-              borderRadius: 999,
+              background: "none",
+              border: "none",
               cursor: "pointer",
-              border: active ? `1px solid ${T.cyan}` : `1px solid ${T.border}`,
-              background: active ? T.cyanSoft : "transparent",
-              color: active ? T.cyan : T.fg3,
-              fontFamily: T.mono,
-              fontSize: 9,
-              fontWeight: 900,
-              letterSpacing: "0.18em",
-              textTransform: "uppercase",
+              padding: "12px 14px",
+              color: active ? T.brandDeep : T.fg3,
+              fontFamily: T.ui,
+              fontSize: 13,
+              fontWeight: active ? 600 : 500,
+              borderBottom: active ? `2px solid ${T.brandStrong}` : "2px solid transparent",
+              marginBottom: -1,
               display: "flex",
               alignItems: "center",
-              gap: 6,
+              gap: 7,
               whiteSpace: "nowrap",
             }}
           >
