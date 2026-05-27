@@ -4,18 +4,15 @@ import type { CSSProperties, ReactNode } from "react"
 import { T, TONE_MAP, type Tone } from "./control-tokens"
 
 /**
- * Sala de Controle — Atomic components
+ * Coach/Admin Panel — Atomic components (LIGHT theme)
  *
- * Mirrors the atoms from ~/Downloads/guto-design-system/project/coach-panel/sala-shell.jsx
- * (Plate, Kicker, Label, Pill, Btn, SearchBox, DataRow, SectionTitle, Field,
- * TextInput, SelectInput) translated to typed React + the project's CSS-in-JS
- * conventions.
- *
- * The legacy ui.tsx atoms (Panel, ActionButton, Field, etc.) remain untouched
- * so we don't break older screens during the migration.
+ * Mirrors the atoms from design_handoff_guto_coach_panel/light-shell.jsx
+ * (Card/Plate, Kicker, Label, Pill, Btn, SearchBox, DataRow, SectionTitle,
+ * Field, TextInput, SelectInput) translated to typed React. UI text uses Inter
+ * (T.ui); JetBrains Mono (T.mono) is reserved for numbers/IDs.
  */
 
-// ─── Plate ────────────────────────────────────────────────────────────────────
+// ─── Plate (Card) ──────────────────────────────────────────────────────────────
 
 export function Plate({
   children,
@@ -36,14 +33,10 @@ export function Plate({
     <div
       className={className}
       style={{
-        background: dp ? T.panelDp : hi ? T.panelHi : T.panel,
-        border: `1px solid ${glow ? T.cyanLine : T.border}`,
-        borderRadius: 14,
-        boxShadow: glow
-          ? `0 0 28px rgba(82,231,255,0.15), inset 0 0 0 1px ${T.cyanLine}`
-          : "0 4px 20px rgba(0,0,0,0.35)",
-        backdropFilter: "blur(10px)",
-        WebkitBackdropFilter: "blur(10px)",
+        background: dp ? T.surfaceAlt : hi ? T.surface : T.surface,
+        border: `1px solid ${glow ? T.brandLine : T.border}`,
+        borderRadius: 12,
+        boxShadow: glow ? "0 1px 2px rgba(8,145,178,0.06)" : T.shadow1,
         ...style,
       }}
     >
@@ -66,12 +59,12 @@ export function Kicker({
   return (
     <span
       style={{
-        fontFamily: T.mono,
-        fontSize: 9,
-        fontWeight: 900,
-        letterSpacing: "0.28em",
+        fontFamily: T.ui,
+        fontSize: 10.5,
+        fontWeight: 600,
+        letterSpacing: "0.10em",
         textTransform: "uppercase",
-        color: cyan ? T.cyan : T.fg3,
+        color: cyan ? T.brand : T.fg4,
         ...style,
       }}
     >
@@ -85,12 +78,10 @@ export function Label({ children, style }: { children: ReactNode; style?: CSSPro
     <span
       style={{
         display: "block",
-        fontFamily: T.mono,
-        fontSize: 10,
-        fontWeight: 900,
-        letterSpacing: "0.22em",
-        textTransform: "uppercase",
-        color: T.fg3,
+        fontFamily: T.ui,
+        fontSize: 12.5,
+        fontWeight: 500,
+        color: T.fg2,
         marginBottom: 6,
         ...style,
       }}
@@ -117,18 +108,18 @@ export function Pill({
       style={{
         display: "inline-flex",
         alignItems: "center",
-        gap: 5,
-        height: 20,
+        gap: 6,
+        height: 22,
         padding: "0 9px",
         borderRadius: 999,
         background: p.bg,
         color: p.fg,
         border: `1px solid ${p.bd}`,
-        fontFamily: T.mono,
-        fontSize: 9,
-        fontWeight: 900,
-        letterSpacing: "0.18em",
-        textTransform: "uppercase",
+        fontFamily: T.ui,
+        fontSize: 11.5,
+        fontWeight: 600,
+        letterSpacing: "0.01em",
+        whiteSpace: "nowrap",
         ...style,
       }}
     >
@@ -162,6 +153,29 @@ export function Btn({
   type?: "button" | "submit"
   title?: string
 }) {
+  let bg: string
+  let fg: string
+  let bd: string
+  let sh = "none"
+  if (cyan) {
+    bg = T.brandStrong
+    fg = "#FFFFFF"
+    bd = T.brandStrong
+    sh = "0 1px 2px rgba(8,145,178,0.25)"
+  } else if (danger) {
+    bg = T.surface
+    fg = T.bad
+    bd = T.badLine
+  } else if (ghost) {
+    bg = "transparent"
+    fg = T.fg2
+    bd = "transparent"
+  } else {
+    bg = T.surface
+    fg = T.fg
+    bd = T.borderStrong
+    sh = T.shadow1
+  }
   return (
     <button
       type={type}
@@ -169,33 +183,20 @@ export function Btn({
       disabled={disabled}
       title={title}
       style={{
-        height: sm ? 34 : 40,
-        padding: `0 ${sm ? 12 : 16}px`,
-        borderRadius: 999,
+        height: sm ? 32 : 38,
+        padding: `0 ${sm ? 12 : 14}px`,
+        borderRadius: 8,
         cursor: disabled ? "not-allowed" : "pointer",
-        opacity: disabled ? 0.4 : 1,
-        background: cyan
-          ? "linear-gradient(135deg,#7df0ff,#1ec5e0)"
-          : ghost
-            ? "transparent"
-            : danger
-              ? T.badS
-              : "rgba(232,244,255,0.07)",
-        color: cyan ? "#04131e" : danger ? T.bad : T.fg,
-        border: cyan
-          ? "1px solid transparent"
-          : ghost
-            ? `1px solid ${T.cyanLine}`
-            : danger
-              ? "1px solid rgba(248,113,113,0.30)"
-              : `1px solid ${T.border}`,
-        fontFamily: T.mono,
-        fontSize: 10,
-        fontWeight: 900,
-        letterSpacing: "0.20em",
-        textTransform: "uppercase",
-        boxShadow: cyan ? "0 0 18px rgba(82,231,255,0.28)" : "none",
-        transition: "all 160ms ease",
+        opacity: disabled ? 0.45 : 1,
+        background: bg,
+        color: fg,
+        border: `1px solid ${bd}`,
+        fontFamily: T.ui,
+        fontSize: sm ? 12.5 : 13.5,
+        fontWeight: 500,
+        letterSpacing: "-0.005em",
+        boxShadow: sh,
+        transition: "all 140ms ease",
         display: "inline-flex",
         alignItems: "center",
         justifyContent: "center",
@@ -227,15 +228,15 @@ export function SearchBox({
       <svg
         style={{
           position: "absolute",
-          left: 12,
+          left: 11,
           top: "50%",
           transform: "translateY(-50%)",
-          color: T.fg3,
+          color: T.fg4,
           pointerEvents: "none",
         }}
         viewBox="0 0 24 24"
-        width={14}
-        height={14}
+        width={15}
+        height={15}
         fill="none"
         stroke="currentColor"
         strokeWidth={2}
@@ -252,14 +253,13 @@ export function SearchBox({
         style={{
           width: "100%",
           height: 38,
-          paddingLeft: 36,
-          paddingRight: 14,
-          background: "rgba(0,0,0,0.30)",
-          border: `1px solid ${T.border}`,
-          borderRadius: 10,
-          boxShadow: "inset 0 2px 6px rgba(0,0,0,0.45)",
-          fontFamily: T.mono,
-          fontSize: 12,
+          paddingLeft: 34,
+          paddingRight: 12,
+          background: T.surface,
+          border: `1px solid ${T.borderStrong}`,
+          borderRadius: 8,
+          fontFamily: T.ui,
+          fontSize: 13.5,
           color: T.fg,
           outline: "none",
         }}
@@ -277,14 +277,14 @@ export function CtrlDataRow({ label, value }: { label: string; value: ReactNode 
         display: "flex",
         justifyContent: "space-between",
         alignItems: "center",
-        borderBottom: `1px solid ${T.border}`,
-        padding: "10px 0",
-        fontFamily: T.mono,
-        fontSize: 11,
+        borderBottom: `1px solid ${T.borderSoft}`,
+        padding: "11px 0",
+        fontFamily: T.ui,
+        fontSize: 13.5,
       }}
     >
       <span style={{ color: T.fg3 }}>{label}</span>
-      <span style={{ color: T.fg, fontWeight: 700, textAlign: "right", maxWidth: "60%" }}>{value}</span>
+      <span style={{ color: T.fg, fontWeight: 500, textAlign: "right", maxWidth: "60%" }}>{value}</span>
     </div>
   )
 }
@@ -334,17 +334,16 @@ export function TextInput({
       placeholder={placeholder}
       disabled={disabled}
       style={{
-        height: 40,
-        padding: "0 14px",
-        background: "rgba(0,0,0,0.35)",
-        border: `1px solid ${T.border}`,
-        borderRadius: 10,
-        boxShadow: "inset 0 2px 6px rgba(0,0,0,0.45)",
+        height: 38,
+        padding: "0 12px",
+        background: T.surface,
+        border: `1px solid ${T.borderStrong}`,
+        borderRadius: 8,
         color: T.fg,
-        fontFamily: T.mono,
-        fontSize: 12,
+        fontFamily: T.ui,
+        fontSize: 13.5,
         outline: "none",
-        opacity: disabled ? 0.5 : 1,
+        opacity: disabled ? 0.55 : 1,
       }}
     />
   )
@@ -367,15 +366,15 @@ export function SelectInput({
       onChange={(e) => onChange?.(e.target.value)}
       style={{
         height: 38,
-        padding: "0 12px",
-        background: "rgba(0,0,0,0.35)",
-        border: `1px solid ${T.border}`,
-        borderRadius: 10,
-        boxShadow: "inset 0 2px 6px rgba(0,0,0,0.45)",
+        padding: "0 10px",
+        background: T.surface,
+        border: `1px solid ${T.borderStrong}`,
+        borderRadius: 8,
         color: T.fg,
-        fontFamily: T.mono,
-        fontSize: 12,
+        fontFamily: T.ui,
+        fontSize: 13.5,
         outline: "none",
+        cursor: "pointer",
         width,
       }}
     >
@@ -407,7 +406,7 @@ export function CtrlField({
       <Label>{label}</Label>
       {children}
       {hint && (
-        <span style={{ fontFamily: T.mono, fontSize: 9, color: T.fg4, lineHeight: 1.5 }}>
+        <span style={{ fontFamily: T.ui, fontSize: 12, color: T.fg4, lineHeight: 1.5 }}>
           {hint}
         </span>
       )}
@@ -429,7 +428,7 @@ export function TelemetryStamp({
   tone?: Tone
 }) {
   const toneColor =
-    tone === "ok" ? T.ok : tone === "warn" ? T.warn : tone === "bad" ? T.bad : T.cyan
+    tone === "ok" ? T.ok : tone === "warn" ? T.warn : tone === "bad" ? T.bad : T.brand
   return (
     <div
       style={{
@@ -438,18 +437,18 @@ export function TelemetryStamp({
         gap: 8,
         padding: "6px 10px",
         borderRadius: 8,
-        background: "rgba(0,0,0,0.35)",
+        background: T.surfaceAlt,
         border: `1px solid ${T.border}`,
       }}
     >
       <span style={{ color: toneColor, display: "flex" }}>{icon}</span>
       <span
         style={{
-          fontFamily: T.mono,
-          fontSize: 8,
-          fontWeight: 900,
+          fontFamily: T.ui,
+          fontSize: 10,
+          fontWeight: 600,
           color: T.fg4,
-          letterSpacing: "0.22em",
+          letterSpacing: "0.10em",
           textTransform: "uppercase",
         }}
       >
@@ -458,10 +457,10 @@ export function TelemetryStamp({
       <span
         style={{
           fontFamily: T.mono,
-          fontSize: 10,
-          fontWeight: 900,
+          fontSize: 12,
+          fontWeight: 600,
           color: toneColor,
-          letterSpacing: "0.04em",
+          letterSpacing: "0.02em",
         }}
       >
         {value}
@@ -470,7 +469,7 @@ export function TelemetryStamp({
   )
 }
 
-// ─── StatCard ────────────────────────────────────────────────────────────────
+// ─── StatCard (KPI) ────────────────────────────────────────────────────────────
 
 export function StatCard({
   icon,
@@ -487,8 +486,8 @@ export function StatCard({
   tone?: "cyan" | "ok" | "warn" | "bad"
   onClick?: () => void
 }) {
-  const colors = { cyan: T.cyan, ok: T.ok, warn: T.warn, bad: T.bad }
-  const softs = { cyan: T.cyanSoft, ok: T.okS, warn: T.warnS, bad: T.badS }
+  const colors = { cyan: T.brand, ok: T.ok, warn: T.warn, bad: T.bad }
+  const softs = { cyan: T.brandSoft, ok: T.okS, warn: T.warnS, bad: T.badS }
   const c = colors[tone]
   const s = softs[tone]
   return (
@@ -496,9 +495,10 @@ export function StatCard({
       onClick={onClick}
       type="button"
       style={{
-        background: s,
-        border: `1px solid ${c}28`,
-        borderRadius: 16,
+        background: T.surface,
+        border: `1px solid ${T.border}`,
+        borderRadius: 12,
+        boxShadow: T.shadow1,
         padding: "18px 18px 16px",
         textAlign: "left",
         cursor: onClick ? "pointer" : "default",
@@ -506,25 +506,37 @@ export function StatCard({
         minWidth: 160,
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 8, color: `${c}99`, marginBottom: 10 }}>
-        {icon}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 10 }}>
         <span
           style={{
-            fontFamily: T.mono,
-            fontSize: 9,
-            fontWeight: 900,
-            letterSpacing: "0.24em",
-            textTransform: "uppercase",
+            fontFamily: T.ui,
+            fontSize: 13,
+            fontWeight: 500,
+            color: T.fg2,
           }}
         >
           {label}
         </span>
+        <span
+          style={{
+            width: 30,
+            height: 30,
+            borderRadius: 8,
+            background: s,
+            color: c,
+            display: "grid",
+            placeItems: "center",
+            flexShrink: 0,
+          }}
+        >
+          {icon}
+        </span>
       </div>
-      <div style={{ fontFamily: T.mono, fontSize: 32, fontWeight: 900, color: c, lineHeight: 1 }}>
+      <div style={{ fontFamily: T.mono, fontSize: 28, fontWeight: 600, color: T.fg, lineHeight: 1, letterSpacing: "-0.02em" }}>
         {value}
       </div>
       {sub && (
-        <div style={{ fontFamily: T.mono, fontSize: 10, color: `${c}70`, marginTop: 6 }}>
+        <div style={{ fontFamily: T.ui, fontSize: 12.5, color: T.fg3, marginTop: 6 }}>
           {sub}
         </div>
       )}
@@ -543,14 +555,14 @@ export function UsageBar({
 }) {
   const cap = max ?? 0
   const pct = Math.min(100, cap > 0 ? (value / cap) * 100 : 0)
-  const tone = pct >= 95 ? T.bad : pct >= 80 ? T.warn : T.cyan
+  const tone = pct >= 95 ? T.bad : pct >= 80 ? T.warn : T.brand
   return (
     <div>
       <div
         style={{
           fontFamily: T.mono,
-          fontSize: 11,
-          fontWeight: 700,
+          fontSize: 13,
+          fontWeight: 600,
           color: T.fg,
           marginBottom: 4,
         }}
@@ -560,8 +572,8 @@ export function UsageBar({
       </div>
       <div
         style={{
-          height: 3,
-          background: "rgba(0,0,0,0.4)",
+          height: 4,
+          background: T.muteLine,
           borderRadius: 99,
           overflow: "hidden",
         }}
@@ -571,7 +583,6 @@ export function UsageBar({
             width: `${pct}%`,
             height: "100%",
             background: tone,
-            boxShadow: `0 0 6px ${tone}`,
           }}
         />
       </div>
@@ -601,14 +612,13 @@ export function FilterPill({
         padding: "0 14px",
         borderRadius: 999,
         cursor: "pointer",
-        border: active ? `1px solid ${T.cyan}` : `1px solid ${T.border}`,
-        background: active ? T.cyan : "transparent",
-        color: active ? "#04131e" : T.fg3,
-        fontFamily: T.mono,
-        fontSize: 9,
-        fontWeight: 900,
-        letterSpacing: "0.18em",
-        textTransform: "uppercase",
+        border: active ? `1px solid ${T.brandStrong}` : `1px solid ${T.borderStrong}`,
+        background: active ? T.brandStrong : T.surface,
+        color: active ? "#FFFFFF" : T.fg3,
+        fontFamily: T.ui,
+        fontSize: 12.5,
+        fontWeight: 500,
+        letterSpacing: "0",
         display: "flex",
         alignItems: "center",
         gap: 6,
@@ -618,11 +628,12 @@ export function FilterPill({
       {typeof count === "number" && count > 0 && (
         <span
           style={{
-            background: active ? "rgba(4,19,30,0.3)" : T.cyanSoft,
-            color: active ? "#04131e" : T.cyan,
+            background: active ? "rgba(255,255,255,0.25)" : T.brandSoft,
+            color: active ? "#FFFFFF" : T.brand,
             borderRadius: 999,
             padding: "1px 6px",
-            fontSize: 8,
+            fontSize: 11,
+            fontWeight: 600,
           }}
         >
           {count}

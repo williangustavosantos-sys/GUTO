@@ -1,45 +1,91 @@
 /**
- * Sala de Controle — Design tokens
+ * Coach/Admin Panel — Design tokens (LIGHT theme)
  *
- * Source: ~/Downloads/guto-design-system/project/coach-panel/sala-shell.jsx (token "T")
- * Replicated as Tailwind-friendly CSS values + a `T` object that mirrors the
- * design-system constants for any inline style we need.
+ * Source of truth: design_handoff_guto_coach_panel/light-shell.jsx (token "T")
+ * + README.md. Premium light SaaS: warm off-white content, deep-navy sidebar,
+ * cyan accents (brand #0E7490 on light surfaces; full #52e7ff only on the navy
+ * sidebar). Inter for UI text; JetBrains Mono only for numbers/IDs.
+ *
+ * All keys used by the existing panel code are preserved here, remapped to the
+ * light palette, so token-driven components flip to the new look automatically.
  */
 
 export const T = {
-  // base
-  ink: "#04060f",
-  bg: "#080e1c",
+  // base / content backgrounds
+  ink: "#F0F2F5",
+  bg: "#F0F2F5",
+  bgAlt: "#E8EBF0",
 
-  // panel surfaces (RGBA so they layer over scanlines)
-  panel: "rgba(15,22,42,0.86)",
-  panelDp: "rgba(8,12,26,0.92)",
-  panelHi: "rgba(22,32,58,0.90)",
+  // panel surfaces (cards)
+  panel: "#FFFFFF",
+  panelDp: "#F7F8FA",
+  panelHi: "#FFFFFF",
+  surface: "#FFFFFF",
+  surfaceAlt: "#F7F8FA",
+  surfaceHover: "#F2F4F7",
 
   // borders
-  border: "rgba(82,231,255,0.10)",
-  borderHi: "rgba(82,231,255,0.26)",
+  border: "#DDE1E8",
+  borderHi: "#C8CDD6",
+  borderStrong: "#C8CDD6",
+  borderSoft: "#EAECF0",
 
-  // text
-  fg: "#e8f4ff",
-  fg2: "rgba(232,244,255,0.60)",
-  fg3: "rgba(232,244,255,0.38)",
-  fg4: "rgba(232,244,255,0.18)",
+  // text — slate ramp (content area)
+  fg: "#0F172A",
+  fg2: "#334155",
+  fg3: "#64748B",
+  fg4: "#94A3B8",
+  fg5: "#CBD5E1",
 
-  // brand
-  cyan: "#52e7ff",
-  cyanSoft: "rgba(82,231,255,0.14)",
-  cyanLine: "rgba(82,231,255,0.24)",
+  // brand cyan — content area uses darker for a11y
+  cyan: "#0E7490",
+  brand: "#0E7490",
+  brandStrong: "#0891B2",
+  brandDeep: "#155E75",
+  cyanSoft: "#ECFEFF",
+  brandSoft: "#ECFEFF",
+  brandSoft2: "#CFFAFE",
+  cyanLine: "#A5F3FC",
+  brandLine: "#A5F3FC",
+  // full brand cyan — only legible on the dark sidebar
+  sidebarCyan: "#52e7ff",
+
+  // sidebar — deep navy
+  sidebar: "#0B1120",
+  sidebarBorder: "rgba(255,255,255,0.07)",
+  sidebarHover: "rgba(255,255,255,0.06)",
+  sidebarActive: "rgba(82,231,255,0.13)",
+  sidebarActiveBd: "rgba(82,231,255,0.60)",
+  sidebarFg: "rgba(255,255,255,0.72)",
+  sidebarFgActive: "#FFFFFF",
+  sidebarFgMuted: "rgba(255,255,255,0.32)",
+  sidebarFgGroup: "rgba(255,255,255,0.28)",
 
   // status
-  ok: "#4ade80",
-  okS: "rgba(74,222,128,0.13)",
-  warn: "#fbbf24",
-  warnS: "rgba(251,191,36,0.13)",
-  bad: "#f87171",
-  badS: "rgba(248,113,113,0.13)",
+  ok: "#15803D",
+  okS: "#DCFCE7",
+  okLine: "#BBF7D0",
+  warn: "#B45309",
+  warnS: "#FEF3C7",
+  warnLine: "#FDE68A",
+  bad: "#B91C1C",
+  badS: "#FEE2E2",
+  badLine: "#FECACA",
+  info: "#1D4ED8",
+  infoS: "#DBEAFE",
+  infoLine: "#BFDBFE",
+  mute: "#475569",
+  muteS: "#F1F5F9",
+  muteLine: "#E2E8F0",
+
+  // shadows (richer on warm bg)
+  shadow1: "0 1px 3px rgba(15,23,42,0.06), 0 1px 2px rgba(15,23,42,0.04)",
+  shadow2: "0 4px 12px rgba(15,23,42,0.07), 0 2px 4px rgba(15,23,42,0.05)",
+  shadow3: "0 12px 32px rgba(15,23,42,0.10), 0 4px 12px rgba(15,23,42,0.07)",
+  shadowFloat: "0 24px 60px rgba(15,23,42,0.20), 0 8px 24px rgba(15,23,42,0.10)",
 
   // typography
+  ui: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif',
   mono: '"JetBrains Mono","SF Mono",Menlo,Monaco,Consolas,monospace',
 } as const
 
@@ -49,12 +95,12 @@ export const TONE_MAP: Record<
   Tone,
   { bg: string; fg: string; bd: string }
 > = {
-  neutral: { bg: "rgba(232,244,255,0.06)", fg: T.fg2, bd: "rgba(232,244,255,0.10)" },
-  cyan: { bg: T.cyanSoft, fg: T.cyan, bd: T.cyanLine },
-  ok: { bg: T.okS, fg: T.ok, bd: "rgba(74,222,128,0.28)" },
-  warn: { bg: T.warnS, fg: T.warn, bd: "rgba(251,191,36,0.28)" },
-  bad: { bg: T.badS, fg: T.bad, bd: "rgba(248,113,113,0.28)" },
-  mute: { bg: "rgba(232,244,255,0.04)", fg: T.fg3, bd: "rgba(232,244,255,0.08)" },
+  neutral: { bg: T.muteS, fg: T.mute, bd: T.muteLine },
+  cyan: { bg: T.brandSoft, fg: T.brand, bd: T.brandLine },
+  ok: { bg: T.okS, fg: T.ok, bd: T.okLine },
+  warn: { bg: T.warnS, fg: T.warn, bd: T.warnLine },
+  bad: { bg: T.badS, fg: T.bad, bd: T.badLine },
+  mute: { bg: T.muteS, fg: T.mute, bd: T.muteLine },
 }
 
 // ─── Plan / status helpers ─────────────────────────────────────────────────

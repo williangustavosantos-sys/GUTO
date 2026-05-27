@@ -18,8 +18,8 @@ export function Panel({
   className?: string
 }) {
   return (
-    <section className={`rounded-xl border border-white/8 bg-white/[0.035] p-4 ${className}`}>
-      <h3 className="mb-4 text-[10px] font-black uppercase tracking-[0.25em] text-[#00e5ff]">
+    <section className={`rounded-xl border border-slate-200 bg-white p-4 shadow-sm ${className}`}>
+      <h3 className="mb-4 text-[11px] font-semibold uppercase tracking-[0.10em] text-[#0E7490]">
         {title}
       </h3>
       {children}
@@ -31,9 +31,9 @@ export function Panel({
 
 export function DataRow({ label, value }: { label: string; value: ReactNode }) {
   return (
-    <div className="flex items-center justify-between gap-4 border-b border-white/[0.04] py-2.5 last:border-0">
-      <span className="text-xs text-white/35">{label}</span>
-      <div className="text-right text-xs font-bold text-white">{value}</div>
+    <div className="flex items-center justify-between gap-4 border-b border-slate-100 py-2.5 last:border-0">
+      <span className="text-sm text-slate-500">{label}</span>
+      <div className="text-right text-sm font-medium text-slate-900">{value}</div>
     </div>
   )
 }
@@ -57,8 +57,8 @@ export function ActionButton({
       variant="outline"
       disabled={disabled}
       onClick={onClick}
-      className={`h-11 justify-center border-white/10 bg-white/5 text-xs font-bold text-white hover:bg-white/10 ${
-        danger ? "border-red-500/30 text-red-300 hover:bg-red-500 hover:text-white" : ""
+      className={`h-11 justify-center border-slate-200 bg-white text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 ${
+        danger ? "border-red-300 text-red-600 hover:bg-red-600 hover:text-white" : ""
       }`}
     >
       {children}
@@ -85,7 +85,7 @@ export function Field({
 }) {
   return (
     <label className={`block ${className}`}>
-      <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-white/30">
+      <span className="mb-1 block text-[12.5px] font-medium text-slate-600">
         {label}
       </span>
       <Input
@@ -93,7 +93,7 @@ export function Field({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="h-10 border-white/10 bg-white/5 text-white placeholder:text-white/25"
+        className="h-9 border-slate-300 bg-white text-slate-900 placeholder:text-slate-400"
       />
     </label>
   )
@@ -112,10 +112,10 @@ export function Metric({
 }) {
   return (
     <div className="min-w-0">
-      <p className="mb-1 text-[9px] font-black uppercase tracking-widest text-white/20">{label}</p>
+      <p className="mb-1 text-[11px] font-medium uppercase tracking-wide text-slate-400">{label}</p>
       <p
-        className={`overflow-hidden text-ellipsis whitespace-nowrap font-mono text-xs font-bold ${
-          cyan ? "text-[#00e5ff]" : "text-white/60"
+        className={`overflow-hidden text-ellipsis whitespace-nowrap font-mono text-sm font-semibold ${
+          cyan ? "text-[#0E7490]" : "text-slate-700"
         }`}
         title={typeof value === "string" ? value : undefined}
       >
@@ -130,23 +130,23 @@ export function Metric({
 import type { AdminLog } from "@/lib/api/admin"
 
 export function LogList({ logs, empty }: { logs: AdminLog[]; empty: string }) {
-  if (!logs.length) return <p className="text-sm text-white/35">{empty}</p>
+  if (!logs.length) return <p className="text-sm text-slate-500">{empty}</p>
   return (
     <div className="grid gap-2">
       {logs.slice(0, 80).map((log, index) => (
         <div
           key={log.id || index}
-          className="rounded-lg border border-white/7 bg-black/15 p-3"
+          className="rounded-lg border border-slate-200 bg-slate-50 p-3"
         >
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="text-xs font-black uppercase tracking-widest text-white">
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-700">
               {log.action || "ação"}
             </span>
-            <span className="font-mono text-[10px] text-white/35">
+            <span className="font-mono text-[11px] text-slate-400">
               {log.timestamp ? new Date(log.timestamp).toLocaleString("pt-BR") : "-"}
             </span>
           </div>
-          <p className="mt-1 font-mono text-[10px] text-white/35">
+          <p className="mt-1 font-mono text-[11px] text-slate-400">
             {log.actorRole || "-"} · {log.actorUserId || "-"}
           </p>
         </div>
@@ -160,7 +160,7 @@ export function LogList({ logs, empty }: { logs: AdminLog[]; empty: string }) {
 export function PlanStatus({ source, locked }: { source?: string; locked?: boolean }) {
   return (
     <div className="flex flex-wrap gap-2">
-      <Badge variant="outline" className="border-[#00e5ff]/35 text-[#00e5ff]">
+      <Badge variant="outline" className="border-[#0E7490]/40 text-[#0E7490]">
         {sourceLabel(source)}
       </Badge>
       <Badge variant={locked ? "default" : "secondary"}>
@@ -187,21 +187,21 @@ export function RankingSection({
         {items.map((item) => (
           <div
             key={item.userId}
-            className="flex items-center justify-between rounded-lg bg-black/15 p-3"
+            className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 p-3"
           >
             <div>
-              <p className="font-bold text-white">
+              <p className="font-semibold text-slate-900">
                 {item.position}º {item.pairName}
               </p>
-              <p className="font-mono text-[10px] text-white/35">
+              <p className="font-mono text-[11px] text-slate-400">
                 {avatarStageLabel(item.avatarStage)}
                 {showStreak && item.currentStreak ? ` · ${item.currentStreak}d` : ""}
               </p>
             </div>
-            <p className="font-mono text-sm font-black text-[#00e5ff]">{item.xp} XP</p>
+            <p className="font-mono text-sm font-semibold text-[#0E7490]">{item.xp} XP</p>
           </div>
         ))}
-        {!items.length && <p className="text-sm text-white/35">Sem ranking.</p>}
+        {!items.length && <p className="text-sm text-slate-500">Sem ranking.</p>}
       </div>
     </Panel>
   )
@@ -214,13 +214,13 @@ import type { RiskLevel } from "./utils"
 export function RiskBadge({ level }: { level: RiskLevel }) {
   if (level === "ok") return null
   const config = {
-    atencao: { label: "ATENÇÃO", cls: "border-yellow-500/40 bg-yellow-500/10 text-yellow-300" },
-    critico: { label: "CRÍTICO", cls: "border-red-500/40 bg-red-500/10 text-red-300" },
-    "sem-sinal": { label: "SEM SINAL", cls: "border-white/20 bg-white/5 text-white/40" },
+    atencao: { label: "ATENÇÃO", cls: "border-amber-300 bg-amber-50 text-amber-700" },
+    critico: { label: "CRÍTICO", cls: "border-red-300 bg-red-50 text-red-700" },
+    "sem-sinal": { label: "SEM SINAL", cls: "border-slate-300 bg-slate-100 text-slate-500" },
   }
   const { label, cls } = config[level]
   return (
-    <span className={`rounded-full border px-2 py-0.5 text-[9px] font-black uppercase tracking-widest ${cls}`}>
+    <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${cls}`}>
       {label}
     </span>
   )

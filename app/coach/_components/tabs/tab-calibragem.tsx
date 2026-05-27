@@ -20,17 +20,17 @@ export function TabCalibragem() {
     <Panel title="Calibragem do aluno">
       <div className="grid gap-3 md:grid-cols-2">
         <label className="block">
-          <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-white/30">
+          <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">
             Sexo biológico
           </span>
           <select
             value={calibrationDraft.biologicalSex}
             onChange={(e) => patch({ biologicalSex: e.target.value })}
-            className="h-10 w-full rounded-md border border-white/10 bg-white/5 px-3 text-sm text-white"
+            className="h-10 w-full rounded-md border border-slate-200 bg-slate-50 px-3 text-sm text-slate-900"
           >
-            <option value="" className="bg-[#0d1426]">Selecionar</option>
+            <option value="" className="bg-white">Selecionar</option>
             {Object.entries(BIOLOGICAL_SEX_LABELS).map(([code, label]) => (
-              <option key={code} value={code} className="bg-[#0d1426]">{label}</option>
+              <option key={code} value={code} className="bg-white">{label}</option>
             ))}
           </select>
         </label>
@@ -44,49 +44,49 @@ export function TabCalibragem() {
         />
 
         <label className="block">
-          <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-white/30">
+          <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">
             Nível de treino
           </span>
           <select
             value={calibrationDraft.trainingLevel}
             onChange={(e) => patch({ trainingLevel: e.target.value })}
-            className="h-10 w-full rounded-md border border-white/10 bg-white/5 px-3 text-sm text-white"
+            className="h-10 w-full rounded-md border border-slate-200 bg-slate-50 px-3 text-sm text-slate-900"
           >
-            <option value="" className="bg-[#0d1426]">Selecionar</option>
+            <option value="" className="bg-white">Selecionar</option>
             {Object.entries(TRAINING_LEVEL_LABELS).map(([code, label]) => (
-              <option key={code} value={code} className="bg-[#0d1426]">{label}</option>
+              <option key={code} value={code} className="bg-white">{label}</option>
             ))}
           </select>
         </label>
 
         <label className="block">
-          <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-white/30">
+          <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">
             Objetivo
           </span>
           <select
             value={calibrationDraft.trainingGoal}
             onChange={(e) => patch({ trainingGoal: e.target.value })}
-            className="h-10 w-full rounded-md border border-white/10 bg-white/5 px-3 text-sm text-white"
+            className="h-10 w-full rounded-md border border-slate-200 bg-slate-50 px-3 text-sm text-slate-900"
           >
-            <option value="" className="bg-[#0d1426]">Selecionar</option>
+            <option value="" className="bg-white">Selecionar</option>
             {Object.entries(TRAINING_GOAL_LABELS).map(([code, label]) => (
-              <option key={code} value={code} className="bg-[#0d1426]">{label}</option>
+              <option key={code} value={code} className="bg-white">{label}</option>
             ))}
           </select>
         </label>
 
         <label className="block">
-          <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-white/30">
+          <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">
             Local preferido
           </span>
           <select
             value={calibrationDraft.preferredTrainingLocation}
             onChange={(e) => patch({ preferredTrainingLocation: e.target.value })}
-            className="h-10 w-full rounded-md border border-white/10 bg-white/5 px-3 text-sm text-white"
+            className="h-10 w-full rounded-md border border-slate-200 bg-slate-50 px-3 text-sm text-slate-900"
           >
-            <option value="" className="bg-[#0d1426]">Selecionar</option>
+            <option value="" className="bg-white">Selecionar</option>
             {Object.entries(TRAINING_LOCATION_LABELS).map(([code, label]) => (
-              <option key={code} value={code} className="bg-[#0d1426]">{label}</option>
+              <option key={code} value={code} className="bg-white">{label}</option>
             ))}
           </select>
         </label>
@@ -139,7 +139,7 @@ export function TabCalibragem() {
       </div>
 
       <Button
-        className="mt-5 bg-[#00e5ff] text-[#0a0f1e] hover:bg-white"
+        className="mt-5 bg-[#0891B2] text-slate-900 hover:bg-[#0E7490]"
         disabled={acting}
         onClick={() =>
           void act(async () => {

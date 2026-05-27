@@ -118,20 +118,20 @@ function WorkoutEditor({
           <Field label="Título" value={value.title || ""} onChange={(title) => onChange({ ...value, title, focus: title || value.focus })} />
           <Field label="Foco / grupo muscular" value={value.focus || ""} onChange={(focus) => onChange({ ...value, focus })} />
           <label className="block">
-            <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-white/30">Dia</span>
-            <select value={value.weekDay || "today"} onChange={(e) => onChange({ ...value, weekDay: e.target.value })} className="h-10 w-full rounded-md border border-white/10 bg-white/5 px-3 text-sm text-white">
+            <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">Dia</span>
+            <select value={value.weekDay || "today"} onChange={(e) => onChange({ ...value, weekDay: e.target.value })} className="h-10 w-full rounded-md border border-slate-200 bg-slate-50 px-3 text-sm text-slate-900">
               {["Domingo","Segunda-feira","Terça-feira","Quarta-feira","Quinta-feira","Sexta-feira","Sábado"].map((d) => (
-                <option key={d} value={d} className="bg-[#0d1426]">{d}</option>
+                <option key={d} value={d} className="bg-white">{d}</option>
               ))}
-              <option value="today" className="bg-[#0d1426]">Hoje ({["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"][new Date().getDay()]})</option>
+              <option value="today" className="bg-white">Hoje ({["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"][new Date().getDay()]})</option>
             </select>
           </label>
           <label className="block">
-            <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-white/30">Local</span>
-            <select value={value.location || ""} onChange={(e) => onChange({ ...value, location: e.target.value })} className="h-10 w-full rounded-md border border-white/10 bg-white/5 px-3 text-sm text-white">
-              <option value="" className="bg-[#0d1426]">Selecionar</option>
+            <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">Local</span>
+            <select value={value.location || ""} onChange={(e) => onChange({ ...value, location: e.target.value })} className="h-10 w-full rounded-md border border-slate-200 bg-slate-50 px-3 text-sm text-slate-900">
+              <option value="" className="bg-white">Selecionar</option>
               {Object.entries(TRAINING_LOCATION_LABELS).map(([code, label]) => (
-                <option key={code} value={code} className="bg-[#0d1426]">{label}</option>
+                <option key={code} value={code} className="bg-white">{label}</option>
               ))}
             </select>
           </label>
@@ -140,15 +140,15 @@ function WorkoutEditor({
           <Field label="Observações do coach" value={value.coachNotes || ""} onChange={(v) => onChange({ ...value, coachNotes: v, summary: v || value.summary })} className="md:col-span-2" />
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
-          <Button className="bg-[#00e5ff] text-[#0a0f1e] hover:bg-white" disabled={acting} onClick={onSave}><Save className="mr-2 h-4 w-4" />Salvar</Button>
-          <Button variant="outline" className="border-white/10 bg-white/5 text-white" disabled={acting} onClick={onCreateManual}><Dumbbell className="mr-2 h-4 w-4" />Treino manual</Button>
-          <Button variant="outline" className="border-white/10 bg-white/5 text-white" disabled={acting} onClick={onGenerate}><RefreshCw className="mr-2 h-4 w-4" />Gerar com GUTO</Button>
-          <Button variant="outline" className="border-white/10 bg-white/5 text-white" disabled={acting} onClick={() => onChange({ ...value, title: `${value.title || value.focus} cópia`, source: "coach_manual", lockedByCoach: true })}>Duplicar</Button>
-          <Button variant="outline" className="border-white/10 bg-white/5 text-white" disabled={acting} onClick={onLock}>
+          <Button className="bg-[#0891B2] text-slate-900 hover:bg-[#0E7490]" disabled={acting} onClick={onSave}><Save className="mr-2 h-4 w-4" />Salvar</Button>
+          <Button variant="outline" className="border-slate-200 bg-slate-50 text-slate-900" disabled={acting} onClick={onCreateManual}><Dumbbell className="mr-2 h-4 w-4" />Treino manual</Button>
+          <Button variant="outline" className="border-slate-200 bg-slate-50 text-slate-900" disabled={acting} onClick={onGenerate}><RefreshCw className="mr-2 h-4 w-4" />Gerar com GUTO</Button>
+          <Button variant="outline" className="border-slate-200 bg-slate-50 text-slate-900" disabled={acting} onClick={() => onChange({ ...value, title: `${value.title || value.focus} cópia`, source: "coach_manual", lockedByCoach: true })}>Duplicar</Button>
+          <Button variant="outline" className="border-slate-200 bg-slate-50 text-slate-900" disabled={acting} onClick={onLock}>
             {value.lockedByCoach ? <Unlock className="mr-2 h-4 w-4" /> : <Lock className="mr-2 h-4 w-4" />}
             {value.lockedByCoach ? "Permitir GUTO atualizar" : "Bloquear auto-atualização"}
           </Button>
-          <Button variant="outline" className="border-red-500/30 bg-transparent text-red-300" disabled={acting} onClick={onReset}><Trash2 className="mr-2 h-4 w-4" />Resetar treino</Button>
+          <Button variant="outline" className="border-red-300 bg-transparent text-red-600" disabled={acting} onClick={onReset}><Trash2 className="mr-2 h-4 w-4" />Resetar treino</Button>
         </div>
       </Panel>
 
@@ -161,29 +161,29 @@ function WorkoutEditor({
             const matches = normalizedSearch ? exerciseCatalog.filter((c) => catalogSearchText(c).includes(normalizedSearch)).slice(0, 8) : []
 
             return (
-              <div key={`${exercise.id}-${index}`} className="rounded-lg border border-white/8 bg-black/15 p-3">
+              <div key={`${exercise.id}-${index}`} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
                 <div className="mb-3 flex items-center justify-between gap-2">
-                  <span className="font-mono text-[10px] font-black uppercase tracking-widest text-white/35">#{index + 1}</span>
+                  <span className="font-mono text-[10px] font-black uppercase tracking-widest text-slate-400">#{index + 1}</span>
                   <div className="flex gap-1">
-                    <Button size="sm" variant="outline" className="h-8 border-white/10 bg-white/5 text-white" onClick={() => moveExercise(index, -1)}>↑</Button>
-                    <Button size="sm" variant="outline" className="h-8 border-white/10 bg-white/5 text-white" onClick={() => moveExercise(index, 1)}>↓</Button>
-                    <Button size="sm" variant="outline" className="h-8 border-red-500/30 bg-transparent text-red-300" onClick={() => removeExercise(index)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                    <Button size="sm" variant="outline" className="h-8 border-slate-200 bg-slate-50 text-slate-900" onClick={() => moveExercise(index, -1)}>↑</Button>
+                    <Button size="sm" variant="outline" className="h-8 border-slate-200 bg-slate-50 text-slate-900" onClick={() => moveExercise(index, 1)}>↓</Button>
+                    <Button size="sm" variant="outline" className="h-8 border-red-300 bg-transparent text-red-600" onClick={() => removeExercise(index)}><Trash2 className="h-3.5 w-3.5" /></Button>
                   </div>
                 </div>
 
                 <div className="mb-3 grid gap-2 md:grid-cols-[1fr_7rem]">
                   <label className="block">
-                    <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-white/30">Exercício oficial</span>
+                    <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">Exercício oficial</span>
                     <Input
                       value={searchTerm}
                       onChange={(e) => setExerciseSearch((s) => ({ ...s, [index]: e.target.value }))}
                       placeholder={catEx ? catEx.canonicalNamePt : "Pesquisar catálogo"}
-                      className="h-10 border-white/10 bg-white/5 text-white placeholder:text-white/30"
+                      className="h-10 border-slate-200 bg-slate-50 text-slate-900 placeholder:text-slate-400"
                     />
                   </label>
-                  <div className="rounded-md border border-white/10 bg-white/5 px-3 py-2">
-                    <span className="block text-[10px] font-black uppercase tracking-widest text-white/30">Catálogo</span>
-                    <span className={catEx ? "text-xs font-black text-[#00e5ff]" : "text-xs font-black text-red-300"}>
+                  <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
+                    <span className="block text-[10px] font-black uppercase tracking-widest text-slate-400">Catálogo</span>
+                    <span className={catEx ? "text-xs font-black text-[#0E7490]" : "text-xs font-black text-red-600"}>
                       {catEx ? catEx.id : "Não selecionado"}
                     </span>
                   </div>
@@ -193,28 +193,28 @@ function WorkoutEditor({
                   <div className="mb-3 grid gap-1.5">
                     {matches.map((item) => (
                       <button key={item.id} type="button" onClick={() => selectCatalog(index, item)}
-                        className="rounded-md border border-white/10 bg-white/[0.04] px-3 py-2 text-left hover:border-[#00e5ff]/45">
-                        <span className="block text-xs font-black text-white">{item.canonicalNamePt}</span>
-                        <span className="font-mono text-[9px] uppercase tracking-widest text-white/35">{item.muscleGroup} · {item.id}</span>
+                        className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-left hover:border-[#0E7490]/45">
+                        <span className="block text-xs font-black text-slate-900">{item.canonicalNamePt}</span>
+                        <span className="font-mono text-[9px] uppercase tracking-widest text-slate-400">{item.muscleGroup} · {item.id}</span>
                       </button>
                     ))}
                   </div>
                 )}
 
                 {!catEx && !normalizedSearch && (
-                  <p className="mb-3 rounded-md border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-red-200">
+                  <p className="mb-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
                     Escolha um exercício do catálogo antes de salvar.
                   </p>
                 )}
 
                 {catEx && (
                   <div className="mb-3 grid gap-2 md:grid-cols-[7rem_1fr]">
-                    <div className="h-[76px] overflow-hidden rounded-md border border-[#00e5ff]/30 bg-black/20">
+                    <div className="h-[76px] overflow-hidden rounded-md border border-[#0E7490]/40 bg-slate-100">
                       <video src={catEx.videoUrl} muted loop playsInline preload="metadata" className="h-full w-full object-contain" />
                     </div>
-                    <div className="rounded-md border border-white/10 bg-white/[0.035] px-3 py-2">
-                      <p className="text-sm font-black text-white">{catEx.canonicalNamePt}</p>
-                      <p className="mt-1 font-mono text-[9px] uppercase tracking-widest text-white/35">{catEx.muscleGroup} · {catEx.equipment || "sem equipamento"}</p>
+                    <div className="rounded-md border border-slate-200 bg-white px-3 py-2">
+                      <p className="text-sm font-black text-slate-900">{catEx.canonicalNamePt}</p>
+                      <p className="mt-1 font-mono text-[9px] uppercase tracking-widest text-slate-400">{catEx.muscleGroup} · {catEx.equipment || "sem equipamento"}</p>
                     </div>
                   </div>
                 )}
@@ -232,22 +232,22 @@ function WorkoutEditor({
             )
           })}
         </div>
-        <Button variant="outline" className="mt-4 border-white/10 bg-white/5 text-white" onClick={() => onChange({ ...value, exercises: [...value.exercises, blankExercise(value.exercises.length)] })}>
+        <Button variant="outline" className="mt-4 border-slate-200 bg-slate-50 text-slate-900" onClick={() => onChange({ ...value, exercises: [...value.exercises, blankExercise(value.exercises.length)] })}>
           <Plus className="mr-2 h-4 w-4" />Adicionar exercício
         </Button>
       </Panel>
 
       <Panel title="Enviar exercício personalizado">
-        <div className="mb-3 rounded-md border border-[#00e5ff]/25 bg-[#00e5ff]/10 px-3 py-2">
-          <p className="text-xs font-bold text-[#baf7ff]">{EXERCISE_VIDEO_LIMIT_COPY}</p>
+        <div className="mb-3 rounded-md border border-[#0E7490]/30 bg-cyan-50 px-3 py-2">
+          <p className="text-xs font-bold text-[#155E75]">{EXERCISE_VIDEO_LIMIT_COPY}</p>
         </div>
         <div className="grid gap-3 md:grid-cols-4">
           <Field label="Nome oficial" value={customDraft.canonicalNamePt} onChange={(v) => setCustomDraft((d) => ({ ...d, canonicalNamePt: v }))} className="md:col-span-2" />
           <Field label="ID opcional" value={customDraft.id} onChange={(v) => setCustomDraft((d) => ({ ...d, id: v }))} />
           <label className="block">
-            <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-white/30">Grupo</span>
-            <select value={customDraft.muscleGroup} onChange={(e) => setCustomDraft((d) => ({ ...d, muscleGroup: e.target.value }))} className="h-10 w-full rounded-md border border-white/10 bg-white/5 px-3 text-sm text-white">
-              {["aquecimento","peito","costas","ombro","bracos","pernas","abdomen"].map((g) => <option key={g} value={g} className="bg-[#0d1426]">{g}</option>)}
+            <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">Grupo</span>
+            <select value={customDraft.muscleGroup} onChange={(e) => setCustomDraft((d) => ({ ...d, muscleGroup: e.target.value }))} className="h-10 w-full rounded-md border border-slate-200 bg-slate-50 px-3 text-sm text-slate-900">
+              {["aquecimento","peito","costas","ombro","bracos","pernas","abdomen"].map((g) => <option key={g} value={g} className="bg-white">{g}</option>)}
             </select>
           </label>
           <Field label="Equipamento" value={customDraft.equipment} onChange={(v) => setCustomDraft((d) => ({ ...d, equipment: v }))} />
@@ -259,11 +259,11 @@ function WorkoutEditor({
           <Field label="Height" value={customDraft.height} onChange={(v) => setCustomDraft((d) => ({ ...d, height: v }))} />
           <Field label="FPS" value={customDraft.fps} onChange={(v) => setCustomDraft((d) => ({ ...d, fps: v }))} />
         </div>
-        <label className="mt-3 flex items-center gap-2 text-sm text-white/55">
+        <label className="mt-3 flex items-center gap-2 text-sm text-slate-600">
           <input type="checkbox" checked={customDraft.hasAudio} onChange={(e) => setCustomDraft((d) => ({ ...d, hasAudio: e.target.checked }))} />
           Vídeo tem áudio
         </label>
-        <Button className="mt-4 bg-[#00e5ff] text-[#0a0f1e] hover:bg-white" disabled={acting || creatingCustom} onClick={() => void submitCustom()}>
+        <Button className="mt-4 bg-[#0891B2] text-slate-900 hover:bg-[#0E7490]" disabled={acting || creatingCustom} onClick={() => void submitCustom()}>
           <FileVideo className="mr-2 h-4 w-4" />Enviar para aprovação
         </Button>
       </Panel>
@@ -340,7 +340,7 @@ function WeeklyWorkoutEditor({
 
   return (
     <Panel title="Plano semanal de treino">
-      <p className="mb-4 text-[11px] text-white/40">Monte o treino de cada dia. O aluno vê apenas o treino do dia atual no app.</p>
+      <p className="mb-4 text-[11px] text-slate-500">Monte o treino de cada dia. O aluno vê apenas o treino do dia atual no app.</p>
       <div className="space-y-2">
         {WEEK_DAYS.map(({ key, label, short }) => {
           const plan = days[key]
@@ -350,40 +350,40 @@ function WeeklyWorkoutEditor({
           const catalogResults = query.length >= 2 ? exerciseCatalog.filter((e) => catalogSearchText(e).includes(query)).slice(0, 8) : []
 
           return (
-            <div key={key} className="rounded-lg border border-white/10 bg-white/5">
+            <div key={key} className="rounded-lg border border-slate-200 bg-slate-50">
               <button className="flex w-full items-center justify-between px-4 py-3 text-left" onClick={() => setExpandedDay(isExpanded ? null : key)}>
                 <div className="flex items-center gap-3">
-                  <span className="w-8 text-[11px] font-black uppercase tracking-widest text-white/40">{short}</span>
-                  <span className="text-sm font-semibold text-white">{label}</span>
+                  <span className="w-8 text-[11px] font-black uppercase tracking-widest text-slate-500">{short}</span>
+                  <span className="text-sm font-semibold text-slate-900">{label}</span>
                   {plan && exerciseCount > 0 && (
-                    <span className="rounded-full bg-[#00e5ff]/15 px-2 py-0.5 text-[10px] font-bold text-[#00e5ff]">{exerciseCount} ex.</span>
+                    <span className="rounded-full bg-cyan-50 px-2 py-0.5 text-[10px] font-bold text-[#0E7490]">{exerciseCount} ex.</span>
                   )}
-                  {!plan && <span className="text-xs text-white/25">Descanso</span>}
+                  {!plan && <span className="text-xs text-slate-300">Descanso</span>}
                 </div>
-                <span className="text-white/30">{isExpanded ? "▲" : "▼"}</span>
+                <span className="text-slate-400">{isExpanded ? "▲" : "▼"}</span>
               </button>
 
               {isExpanded && (
-                <div className="border-t border-white/8 px-4 pb-4 pt-3 space-y-3">
+                <div className="border-t border-slate-200 px-4 pb-4 pt-3 space-y-3">
                   {plan && (
                     <>
                       <div className="grid gap-2 sm:grid-cols-2">
                         <label className="block">
-                          <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-white/30">Foco do dia</span>
-                          <Input value={plan.focus || ""} onChange={(e) => setDayPlan(key, { ...plan, focus: e.target.value, title: e.target.value })} placeholder="Ex: Peito + tríceps" className="h-9 border-white/10 bg-white/5 text-sm text-white" />
+                          <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">Foco do dia</span>
+                          <Input value={plan.focus || ""} onChange={(e) => setDayPlan(key, { ...plan, focus: e.target.value, title: e.target.value })} placeholder="Ex: Peito + tríceps" className="h-9 border-slate-200 bg-slate-50 text-sm text-slate-900" />
                         </label>
                         <label className="block">
-                          <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-white/30">Notas do coach</span>
-                          <Input value={plan.coachNotes || ""} onChange={(e) => setDayPlan(key, { ...plan, coachNotes: e.target.value })} placeholder="Observações" className="h-9 border-white/10 bg-white/5 text-sm text-white" />
+                          <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">Notas do coach</span>
+                          <Input value={plan.coachNotes || ""} onChange={(e) => setDayPlan(key, { ...plan, coachNotes: e.target.value })} placeholder="Observações" className="h-9 border-slate-200 bg-slate-50 text-sm text-slate-900" />
                         </label>
                       </div>
                       {plan.exercises.length > 0 && (
                         <div className="space-y-1">
                           {plan.exercises.map((ex, i) => (
-                            <div key={i} className="flex items-center gap-2 rounded-md border border-white/8 bg-white/5 px-3 py-2">
-                              <span className="min-w-0 flex-1 truncate text-xs text-white">{ex.name || ex.canonicalNamePt || ex.id}</span>
-                              <span className="shrink-0 text-[10px] text-white/30">{ex.sets}×{ex.reps}</span>
-                              <button onClick={() => removeExFromDay(key, i)} className="shrink-0 text-white/30 hover:text-red-400"><Trash2 className="h-3.5 w-3.5" /></button>
+                            <div key={i} className="flex items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
+                              <span className="min-w-0 flex-1 truncate text-xs text-slate-900">{ex.name || ex.canonicalNamePt || ex.id}</span>
+                              <span className="shrink-0 text-[10px] text-slate-400">{ex.sets}×{ex.reps}</span>
+                              <button onClick={() => removeExFromDay(key, i)} className="shrink-0 text-slate-400 hover:text-red-600"><Trash2 className="h-3.5 w-3.5" /></button>
                             </div>
                           ))}
                         </div>
@@ -391,13 +391,13 @@ function WeeklyWorkoutEditor({
                     </>
                   )}
                   <div className="relative">
-                    <Input value={daySearch[key] ?? ""} onChange={(e) => setDaySearch((s) => ({ ...s, [key]: e.target.value }))} placeholder="Buscar exercício no catálogo…" className="h-9 border-white/10 bg-white/5 text-sm text-white" />
+                    <Input value={daySearch[key] ?? ""} onChange={(e) => setDaySearch((s) => ({ ...s, [key]: e.target.value }))} placeholder="Buscar exercício no catálogo…" className="h-9 border-slate-200 bg-slate-50 text-sm text-slate-900" />
                     {catalogResults.length > 0 && (
-                      <div className="absolute left-0 right-0 top-10 z-20 rounded-lg border border-white/10 bg-[#0d1426] shadow-xl">
+                      <div className="absolute left-0 right-0 top-10 z-20 rounded-lg border border-slate-200 bg-white shadow-xl">
                         {catalogResults.map((cat) => (
-                          <button key={cat.id} className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs hover:bg-white/5" onClick={() => addExFromCatalog(key, cat)}>
-                            <span className="font-medium text-white">{cat.canonicalNamePt}</span>
-                            <span className="text-white/35">{cat.muscleGroup}</span>
+                          <button key={cat.id} className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs hover:bg-slate-50" onClick={() => addExFromCatalog(key, cat)}>
+                            <span className="font-medium text-slate-900">{cat.canonicalNamePt}</span>
+                            <span className="text-slate-400">{cat.muscleGroup}</span>
                           </button>
                         ))}
                       </div>
@@ -405,12 +405,12 @@ function WeeklyWorkoutEditor({
                   </div>
                   <div className="flex gap-2">
                     {!plan && (
-                      <Button size="sm" variant="outline" className="border-[#00e5ff]/30 text-[#00e5ff] hover:bg-[#00e5ff]/10" onClick={() => setDayPlan(key, blankDayPlan())}>
+                      <Button size="sm" variant="outline" className="border-[#0E7490]/40 text-[#0E7490] hover:bg-cyan-50" onClick={() => setDayPlan(key, blankDayPlan())}>
                         <Plus className="mr-1 h-3.5 w-3.5" />Adicionar treino
                       </Button>
                     )}
                     {plan && (
-                      <Button size="sm" variant="outline" className="border-white/10 text-white/50 hover:bg-white/5" onClick={() => setDayPlan(key, undefined)}>
+                      <Button size="sm" variant="outline" className="border-slate-200 text-slate-500 hover:bg-slate-50" onClick={() => setDayPlan(key, undefined)}>
                         <Trash2 className="mr-1 h-3.5 w-3.5" />Remover dia
                       </Button>
                     )}
@@ -421,12 +421,12 @@ function WeeklyWorkoutEditor({
           )
         })}
       </div>
-      <div className="mt-4 border-t border-white/8 pt-4">
-        <Button className="bg-[#00e5ff] text-[#0a0f1e] hover:bg-white" disabled={acting || saving} onClick={() => void handleSave()}>
+      <div className="mt-4 border-t border-slate-200 pt-4">
+        <Button className="bg-[#0891B2] text-slate-900 hover:bg-[#0E7490]" disabled={acting || saving} onClick={() => void handleSave()}>
           <Save className="mr-2 h-4 w-4" />{saving ? "Salvando…" : "Salvar plano semanal"}
         </Button>
         {weeklyPlan?.updatedAt && (
-          <p className="mt-2 text-[10px] text-white/30">
+          <p className="mt-2 text-[10px] text-slate-400">
             Última atualização: {new Date(weeklyPlan.updatedAt).toLocaleString("pt-BR")}
           </p>
         )}
@@ -452,13 +452,13 @@ export function TabTreino() {
   return (
     <div className="space-y-3">
       {/* Sub-tab toggle */}
-      <div className="flex gap-1 rounded-lg border border-white/10 bg-white/5 p-1">
+      <div className="flex gap-1 rounded-lg border border-slate-200 bg-slate-50 p-1">
         {(["oficial", "semana"] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setTreinoSubTab(tab)}
             className={`flex-1 rounded-md py-2 text-xs font-bold uppercase tracking-widest transition-colors ${
-              treinoSubTab === tab ? "bg-[#00e5ff] text-[#0a0f1e]" : "text-white/50 hover:text-white"
+              treinoSubTab === tab ? "bg-[#0891B2] text-slate-900" : "text-slate-500 hover:text-slate-900"
             }`}
           >
             {tab === "oficial" ? "Treino oficial" : "Plano semanal"}

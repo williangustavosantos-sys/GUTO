@@ -79,11 +79,11 @@ export function TabAcesso() {
                   setSelectedDetail((c) => c ? { ...c, student: result.student } : c)
                 }, "Aluno atribuído ao coach.")
               }}
-              className="h-11 rounded-md border border-white/10 bg-white/5 px-3 text-sm text-white"
+              className="h-11 rounded-md border border-slate-200 bg-slate-50 px-3 text-sm text-slate-900"
             >
-              <option value="" className="bg-[#0d1426]">Atribuir coach…</option>
+              <option value="" className="bg-white">Atribuir coach…</option>
               {coaches.map((c) => (
-                <option key={c.userId} value={c.userId} className="bg-[#0d1426]">
+                <option key={c.userId} value={c.userId} className="bg-white">
                   {c.name || c.email || c.userId}
                 </option>
               ))}
@@ -127,12 +127,12 @@ export function TabAcesso() {
         </div>
 
         {lastSecret?.startsWith("http") && (
-          <div className="mt-3 flex items-center gap-2 rounded-lg border border-[#00e5ff]/30 bg-[#00e5ff]/10 p-3">
-            <p className="min-w-0 flex-1 break-all font-mono text-xs text-white">{lastSecret}</p>
+          <div className="mt-3 flex items-center gap-2 rounded-lg border border-[#0E7490]/40 bg-cyan-50 p-3">
+            <p className="min-w-0 flex-1 break-all font-mono text-xs text-slate-900">{lastSecret}</p>
             <Button
               size="sm"
               variant="outline"
-              className="shrink-0 border-white/10 bg-white/5 text-white"
+              className="shrink-0 border-slate-200 bg-slate-50 text-slate-900"
               onClick={() => {
                 void navigator.clipboard.writeText(lastSecret)
                 toast.success("Link copiado!")
@@ -180,11 +180,11 @@ export function TabAcesso() {
         </div>
 
         {lastSecret && !lastSecret.startsWith("http") && (
-          <div className="mt-4 rounded-lg border border-[#00e5ff]/30 bg-[#00e5ff]/10 p-4">
-            <p className="mb-1 text-[10px] font-black uppercase tracking-widest text-[#00e5ff]">
+          <div className="mt-4 rounded-lg border border-[#0E7490]/40 bg-cyan-50 p-4">
+            <p className="mb-1 text-[10px] font-black uppercase tracking-widest text-[#0E7490]">
               Senha temporária
             </p>
-            <p className="font-mono text-lg font-black text-white">{lastSecret}</p>
+            <p className="font-mono text-lg font-black text-slate-900">{lastSecret}</p>
           </div>
         )}
       </Panel>
