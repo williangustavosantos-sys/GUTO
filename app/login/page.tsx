@@ -1,6 +1,6 @@
 "use client"
 
-import { Suspense, useState, useEffect } from "react"
+import { Suspense, useState, useEffect, useRef } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Image from "next/image"
 import { useAuth } from "@/components/auth-provider"
@@ -8,6 +8,7 @@ import { loginUser } from "@/lib/api/auth"
 import { ApiError, getApiErrorMessage } from "@/lib/api/client"
 import { gutoAudio } from "@/lib/audio-haptics"
 import { resolveGutoLanguage } from "@/lib/guto-profile"
+import { useGutoViewport } from "@/hooks/use-guto-viewport"
 import { Loader2 } from "lucide-react"
 
 type Lang = "pt-BR" | "it-IT" | "en-US"
@@ -61,6 +62,8 @@ function LoginPageContent() {
   const [lang, setLang] = useState<Lang>("pt-BR")
   const { login } = useAuth()
   const router = useRouter()
+  const shellRef = useRef<HTMLDivElement | null>(null)
+  useGutoViewport(shellRef)
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -122,7 +125,7 @@ function LoginPageContent() {
   }
 
   return (
-    <div className="sala-guto flex min-h-dvh flex-col overflow-y-auto">
+    <div ref={shellRef} className="sala-guto flex min-h-dvh flex-col overflow-y-auto">
       <div className="flex flex-1 flex-col items-center justify-center px-8 py-12">
 
         <div className="mb-12 flex w-full max-w-sm flex-col items-center px-1 text-center">

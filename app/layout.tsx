@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next"
 import { Inter, JetBrains_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { AuthProvider } from "@/components/auth-provider"
+import { RootFrame } from "@/components/root-frame"
 import "./globals.css"
 
 const inter = Inter({
@@ -76,6 +77,11 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   themeColor: '#e8eef5',
+  // iPhone (notch/home-indicator): sem viewport-fit=cover, env(safe-area-inset-*)
+  // resolve 0 e o layout do chat/nav (que depende desses insets para ancorar o
+  // input e dimensionar a bottom-nav) calcula errado — input sobre mensagens,
+  // balões atrás do input, nav cobrindo. Cobre a tela e habilita os safe-areas.
+  viewportFit: 'cover',
 }
 
 export default function RootLayout({
@@ -87,9 +93,7 @@ export default function RootLayout({
     <html lang="pt-BR" className={`bg-background ${inter.variable} ${jetbrainsMono.variable}`}>
       <body className="font-sans text-foreground">
         <AuthProvider>
-          <main className="mx-auto flex h-dvh w-full max-w-[430px] flex-col overflow-hidden bg-white">
-            {children}
-          </main>
+          <RootFrame>{children}</RootFrame>
         </AuthProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>

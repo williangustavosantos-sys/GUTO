@@ -62,3 +62,4 @@ task_progress.md
 # Configs locais de ferramentas de dev
 .mcp.json
 .claude/launch.json
+.codex/

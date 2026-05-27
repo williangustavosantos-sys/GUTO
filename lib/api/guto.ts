@@ -168,7 +168,7 @@ export interface GutoMemory {
   trainingLimitations?: string
   trainingAge?: number
   userAge?: number
-  biologicalSex?: "female" | "male" | "prefer_not_to_say"
+  biologicalSex?: "female" | "male"
   trainingLevel?: "beginner" | "returning" | "consistent" | "advanced"
   trainingGoal?: "consistency" | "fat_loss" | "muscle_gain" | "conditioning" | "mobility_health"
   preferredTrainingLocation?: "gym" | "home" | "park" | "mixed"
@@ -179,8 +179,10 @@ export interface GutoMemory {
   heightCm?: number
   weightKg?: number
   foodRestrictions?: string
-  phone?: string
-  foodIntolerances?: string
+  consentHealthFitness?: boolean
+  acceptedTerms?: boolean
+  consentAcceptedAt?: string
+  consentRevokedAt?: string
   lastWorkoutCompletedAt?: string
   completedWorkoutDates: string[]
   adaptedMissionDates: string[]
@@ -221,6 +223,29 @@ export interface GutoMemory {
   hasSeenChatOpening?: boolean
   validationHistory?: WorkoutValidationRecord[]
   workoutFeedbackHistory?: WorkoutFeedbackRecord[]
+  // Classificação semântica dos 3 campos livres (país/patologia/restrição) feita
+  // pelo backend. Usada pelos badges de contexto (Fase 3K) para distinguir
+  // cuidado físico ativo (status "clear" + bodyRegion) de cuidado pendente.
+  resolvedFields?: GutoResolvedProfileFields
+}
+
+export interface GutoResolvedField {
+  field: "country" | "pathology" | "foodRestriction"
+  rawValue: string
+  normalizedValue?: string
+  possibleMeaning?: string
+  bodyRegion?: string
+  riskTags?: string[]
+  confidence?: number
+  status: "clear" | "needs_confirmation" | "unknown" | "risky_unclear" | "needs_clarification"
+  resolvedAt?: string
+}
+
+export interface GutoResolvedProfileFields {
+  country?: GutoResolvedField
+  pathology?: GutoResolvedField
+  foodRestriction?: GutoResolvedField
+  acknowledged?: string[]
 }
 
 export interface GutoProactiveResponse {
@@ -329,7 +354,7 @@ export async function saveGutoMemory(payload: {
   trainingStatus?: string
   trainingLimitations?: string
   userAge?: number
-  biologicalSex?: "female" | "male" | "prefer_not_to_say"
+  biologicalSex?: "female" | "male"
   trainingLevel?: "beginner" | "returning" | "consistent" | "advanced"
   trainingGoal?: "consistency" | "fat_loss" | "muscle_gain" | "conditioning" | "mobility_health"
   preferredTrainingLocation?: "gym" | "home" | "park" | "mixed"
@@ -340,8 +365,6 @@ export async function saveGutoMemory(payload: {
   heightCm?: number
   weightKg?: number
   foodRestrictions?: string
-  phone?: string
-  foodIntolerances?: string
   confirmedName?: boolean
   initialXpRewardSeen?: boolean
   lastWorkoutPlan?: GutoWorkoutPlan | null
@@ -355,6 +378,14 @@ export async function saveGutoMemory(payload: {
 export async function getGutoMemory() {
   return apiRequest<GutoMemory>(`/guto/memory`, {
     method: "GET",
+  })
+}
+
+// Fase 2A — persiste o ACEITE de consentimento no backend (fonte de verdade).
+// Retorna a memória atualizada (com consentHealthFitness/acceptedTerms/consentAcceptedAt).
+export async function acceptGutoConsent() {
+  return apiRequest<GutoMemory>(`/guto/consent/accept`, {
+    method: "POST",
   })
 }
 

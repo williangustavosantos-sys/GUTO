@@ -121,7 +121,7 @@ export function getMissingCalibrationFields(memory?: GutoMemory | null) {
   if (!hasText(memory?.countryCode)) missing.push("código do país")
   if (!hasText(memory?.city)) missing.push("cidade")
   if (!hasText(memory?.trainingPathology) && !hasText(memory?.trainingLimitations)) missing.push("dor ou limitação")
-  if (!hasText(memory?.foodRestrictions) && !hasText(memory?.foodIntolerances)) {
+  if (!hasText(memory?.foodRestrictions)) {
     missing.push("restrição alimentar")
   }
   return missing

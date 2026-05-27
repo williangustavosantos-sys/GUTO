@@ -11,6 +11,7 @@ type ConsentLanguage = "pt-BR" | "en-US" | "it-IT"
 interface ConsentScreenProps {
   language?: string
   onComplete: () => void
+  errorMessage?: string | null
 }
 
 const consentCopy: Record<ConsentLanguage, {
@@ -119,7 +120,7 @@ function ConsentCheckbox({
   )
 }
 
-export function ConsentScreen({ language = "pt-BR", onComplete }: ConsentScreenProps) {
+export function ConsentScreen({ language = "pt-BR", onComplete, errorMessage }: ConsentScreenProps) {
   const safeLanguage: ConsentLanguage = language === "en-US" || language === "it-IT" ? language : "pt-BR"
   const t = consentCopy[safeLanguage]
   const [checkHealth, setCheckHealth] = useState(false)
@@ -203,8 +204,6 @@ export function ConsentScreen({ language = "pt-BR", onComplete }: ConsentScreenP
           {t.checkTerms}{" "}
           <Link
             href={`/terms?lang=${safeLanguage}`}
-            target="_blank"
-            rel="noopener"
             className="font-semibold underline"
             style={{ color: "var(--guto-navy)" }}
             onClick={(e) => e.stopPropagation()}
@@ -214,8 +213,6 @@ export function ConsentScreen({ language = "pt-BR", onComplete }: ConsentScreenP
           {t.and}{" "}
           <Link
             href={`/privacy?lang=${safeLanguage}`}
-            target="_blank"
-            rel="noopener"
             className="font-semibold underline"
             style={{ color: "var(--guto-navy)" }}
             onClick={(e) => e.stopPropagation()}
@@ -227,6 +224,11 @@ export function ConsentScreen({ language = "pt-BR", onComplete }: ConsentScreenP
       </div>
 
       <div>
+        {errorMessage && (
+          <p className="mb-2 text-center font-mono text-[10px] font-black uppercase leading-snug tracking-[0.12em] text-[rgba(200,30,30,0.82)]">
+            {errorMessage}
+          </p>
+        )}
         <button
           type="button"
           onClick={canContinue ? onComplete : undefined}

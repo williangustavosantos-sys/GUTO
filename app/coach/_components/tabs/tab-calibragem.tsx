@@ -99,6 +99,13 @@ export function TabCalibragem() {
         />
 
         <Field
+          label="Cidade"
+          value={calibrationDraft.city}
+          onChange={(city) => patch({ city })}
+          placeholder="Ex: São Paulo"
+        />
+
+        <Field
           label="Altura (cm)"
           value={calibrationDraft.heightCm}
           onChange={(heightCm) => patch({ heightCm })}
