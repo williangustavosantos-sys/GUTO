@@ -1,15 +1,7 @@
-"use client"
+import { LegacyPanelRedirect } from "@/components/legacy-panel-redirect"
 
-import { use } from "react"
-import { CompanyApp } from "./_components/company-app"
-
-// Rota dedicada do Detalhe da Empresa.
-// Auth + role gating rodam dentro do <CompanyApp>.
-export default function TeamDetailPage({
-  params,
-}: {
-  params: Promise<{ teamId: string }>
-}) {
-  const { teamId } = use(params)
-  return <CompanyApp teamId={teamId} />
+// O detalhe de empresa em /admin/teams/:id era protótipo com dados mock. O
+// detalhe real abre dentro de /coach (drawer da empresa). Rota vira redirect.
+export default function TeamDetailPage() {
+  return <LegacyPanelRedirect />
 }

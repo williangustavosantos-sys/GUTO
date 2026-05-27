@@ -319,21 +319,49 @@ function TabCoaches({ empresa }: { empresa: AdminTeam }) {
 // ─── Tab Alunos ──────────────────────────────────────────────────────────────
 
 function TabAlunos({ empresa }: { empresa: AdminTeam }) {
-  const { students, coaches, openStudent } = useCockpit()
+  const {
+    students,
+    coaches,
+    openStudent,
+    setSelectedTeamId,
+    setStudentDraft,
+    setShowCreateStudent,
+    studentLimitReached,
+  } = useCockpit()
   const empresaStudents = useMemo(() => studentsOfEmpresa(empresa, students), [empresa, students])
+
+  // Cria aluno JÁ vinculado a esta empresa (contexto do drawer). O coach é
+  // exigido dentro do diálogo (filtrado por esta empresa) quando ela é cliente.
+  const openCreateStudent = () => {
+    setSelectedTeamId(empresa.id)
+    setStudentDraft({
+      name: "", email: "", phone: "", password: "", active: false,
+      coachId: "", teamId: empresa.id, sex: "", age: "",
+    })
+    setShowCreateStudent(true)
+  }
+
+  const addButton = (
+    <Btn cyan sm disabled={studentLimitReached} onClick={openCreateStudent}>
+      <Plus className="h-3 w-3" />
+      Aluno
+    </Btn>
+  )
 
   if (!empresaStudents.length) {
     return (
-      <Plate style={{ padding: 32, textAlign: "center" }}>
-        <p style={{ fontFamily: T.mono, fontSize: 12, color: T.fg3 }}>
-          Sem alunos nesta empresa.
+      <Plate style={{ padding: 32, textAlign: "center", display: "grid", gap: 14, justifyItems: "center" }}>
+        <p style={{ fontFamily: T.ui, fontSize: 13, color: T.fg3 }}>
+          Sem alunos nesta empresa ainda.
         </p>
+        {addButton}
       </Plate>
     )
   }
 
   return (
     <div style={{ display: "grid", gap: 8 }}>
+      <div style={{ display: "flex", justifyContent: "flex-end" }}>{addButton}</div>
       {empresaStudents.map((s) => {
         const risk = studentRisk(s)
         const tone =

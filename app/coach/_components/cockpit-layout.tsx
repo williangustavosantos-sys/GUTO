@@ -21,6 +21,7 @@ import { useCockpit } from "./cockpit-context"
 import { T } from "./control-tokens"
 import { Btn, TelemetryStamp } from "./controls"
 import type { Screen } from "./utils"
+import { activeClientTeams, headerCtaForScreen } from "@/lib/panel-rules"
 
 // ─── Sidebar config ───────────────────────────────────────────────────────────
 
@@ -381,16 +382,19 @@ function Header({ onMobileMenu }: { onMobileMenu: () => void }) {
   const meta = SCREEN_TITLES[activeScreen]
   const pendingTotal = pendingExercises.length
 
-  // CTA contextual baseado na screen
+  // CTA contextual baseado na screen. O Dashboard ("hoje") NÃO cria aluno solto:
+  // aluno só nasce na lista de Alunos (com empresa+coach exigidos) ou dentro do
+  // drawer da empresa. Regra centralizada em headerCtaForScreen.
+  const ctaKind = headerCtaForScreen(activeScreen, { isSuperAdmin, isAdmin })
   const cta = (() => {
-    if (activeScreen === "empresas" && isSuperAdmin) {
+    if (ctaKind === "empresa") {
       return (
         <Btn cyan sm onClick={() => setShowCreateTeam(true)}>
           + Empresa
         </Btn>
       )
     }
-    if (activeScreen === "coaches" && isAdmin) {
+    if (ctaKind === "coach") {
       return (
         <Btn
           cyan
@@ -405,7 +409,7 @@ function Header({ onMobileMenu }: { onMobileMenu: () => void }) {
         </Btn>
       )
     }
-    if (activeScreen === "students" || activeScreen === "hoje") {
+    if (ctaKind === "aluno") {
       return (
         <Btn
           cyan
@@ -517,7 +521,7 @@ function Header({ onMobileMenu }: { onMobileMenu: () => void }) {
             <TelemetryStamp
               icon={<Globe className="h-2.5 w-2.5" />}
               label="Empresas"
-              value={String(teams.length)}
+              value={String(activeClientTeams(teams).length)}
             />
           )}
           <TelemetryStamp
