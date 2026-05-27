@@ -68,21 +68,21 @@ function DietEditor({
           <Field label="Notas do coach" value={value.coachNotes || ""} onChange={(v) => onChange({ ...value, coachNotes: v })} />
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
-          <Button className="bg-[#00e5ff] text-[#0a0f1e] hover:bg-white" disabled={acting} onClick={onSave}><Save className="mr-2 h-4 w-4" />Salvar</Button>
-          <Button variant="outline" className="border-white/10 bg-white/5 text-white" disabled={acting} onClick={onCreateManual}><Utensils className="mr-2 h-4 w-4" />Dieta manual</Button>
-          <Button variant="outline" className="border-white/10 bg-white/5 text-white" disabled={acting} onClick={onGenerate}><RefreshCw className="mr-2 h-4 w-4" />Gerar com GUTO</Button>
-          <Button variant="outline" className="border-white/10 bg-white/5 text-white" disabled={acting} onClick={onLock}>
+          <Button className="bg-[#0891B2] text-slate-900 hover:bg-[#0E7490]" disabled={acting} onClick={onSave}><Save className="mr-2 h-4 w-4" />Salvar</Button>
+          <Button variant="outline" className="border-slate-200 bg-slate-50 text-slate-900" disabled={acting} onClick={onCreateManual}><Utensils className="mr-2 h-4 w-4" />Dieta manual</Button>
+          <Button variant="outline" className="border-slate-200 bg-slate-50 text-slate-900" disabled={acting} onClick={onGenerate}><RefreshCw className="mr-2 h-4 w-4" />Gerar com GUTO</Button>
+          <Button variant="outline" className="border-slate-200 bg-slate-50 text-slate-900" disabled={acting} onClick={onLock}>
             {value.lockedByCoach ? <Unlock className="mr-2 h-4 w-4" /> : <Lock className="mr-2 h-4 w-4" />}
             {value.lockedByCoach ? "Permitir GUTO atualizar" : "Bloquear auto-atualização"}
           </Button>
-          <Button variant="outline" className="border-red-500/30 bg-transparent text-red-300" disabled={acting} onClick={onReset}><Trash2 className="mr-2 h-4 w-4" />Resetar dieta</Button>
+          <Button variant="outline" className="border-red-300 bg-transparent text-red-600" disabled={acting} onClick={onReset}><Trash2 className="mr-2 h-4 w-4" />Resetar dieta</Button>
         </div>
       </Panel>
 
       <Panel title={`Refeições de ${student.name}`}>
         <div className="grid gap-3">
           {value.meals.map((meal, mealIdx) => (
-            <div key={`${meal.id}-${mealIdx}`} className="rounded-lg border border-white/8 bg-black/15 p-3">
+            <div key={`${meal.id}-${mealIdx}`} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
               <div className="grid gap-3 md:grid-cols-4">
                 <Field label="Refeição" value={meal.name} onChange={(v) => updateMeal(mealIdx, { name: v })} className="md:col-span-2" />
                 <Field label="Horário" value={meal.time} onChange={(v) => updateMeal(mealIdx, { time: v })} />
@@ -91,21 +91,21 @@ function DietEditor({
               </div>
               <div className="mt-3 grid gap-2">
                 {meal.foods.map((food, foodIdx) => (
-                  <div key={`${food.name}-${foodIdx}`} className="grid gap-2 rounded-md bg-white/[0.035] p-2 md:grid-cols-[1fr_1fr_.6fr_auto]">
-                    <Input value={food.name} onChange={(e) => updateFood(mealIdx, foodIdx, { name: e.target.value })} placeholder="Alimento" className="border-white/10 bg-white/5 text-white" />
-                    <Input value={food.quantity} onChange={(e) => updateFood(mealIdx, foodIdx, { quantity: e.target.value })} placeholder="Quantidade" className="border-white/10 bg-white/5 text-white" />
-                    <Input value={String(food.kcal || "")} onChange={(e) => updateFood(mealIdx, foodIdx, { kcal: Number(e.target.value) || 0 })} placeholder="kcal" className="border-white/10 bg-white/5 text-white" />
-                    <Button variant="outline" className="border-red-500/30 bg-transparent text-red-300" onClick={() => updateMeal(mealIdx, { foods: meal.foods.filter((_, i) => i !== foodIdx) })}><Trash2 className="h-4 w-4" /></Button>
+                  <div key={`${food.name}-${foodIdx}`} className="grid gap-2 rounded-md bg-white p-2 md:grid-cols-[1fr_1fr_.6fr_auto]">
+                    <Input value={food.name} onChange={(e) => updateFood(mealIdx, foodIdx, { name: e.target.value })} placeholder="Alimento" className="border-slate-200 bg-slate-50 text-slate-900" />
+                    <Input value={food.quantity} onChange={(e) => updateFood(mealIdx, foodIdx, { quantity: e.target.value })} placeholder="Quantidade" className="border-slate-200 bg-slate-50 text-slate-900" />
+                    <Input value={String(food.kcal || "")} onChange={(e) => updateFood(mealIdx, foodIdx, { kcal: Number(e.target.value) || 0 })} placeholder="kcal" className="border-slate-200 bg-slate-50 text-slate-900" />
+                    <Button variant="outline" className="border-red-300 bg-transparent text-red-600" onClick={() => updateMeal(mealIdx, { foods: meal.foods.filter((_, i) => i !== foodIdx) })}><Trash2 className="h-4 w-4" /></Button>
                   </div>
                 ))}
               </div>
-              <Button variant="outline" className="mt-3 border-white/10 bg-white/5 text-white" onClick={() => updateMeal(mealIdx, { foods: [...meal.foods, { name: "", quantity: "", kcal: 0, notes: "" }] })}>
+              <Button variant="outline" className="mt-3 border-slate-200 bg-slate-50 text-slate-900" onClick={() => updateMeal(mealIdx, { foods: [...meal.foods, { name: "", quantity: "", kcal: 0, notes: "" }] })}>
                 <Plus className="mr-2 h-4 w-4" />Adicionar alimento
               </Button>
             </div>
           ))}
         </div>
-        <Button variant="outline" className="mt-4 border-white/10 bg-white/5 text-white" onClick={() => onChange({ ...value, meals: [...value.meals, { id: `meal-${Date.now()}`, name: "Nova refeição", time: "", totalKcal: 0, gutoNote: "", foods: [], alternatives: [] }] })}>
+        <Button variant="outline" className="mt-4 border-slate-200 bg-slate-50 text-slate-900" onClick={() => onChange({ ...value, meals: [...value.meals, { id: `meal-${Date.now()}`, name: "Nova refeição", time: "", totalKcal: 0, gutoNote: "", foods: [], alternatives: [] }] })}>
           <Plus className="mr-2 h-4 w-4" />Adicionar refeição
         </Button>
       </Panel>
@@ -157,61 +157,61 @@ function WeeklyDietEditor({
 
   return (
     <Panel title="Plano semanal de dieta">
-      <p className="mb-4 text-[11px] text-white/40">Monte a dieta de cada dia. O aluno verá a dieta do dia atual.</p>
+      <p className="mb-4 text-[11px] text-slate-500">Monte a dieta de cada dia. O aluno verá a dieta do dia atual.</p>
       <div className="space-y-2">
         {WEEK_DAYS.map(({ key, label }) => {
           const dayData = days[key]
           const isExpanded = expandedDay === key
           return (
-            <div key={key} className="rounded-lg border border-white/10 bg-white/5">
+            <div key={key} className="rounded-lg border border-slate-200 bg-slate-50">
               <button className="flex w-full items-center justify-between px-4 py-3 text-left" onClick={() => setExpandedDay(isExpanded ? null : key)}>
                 <div>
-                  <span className="text-sm font-bold text-white">{label}</span>
-                  {dayData && <span className="ml-2 text-[11px] text-[#00e5ff]">preenchido</span>}
+                  <span className="text-sm font-bold text-slate-900">{label}</span>
+                  {dayData && <span className="ml-2 text-[11px] text-[#0E7490]">preenchido</span>}
                 </div>
-                <span className="text-[11px] text-white/40">{isExpanded ? "▲" : "▼"}</span>
+                <span className="text-[11px] text-slate-500">{isExpanded ? "▲" : "▼"}</span>
               </button>
               {!isExpanded && (
-                <p className="px-4 pb-2 text-[11px] text-white/30">{dietDaySummary(dayData)}</p>
+                <p className="px-4 pb-2 text-[11px] text-slate-400">{dietDaySummary(dayData)}</p>
               )}
               {isExpanded && (
-                <div className="border-t border-white/10 px-4 pb-4 pt-3">
+                <div className="border-t border-slate-200 px-4 pb-4 pt-3">
                   <div className="grid gap-3 md:grid-cols-2">
                     {(["breakfast", "lunch", "dinner", "snacks"] as const).map((field) => {
                       const labels: Record<string, string> = { breakfast: "Café da manhã", lunch: "Almoço", dinner: "Jantar", snacks: "Lanches" }
                       const placeholders: Record<string, string> = { breakfast: "Ex: Aveia com banana, ovo mexido...", lunch: "Ex: Frango grelhado, arroz...", dinner: "Ex: Sopa de legumes...", snacks: "Ex: Iogurte, fruta..." }
                       return (
                         <div key={field}>
-                          <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-white/40">{labels[field]}</label>
+                          <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-slate-500">{labels[field]}</label>
                           <textarea
                             value={dayData?.[field] ?? ""}
                             onChange={(e) => setField(key, field, e.target.value)}
                             rows={2}
                             placeholder={placeholders[field]}
-                            className="w-full resize-none rounded-md border border-white/10 bg-black/20 px-3 py-2 text-sm text-white placeholder-white/20 focus:border-[#00e5ff]/50 focus:outline-none"
+                            className="w-full resize-none rounded-md border border-slate-200 bg-slate-100 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:border-[#0E7490]/50 focus:outline-none"
                           />
                         </div>
                       )
                     })}
                     <div>
-                      <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-white/40">Hidratação</label>
-                      <input type="text" value={dayData?.hydration ?? ""} onChange={(e) => setField(key, "hydration", e.target.value)} placeholder="Ex: 2,5 litros de água" className="w-full rounded-md border border-white/10 bg-black/20 px-3 py-2 text-sm text-white placeholder-white/20 focus:border-[#00e5ff]/50 focus:outline-none" />
+                      <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-slate-500">Hidratação</label>
+                      <input type="text" value={dayData?.hydration ?? ""} onChange={(e) => setField(key, "hydration", e.target.value)} placeholder="Ex: 2,5 litros de água" className="w-full rounded-md border border-slate-200 bg-slate-100 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:border-[#0E7490]/50 focus:outline-none" />
                     </div>
                     <div>
-                      <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-white/40">Observações</label>
-                      <textarea value={dayData?.notes ?? ""} onChange={(e) => setField(key, "notes", e.target.value)} rows={2} placeholder="Ex: Evitar açúcar após 18h..." className="w-full resize-none rounded-md border border-white/10 bg-black/20 px-3 py-2 text-sm text-white placeholder-white/20 focus:border-[#00e5ff]/50 focus:outline-none" />
+                      <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-slate-500">Observações</label>
+                      <textarea value={dayData?.notes ?? ""} onChange={(e) => setField(key, "notes", e.target.value)} rows={2} placeholder="Ex: Evitar açúcar após 18h..." className="w-full resize-none rounded-md border border-slate-200 bg-slate-100 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:border-[#0E7490]/50 focus:outline-none" />
                     </div>
                     <div>
-                      <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-white/40">Estimativa calórica (kcal)</label>
-                      <input type="number" value={dayData?.caloriesEstimate ?? ""} onChange={(e) => setField(key, "caloriesEstimate", e.target.value ? Number(e.target.value) : undefined)} placeholder="Ex: 2200" className="w-full rounded-md border border-white/10 bg-black/20 px-3 py-2 text-sm text-white placeholder-white/20 focus:border-[#00e5ff]/50 focus:outline-none" />
+                      <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-slate-500">Estimativa calórica (kcal)</label>
+                      <input type="number" value={dayData?.caloriesEstimate ?? ""} onChange={(e) => setField(key, "caloriesEstimate", e.target.value ? Number(e.target.value) : undefined)} placeholder="Ex: 2200" className="w-full rounded-md border border-slate-200 bg-slate-100 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:border-[#0E7490]/50 focus:outline-none" />
                     </div>
                     <div>
-                      <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-white/40">Estimativa proteína (g)</label>
-                      <input type="number" value={dayData?.proteinEstimate ?? ""} onChange={(e) => setField(key, "proteinEstimate", e.target.value ? Number(e.target.value) : undefined)} placeholder="Ex: 160" className="w-full rounded-md border border-white/10 bg-black/20 px-3 py-2 text-sm text-white placeholder-white/20 focus:border-[#00e5ff]/50 focus:outline-none" />
+                      <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-slate-500">Estimativa proteína (g)</label>
+                      <input type="number" value={dayData?.proteinEstimate ?? ""} onChange={(e) => setField(key, "proteinEstimate", e.target.value ? Number(e.target.value) : undefined)} placeholder="Ex: 160" className="w-full rounded-md border border-slate-200 bg-slate-100 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:border-[#0E7490]/50 focus:outline-none" />
                     </div>
                   </div>
                   <div className="mt-3">
-                    <Button variant="outline" className="border-red-500/30 bg-transparent text-red-300 text-xs" onClick={() => clearDay(key)}>
+                    <Button variant="outline" className="border-red-300 bg-transparent text-red-600 text-xs" onClick={() => clearDay(key)}>
                       <Trash2 className="mr-1 h-3 w-3" />Limpar dia
                     </Button>
                   </div>
@@ -221,13 +221,13 @@ function WeeklyDietEditor({
           )
         })}
       </div>
-      <div className="mt-4 flex gap-2 border-t border-white/8 pt-4">
-        <Button className="bg-[#00e5ff] text-[#0a0f1e] hover:bg-white" disabled={acting || saving} onClick={() => void handleSave()}>
+      <div className="mt-4 flex gap-2 border-t border-slate-200 pt-4">
+        <Button className="bg-[#0891B2] text-slate-900 hover:bg-[#0E7490]" disabled={acting || saving} onClick={() => void handleSave()}>
           <Save className="mr-2 h-4 w-4" />{saving ? "Salvando…" : "Salvar plano semanal"}
         </Button>
       </div>
       {weeklyPlan?.updatedAt && (
-        <p className="mt-2 text-[10px] text-white/30">
+        <p className="mt-2 text-[10px] text-slate-400">
           Última atualização: {new Date(weeklyPlan.updatedAt).toLocaleString("pt-BR")} por {weeklyPlan.updatedBy}
         </p>
       )}
@@ -251,13 +251,13 @@ export function TabDieta() {
 
   return (
     <div className="space-y-3">
-      <div className="flex gap-1 rounded-lg border border-white/10 bg-white/5 p-1">
+      <div className="flex gap-1 rounded-lg border border-slate-200 bg-slate-50 p-1">
         {(["oficial", "semanal"] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setDietaSubTab(tab)}
             className={`flex-1 rounded-md py-2 text-xs font-bold uppercase tracking-widest transition-colors ${
-              dietaSubTab === tab ? "bg-[#00e5ff] text-[#0a0f1e]" : "text-white/50 hover:text-white"
+              dietaSubTab === tab ? "bg-[#0891B2] text-slate-900" : "text-slate-500 hover:text-slate-900"
             }`}
           >
             {tab === "oficial" ? "Dieta oficial" : "Plano semanal"}

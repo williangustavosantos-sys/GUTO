@@ -17,21 +17,20 @@ import { BIOLOGICAL_SEX_LABELS } from "@/lib/format-codes"
 import { formatHuman, type TeamDraft } from "./utils"
 
 const dialogClass =
-  "p-0 max-w-md gap-0 overflow-hidden border bg-transparent text-white"
+  "p-0 max-w-md gap-0 overflow-hidden border bg-transparent text-slate-900"
 
 const dialogStyle: React.CSSProperties = {
-  background: T.ink,
-  borderColor: T.borderHi,
-  fontFamily: T.mono,
+  background: T.surface,
+  borderColor: T.border,
+  fontFamily: T.ui,
   borderRadius: 16,
-  boxShadow: "0 0 40px rgba(82,231,255,0.10), 0 4px 30px rgba(0,0,0,0.5)",
+  boxShadow: T.shadowFloat,
 }
 
 const headerStyle: React.CSSProperties = {
   padding: "20px 24px 16px",
-  borderBottom: `1px solid ${T.border}`,
-  background:
-    "radial-gradient(120% 100% at 50% 0%, rgba(82,231,255,0.08) 0%, rgba(82,231,255,0) 70%)",
+  borderBottom: `1px solid ${T.borderSoft}`,
+  background: T.surfaceAlt,
 }
 
 const bodyStyle: React.CSSProperties = {

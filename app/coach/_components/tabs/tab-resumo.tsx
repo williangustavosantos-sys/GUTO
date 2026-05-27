@@ -122,7 +122,7 @@ export function TabResumo() {
       </Panel>
 
       <Panel title="Reset Arena / XP" className="md:col-span-2">
-        <p className="mb-3 text-[11px] text-white/35">
+        <p className="mb-3 text-[11px] text-slate-400">
           Use com cuidado — ações irreversíveis de reset de progresso do aluno.
         </p>
         <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-4">
