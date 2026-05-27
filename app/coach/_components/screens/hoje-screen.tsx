@@ -7,6 +7,7 @@ import { T } from "../control-tokens"
 import { Plate, Pill, Btn, SectionTitle, StatCard } from "../controls"
 import { studentRisk, relativeTime, type RiskLevel } from "../utils"
 import type { AdminStudent, AdminTeam } from "@/lib/api/admin"
+import { activeClientTeams, clientTeams } from "@/lib/panel-rules"
 
 function riskTone(risk: RiskLevel): "ok" | "warn" | "bad" | "mute" {
   return risk === "critico" ? "bad" : risk === "atencao" ? "warn" : risk === "sem-sinal" ? "mute" : "ok"
@@ -30,12 +31,10 @@ export function HojeScreen() {
     }
   }, [students, todayStr])
 
-  // Inclui "trial" como ativo via cast — backend ainda não tem trial mas o
-  // tipo já antecipa (PR #3 trará).
-  const empresasAtivas = useMemo(
-    () => teams.filter((t) => t.status === "active" || (t.status as string) === "trial"),
-    [teams]
-  )
+  // Empresas = clientes B2B reais. GUTO_CORE (empresa interna) NÃO conta como
+  // cliente nem entra no total; pausadas/arquivadas não contam como ativas.
+  const empresasAtivas = useMemo(() => activeClientTeams(teams), [teams])
+  const empresasCliente = useMemo(() => clientTeams(teams), [teams])
 
   const priorityList: AdminStudent[] = useMemo(
     () => [...stats.criticos, ...stats.atencao, ...stats.semSinal].slice(0, 8),
@@ -55,9 +54,9 @@ export function HojeScreen() {
         {isSuperAdmin && (
           <StatCard
             icon={<Building2 className="h-3.5 w-3.5" />}
-            label="Empresas"
+            label="Empresas ativas"
             value={empresasAtivas.length}
-            sub={`${teams.length} cadastradas`}
+            sub={`${empresasCliente.length} cliente(s) cadastrada(s)`}
             tone="cyan"
             onClick={() => setActiveScreen("empresas")}
           />

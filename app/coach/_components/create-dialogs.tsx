@@ -15,6 +15,7 @@ import { T } from "./control-tokens"
 import { Btn, CtrlField, Pill, TextInput, SelectInput } from "./controls"
 import { BIOLOGICAL_SEX_LABELS } from "@/lib/format-codes"
 import { formatHuman, type TeamDraft } from "./utils"
+import { blockCreateStudent, coachesForTeam, studentRequiresCoach } from "@/lib/panel-rules"
 
 const dialogClass =
   "p-0 max-w-md gap-0 overflow-hidden border bg-transparent text-slate-900"
@@ -68,6 +69,25 @@ export function CreateStudentDialog() {
   const isTeamLocked =
     isSuperAdmin && !!studentDraft.teamId && teams.some((t) => t.id === studentDraft.teamId)
   const lockedTeam = teams.find((t) => t.id === studentDraft.teamId)
+
+  // Coaches SEMPRE filtrados pela empresa (super_admin escolhe a empresa; admin
+  // já recebe a lista escopada ao próprio time pelo backend) — não vaza coach
+  // de outra empresa. Coach é OBRIGATÓRIO para super_admin em empresa cliente
+  // (espelha o backend GUTO_COACH_REQUIRED); para admin é recomendado.
+  const availableCoaches = isSuperAdmin
+    ? coachesForTeam(coaches, studentDraft.teamId)
+    : coaches
+  const requiresCoach = isSuperAdmin && studentRequiresCoach(studentDraft.teamId)
+  const noCoachInTeam = requiresCoach && availableCoaches.length === 0
+  const createBlock = blockCreateStudent({
+    name: studentDraft.name,
+    email: studentDraft.email,
+    needsTeam: isSuperAdmin,
+    teamId: studentDraft.teamId,
+    coachId: studentDraft.coachId,
+    teamCoachCount: availableCoaches.length,
+    requiresCoach,
+  })
 
   return (
     <AlertDialog open={showCreateStudent} onOpenChange={setShowCreateStudent}>
@@ -164,7 +184,7 @@ export function CreateStudentDialog() {
               ) : (
                 <SelectInput
                   value={studentDraft.teamId}
-                  onChange={(v) => setStudentDraft({ ...studentDraft, teamId: v })}
+                  onChange={(v) => setStudentDraft({ ...studentDraft, teamId: v, coachId: "" })}
                 >
                   <option value="" style={{ background: T.ink }}>
                     Selecione…
@@ -179,19 +199,36 @@ export function CreateStudentDialog() {
             </CtrlField>
           )}
 
-          {isAdmin && (
-            <CtrlField label="Coach responsável">
-              <SelectInput
-                value={studentDraft.coachId}
-                onChange={(v) => setStudentDraft({ ...studentDraft, coachId: v })}
-              >
-                <option value="" style={{ background: T.ink }}>—</option>
-                {coaches.map((c) => (
-                  <option key={c.userId} value={c.userId} style={{ background: T.ink }}>
-                    {c.name || c.email || c.userId}
+          {(isAdmin || (isSuperAdmin && !!studentDraft.teamId)) && (
+            <CtrlField label={requiresCoach ? "Coach responsável *" : "Coach responsável"}>
+              {noCoachInTeam ? (
+                <p
+                  style={{
+                    fontFamily: T.mono,
+                    fontSize: 10,
+                    color: T.warn,
+                    fontWeight: 900,
+                    letterSpacing: "0.06em",
+                    lineHeight: 1.6,
+                  }}
+                >
+                  ⚠ Nenhum coach nesta empresa. Crie um coach antes de adicionar alunos.
+                </p>
+              ) : (
+                <SelectInput
+                  value={studentDraft.coachId}
+                  onChange={(v) => setStudentDraft({ ...studentDraft, coachId: v })}
+                >
+                  <option value="" style={{ background: T.ink }}>
+                    {requiresCoach ? "Selecione…" : "—"}
                   </option>
-                ))}
-              </SelectInput>
+                  {availableCoaches.map((c) => (
+                    <option key={c.userId} value={c.userId} style={{ background: T.ink }}>
+                      {c.name || c.email || c.userId}
+                    </option>
+                  ))}
+                </SelectInput>
+              )}
             </CtrlField>
           )}
 
@@ -233,13 +270,7 @@ export function CreateStudentDialog() {
           <Btn
             cyan
             sm
-            disabled={
-              acting ||
-              studentLimitReached ||
-              !studentDraft.name.trim() ||
-              !studentDraft.email.trim() ||
-              (isSuperAdmin && !studentDraft.teamId)
-            }
+            disabled={acting || studentLimitReached || createBlock !== null}
             onClick={() => void doCreateStudent(() => {})}
           >
             Criar aluno

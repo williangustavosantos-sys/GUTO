@@ -1,8 +1,8 @@
-"use client"
+import { LegacyPanelRedirect } from "@/components/legacy-panel-redirect"
 
-import { SalaApp } from "./_components/sala-app"
-
-// Sala de Controle (super-admin). Auth + role gating runs inside <SalaApp>.
+// A Sala de Controle (/admin) era um protótipo com dados mock. O painel
+// operacional real é /coach. Mantemos a rota apenas como redirect.
+// (O login real continua em /admin/login, rota própria, não afetada.)
 export default function AdminPage() {
-  return <SalaApp />
+  return <LegacyPanelRedirect />
 }

@@ -1,8 +1,7 @@
-"use client"
+import { LegacyPanelRedirect } from "@/components/legacy-panel-redirect"
 
-import { EmpresaApp } from "./_components/empresa-app"
-
-// Empresa Portal (admin de time). Auth + role gating runs inside <EmpresaApp>.
+// O Portal da Empresa (/empresa) era um protótipo com dados mock. O painel
+// operacional real é /coach. Mantemos a rota apenas como redirect.
 export default function EmpresaPage() {
-  return <EmpresaApp />
+  return <LegacyPanelRedirect />
 }

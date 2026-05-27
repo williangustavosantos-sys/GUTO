@@ -7,6 +7,7 @@ import { Plate, Pill, SearchBox, FilterPill, UsageBar } from "../controls"
 import { studentRisk } from "../utils"
 import { ChevronRight } from "lucide-react"
 import type { AdminTeam } from "@/lib/api/admin"
+import { clientTeams } from "@/lib/panel-rules"
 
 const FILTERS: { id: "todas" | "active" | "paused" | "archived"; label: string }[] = [
   { id: "todas", label: "Todas" },
@@ -21,7 +22,8 @@ export function EmpresasScreen() {
   const [filter, setFilter] = useState<(typeof FILTERS)[number]["id"]>("todas")
 
   const list = useMemo(() => {
-    let l: AdminTeam[] = [...teams]
+    // GUTO_CORE é empresa interna do sistema, não cliente B2B: fora da lista.
+    let l: AdminTeam[] = clientTeams(teams)
     if (filter !== "todas") l = l.filter((t) => t.status === filter)
     if (search) {
       const q = search.toLowerCase()
