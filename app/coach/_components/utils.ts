@@ -42,6 +42,8 @@ export type CoachDraft = {
 export type TeamDraft = {
   name: string; plan: "start" | "pro" | "elite" | "custom"
   maxStudents: string; maxCoaches: string
+  email: string; phone: string; addressLine: string; city: string; country: string
+  status: "active" | "paused" | "archived"
 }
 
 export type CalibrationDraft = {

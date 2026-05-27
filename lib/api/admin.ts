@@ -111,6 +111,12 @@ export interface AdminTeam {
     maxStudents?: number | null
     maxCoaches?: number | null
   }
+  // Contato operacional (B2B). Telefone/endereço não entram na GutoMemory do aluno.
+  email?: string
+  phone?: string
+  addressLine?: string
+  city?: string
+  country?: string
 }
 
 export interface AdminTeamSummary {
@@ -466,11 +472,20 @@ export function getAdminTeams(): Promise<{ teams: AdminTeam[] }> {
   return apiRequest<{ teams: AdminTeam[] }>("/admin/teams")
 }
 
+interface AdminTeamContactInput {
+  email?: string
+  phone?: string
+  addressLine?: string
+  city?: string
+  country?: string
+}
+
 export function createAdminTeam(data: {
   name: string
   plan: "start" | "pro" | "elite" | "custom"
+  status?: "active" | "paused" | "archived"
   customLimits?: { maxStudents?: number | null; maxCoaches?: number | null }
-}): Promise<{ team: AdminTeam }> {
+} & AdminTeamContactInput): Promise<{ team: AdminTeam }> {
   return apiRequest<{ team: AdminTeam }>("/admin/teams", {
     method: "POST",
     body: JSON.stringify(data),
@@ -482,11 +497,22 @@ export function updateAdminTeam(teamId: string, data: {
   plan?: "start" | "pro" | "elite" | "custom"
   status?: "active" | "paused" | "archived"
   customLimits?: { maxStudents?: number | null; maxCoaches?: number | null }
-}): Promise<{ team: AdminTeam }> {
+} & AdminTeamContactInput): Promise<{ team: AdminTeam }> {
   return apiRequest<{ team: AdminTeam }>(`/admin/teams/${teamId}`, {
     method: "PATCH",
     body: JSON.stringify(data),
   })
+}
+
+export function deleteAdminTeam(teamId: string): Promise<{ ok: boolean; teamId: string }> {
+  return apiRequest<{ ok: boolean; teamId: string }>(`/admin/teams/${teamId}`, { method: "DELETE" })
+}
+
+export function cleanupEmptyTeams(): Promise<{ ok: boolean; removedCount: number; removed: { id: string; name: string }[] }> {
+  return apiRequest<{ ok: boolean; removedCount: number; removed: { id: string; name: string }[] }>(
+    "/admin/maintenance/cleanup-empty-teams",
+    { method: "POST", body: JSON.stringify({}) },
+  )
 }
 
 export function getAdminStudentInvite(userId: string): Promise<{ invite: unknown; inviteLink: string | null; message?: string }> {

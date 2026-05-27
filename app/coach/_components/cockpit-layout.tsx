@@ -7,7 +7,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Database,
-  Dumbbell,
   Gavel,
   Globe,
   Menu,
@@ -15,7 +14,6 @@ import {
   Shield,
   Signal,
   Users,
-  UtensilsCrossed,
   X,
   Zap,
 } from "lucide-react"
@@ -26,27 +24,32 @@ import type { Screen } from "./utils"
 
 // ─── Sidebar config ───────────────────────────────────────────────────────────
 
+// "minha_empresa" não é uma Screen — é um atalho que abre o drawer da própria
+// empresa do admin. Tratado especialmente no clique do Sidebar.
+type NavId = Screen | "minha_empresa"
+
 interface NavItem {
-  id: Screen
+  id: NavId
   label: string
   group: string
   icon: ReactNode
-  adminOnly?: boolean
-  superAdminOnly?: boolean
+  adminOnly?: boolean // admin OU super_admin
+  superAdminOnly?: boolean // apenas super_admin
+  adminCompanyOnly?: boolean // admin da empresa (não super_admin)
   showsBadge?: boolean
 }
 
+// Hierarquia operacional: Coaches vivem DENTRO da empresa (drawer), não como aba
+// global. Treino/Dieta vivem DENTRO do aluno (drawer), não como abas globais.
 const NAV_ITEMS: NavItem[] = [
-  { id: "hoje", label: "Hoje", group: "Operação", icon: <Zap className="h-[18px] w-[18px]" /> },
+  { id: "hoje", label: "Dashboard", group: "Operação", icon: <Zap className="h-[18px] w-[18px]" /> },
   { id: "aprovacoes", label: "Aprovações", group: "Operação", icon: <Gavel className="h-[18px] w-[18px]" />, adminOnly: true, showsBadge: true },
   { id: "empresas", label: "Empresas", group: "Cadastros", icon: <Building2 className="h-[18px] w-[18px]" />, superAdminOnly: true },
-  { id: "coaches", label: "Coaches", group: "Cadastros", icon: <Shield className="h-[18px] w-[18px]" />, adminOnly: true },
+  { id: "minha_empresa", label: "Minha Empresa", group: "Cadastros", icon: <Building2 className="h-[18px] w-[18px]" />, adminCompanyOnly: true },
   { id: "students", label: "Alunos", group: "Cadastros", icon: <Users className="h-[18px] w-[18px]" /> },
-  { id: "treinos", label: "Treinos", group: "Conteúdo", icon: <Dumbbell className="h-[18px] w-[18px]" /> },
-  { id: "dietas", label: "Dietas", group: "Conteúdo", icon: <UtensilsCrossed className="h-[18px] w-[18px]" /> },
-  { id: "banco", label: "Banco GUTO", group: "Conteúdo", icon: <Database className="h-[18px] w-[18px]" />, adminOnly: true },
   { id: "arena", label: "Arena", group: "Análise", icon: <Activity className="h-[18px] w-[18px]" /> },
-  { id: "logs", label: "Logs", group: "Análise", icon: <Settings className="h-[18px] w-[18px]" />, adminOnly: true },
+  { id: "banco", label: "Banco GUTO", group: "Sistema", icon: <Database className="h-[18px] w-[18px]" />, superAdminOnly: true },
+  { id: "logs", label: "Logs", group: "Sistema", icon: <Settings className="h-[18px] w-[18px]" />, superAdminOnly: true },
 ]
 
 const SCREEN_TITLES: Record<Screen, { t: string; sub: string }> = {
@@ -73,13 +76,25 @@ function Sidebar({
   onToggle: () => void
   onClose?: () => void
 }) {
-  const { user, isAdmin, isSuperAdmin, activeScreen, setActiveScreen, pendingExercises } = useCockpit()
+  const { user, isAdmin, isSuperAdmin, activeScreen, setActiveScreen, pendingExercises, teams, openEmpresa } = useCockpit()
 
   const visibleItems = NAV_ITEMS.filter((item) => {
     if (item.superAdminOnly) return isSuperAdmin
+    if (item.adminCompanyOnly) return isAdmin && !isSuperAdmin
     if (item.adminOnly) return isAdmin
     return true
   })
+
+  // "Minha Empresa" abre o drawer da própria empresa do admin; demais itens
+  // trocam a screen. Coaches/treinos/dietas não são mais navegação global.
+  const handleNav = (item: NavItem) => {
+    if (item.id === "minha_empresa") {
+      const myTeam = teams[0]
+      if (myTeam) void openEmpresa(myTeam)
+      return
+    }
+    setActiveScreen(item.id as Screen)
+  }
 
   // Preserve declaration order while grouping under section headers.
   const groups: { name: string; items: NavItem[] }[] = []
@@ -204,7 +219,7 @@ function Sidebar({
                 <button
                   key={item.id}
                   onClick={() => {
-                    setActiveScreen(item.id)
+                    handleNav(item)
                     onClose?.()
                   }}
                   title={collapsed ? item.label : undefined}

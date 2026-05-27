@@ -422,18 +422,53 @@ export function CreateTeamDialog() {
             <TextInput value={teamDraft.name} onChange={(name) => setTeamDraft({ ...teamDraft, name })} />
           </CtrlField>
 
-          <CtrlField label="Plano">
-            <SelectInput
-              value={teamDraft.plan}
-              onChange={(v) => setTeamDraft({ ...teamDraft, plan: v as TeamDraft["plan"] })}
-            >
-              {(["start", "pro", "elite", "custom"] as const).map((p) => (
-                <option key={p} value={p} style={{ background: T.ink }}>
-                  {formatHuman(p)}
-                </option>
-              ))}
-            </SelectInput>
+          <CtrlField label="E-mail de contato *">
+            <TextInput value={teamDraft.email} onChange={(email) => setTeamDraft({ ...teamDraft, email })} />
           </CtrlField>
+
+          <CtrlField label="Telefone (opcional)">
+            <TextInput value={teamDraft.phone} onChange={(phone) => setTeamDraft({ ...teamDraft, phone })} />
+          </CtrlField>
+
+          <CtrlField label="Endereço (opcional)">
+            <TextInput value={teamDraft.addressLine} onChange={(addressLine) => setTeamDraft({ ...teamDraft, addressLine })} />
+          </CtrlField>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <CtrlField label="Cidade">
+              <TextInput value={teamDraft.city} onChange={(city) => setTeamDraft({ ...teamDraft, city })} />
+            </CtrlField>
+            <CtrlField label="País">
+              <TextInput value={teamDraft.country} onChange={(country) => setTeamDraft({ ...teamDraft, country })} />
+            </CtrlField>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <CtrlField label="Plano">
+              <SelectInput
+                value={teamDraft.plan}
+                onChange={(v) => setTeamDraft({ ...teamDraft, plan: v as TeamDraft["plan"] })}
+              >
+                {(["start", "pro", "elite", "custom"] as const).map((p) => (
+                  <option key={p} value={p} style={{ background: T.surface }}>
+                    {formatHuman(p)}
+                  </option>
+                ))}
+              </SelectInput>
+            </CtrlField>
+            <CtrlField label="Status">
+              <SelectInput
+                value={teamDraft.status}
+                onChange={(v) => setTeamDraft({ ...teamDraft, status: v as TeamDraft["status"] })}
+              >
+                {(["active", "paused", "archived"] as const).map((s) => (
+                  <option key={s} value={s} style={{ background: T.surface }}>
+                    {formatHuman(s)}
+                  </option>
+                ))}
+              </SelectInput>
+            </CtrlField>
+          </div>
 
           {teamDraft.plan === "custom" && (
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -473,7 +508,12 @@ export function CreateTeamDialog() {
           >
             Cancelar
           </AlertDialogCancel>
-          <Btn cyan sm disabled={acting || !teamDraft.name.trim()} onClick={() => void doCreateTeam(setTeams)}>
+          <Btn
+            cyan
+            sm
+            disabled={acting || !teamDraft.name.trim() || !teamDraft.email.trim()}
+            onClick={() => void doCreateTeam(setTeams)}
+          >
             <Building2 className="h-3 w-3" />
             Criar empresa
           </Btn>

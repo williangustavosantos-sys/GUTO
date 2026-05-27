@@ -44,6 +44,7 @@ export function useStudentActions({
   })
   const [teamDraft, setTeamDraft] = useState<TeamDraft>({
     name: "", plan: "pro", maxStudents: "", maxCoaches: "",
+    email: "", phone: "", addressLine: "", city: "", country: "", status: "active",
   })
 
   const act = useCallback(
@@ -113,12 +114,22 @@ export function useStudentActions({
                 maxCoaches: teamDraft.maxCoaches ? Number(teamDraft.maxCoaches) || null : null,
               }
             : undefined
-        const result = await createAdminTeam({ name: teamDraft.name, plan: teamDraft.plan, customLimits })
+        const result = await createAdminTeam({
+          name: teamDraft.name,
+          plan: teamDraft.plan,
+          status: teamDraft.status,
+          email: teamDraft.email.trim() || undefined,
+          phone: teamDraft.phone.trim() || undefined,
+          addressLine: teamDraft.addressLine.trim() || undefined,
+          city: teamDraft.city.trim() || undefined,
+          country: teamDraft.country.trim() || undefined,
+          customLimits,
+        })
         setTeams((prev) => [...prev, result.team])
         setSelectedTeamId(result.team.id)
         setStudentDraft((d) => ({ ...d, teamId: result.team.id }))
         setCoachDraft((d) => ({ ...d, teamId: result.team.id }))
-        setTeamDraft({ name: "", plan: "pro", maxStudents: "", maxCoaches: "" })
+        setTeamDraft({ name: "", plan: "pro", maxStudents: "", maxCoaches: "", email: "", phone: "", addressLine: "", city: "", country: "", status: "active" })
         setShowCreateTeam(false)
       }, "Time criado."),
     [act, teamDraft]

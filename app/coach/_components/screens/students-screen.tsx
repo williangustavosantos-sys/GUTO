@@ -214,14 +214,15 @@ export function StudentsScreen() {
                 style={{
                   fontFamily: T.mono,
                   fontSize: 10,
-                  color: T.fg2,
+                  color: s.coachId ? T.fg2 : T.warn,
+                  fontWeight: s.coachId ? 400 : 700,
                   whiteSpace: "nowrap",
                   overflow: "hidden",
                   textOverflow: "ellipsis",
                 }}
-                title={coachLabel(s, coaches)}
+                title={s.coachId ? coachLabel(s, coaches) : "Aluno sem coach atribuído — atenção operacional"}
               >
-                {coachLabel(s, coaches)}
+                {s.coachId ? coachLabel(s, coaches) : "⚠ SEM COACH"}
               </span>
               <span style={{ fontFamily: T.mono, fontSize: 11, color: T.cyan, fontWeight: 700 }}>
                 {s.weeklyXp} XP
