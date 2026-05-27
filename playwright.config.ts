@@ -1,5 +1,8 @@
 import { defineConfig, devices } from '@playwright/test';
 
+const port = process.env.PORT ?? '3000';
+const baseURL = `http://localhost:${port}`;
+
 /**
  * Read environment variables from file.
  * https://github.com/motdotla/dotenv
@@ -25,7 +28,7 @@ export default defineConfig({
   reporter: 'html',
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
-    baseURL: 'http://localhost:3000',
+    baseURL,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
@@ -33,8 +36,8 @@ export default defineConfig({
 
   /* Start dev server in CI before running tests */
   webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:3000',
+    command: `PORT=${port} npm run dev`,
+    url: baseURL,
     reuseExistingServer: !process.env.CI,
   },
 
