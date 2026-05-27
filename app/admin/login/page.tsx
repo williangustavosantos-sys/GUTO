@@ -168,11 +168,16 @@ export default function AdminLoginPage() {
       const res = role === "coach" ? await loginCoach(email, password) : await loginAdmin(email, password)
       login(res)
       const actualRole = res.role
-      if (actualRole === "super_admin") router.push("/admin")
-      else if (actualRole === "admin") router.push("/empresa")
-      else if (actualRole === "coach") router.push("/coach")
-      else if (actualRole === "student") setError(copy.restrictedStudent)
-      else setError(copy.noAccess)
+      // Painel operacional canônico = /coach (cockpit real, ligado a /admin/*),
+      // que já trata super_admin, admin e coach por papel. /admin e /empresa
+      // continuam como casa futura mock e não recebem o operador no fluxo P0.
+      if (actualRole === "super_admin" || actualRole === "admin" || actualRole === "coach") {
+        router.push("/coach")
+      } else if (actualRole === "student") {
+        setError(copy.restrictedStudent)
+      } else {
+        setError(copy.noAccess)
+      }
     } catch (err) {
       setError(getApiErrorMessage(err))
     } finally {
