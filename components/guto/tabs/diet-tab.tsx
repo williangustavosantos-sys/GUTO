@@ -9,6 +9,7 @@ import { ApiError } from "@/lib/api/client"
 import { DietPlanValidationError, sanitizeDietPlan } from "@/lib/diet-plan"
 import { getLanguage } from "../translations"
 import type { ValidLanguage } from "../translations"
+import { DietProfileNotice } from "../memory-context/diet-profile-notice"
 import { gutoAudio } from "@/lib/audio-haptics"
 
 // ─── Copy ────────────────────────────────────────────────────────────────────
@@ -786,6 +787,9 @@ export function DietTab({ userId, language, onFoodDoubt, memory }: DietTabProps)
           <MacroPill icon={<Droplets className="h-3 w-3" />} label={copy.fatLabel} value={`${macros.fatG}g`} color="sky" />
         </div>
       </motion.div>
+
+      {/* Perfil usado na dieta — memória visível (Fase 3K) */}
+      <DietProfileNotice memory={memory} language={validLang} />
 
       {/* ── Scrollable meals ── */}
       <div className="guto-tab-scroll flex flex-col gap-2.5 pb-[calc(8rem+env(safe-area-inset-bottom))] scroll-pb-[calc(8rem+env(safe-area-inset-bottom))]">
