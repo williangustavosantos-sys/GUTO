@@ -9,9 +9,6 @@ import { CockpitLayout } from "./_components/cockpit-layout"
 import { HojeScreen } from "./_components/screens/hoje-screen"
 import { EmpresasScreen } from "./_components/screens/empresas-screen"
 import { StudentsScreen } from "./_components/screens/students-screen"
-import { CoachesScreen } from "./_components/screens/coaches-screen"
-import { TreinosScreen } from "./_components/screens/treinos-screen"
-import { DietasScreen } from "./_components/screens/dietas-screen"
 import { AprovacoesScreen } from "./_components/screens/aprovacoes-screen"
 import { BancoScreen } from "./_components/screens/banco-screen"
 import { ArenaScreen } from "./_components/screens/arena-screen"
@@ -84,12 +81,6 @@ function ActiveScreen() {
       return <EmpresasScreen />
     case "students":
       return <StudentsScreen />
-    case "coaches":
-      return <CoachesScreen />
-    case "treinos":
-      return <TreinosScreen />
-    case "dietas":
-      return <DietasScreen />
     case "aprovacoes":
       return <AprovacoesScreen />
     case "banco":

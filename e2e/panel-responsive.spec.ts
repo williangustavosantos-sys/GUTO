@@ -1,11 +1,8 @@
 import { test, expect } from "@playwright/test"
 
-// Phase 1.1 smoke: captures /admin/login at 3 widths and asserts no horizontal
-// overflow. Other panel routes (/admin, /empresa) redirect to /admin/login when
-// not authenticated, so we exercise them anyway to capture the loading state.
-
-const PORT = process.env.PORT ?? "3459"
-const BASE = `http://localhost:${PORT}`
+// Phase 1.1 smoke: captures the real admin login and legacy panel entrypoints
+// at 3 widths. /admin and /empresa are legacy routes whose canonical target is
+// /coach; unauthenticated users then land on /admin/login.
 
 const SIZES = [
   { name: "mobile-375", width: 375, height: 740 },
@@ -14,17 +11,19 @@ const SIZES = [
 ] as const
 
 const ROUTES = [
-  { name: "admin-login", path: "/admin/login" },
-  { name: "admin", path: "/admin" },
-  { name: "empresa", path: "/empresa" },
+  { name: "admin-login", path: "/admin/login", finalPath: /\/admin\/login$/ },
+  { name: "admin", path: "/admin", finalPath: /\/admin\/login$/ },
+  { name: "empresa", path: "/empresa", finalPath: /\/admin\/login$/ },
 ]
 
 for (const size of SIZES) {
   for (const route of ROUTES) {
     test(`${route.name} @ ${size.name}`, async ({ page }) => {
       await page.setViewportSize({ width: size.width, height: size.height })
-      const resp = await page.goto(`${BASE}${route.path}`, { waitUntil: "networkidle" })
+      const resp = await page.goto(route.path, { waitUntil: "domcontentloaded" })
       expect(resp?.status() ?? 0).toBeLessThan(400)
+      await page.waitForURL(route.finalPath)
+      await page.locator("body").waitFor({ state: "visible" })
       await page.screenshot({
         path: `playwright-report/phase1.1/${route.name}-${size.name}.png`,
         fullPage: false,

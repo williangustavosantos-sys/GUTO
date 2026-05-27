@@ -57,9 +57,6 @@ const SCREEN_TITLES: Record<Screen, { t: string; sub: string }> = {
   hoje: { t: "Hoje", sub: "Visão geral operacional" },
   empresas: { t: "Empresas", sub: "Cadastros / clientes B2B" },
   students: { t: "Alunos", sub: "Todos os alunos do seu escopo" },
-  coaches: { t: "Coaches", sub: "Operadores e permissões" },
-  treinos: { t: "Treinos", sub: "Fila editorial · ordenada por urgência" },
-  dietas: { t: "Dietas", sub: "Fila editorial · ordenada por urgência" },
   aprovacoes: { t: "Aprovações", sub: "Itens pendentes para o catálogo GUTO" },
   banco: { t: "Banco do GUTO", sub: "Catálogo aprovado · treinos e dietas" },
   arena: { t: "Arena", sub: "Ranking competitivo" },
@@ -369,12 +366,8 @@ function Header({ onMobileMenu }: { onMobileMenu: () => void }) {
     students,
     pendingExercises,
     studentLimitReached,
-    coachLimitReached,
-    superAdminNeedsTeam,
     setShowCreateStudent,
     setStudentDraft,
-    setShowCreateCoach,
-    setCoachDraft,
     setShowCreateTeam,
     selectedTeamId,
   } = useCockpit()
@@ -394,27 +387,12 @@ function Header({ onMobileMenu }: { onMobileMenu: () => void }) {
         </Btn>
       )
     }
-    if (ctaKind === "coach") {
-      return (
-        <Btn
-          cyan
-          sm
-          disabled={coachLimitReached || superAdminNeedsTeam}
-          onClick={() => {
-            setCoachDraft({ name: "", email: "", password: "", teamId: selectedTeamId || "" })
-            setShowCreateCoach(true)
-          }}
-        >
-          + Coach
-        </Btn>
-      )
-    }
     if (ctaKind === "aluno") {
       return (
         <Btn
           cyan
           sm
-          disabled={studentLimitReached || superAdminNeedsTeam}
+          disabled={studentLimitReached}
           onClick={() => {
             setStudentDraft({
               name: "",
