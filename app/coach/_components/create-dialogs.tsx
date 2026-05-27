@@ -104,13 +104,13 @@ export function CreateStudentDialog() {
           <CtrlField label="Nome">
             <TextInput value={studentDraft.name} onChange={(name) => setStudentDraft({ ...studentDraft, name })} />
           </CtrlField>
-          <CtrlField label="E-mail">
+          <CtrlField label="E-mail *">
             <TextInput
               value={studentDraft.email}
               onChange={(email) => setStudentDraft({ ...studentDraft, email })}
             />
           </CtrlField>
-          <CtrlField label="Telefone">
+          <CtrlField label="Telefone (opcional)">
             <TextInput
               value={studentDraft.phone}
               onChange={(phone) => setStudentDraft({ ...studentDraft, phone })}
@@ -234,7 +234,13 @@ export function CreateStudentDialog() {
           <Btn
             cyan
             sm
-            disabled={acting || studentLimitReached || !studentDraft.name.trim() || (isSuperAdmin && !studentDraft.teamId)}
+            disabled={
+              acting ||
+              studentLimitReached ||
+              !studentDraft.name.trim() ||
+              !studentDraft.email.trim() ||
+              (isSuperAdmin && !studentDraft.teamId)
+            }
             onClick={() => void doCreateStudent(() => {})}
           >
             Criar aluno
