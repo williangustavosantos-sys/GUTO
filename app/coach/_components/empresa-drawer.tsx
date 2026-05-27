@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo } from "react"
-import { Building2, Users, Shield, CreditCard, ScrollText, X } from "lucide-react"
+import { Building2, Users, Shield, CreditCard, ScrollText, Plus, X } from "lucide-react"
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
 import { useCockpit } from "./cockpit-context"
 import { T, planLabel, teamStatusLabel, teamStatusTone } from "./control-tokens"
@@ -227,22 +227,12 @@ function TabResumo({ empresa }: { empresa: AdminTeam }) {
         <CtrlDataRow label="Criada em" value={empresa.createdAt ? new Date(empresa.createdAt).toLocaleDateString("pt-BR") : "—"} />
       </Plate>
 
-      <Plate dp style={{ padding: 16 }}>
-        <p
-          style={{
-            fontFamily: T.mono,
-            fontSize: 10,
-            color: T.fg3,
-            letterSpacing: "0.10em",
-            lineHeight: 1.6,
-          }}
-        >
-          <span style={{ color: T.warn, fontWeight: 900, letterSpacing: "0.20em" }}>
-            ENDPOINT PENDENTE
-          </span>{" "}
-          · campos do plano de negócios (responsável, e-mail, país, última atividade, status trial/overdue) chegam
-          no PR <strong style={{ color: T.cyan }}>#3</strong> junto com mudança no backend.
-        </p>
+      <Plate style={{ padding: 20 }}>
+        <SectionTitle>CONTATO</SectionTitle>
+        <CtrlDataRow label="E-mail" value={empresa.email || "—"} />
+        <CtrlDataRow label="Telefone" value={empresa.phone || "—"} />
+        <CtrlDataRow label="Endereço" value={empresa.addressLine || "—"} />
+        <CtrlDataRow label="Cidade / País" value={[empresa.city, empresa.country].filter(Boolean).join(" · ") || "—"} />
       </Plate>
     </div>
   )
@@ -251,21 +241,38 @@ function TabResumo({ empresa }: { empresa: AdminTeam }) {
 // ─── Tab Coaches ─────────────────────────────────────────────────────────────
 
 function TabCoaches({ empresa }: { empresa: AdminTeam }) {
-  const { coaches, students, openCoach } = useCockpit()
+  const { coaches, students, openCoach, coachLimitReached, setCoachDraft, setSelectedTeamId, setShowCreateCoach } =
+    useCockpit()
   const empresaCoaches = useMemo(() => coachesOfEmpresa(empresa, coaches), [empresa, coaches])
+
+  // Cria coach JÁ vinculado a esta empresa (contexto do drawer).
+  const openCreateCoach = () => {
+    setSelectedTeamId(empresa.id)
+    setCoachDraft({ name: "", email: "", password: "", teamId: empresa.id })
+    setShowCreateCoach(true)
+  }
+
+  const addButton = (
+    <Btn cyan sm disabled={coachLimitReached} onClick={openCreateCoach}>
+      <Plus className="h-3 w-3" />
+      Coach
+    </Btn>
+  )
 
   if (!empresaCoaches.length) {
     return (
-      <Plate style={{ padding: 32, textAlign: "center" }}>
-        <p style={{ fontFamily: T.mono, fontSize: 12, color: T.fg3 }}>
-          Sem coaches nesta empresa.
+      <Plate style={{ padding: 32, textAlign: "center", display: "grid", gap: 14, justifyItems: "center" }}>
+        <p style={{ fontFamily: T.ui, fontSize: 13, color: T.fg3 }}>
+          Sem coaches nesta empresa ainda.
         </p>
+        {addButton}
       </Plate>
     )
   }
 
   return (
     <div style={{ display: "grid", gap: 8 }}>
+      <div style={{ display: "flex", justifyContent: "flex-end" }}>{addButton}</div>
       {empresaCoaches.map((coach) => {
         const stCount = students.filter((s) => s.coachId === coach.userId).length
         return (
@@ -438,20 +445,8 @@ function TabPlano({ empresa }: { empresa: AdminTeam }) {
       )}
 
       <Plate dp style={{ padding: 16 }}>
-        <p
-          style={{
-            fontFamily: T.mono,
-            fontSize: 10,
-            color: T.fg3,
-            letterSpacing: "0.10em",
-            lineHeight: 1.6,
-          }}
-        >
-          <span style={{ color: T.warn, fontWeight: 900, letterSpacing: "0.20em" }}>
-            ENDPOINT PENDENTE
-          </span>{" "}
-          · billing real (status pagamento, MRR, próxima cobrança) chega no{" "}
-          <strong style={{ color: T.cyan }}>PR #3 / #5</strong>.
+        <p style={{ fontFamily: T.ui, fontSize: 12.5, color: T.fg3, lineHeight: 1.6 }}>
+          Billing (status de pagamento, MRR, próxima cobrança) ainda não está disponível neste painel.
         </p>
       </Plate>
     </div>

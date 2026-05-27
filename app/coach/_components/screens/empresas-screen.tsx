@@ -230,31 +230,6 @@ export function EmpresasScreen() {
         )}
       </div>
 
-      {/* Aviso campos pendentes */}
-      <Plate
-        dp
-        style={{
-          marginTop: 18,
-          padding: "12px 16px",
-          borderColor: "rgba(251,191,36,0.20)",
-        }}
-      >
-        <p
-          style={{
-            fontFamily: T.mono,
-            fontSize: 10,
-            color: T.fg3,
-            letterSpacing: "0.10em",
-            lineHeight: 1.6,
-          }}
-        >
-          <span style={{ color: T.warn, fontWeight: 900, letterSpacing: "0.20em" }}>
-            ENDPOINT PENDENTE
-          </span>{" "}
-          · país, responsável, e-mail do responsável e última atividade chegam no PR{" "}
-          <strong style={{ color: T.cyan }}>#3</strong> (mudança no schema do <code>Team</code>).
-        </p>
-      </Plate>
     </div>
     </>
   )
