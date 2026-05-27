@@ -1,12 +1,13 @@
 "use client"
 
 import { useMemo, useState } from "react"
+import { toast } from "sonner"
 import { useCockpit } from "../cockpit-context"
 import { T, planLabel, teamStatusLabel, teamStatusTone } from "../control-tokens"
-import { Plate, Pill, SearchBox, FilterPill, UsageBar } from "../controls"
+import { Plate, Pill, Btn, SearchBox, FilterPill, UsageBar } from "../controls"
 import { studentRisk } from "../utils"
-import { ChevronRight } from "lucide-react"
-import type { AdminTeam } from "@/lib/api/admin"
+import { ChevronRight, Sparkles } from "lucide-react"
+import { cleanupEmptyTeams, type AdminTeam } from "@/lib/api/admin"
 import { clientTeams } from "@/lib/panel-rules"
 
 const FILTERS: { id: "todas" | "active" | "paused" | "archived"; label: string }[] = [
@@ -17,9 +18,29 @@ const FILTERS: { id: "todas" | "active" | "paused" | "archived"; label: string }
 ]
 
 export function EmpresasScreen() {
-  const { teams, students, coaches, openEmpresa } = useCockpit()
+  const { teams, students, coaches, openEmpresa, setTeams, isSuperAdmin } = useCockpit()
   const [search, setSearch] = useState("")
   const [filter, setFilter] = useState<(typeof FILTERS)[number]["id"]>("todas")
+  const [cleaning, setCleaning] = useState(false)
+
+  // Limpeza operacional segura: remove só empresas SEM coaches e SEM alunos
+  // (vazias/teste), preserva GUTO_CORE e empresas com membros. Ação explícita
+  // do super admin — nunca automática.
+  async function handleCleanupEmpty() {
+    if (cleaning) return
+    if (!window.confirm("Remover empresas VAZIAS (sem coaches e sem alunos)? GUTO_CORE e empresas com membros são preservadas. Ação não destrutiva de dados de alunos.")) return
+    setCleaning(true)
+    try {
+      const { removedCount, removed } = await cleanupEmptyTeams()
+      const removedIds = new Set(removed.map((r) => r.id))
+      setTeams((prev) => prev.filter((t) => !removedIds.has(t.id)))
+      toast.success(removedCount > 0 ? `${removedCount} empresa(s) vazia(s) removida(s).` : "Nenhuma empresa vazia encontrada.")
+    } catch {
+      toast.error("Não foi possível limpar empresas vazias.")
+    } finally {
+      setCleaning(false)
+    }
+  }
 
   const list = useMemo(() => {
     // GUTO_CORE é empresa interna do sistema, não cliente B2B: fora da lista.
@@ -108,6 +129,14 @@ export function EmpresasScreen() {
             </FilterPill>
           ))}
         </div>
+        {isSuperAdmin && (
+          <div style={{ marginLeft: "auto" }}>
+            <Btn sm disabled={cleaning} onClick={handleCleanupEmpty}>
+              <Sparkles className="h-3 w-3" />
+              {cleaning ? "Limpando…" : "Limpar vazias"}
+            </Btn>
+          </div>
+        )}
       </div>
 
       {/* Header row */}
