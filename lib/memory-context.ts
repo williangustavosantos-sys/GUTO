@@ -115,6 +115,26 @@ function regionLabel(region: BodyRegion | null, lang: ValidLanguage): string {
   return REGION_LABEL[region][lang]
 }
 
+// Forma com artigo, para frases naturais ("proteger a lombar", "protect the knee",
+// "proteggere la schiena"). Evita o erro de gênero de "proteger teu lombar".
+const REGION_WITH_ARTICLE: Record<BodyRegion, Record<ValidLanguage, string>> = {
+  knee: { "pt-BR": "o joelho", "en-US": "the knee", "it-IT": "il ginocchio" },
+  shoulder: { "pt-BR": "o ombro", "en-US": "the shoulder", "it-IT": "la spalla" },
+  lower_back: { "pt-BR": "a lombar", "en-US": "the lower back", "it-IT": "la schiena" },
+  ankle: { "pt-BR": "o tornozelo", "en-US": "the ankle", "it-IT": "la caviglia" },
+  hip: { "pt-BR": "o quadril", "en-US": "the hip", "it-IT": "l'anca" },
+  wrist: { "pt-BR": "o punho", "en-US": "the wrist", "it-IT": "il polso" },
+  elbow: { "pt-BR": "o cotovelo", "en-US": "the elbow", "it-IT": "il gomito" },
+  legs: { "pt-BR": "as pernas", "en-US": "the legs", "it-IT": "le gambe" },
+  neck: { "pt-BR": "o pescoço", "en-US": "the neck", "it-IT": "il collo" },
+  generic: { "pt-BR": "", "en-US": "", "it-IT": "" },
+}
+
+function regionWithArticle(region: BodyRegion | null, lang: ValidLanguage): string {
+  if (!region) return ""
+  return REGION_WITH_ARTICLE[region][lang]
+}
+
 // Status do resolver que ainda exigem confirmação (cuidado pendente).
 const PENDING_STATUSES = new Set(["needs_confirmation", "unknown", "risky_unclear", "needs_clarification"])
 
@@ -154,7 +174,7 @@ export function buildWorkoutCare(memory: GutoMemory | null | undefined, language
       status: "active",
       region,
       title: region ? `${t.activeTitlePrefix}: ${regionLabel(region, language)}` : t.activeTitleGeneric,
-      body: t.activeBody(region ? regionLabel(region, language) : null),
+      body: t.activeBody(region ? regionWithArticle(region, language) : null),
     }
   }
 
@@ -169,7 +189,8 @@ export function buildWorkoutCare(memory: GutoMemory | null | undefined, language
 const WORKOUT_COPY: Record<ValidLanguage, {
   activeTitlePrefix: string
   activeTitleGeneric: string
-  activeBody: (region: string | null) => string
+  // Recebe a região JÁ com artigo ("a lombar", "the knee", "la schiena").
+  activeBody: (regionWithArticle: string | null) => string
   pendingTitle: string
   pendingBody: string
 }> = {
@@ -178,8 +199,8 @@ const WORKOUT_COPY: Record<ValidLanguage, {
     activeTitleGeneric: "Cuidados ativos",
     activeBody: (region) =>
       region
-        ? `Hoje eu ajustei o treino pra proteger teu ${region}: menos impacto e sem carga agressiva.`
-        : "Hoje eu ajustei o treino pra respeitar tua limitação: menos impacto e sem carga agressiva.",
+        ? `Hoje ajustei o treino para proteger ${region}: menos impacto e sem carga agressiva.`
+        : "Hoje ajustei o treino para respeitar a sua limitação: menos impacto e sem carga agressiva.",
     pendingTitle: "Cuidado pendente",
     pendingBody: "Preciso entender melhor essa limitação antes de liberar certos exercícios.",
   },
@@ -188,8 +209,8 @@ const WORKOUT_COPY: Record<ValidLanguage, {
     activeTitleGeneric: "Active care",
     activeBody: (region) =>
       region
-        ? `Today I tuned the workout to protect your ${region}: less impact, no aggressive load.`
-        : "Today I tuned the workout to respect your limitation: less impact, no aggressive load.",
+        ? `Today I adjusted the workout to protect ${region}: less impact, no aggressive load.`
+        : "Today I adjusted the workout to respect your limitation: less impact, no aggressive load.",
     pendingTitle: "Care pending",
     pendingBody: "I need to understand this limitation better before I clear certain exercises.",
   },
@@ -198,7 +219,7 @@ const WORKOUT_COPY: Record<ValidLanguage, {
     activeTitleGeneric: "Attenzioni attive",
     activeBody: (region) =>
       region
-        ? `Oggi ho adattato l'allenamento per proteggere il tuo ${region}: meno impatto e niente carichi aggressivi.`
+        ? `Oggi ho adattato l'allenamento per proteggere ${region}: meno impatto e niente carichi aggressivi.`
         : "Oggi ho adattato l'allenamento per rispettare il tuo limite: meno impatto e niente carichi aggressivi.",
     pendingTitle: "Attenzione in sospeso",
     pendingBody: "Devo capire meglio questo limite prima di sbloccare certi esercizi.",
