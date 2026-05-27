@@ -2,6 +2,7 @@ import { describe, it } from "node:test"
 import assert from "node:assert/strict"
 import {
   GUTO_CORE_TEAM_ID,
+  OPERATIONAL_PANEL_SCREENS,
   activeClientTeams,
   clientTeams,
   coachesForTeam,
@@ -88,7 +89,14 @@ describe("panel-rules · criar aluno exige vínculo empresa/coach", () => {
     )
   })
 
-  it("admin (coach opcional) pode criar sem coach quando não é exigido", () => {
+  it("admin de empresa cliente também precisa escolher coach", () => {
+    assert.equal(
+      blockCreateStudent({ ...base, needsTeam: false, teamId: "t1", coachId: "", teamCoachCount: 2, requiresCoach: true }),
+      "coach",
+    )
+  })
+
+  it("coach criando para si não precisa escolher coach no formulário", () => {
     assert.equal(
       blockCreateStudent({ ...base, needsTeam: false, teamId: "", coachId: "", teamCoachCount: 0, requiresCoach: false }),
       null,
@@ -118,6 +126,15 @@ describe("panel-rules · +Aluno não aparece no Dashboard", () => {
   it("Empresas tem +Empresa só para super_admin", () => {
     assert.equal(headerCtaForScreen("empresas", { isSuperAdmin: true, isAdmin: true }), "empresa")
     assert.equal(headerCtaForScreen("empresas", { isSuperAdmin: false, isAdmin: true }), null)
+  })
+  it("Coaches/Treinos/Dietas não têm CTA nem tela operacional global", () => {
+    const screens: readonly string[] = OPERATIONAL_PANEL_SCREENS
+    assert.equal(headerCtaForScreen("coaches", roles), null)
+    assert.equal(headerCtaForScreen("treinos", roles), null)
+    assert.equal(headerCtaForScreen("dietas", roles), null)
+    assert.equal(screens.includes("coaches"), false)
+    assert.equal(screens.includes("treinos"), false)
+    assert.equal(screens.includes("dietas"), false)
   })
 })
 

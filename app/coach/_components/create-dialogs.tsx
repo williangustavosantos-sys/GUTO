@@ -53,6 +53,7 @@ const footerStyle: React.CSSProperties = {
 
 export function CreateStudentDialog() {
   const {
+    user,
     showCreateStudent,
     setShowCreateStudent,
     studentDraft,
@@ -77,13 +78,15 @@ export function CreateStudentDialog() {
   const availableCoaches = isSuperAdmin
     ? coachesForTeam(coaches, studentDraft.teamId)
     : coaches
-  const requiresCoach = isSuperAdmin && studentRequiresCoach(studentDraft.teamId)
+  const effectiveTeamId = isSuperAdmin ? studentDraft.teamId : user.teamId
+  const requiresCoach = isAdmin && studentRequiresCoach(effectiveTeamId)
   const noCoachInTeam = requiresCoach && availableCoaches.length === 0
+  const shouldShowCoachSelector = user.role === "admin" || (isSuperAdmin && !!studentDraft.teamId)
   const createBlock = blockCreateStudent({
     name: studentDraft.name,
     email: studentDraft.email,
     needsTeam: isSuperAdmin,
-    teamId: studentDraft.teamId,
+    teamId: effectiveTeamId,
     coachId: studentDraft.coachId,
     teamCoachCount: availableCoaches.length,
     requiresCoach,
@@ -199,7 +202,7 @@ export function CreateStudentDialog() {
             </CtrlField>
           )}
 
-          {(isAdmin || (isSuperAdmin && !!studentDraft.teamId)) && (
+          {shouldShowCoachSelector && (
             <CtrlField label={requiresCoach ? "Coach responsável *" : "Coach responsável"}>
               {noCoachInTeam ? (
                 <p

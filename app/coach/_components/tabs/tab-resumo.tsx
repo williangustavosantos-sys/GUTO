@@ -1,17 +1,15 @@
 "use client"
 
 import { Badge } from "@/components/ui/badge"
-import { resetAdminStudent } from "@/lib/api/admin"
 import type { GutoMemory } from "@/lib/api/guto"
 import { useCockpit } from "../cockpit-context"
-import { Panel, DataRow, ActionButton } from "../ui"
+import { Panel, DataRow } from "../ui"
 import {
   getStatusInfo,
   avatarStageLabel,
   sourceLabel,
   formatDate,
   coachLabel,
-  type ResetScope,
 } from "../utils"
 
 // Status de onboarding derivado da memória real do aluno (fonte de verdade).
@@ -33,8 +31,7 @@ function deriveOnboarding(memory: GutoMemory | null): {
 }
 
 export function TabResumo() {
-  const { selectedDetail, coaches, teams, isSuperAdmin, acting, act, setSelectedDetail } =
-    useCockpit()
+  const { selectedDetail, coaches, teams, isSuperAdmin } = useCockpit()
 
   if (!selectedDetail) return null
   const { student } = selectedDetail
@@ -47,13 +44,6 @@ export function TabResumo() {
       : onb.calibration === "partial"
         ? { variant: "outline" as const, text: "Parcial" }
         : { variant: "secondary" as const, text: "Pendente" }
-
-  const RESETS: [string, ResetScope][] = [
-    ["Resetar semana", "weekly"],
-    ["Resetar mês", "monthly"],
-    ["Resetar XP total", "individual"],
-    ["Resetar histórico de validações", "validationHistory"],
-  ]
 
   return (
     <div className="grid gap-4 md:grid-cols-2">
@@ -121,30 +111,6 @@ export function TabResumo() {
         />
       </Panel>
 
-      <Panel title="Reset Arena / XP" className="md:col-span-2">
-        <p className="mb-3 text-[11px] text-slate-400">
-          Use com cuidado — ações irreversíveis de reset de progresso do aluno.
-        </p>
-        <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-4">
-          {RESETS.map(([label, scope]) => (
-            <ActionButton
-              key={scope}
-              disabled={acting}
-              onClick={() => {
-                if (!window.confirm(`${label}?`)) return
-                void act(async () => {
-                  const result = await resetAdminStudent(student.userId, scope)
-                  setSelectedDetail((curr) =>
-                    curr ? { ...curr, student: result.student } : curr
-                  )
-                }, "Reset executado.")
-              }}
-            >
-              {label}
-            </ActionButton>
-          ))}
-        </div>
-      </Panel>
     </div>
   )
 }

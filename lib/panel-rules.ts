@@ -7,6 +7,16 @@
 // conta nas métricas; é a casa documentada de alunos sem vínculo (super admin).
 export const GUTO_CORE_TEAM_ID = "GUTO_CORE"
 
+export const OPERATIONAL_PANEL_SCREENS = [
+  "hoje",
+  "empresas",
+  "students",
+  "aprovacoes",
+  "banco",
+  "arena",
+  "logs",
+] as const
+
 const ACTIVE_TEAM_STATUSES = new Set(["active", "trial"])
 
 export function isClientTeam(team: { id: string }): boolean {
@@ -68,7 +78,7 @@ export function blockCreateStudent(input: {
   return null
 }
 
-export type HeaderCtaKind = "empresa" | "coach" | "aluno" | null
+export type HeaderCtaKind = "empresa" | "aluno" | null
 
 /**
  * CTA contextual do header. O Dashboard ("hoje") NUNCA cria aluno solto — o
@@ -80,7 +90,6 @@ export function headerCtaForScreen(
   roles: { isSuperAdmin: boolean; isAdmin: boolean },
 ): HeaderCtaKind {
   if (screen === "empresas" && roles.isSuperAdmin) return "empresa"
-  if (screen === "coaches" && roles.isAdmin) return "coach"
   if (screen === "students") return "aluno"
   return null
 }
