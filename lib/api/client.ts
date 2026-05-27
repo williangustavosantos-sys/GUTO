@@ -5,9 +5,14 @@ function shouldUseApiProxy() {
   if (typeof window === "undefined") return false
   const host = window.location.hostname
   if (host.endsWith(".vercel.app") && host !== "corpoguto.vercel.app") return true
-  // Dev local: same-origin proxy evita CORS com Render ou backend na :3001
+  // Dev local: same-origin proxy evita CORS com Render ou backend na :3001.
+  // Cobre também IPs de LAN (192.168.x.x / 10.x.x.x / 172.16-31.x.x) para que
+  // o painel funcione quando aberto do celular real apontando pro Mac.
   if (process.env.NODE_ENV === "development") {
-    return host === "localhost" || host === "127.0.0.1" || host === "0.0.0.0"
+    if (host === "localhost" || host === "127.0.0.1" || host === "0.0.0.0") return true
+    if (/^192\.168\.\d{1,3}\.\d{1,3}$/.test(host)) return true
+    if (/^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host)) return true
+    if (/^172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3}$/.test(host)) return true
   }
   return false
 }
@@ -180,12 +185,20 @@ export async function apiRequest<T>(
 
     if (res.status === 403) {
       const body = await res.json().catch(() => ({}))
-      if (isApiErrorBody(body) && body.code === "ACCESS_PAUSED") {
+      const code = isApiErrorBody(body) ? body.code : undefined
+      const blockedCodes = new Set([
+        "ACCESS_PAUSED",
+        "ACCESS_EXPIRED",
+        "SUBSCRIPTION_EXPIRED",
+        "GUTO_DECEASED",
+        "GUTO_DEAD",
+      ])
+      if (code && blockedCodes.has(code)) {
         if (typeof window !== "undefined" && !window.location.pathname.includes("/acesso-pausado")) {
-          window.location.href = "/acesso-pausado"
+          window.location.href = `/acesso-pausado?reason=${encodeURIComponent(code)}`
         }
       }
-      throw new ApiError(isApiErrorBody(body) ? body.message || "Acesso negado." : "Acesso negado.", 403, body, isApiErrorBody(body) ? body.code : undefined)
+      throw new ApiError(isApiErrorBody(body) ? body.message || "Acesso negado." : "Acesso negado.", 403, body, code)
     }
 
     if (!res.ok) {

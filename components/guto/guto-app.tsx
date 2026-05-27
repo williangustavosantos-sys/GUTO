@@ -5,6 +5,7 @@ import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { AnimatePresence, motion } from "framer-motion"
 import { Activity, ArrowLeft, Check, CheckCircle2, Download, Fingerprint, Languages, Loader2, Send, Settings, Shield, Trash2, UserRound, Volume2 } from "lucide-react"
+import { Country } from "country-state-city"
 
 import { BottomNavigation, type TabType } from "./bottom-navigation"
 import { createGutoEffectRegistry } from "./effects"
@@ -20,7 +21,7 @@ import { LanguageScreen } from "./screens/language-screen"
 import type { MissionExercise } from "./view-models"
 import { WorkoutValidationFlow } from "./validation/workout-validation-flow"
 import { getApiErrorMessage } from "@/lib/api/client"
-import { getGutoMemory, saveGutoMemory, trackGutoEvent, validateGutoName, type DietFood, type DietMeal, type GutoMemory, type GutoNameValidation, type GutoTelemetryEvent, type GutoWorkoutPlan } from "@/lib/api/guto"
+import { acceptGutoConsent, getGutoMemory, saveGutoMemory, trackGutoEvent, validateGutoName, type DietFood, type DietMeal, type GutoMemory, type GutoNameValidation, type GutoTelemetryEvent, type GutoWorkoutPlan } from "@/lib/api/guto"
 import { useAuth } from "@/components/auth-provider"
 import { getInvite, claimInvite, logout, deleteOwnAccount, revokeConsent, type InvitePreview } from "@/lib/api/auth"
 import type { EvolutionStage, SupportedLanguage } from "@/types/contract"
@@ -61,8 +62,6 @@ interface StoredProfile extends StoredGutoProfile {
   namingConfirmed?: boolean
   calibrationComplete?: boolean
   pactAccepted?: boolean
-  phone?: string
-  foodIntolerances?: string
   consentHealthFitness?: boolean
   acceptedTerms?: boolean
   consentAcceptedAt?: string
@@ -79,6 +78,8 @@ interface NameGate {
   message: string
   target: "onboarding" | "settings"
 }
+
+type GutoMemoryPayload = Parameters<typeof saveGutoMemory>[0]
 
 const STORAGE_KEY = "guto-white-lab-profile"
 const STORAGE_VERSION = 2  // bump aqui para forçar reset em todos os dispositivos
@@ -129,9 +130,9 @@ const stageCopy: Record<
     settingsPhysicalData: string
     settingsResidence: string
     settingsFoodRestrictions: string
-    settingsPhoneLabel: string
     settingsSave: string
     settingsSavedMsg: string
+    profileSaveError: string
     settingsFoodIntolerances: string
     settingsPrivacy: string
     settingsPrivacySubtext: string
@@ -203,9 +204,9 @@ const stageCopy: Record<
     settingsPhysicalData: "Peso / Altura",
     settingsResidence: "Onde Mora",
     settingsFoodRestrictions: "Restrições",
-    settingsPhoneLabel: "Telefone",
     settingsSave: "Salvar",
     settingsSavedMsg: "Configurações salvas.",
+    profileSaveError: "Não consegui salvar agora. Tente de novo.",
     settingsFoodIntolerances: "Intolerâncias",
     settingsPrivacy: "Privacidade e dados",
     settingsPrivacySubtext: "Baixe, corrija ou exclua seus dados.",
@@ -276,9 +277,9 @@ const stageCopy: Record<
     settingsPhysicalData: "Weight / Height",
     settingsResidence: "Where You Live",
     settingsFoodRestrictions: "Restrictions",
-    settingsPhoneLabel: "Phone",
     settingsSave: "Save",
     settingsSavedMsg: "Settings saved.",
+    profileSaveError: "I could not save it right now. Try again.",
     settingsFoodIntolerances: "Intolerances",
     settingsPrivacy: "Privacy & Data",
     settingsPrivacySubtext: "Download, correct or delete your data.",
@@ -349,9 +350,9 @@ const stageCopy: Record<
     settingsPhysicalData: "Peso / Altezza",
     settingsResidence: "Dove Abiti",
     settingsFoodRestrictions: "Restrizioni",
-    settingsPhoneLabel: "Telefono",
     settingsSave: "Salva",
     settingsSavedMsg: "Impostazioni salvate.",
+    profileSaveError: "Non sono riuscito a salvare ora. Riprova.",
     settingsFoodIntolerances: "Intolleranze",
     settingsPrivacy: "Privacy e dati",
     settingsPrivacySubtext: "Scarica, correggi o elimina i tuoi dati.",
@@ -567,8 +568,60 @@ function hasMemoryName(memory?: GutoMemory | null) {
   return Boolean(firstRealGutoName(memory?.name))
 }
 
+function normalizeCountryLookup(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("pt-BR")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim()
+}
+
+function resolveCountryCodeFromDraft(country: string, language: SupportedLanguage): string | undefined {
+  const raw = country.trim()
+  if (!raw) return undefined
+
+  const directCode = raw.toUpperCase()
+  if (/^[A-Z]{2}$/.test(directCode) && Country.getCountryByCode(directCode)) return directCode
+
+  const aliases: Record<string, string> = {
+    brasil: "BR",
+    brazil: "BR",
+    italia: "IT",
+    italy: "IT",
+    usa: "US",
+    eua: "US",
+    "estados unidos": "US",
+    "united states": "US",
+    portugal: "PT",
+    espanha: "ES",
+    spain: "ES",
+    franca: "FR",
+    france: "FR",
+    alemanha: "DE",
+    germany: "DE",
+    argentina: "AR",
+  }
+  const normalizedRaw = normalizeCountryLookup(raw)
+  const alias = aliases[normalizedRaw]
+  if (alias) return alias
+
+  const locales = Array.from(new Set([language, "pt-BR", "en-US", "it-IT"]))
+  const displayNames = locales.map((locale) => new Intl.DisplayNames([locale], { type: "region" }))
+
+  return Country.getAllCountries().find((countryOption) => {
+    if (normalizeCountryLookup(countryOption.isoCode) === normalizedRaw) return true
+    if (normalizeCountryLookup(countryOption.name) === normalizedRaw) return true
+    return displayNames.some((names) => normalizeCountryLookup(names.of(countryOption.isoCode) ?? "") === normalizedRaw)
+  })?.isoCode
+}
+
 function hasMemoryCalibration(memory?: GutoMemory | null) {
   return hasCompleteGutoCalibration(memory)
+}
+
+function hasMemoryConsent(memory?: GutoMemory | null) {
+  return Boolean(memory?.consentHealthFitness && memory?.acceptedTerms)
 }
 
 function resolveAuthenticatedStage(
@@ -579,7 +632,14 @@ function resolveAuthenticatedStage(
   if (!user) return "intro"
 
 
-  if (!profile?.consentHealthFitness || !profile?.acceptedTerms) {
+  // Fase 2A — backend é a fonte de verdade do consentimento (igual à calibragem).
+  // Se a memória do backend carregou, ela manda; localStorage é só cache/UX.
+  // Assim, consentimento revogado em outro device força a tela de consent mesmo
+  // que o cache local diga o contrário.
+  const consentMissing = memory
+    ? !hasMemoryConsent(memory)
+    : (!profile?.consentHealthFitness || !profile?.acceptedTerms)
+  if (consentMissing) {
     return "consent"
   }
 
@@ -644,10 +704,10 @@ export function GutoApp({
   const [settingsWeightDraft, setSettingsWeightDraft] = useState("")
   const [settingsHeightDraft, setSettingsHeightDraft] = useState("")
   const [settingsCountryDraft, setSettingsCountryDraft] = useState("")
+  const [settingsCityDraft, setSettingsCityDraft] = useState("")
   const [settingsFoodRestrictionsDraft, setSettingsFoodRestrictionsDraft] = useState("")
-  const [settingsFoodIntolerancesDraft, setSettingsFoodIntolerancesDraft] = useState("")
-  const [settingsPhoneDraft, setSettingsPhoneDraft] = useState("")
   const [settingsSavedToast, setSettingsSavedToast] = useState(false)
+  const [profileSaveError, setProfileSaveError] = useState<string | null>(null)
   const [privacyConfirm, setPrivacyConfirm] = useState<"revoke" | "delete-step1" | "delete-step2" | "delete-done" | null>(null)
   const [deleteConfirmText, setDeleteConfirmText] = useState("")
   const [privacyMsg, setPrivacyMsg] = useState<string | null>(null)
@@ -685,7 +745,12 @@ export function GutoApp({
   const pactCompleteRef = useRef(false)
   const portalVideoRef = useRef<HTMLVideoElement | null>(null)
   const shellRef = useRef<HTMLDivElement | null>(null)
+  const memoryRef = useRef<GutoMemory | null>(null)
   const effectRegistry = useMemo(() => createGutoEffectRegistry(), [])
+
+  useEffect(() => {
+    memoryRef.current = memory
+  }, [memory])
 
   const schedule = useCallback((callback: () => void, delay: number) => {
     const timer = window.setTimeout(() => {
@@ -747,19 +812,40 @@ export function GutoApp({
   )
 
   const persistMemory = useCallback(
-    async (payload: Parameters<typeof saveGutoMemory>[0]) => {
-      setMemory((prev) => (prev ? { ...prev, ...payload } : (payload as import("@/lib/api/guto").GutoMemory)))
-      if (!user?.userId) return
+    async (payload: GutoMemoryPayload, options?: { optimistic?: boolean }) => {
+      const shouldOptimisticallyUpdate = options?.optimistic !== false
+      const memoryBeforeSave = memoryRef.current
+      const rollbackOptimisticUpdate = () => {
+        if (shouldOptimisticallyUpdate) {
+          memoryRef.current = memoryBeforeSave
+          setMemory(memoryBeforeSave)
+        }
+      }
+
+      if (shouldOptimisticallyUpdate) {
+        const optimisticMemory = memoryBeforeSave ? { ...memoryBeforeSave, ...payload } : (payload as GutoMemory)
+        memoryRef.current = optimisticMemory
+        setMemory(optimisticMemory)
+      }
+
+      if (!user?.userId) {
+        rollbackOptimisticUpdate()
+        return null
+      }
+
       try {
         const updated = await saveGutoMemory({
           userId: gutoUserId,
           language: selectedLanguage,
           ...payload,
         })
+        memoryRef.current = updated
         setMemory(updated)
         return updated
       } catch (error) {
+        rollbackOptimisticUpdate()
         console.warn(`Memória do GUTO não sincronizada: ${getApiErrorMessage(error)}`)
+        return null
       }
     },
     [gutoUserId, selectedLanguage, user?.userId]
@@ -1102,19 +1188,35 @@ export function GutoApp({
     [effectRegistry, persistMemory, persistProfile, schedule, setMemory, trackBehaviorEvent]
   )
 
-  const handleConsentAccepted = useCallback(() => {
+  const handleConsentAccepted = useCallback(async () => {
+    // Fase 2A — o aceite tem de ser gravado no backend (fonte de verdade).
+    // Se o backend falhar, NÃO avança nem finge que salvou.
+    setProfileSaveError(null)
+    let updated: GutoMemory | null = null
+    try {
+      updated = await acceptGutoConsent()
+    } catch {
+      updated = null
+    }
+    if (!updated) {
+      gutoAudio.playGutoFeedback("error")
+      setProfileSaveError(stageCopy[selectedLanguage].profileSaveError)
+      return
+    }
+    // Backend confirmou: espelha no estado em memória + cache local (UX), e avança.
+    memoryRef.current = updated
+    setMemory(updated)
     persistProfile({
       language: selectedLanguage,
       consentHealthFitness: true,
       acceptedTerms: true,
-      consentAcceptedAt: new Date().toISOString(),
+      consentAcceptedAt: updated.consentAcceptedAt ?? new Date().toISOString(),
     })
-    void persistMemory({ language: selectedLanguage })
     const storedRaw = readStorageItem(`${STORAGE_KEY}-${user?.userId}`)
     let stored: StoredProfile | null = null
     try { stored = storedRaw ? JSON.parse(storedRaw) as StoredProfile : null } catch { stored = null }
-    setStage(resolveAuthenticatedStage(user, stored, memory))
-  }, [memory, persistMemory, persistProfile, selectedLanguage, user])
+    setStage(resolveAuthenticatedStage(user, stored, updated))
+  }, [persistProfile, selectedLanguage, user])
 
   // ── Unique completer: ONLY sets stage to language, never decides login/invite ─
   const completeIntroToLanguage = useCallback(() => {
@@ -1275,27 +1377,24 @@ export function GutoApp({
   )
 
   const handleCalibrationComplete = useCallback(
-    async (calibration: Parameters<typeof saveGutoMemory>[0]) => {
-      setStage("pact")
-      persistProfile({ calibrationComplete: true, onboardingComplete: false })
-      await persistMemory({
+    async (calibration: GutoMemoryPayload) => {
+      setProfileSaveError(null)
+      const updated = await persistMemory({
         ...calibration,
         language: selectedLanguage,
         foodRestrictions: calibration.foodRestrictions?.trim(),
-        foodIntolerances: calibration.foodIntolerances?.trim(),
         trainingPathology: calibration.trainingPathology?.trim(),
         trainingStatus: calibration.trainingLevel,
         trainingLimitations: calibration.trainingPathology?.trim(),
-      })
-      trackBehaviorEvent("calibration_completed", { ...calibration })
-      
-      // Proactively trigger diet generation in background so it's ready when they open the tab
-      try {
-        const { generateDietPlan } = await import("@/lib/api/guto")
-        await generateDietPlan(selectedLanguage)
-      } catch (err) {
-        console.warn("[GUTO] Proactive diet generation failed:", err)
+      }, { optimistic: false })
+      if (!updated) {
+        gutoAudio.playGutoFeedback("error")
+        setProfileSaveError(stageCopy[selectedLanguage].profileSaveError)
+        return
       }
+      persistProfile({ calibrationComplete: true, onboardingComplete: false })
+      trackBehaviorEvent("calibration_completed", { ...calibration })
+      setStage("pact")
     },
     [persistMemory, persistProfile, selectedLanguage, trackBehaviorEvent]
   )
@@ -1342,13 +1441,9 @@ export function GutoApp({
     [commitOnboardingName, draftName, isValidatingName, selectedLanguage, gutoUserId]
   )
 
-  // Hoist `userId` para que o React Compiler enxergue apenas o primitivo
-  // dentro de `openSettings` — assim a dep inferida bate com a manual e
-  // mantemos a memoização granular (re-cria só quando o userId muda, não
-  // quando qualquer campo de `user` muda).
-  const settingsUserId = user?.userId
   const openSettings = useCallback(() => {
     gutoAudio.playGutoFeedback("tap")
+    setProfileSaveError(null)
     setSettingsNameDraft(committedName || formatGutoName(userName || ""))
     setSettingsSexDraft(memory?.biologicalSex === "male" || memory?.biologicalSex === "female" ? memory.biologicalSex : null)
     setSettingsAgeDraft(memory?.userAge ? String(memory.userAge) : "")
@@ -1362,22 +1457,18 @@ export function GutoApp({
     setSettingsWeightDraft(memory?.weightKg ? String(memory.weightKg) : "")
     setSettingsHeightDraft(memory?.heightCm ? String(memory.heightCm) : "")
     setSettingsCountryDraft(memory?.country ?? "")
-    const stored = (() => {
-      if (typeof window === "undefined" || !settingsUserId) return null
-      try { return JSON.parse(window.localStorage.getItem(`${STORAGE_KEY}-${settingsUserId}`) ?? "null") as StoredProfile | null } catch { return null }
-    })()
+    setSettingsCityDraft(memory?.city ?? "")
     setSettingsFoodRestrictionsDraft(memory?.foodRestrictions?.trim() || "")
-    setSettingsFoodIntolerancesDraft(memory?.foodIntolerances?.trim() || stored?.foodIntolerances?.trim() || "")
-    setSettingsPhoneDraft(stored?.phone ?? "")
     setSettingsMode("menu")
     setSettingsSavedToast(false)
     setNameGate(null)
     setStage("settings")
-  }, [committedName, memory, settingsUserId, userName])
+  }, [committedName, memory, userName])
 
   const handleSettingsBack = useCallback(() => {
     gutoAudio.playGutoFeedback("tap")
     setActiveLanguageGlow(null)
+    setProfileSaveError(null)
 
     if (settingsMode === "privacy" && privacyConfirm !== null) {
       setPrivacyConfirm(null)
@@ -1465,29 +1556,31 @@ export function GutoApp({
   }, [pushBusy, pushSubscribed, selectedLanguage])
 
   const handleSettingsLanguageSelect = useCallback(
-    (lang: SupportedLanguage) => {
+    async (lang: SupportedLanguage) => {
       gutoAudio.playGutoFeedback("select")
       effectRegistry.emit("language_select", { meta: { language: lang, source: "settings" } })
+      setProfileSaveError(null)
       setSelectedLanguage(lang)
       writeConfirmedLanguageStorage(lang)
       if (process.env.NODE_ENV === "development") {
         console.info("[GUTO_LANGUAGE] settings changed", lang)
       }
-      setWorkoutPlan((current) => localizeGutoWorkoutPlan(current, lang))
+      const updated = await persistMemory({ language: lang }, { optimistic: false })
+      if (!updated) {
+        gutoAudio.playGutoFeedback("error")
+        setProfileSaveError(stageCopy[lang].profileSaveError)
+        return
+      }
+      setWorkoutPlan(localizeGutoWorkoutPlan(updated.lastWorkoutPlan?.exercises?.length ? updated.lastWorkoutPlan : workoutPlan, lang))
       setActiveLanguageGlow(null)
       setSettingsMode("menu")
       setStage("system")
       persistProfile({ language: lang, onboardingComplete: true })
-      void persistMemory({ language: lang }).then((updated) => {
-        if (updated?.lastWorkoutPlan?.exercises?.length) {
-          setWorkoutPlan(localizeGutoWorkoutPlan(updated.lastWorkoutPlan, lang))
-        }
-        if (process.env.NODE_ENV === "development") {
-          console.info("[GUTO_BACKEND_PROFILE] language synced", lang)
-        }
-      })
+      if (process.env.NODE_ENV === "development") {
+        console.info("[GUTO_BACKEND_PROFILE] language synced", lang)
+      }
     },
-    [effectRegistry, persistMemory, persistProfile]
+    [effectRegistry, persistMemory, persistProfile, workoutPlan]
   )
 
   const saveSettingsName = useCallback(
@@ -1521,10 +1614,16 @@ export function GutoApp({
 
       const finalName = formatGutoName(validation.normalized)
       setNameGate(null)
+      setProfileSaveError(null)
+      const updated = await persistMemory({ name: finalName, confirmedName }, { optimistic: false })
+      if (!updated) {
+        gutoAudio.playGutoFeedback("error")
+        setProfileSaveError(stageCopy[selectedLanguage].profileSaveError)
+        return
+      }
       setDraftName(finalName)
       setCommittedName(finalName)
       persistProfile({ userName: finalName, onboardingComplete: true })
-      persistMemory({ name: finalName, confirmedName })
       setSettingsNameDraft(finalName)
       setSettingsMode("menu")
       setStage("system")
@@ -1533,110 +1632,125 @@ export function GutoApp({
   )
 
   const showSavedToast = useCallback(() => {
+    setProfileSaveError(null)
     setSettingsSavedToast(true)
     window.setTimeout(() => setSettingsSavedToast(false), 2200)
   }, [])
 
-  const saveProfileSettings = useCallback(() => {
+  const showProfileSaveError = useCallback(() => {
+    gutoAudio.playGutoFeedback("error")
+    setProfileSaveError(stageCopy[selectedLanguage].profileSaveError)
+  }, [selectedLanguage])
+
+  const persistSettingsMemory = useCallback(
+    async (payload: GutoMemoryPayload) => {
+      setProfileSaveError(null)
+      const updated = await persistMemory(payload, { optimistic: false })
+      if (!updated) {
+        showProfileSaveError()
+        return null
+      }
+      return updated
+    },
+    [persistMemory, showProfileSaveError]
+  )
+
+  const saveProfileSettings = useCallback(async () => {
     const ageNum = parseInt(settingsAgeDraft, 10)
     const isAgeValid = !isNaN(ageNum) && ageNum >= 14 && ageNum <= 99
     if (settingsSexDraft && isAgeValid) {
-      persistMemory({ biologicalSex: settingsSexDraft, userAge: ageNum })
-      setMemory((prev) => prev ? { ...prev, biologicalSex: settingsSexDraft, userAge: ageNum } : prev)
+      const updated = await persistSettingsMemory({ biologicalSex: settingsSexDraft, userAge: ageNum })
+      if (!updated) return
     }
-    persistProfile({ phone: settingsPhoneDraft.trim() || undefined })
     showSavedToast()
     setSettingsMode("menu")
     setStage("system")
-  }, [persistMemory, persistProfile, settingsAgeDraft, settingsPhoneDraft, settingsSexDraft, showSavedToast])
+  }, [persistSettingsMemory, settingsAgeDraft, settingsSexDraft, showSavedToast])
 
-  const saveGoalSettings = useCallback(() => {
+  const saveGoalSettings = useCallback(async () => {
     if (!settingsGoalDraft) return
     const goal = settingsGoalDraft as "consistency" | "fat_loss" | "muscle_gain" | "conditioning" | "mobility_health"
-    persistMemory({ trainingGoal: goal })
-    setMemory((prev) => prev ? { ...prev, trainingGoal: goal } : prev)
+    const updated = await persistSettingsMemory({ trainingGoal: goal })
+    if (!updated) return
     showSavedToast()
     setSettingsMode("menu")
     setStage("system")
-  }, [persistMemory, settingsGoalDraft, showSavedToast])
+  }, [persistSettingsMemory, settingsGoalDraft, showSavedToast])
 
-  const saveLocationSettings = useCallback(() => {
+  const saveLocationSettings = useCallback(async () => {
     if (!settingsLocationDraft) return
     const loc = settingsLocationDraft as "gym" | "home" | "park" | "mixed"
-    persistMemory({ preferredTrainingLocation: loc })
-    setMemory((prev) => prev ? { ...prev, preferredTrainingLocation: loc } : prev)
+    const updated = await persistSettingsMemory({ preferredTrainingLocation: loc })
+    if (!updated) return
     showSavedToast()
     setSettingsMode("menu")
     setStage("system")
-  }, [persistMemory, settingsLocationDraft, showSavedToast])
+  }, [persistSettingsMemory, settingsLocationDraft, showSavedToast])
 
-  const savePathologySettings = useCallback(() => {
+  const savePathologySettings = useCallback(async () => {
     const val = settingsPathologyDraft.trim()
     if (!val) return
-    persistMemory({ trainingPathology: val })
-    setMemory((prev) => prev ? { ...prev, trainingPathology: val } : prev)
+    const updated = await persistSettingsMemory({ trainingPathology: val })
+    if (!updated) return
     showSavedToast()
     setSettingsMode("menu")
     setStage("system")
-  }, [persistMemory, settingsPathologyDraft, showSavedToast])
+  }, [persistSettingsMemory, settingsPathologyDraft, showSavedToast])
 
-  const savePhysicalDataSettings = useCallback(() => {
+  const savePhysicalDataSettings = useCallback(async () => {
     const wNum = parseFloat(settingsWeightDraft)
     const hNum = parseInt(settingsHeightDraft, 10)
     const isWeightValid = !isNaN(wNum) && wNum >= 30 && wNum <= 300
     const isHeightValid = !isNaN(hNum) && hNum >= 100 && hNum <= 250
-    const update: Partial<Parameters<typeof persistMemory>[0]> = {}
+    const update: GutoMemoryPayload = {}
     if (isWeightValid) update.weightKg = wNum
     if (isHeightValid) update.heightCm = hNum
     if (Object.keys(update).length === 0) return
-    persistMemory(update)
-    setMemory((prev) => prev ? { ...prev, ...update } : prev)
+    const updated = await persistSettingsMemory(update)
+    if (!updated) return
     showSavedToast()
     setSettingsMode("menu")
     setStage("system")
-  }, [persistMemory, settingsHeightDraft, settingsWeightDraft, showSavedToast])
+  }, [persistSettingsMemory, settingsHeightDraft, settingsWeightDraft, showSavedToast])
 
-  const saveResidenceSettings = useCallback(() => {
-    const val = settingsCountryDraft.trim()
-    persistMemory({ country: val || undefined })
-    setMemory((prev) => prev ? { ...prev, country: val || undefined } : prev)
-    showSavedToast()
-    setSettingsMode("menu")
-    setStage("system")
-  }, [persistMemory, settingsCountryDraft, showSavedToast])
-
-  const saveFoodRestrictionsSettings = useCallback(() => {
-    const restrictions = settingsFoodRestrictionsDraft.trim()
-    const intolerances = settingsFoodIntolerancesDraft.trim()
-    if (!restrictions && !intolerances) return
-    persistMemory({
-      foodRestrictions: restrictions || undefined,
-      foodIntolerances: intolerances || undefined,
+  const saveResidenceSettings = useCallback(async () => {
+    const country = settingsCountryDraft.trim()
+    const city = settingsCityDraft.trim()
+    const countryCode = resolveCountryCodeFromDraft(country, selectedLanguage)
+    if (!country || !countryCode || !city) {
+      showProfileSaveError()
+      return
+    }
+    const updated = await persistSettingsMemory({
+      country,
+      countryCode,
+      city,
     })
-    setMemory((prev) =>
-      prev
-        ? {
-            ...prev,
-            foodRestrictions: restrictions || undefined,
-            foodIntolerances: intolerances || undefined,
-          }
-        : prev
-    )
+    if (!updated) return
     showSavedToast()
     setSettingsMode("menu")
     setStage("system")
-  }, [persistMemory, settingsFoodIntolerancesDraft, settingsFoodRestrictionsDraft, showSavedToast])
+  }, [persistSettingsMemory, selectedLanguage, settingsCityDraft, settingsCountryDraft, showProfileSaveError, showSavedToast])
+
+  const saveFoodRestrictionsSettings = useCallback(async () => {
+    const restrictions = settingsFoodRestrictionsDraft.trim()
+    const updated = await persistSettingsMemory({ foodRestrictions: restrictions })
+    if (!updated) return
+    showSavedToast()
+    setSettingsMode("menu")
+    setStage("system")
+  }, [persistSettingsMemory, settingsFoodRestrictionsDraft, showSavedToast])
 
   const saveSettingsData = useCallback(
-    (calibration: Parameters<typeof saveGutoMemory>[0]) => {
+    async (calibration: GutoMemoryPayload) => {
+      const updated = await persistSettingsMemory(calibration)
+      if (!updated) return
       persistProfile({ calibrationComplete: true, onboardingComplete: true })
-      persistMemory(calibration)
-      setMemory((prev) => (prev ? { ...prev, ...calibration } : prev))
       showSavedToast()
       setSettingsMode("menu")
       setStage("system")
     },
-    [persistMemory, persistProfile, showSavedToast]
+    [persistProfile, persistSettingsMemory, showSavedToast]
   )
 
   const handleDownloadData = useCallback(() => {
@@ -1649,8 +1763,6 @@ export function GutoApp({
       userId: user.userId,
       language: stored?.language ?? selectedLanguage,
       userName: stored?.userName ?? committedName,
-      phone: stored?.phone ?? null,
-      foodIntolerances: stored?.foodIntolerances ?? null,
       consents: {
         consentHealthFitness: stored?.consentHealthFitness ?? false,
         acceptedTerms: stored?.acceptedTerms ?? false,
@@ -1668,7 +1780,6 @@ export function GutoApp({
         countryCode: memory?.countryCode ?? null,
         city: memory?.city ?? null,
         foodRestrictions: memory?.foodRestrictions ?? null,
-        foodIntolerances: memory?.foodIntolerances ?? null,
       },
       progress: {
         totalXp: memory?.totalXp ?? null,
@@ -1786,18 +1897,6 @@ export function GutoApp({
           )
           break
         }
-        case "phone":
-          persistProfile({ phone: String(value) || undefined })
-          persistMemory({ phone: String(value) || undefined })
-          break
-        case "foodIntolerances":
-          {
-            const intoleranceValue = String(value).trim() || undefined
-            persistProfile({ foodIntolerances: intoleranceValue })
-            persistMemory({ foodIntolerances: intoleranceValue })
-            setMemory((prev) => prev ? { ...prev, foodIntolerances: intoleranceValue } : prev)
-          }
-          break
         case "language": {
           const lang = value as SupportedLanguage
           if (!["pt-BR", "en-US", "it-IT"].includes(lang)) break
@@ -2057,7 +2156,7 @@ export function GutoApp({
       }}
       isAvatarActive={activeTab === "guto" && !isKeyboardOpen}
     />
-  ), [activeTab, evolution, gutoUserId, isKeyboardOpen, vitalState, memory, pendingExerciseQuestion, pendingFoodQuestion, persistMemory, persistProfile, selectedLanguage, updateUserProfileField, userLabel])
+  ), [activeTab, evolution, gutoUserId, isKeyboardOpen, localizedWorkoutPlan, vitalState, memory, pendingExerciseQuestion, pendingFoodQuestion, persistMemory, persistProfile, selectedLanguage, updateUserProfileField, userLabel])
 
   const validationLocationMode = useMemo(
     () =>
@@ -2109,6 +2208,7 @@ export function GutoApp({
             onAdaptedMissionComplete={handleAdaptedMissionComplete}
             onValidateWorkout={() => setShowValidationFlow(true)}
             missingProfileFields={workoutMissingFields}
+            memory={memory}
           />
         )
       case "arena":
@@ -2133,7 +2233,7 @@ export function GutoApp({
       default:
         return null
     }
-  }, [activeTab, arenaRefreshKey, evolution, gutoUserId, handleAdaptedMissionComplete, handleExerciseQuestion, handleFoodDoubt, handleMissionComplete, localizedWorkoutPlan, memory, selectedLanguage, updateUserProfileField, userLabel, vitalState, workoutMissingFields])
+  }, [activeTab, arenaRefreshKey, evolution, gutoUserId, handleAdaptedMissionComplete, handleExerciseQuestion, handleFoodDoubt, handleMissionComplete, localizedWorkoutPlan, memory, selectedLanguage, userLabel, workoutMissingFields])
 
   if (authLoading || !isHydrated || (user && user.role !== "student")) {
     return (
@@ -2354,6 +2454,7 @@ export function GutoApp({
             key="consent"
             language={selectedLanguage}
             onComplete={handleConsentAccepted}
+            errorMessage={profileSaveError}
           />
         )}
 
@@ -2460,6 +2561,13 @@ export function GutoApp({
               language={selectedLanguage} 
               onComplete={handleCalibrationComplete} 
             />
+            {profileSaveError && (
+              <div className="absolute inset-x-8 bottom-[max(env(safe-area-inset-bottom),1rem)] rounded-[18px] border border-[rgba(255,60,60,0.24)] bg-[rgba(255,60,60,0.08)] px-4 py-2 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.5)]">
+                <p className="font-mono text-[9px] font-black uppercase leading-snug tracking-[0.12em] text-[rgba(200,30,30,0.82)]">
+                  {profileSaveError}
+                </p>
+              </div>
+            )}
           </motion.section>
         )}
 
@@ -2708,6 +2816,14 @@ export function GutoApp({
               <div className="h-10 w-10" aria-hidden="true" />
             </div>
 
+            {profileSaveError && (
+              <div className="mx-auto mt-2 w-full max-w-[22rem] rounded-[18px] border border-[rgba(255,60,60,0.24)] bg-[rgba(255,60,60,0.08)] px-4 py-2 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.5)]">
+                <p className="font-mono text-[9px] font-black uppercase leading-snug tracking-[0.12em] text-[rgba(200,30,30,0.82)]">
+                  {profileSaveError}
+                </p>
+              </div>
+            )}
+
             {settingsMode === "menu" && (() => {
               const langLabel = languages.find((l) => l.id === selectedLanguage)?.label ?? selectedLanguage
               const dataSummary = [
@@ -2762,7 +2878,7 @@ export function GutoApp({
                     onPointerUp={() => setActiveLanguageGlow(null)}
                     onPointerCancel={() => setActiveLanguageGlow(null)}
                     onPointerLeave={() => setActiveLanguageGlow(null)}
-                    onClick={() => handleSettingsLanguageSelect(lang.id)}
+                    onClick={() => void handleSettingsLanguageSelect(lang.id)}
                     aria-label={lang.label}
                     className="guto-settings-language-option relative flex w-full items-center gap-4 overflow-hidden rounded-[20px] px-3.5 py-3.5 text-left transition-all"
                     data-active={activeLanguageGlow === lang.id || selectedLanguage === lang.id}
@@ -2850,7 +2966,6 @@ export function GutoApp({
                     heightCm: memory?.heightCm,
                     weightKg: memory?.weightKg,
                     foodRestrictions: memory?.foodRestrictions,
-                    foodIntolerances: memory?.foodIntolerances,
                   }}
                   onComplete={saveSettingsData}
                 />
@@ -2944,7 +3059,7 @@ export function GutoApp({
               const t = translations[selectedLanguage].calibration
               const ageNum = parseInt(settingsAgeDraft, 10)
               const isAgeValid = !isNaN(ageNum) && ageNum >= 14 && ageNum <= 99
-              const canSave = Boolean((settingsSexDraft && isAgeValid) || settingsPhoneDraft.trim())
+              const canSave = Boolean(settingsSexDraft && isAgeValid)
               const inputClass = "w-full rounded-full border border-[rgba(82,231,255,0.45)] bg-white px-4 py-2.5 text-center font-mono text-[14px] font-black text-(--guto-navy) outline-none appearance-none [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               const labelClass = "mt-4 mb-2 font-mono text-[8px] font-black uppercase tracking-[0.2em] text-[rgba(13,35,65,0.42)]"
               return (
@@ -2981,21 +3096,11 @@ export function GutoApp({
                       autoComplete="off"
                       className={inputClass}
                     />
-                    <p className={labelClass}>{locale.settingsPhoneLabel}</p>
-                    <input
-                      type="tel"
-                      inputMode="tel"
-                      value={settingsPhoneDraft}
-                      onChange={(e) => setSettingsPhoneDraft(e.target.value)}
-                      placeholder="+55 11 99999-9999"
-                      autoComplete="tel"
-                      className={inputClass}
-                    />
                   </div>
                   <button
                     type="button"
                     disabled={!canSave}
-                    onClick={saveProfileSettings}
+                    onClick={() => void saveProfileSettings()}
                     className={`h-12 w-full rounded-full font-mono text-[11px] font-black uppercase tracking-[0.2em] transition-all ${
                       canSave
                         ? "bg-(--guto-cyan) text-(--guto-navy) shadow-[0_4px_16px_rgba(82,231,255,0.3)]"
@@ -3034,7 +3139,7 @@ export function GutoApp({
                   <button
                     type="button"
                     disabled={!settingsGoalDraft}
-                    onClick={saveGoalSettings}
+                    onClick={() => void saveGoalSettings()}
                     className={`h-12 w-full rounded-full font-mono text-[11px] font-black uppercase tracking-[0.2em] transition-all ${
                       settingsGoalDraft
                         ? "bg-(--guto-cyan) text-(--guto-navy) shadow-[0_4px_16px_rgba(82,231,255,0.3)]"
@@ -3073,7 +3178,7 @@ export function GutoApp({
                   <button
                     type="button"
                     disabled={!settingsLocationDraft}
-                    onClick={saveLocationSettings}
+                    onClick={() => void saveLocationSettings()}
                     className={`h-12 w-full rounded-full font-mono text-[11px] font-black uppercase tracking-[0.2em] transition-all ${
                       settingsLocationDraft
                         ? "bg-(--guto-cyan) text-(--guto-navy) shadow-[0_4px_16px_rgba(82,231,255,0.3)]"
@@ -3102,7 +3207,7 @@ export function GutoApp({
                 </div>
                 <button
                   type="button"
-                  onClick={savePathologySettings}
+                  onClick={() => void savePathologySettings()}
                   className="h-12 w-full rounded-full bg-(--guto-cyan) font-mono text-[11px] font-black uppercase tracking-[0.2em] text-(--guto-navy) shadow-[0_4px_16px_rgba(82,231,255,0.3)]"
                 >
                   {locale.settingsSave}
@@ -3155,7 +3260,7 @@ export function GutoApp({
                   <button
                     type="button"
                     disabled={!canSave}
-                    onClick={savePhysicalDataSettings}
+                    onClick={() => void savePhysicalDataSettings()}
                     className={`h-12 w-full rounded-full font-mono text-[11px] font-black uppercase tracking-[0.2em] transition-all ${
                       canSave
                         ? "bg-(--guto-cyan) text-(--guto-navy) shadow-[0_4px_16px_rgba(82,231,255,0.3)]"
@@ -3185,9 +3290,22 @@ export function GutoApp({
                       className="w-full rounded-full border border-[rgba(82,231,255,0.45)] bg-white px-4 py-2.5 font-mono text-[12px] text-(--guto-navy) placeholder-[rgba(13,35,65,0.3)] outline-none"
                     />
                   </div>
+                  <div className="guto-slot rounded-3xl px-5 py-4">
+                    <p className="mb-2 font-mono text-[8px] font-black uppercase tracking-[0.2em] text-[rgba(13,35,65,0.42)]">{cal.cityLabel}</p>
+                    <input
+                      type="text"
+                      value={settingsCityDraft}
+                      onChange={(e) => setSettingsCityDraft(e.target.value)}
+                      placeholder={cal.cityPlaceholder}
+                      autoComplete="address-level2"
+                      autoCorrect="off"
+                      spellCheck={false}
+                      className="w-full rounded-full border border-[rgba(82,231,255,0.45)] bg-white px-4 py-2.5 font-mono text-[12px] text-(--guto-navy) placeholder-[rgba(13,35,65,0.3)] outline-none"
+                    />
+                  </div>
                   <button
                     type="button"
-                    onClick={saveResidenceSettings}
+                    onClick={() => void saveResidenceSettings()}
                     className="h-12 w-full rounded-full bg-(--guto-cyan) font-mono text-[11px] font-black uppercase tracking-[0.2em] text-(--guto-navy) shadow-[0_4px_16px_rgba(82,231,255,0.3)]"
                   >
                     {locale.settingsSave}
@@ -3213,22 +3331,9 @@ export function GutoApp({
                       className="w-full rounded-full border border-[rgba(82,231,255,0.45)] bg-white px-4 py-2.5 font-mono text-[12px] text-(--guto-navy) placeholder-[rgba(13,35,65,0.3)] outline-none"
                     />
                   </div>
-                  <div className="guto-slot rounded-3xl px-5 py-4">
-                    <p className="mb-2 font-mono text-[8px] font-black uppercase tracking-[0.2em] text-[rgba(13,35,65,0.42)]">{cal.intolerancesLabel}</p>
-                    <input
-                      type="text"
-                      value={settingsFoodIntolerancesDraft}
-                      onChange={(e) => setSettingsFoodIntolerancesDraft(e.target.value)}
-                      placeholder={cal.intolerancesPlaceholder}
-                      autoComplete="off"
-                      autoCorrect="off"
-                      spellCheck={false}
-                      className="w-full rounded-full border border-[rgba(82,231,255,0.45)] bg-white px-4 py-2.5 font-mono text-[12px] text-(--guto-navy) placeholder-[rgba(13,35,65,0.3)] outline-none"
-                    />
-                  </div>
                   <button
                     type="button"
-                    onClick={saveFoodRestrictionsSettings}
+                    onClick={() => void saveFoodRestrictionsSettings()}
                     className="h-12 w-full rounded-full bg-(--guto-cyan) font-mono text-[11px] font-black uppercase tracking-[0.2em] text-(--guto-navy) shadow-[0_4px_16px_rgba(82,231,255,0.3)]"
                   >
                     {locale.settingsSave}

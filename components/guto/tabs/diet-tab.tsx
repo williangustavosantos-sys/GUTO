@@ -6,9 +6,10 @@ import { Apple, ChevronDown, ChevronUp, ClipboardList, Coffee, Droplets, Flame, 
 
 import { getDietPlan, generateDietPlan, type DietPlan, type DietMeal, type DietFood } from "@/lib/api/guto"
 import { ApiError } from "@/lib/api/client"
-import { sanitizeDietPlan } from "@/lib/diet-plan"
+import { DietPlanValidationError, sanitizeDietPlan } from "@/lib/diet-plan"
 import { getLanguage } from "../translations"
 import type { ValidLanguage } from "../translations"
+import { DietProfileNotice } from "../memory-context/diet-profile-notice"
 import { gutoAudio } from "@/lib/audio-haptics"
 
 // ─── Copy ────────────────────────────────────────────────────────────────────
@@ -46,6 +47,10 @@ const dietCopy = {
     disclaimer: "Orientação fitness. Não substitui consulta médica ou nutricional.",
     timeoutError: "Ixi, meu sistema demorou demais pra calcular tua dieta. Aguenta aí e tenta de novo.",
     connectionError: "Perdi o fio com o cérebro por um instante. Confere a conexão e me chama de novo.",
+    invalidPlanError: "A dieta que voltou do cérebro falhou na checagem final. Não vou mostrar um plano duvidoso. Tente gerar de novo.",
+    restrictionError: "Bloqueei essa dieta porque ela trouxe algo que você disse que não come. Gere de novo que eu refaço limpo.",
+    locationError: "Bloqueei essa dieta porque ela usou alimento que não bate com onde você mora. Gere de novo que eu mantenho local.",
+    calorieError: "Bloqueei essa dieta porque calorias e macros não fecharam com segurança. Gere de novo.",
     goalNames: {
       fat_loss: "Emagrecer",
       muscle_gain: "Hipertrofia",
@@ -86,6 +91,10 @@ const dietCopy = {
     disclaimer: "Fitness guidance only. Not a substitute for medical or nutritional advice.",
     timeoutError: "My system took too long to calculate your diet. Hold on and try again.",
     connectionError: "I lost the line to my brain for a moment. Check the connection and call me again.",
+    invalidPlanError: "The diet returned by the brain failed the final check. I will not show a doubtful plan. Generate it again.",
+    restrictionError: "I blocked this diet because it included something you said you do not eat. Generate it again so I can rebuild it clean.",
+    locationError: "I blocked this diet because it used food that does not match where you live. Generate it again and I will keep it local.",
+    calorieError: "I blocked this diet because the calories and macros did not close safely. Generate it again.",
     goalNames: {
       fat_loss: "Fat Loss",
       muscle_gain: "Hypertrophy",
@@ -126,6 +135,10 @@ const dietCopy = {
     disclaimer: "Solo orientamento fitness. Non sostituisce la consulenza medica o nutrizionale.",
     timeoutError: "Il mio sistema ci ha messo troppo a calcolare la tua dieta. Aspetta un attimo e riprova.",
     connectionError: "Ho perso il filo col mio cervello per un attimo. Controlla la connessione e richiamami.",
+    invalidPlanError: "La dieta tornata dal cervello non ha superato il controllo finale. Non mostro un piano dubbio. Generala di nuovo.",
+    restrictionError: "Ho bloccato questa dieta perché includeva qualcosa che hai detto di non mangiare. Rigenerala così la rifaccio pulita.",
+    locationError: "Ho bloccato questa dieta perché usava alimenti che non battono con dove vivi. Rigenerala e la tengo locale.",
+    calorieError: "Ho bloccato questa dieta perché calorie e macro non tornavano in sicurezza. Rigenerala.",
     goalNames: {
       fat_loss: "Dimagrire",
       muscle_gain: "Ipertrofia",
@@ -171,13 +184,33 @@ function isMissingProfileError(error: unknown) {
   return typeof details === "object" && details !== null && (details as { error?: unknown }).error === "missing_profile_fields"
 }
 
+function getDietFailureReason(error: unknown) {
+  if (!(error instanceof ApiError)) return null
+  const details = error.details
+  if (typeof details !== "object" || details === null) return null
+  const reason = (details as { reason?: unknown }).reason
+  return typeof reason === "string" ? reason : null
+}
+
 function getDietErrorMessage(
   error: unknown,
-  copy: { timeoutError: string; connectionError: string }
+  copy: {
+    timeoutError: string
+    connectionError: string
+    invalidPlanError: string
+    restrictionError: string
+    locationError: string
+    calorieError: string
+  }
 ): string {
+  if (error instanceof DietPlanValidationError) return copy.invalidPlanError
   if (error instanceof ApiError) {
     if (error.code === "TIMEOUT") return copy.timeoutError
     if (error.code === "CONNECTION_ERROR") return copy.connectionError
+    const reason = getDietFailureReason(error)
+    if (reason === "food_restriction") return copy.restrictionError
+    if (reason === "location") return copy.locationError
+    if (reason === "calorie_validation") return copy.calorieError
     return error.message
   }
   return error instanceof Error ? error.message : copy.connectionError
@@ -466,7 +499,6 @@ export function DietTab({ userId, language, onFoodDoubt, memory }: DietTabProps)
     trainingLevel: memory?.trainingLevel ?? null,
     trainingStatus: memory?.trainingStatus ?? null,
     foodRestrictions: memory?.foodRestrictions ?? null,
-    foodIntolerances: memory?.foodIntolerances ?? null,
     country: memory?.country ?? null,
     countryCode: memory?.countryCode ?? null,
   }), [
@@ -478,7 +510,6 @@ export function DietTab({ userId, language, onFoodDoubt, memory }: DietTabProps)
     memory?.trainingLevel,
     memory?.trainingStatus,
     memory?.foodRestrictions,
-    memory?.foodIntolerances,
     memory?.country,
     memory?.countryCode,
   ])
@@ -552,7 +583,7 @@ export function DietTab({ userId, language, onFoodDoubt, memory }: DietTabProps)
           if (cancelled) return
         }
 
-        setPlan(sanitizeDietPlan(fetched, latestMemoryRef.current, validLang))
+        setPlan(sanitizeDietPlan(fetched, latestMemoryRef.current))
         setStatus("ready")
       } catch (err: unknown) {
         if (cancelled) return
@@ -589,7 +620,7 @@ export function DietTab({ userId, language, onFoodDoubt, memory }: DietTabProps)
         return
       }
       const newPlan = await generateDietPlan(validLang)
-      setPlan(sanitizeDietPlan(newPlan, latestMemoryRef.current, validLang))
+      setPlan(sanitizeDietPlan(newPlan, latestMemoryRef.current))
       setStatus("ready")
     } catch (err: unknown) {
       setStatus("error")
@@ -756,6 +787,9 @@ export function DietTab({ userId, language, onFoodDoubt, memory }: DietTabProps)
           <MacroPill icon={<Droplets className="h-3 w-3" />} label={copy.fatLabel} value={`${macros.fatG}g`} color="sky" />
         </div>
       </motion.div>
+
+      {/* Perfil usado na dieta — memória visível (Fase 3K) */}
+      <DietProfileNotice memory={memory} language={validLang} />
 
       {/* ── Scrollable meals ── */}
       <div className="guto-tab-scroll flex flex-col gap-2.5 pb-[calc(8rem+env(safe-area-inset-bottom))] scroll-pb-[calc(8rem+env(safe-area-inset-bottom))]">

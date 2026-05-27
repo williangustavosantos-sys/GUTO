@@ -541,8 +541,7 @@ function buildDietModelContext(
     `Food in question: "${food.name}" (${food.quantity}, ${food.kcal ?? "?"} kcal).`,
     `Meal: "${meal.name}" (${meal.time}). Full meal: ${mealFoodsList}.`,
     `Goal: ${goalLabel}. Profile: ${profileStr || "unknown"}.`,
-    `Food restrictions (what they avoid eating): ${memory?.foodRestrictions?.trim() || "none"}.`,
-    `Intolerances/allergies: ${memory?.foodIntolerances?.trim() || "none"}.`,
+    `Food restrictions (what they avoid eating, incl. intolerances/allergies): ${memory?.foodRestrictions?.trim() || "none"}.`,
     `Limitations/pathology: ${memory?.trainingPathology?.trim() || "none"}.`,
     `Reply in ${language} with substitution, portion guidance, or macro impact for THIS food in THIS meal. Direct, max 2–3 short sentences.`,
   ].join(" ")
@@ -806,6 +805,30 @@ export function ChatTab({
     })
   }, [messages, showInitialXpCard, contextChip])
 
+  // BUG 3 (mobile): quando o teclado do iOS abre/fecha, o visualViewport encolhe
+  // mas a lista de mensagens não re-rola sozinha — a última resposta pode ficar
+  // escondida atrás do input. Re-rola ao fim em toda mudança de visualViewport
+  // para manter a última mensagem visível. Seguro: só mexe no scroll da própria
+  // lista, não altera layout/estrutura. (Validação final no iPhone — ver
+  // docs/QA_IPHONE_FASE3.md.)
+  useEffect(() => {
+    const vv = typeof window !== "undefined" ? window.visualViewport : null
+    if (!vv) return
+    let frame = 0
+    const scrollToLatest = () => {
+      window.cancelAnimationFrame(frame)
+      frame = window.requestAnimationFrame(() => {
+        const el = scrollRef.current
+        if (el) el.scrollTop = el.scrollHeight
+      })
+    }
+    vv.addEventListener("resize", scrollToLatest)
+    return () => {
+      window.cancelAnimationFrame(frame)
+      vv.removeEventListener("resize", scrollToLatest)
+    }
+  }, [])
+
   useEffect(() => {
     return () => {
       gutoVoice.stop()
@@ -906,7 +929,7 @@ export function ChatTab({
     } finally {
       proactiveInFlightRef.current = false
     }
-  }, [isMuted, language, onWorkoutPlanUpdated, synthesizeAndPlay])
+  }, [isMuted, language, onWorkoutPlanUpdated, synthesizeAndPlay, userId])
 
   const deliverWeeklyOpeningIfNeeded = useCallback(async () => {
     if (weeklyDeferredThisSessionRef.current) return

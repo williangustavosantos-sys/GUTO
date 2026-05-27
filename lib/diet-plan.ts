@@ -114,24 +114,30 @@ export function validateDietPlan(plan: DietPlan) {
   }
 }
 
-export function sanitizeDietPlan(plan: DietPlan, memory: GutoMemory | null, language: SupportedLanguage): DietPlan {
+export class DietPlanValidationError extends Error {
+  constructor(public readonly reason: "calorie_mismatch" | "restriction_violation") {
+    super("A dieta recebida do cérebro não passou na validação final. Vou pedir uma nova versão antes de mostrar isso para você.")
+    this.name = "DietPlanValidationError"
+  }
+}
+
+export function sanitizeDietPlan(plan: DietPlan, memory: GutoMemory | null): DietPlan {
   if (plan.lockedByCoach || plan.manualOverride || plan.source === "coach_manual" || plan.source === "mixed") {
     return plan
   }
 
-  const validation = validateDietPlan(plan)
-  logValidation(validation)
+  // O backend é a fonte de verdade da dieta: ele já valida calorias/macros
+  // (tolerância ±80 kcal/dia + soma exata por refeição) e estrutura antes de
+  // devolver 200. O front NÃO pode re-rejeitar por uma tolerância mais apertada
+  // (±10 kcal) — isso barrava planos válidos com o falso "falhou na checagem
+  // final". Mantemos validateDietPlan só como telemetria (dev) e preservamos o
+  // bloqueio de RESTRIÇÃO ALIMENTAR como rede de segurança real.
+  logValidation(validateDietPlan(plan))
   const violatesDietLimits = memory ? planViolatesDietLimits(plan, memory) : false
-  if (validation.valid && !violatesDietLimits) return plan
-
-  if (memory && hasDietProfile(memory)) {
-    const corrected = createCalculatedDietPlan(memory, language, plan.userId, plan.generatedAt)
-    const correctedValidation = validateDietPlan(corrected)
-    logValidation(correctedValidation)
-    return corrected
+  if (violatesDietLimits) {
+    throw new DietPlanValidationError("restriction_violation")
   }
-
-  return reconcileDietPlan(plan)
+  return plan
 }
 
 export function createCalculatedDietPlan(
@@ -197,18 +203,6 @@ export function createCalculatedDietPlan(
   }
 }
 
-function hasDietProfile(memory: GutoMemory): boolean {
-  return Boolean(
-    memory.heightCm &&
-    memory.weightKg &&
-    memory.userAge &&
-    memory.biologicalSex &&
-    memory.trainingGoal &&
-    memory.country &&
-    (memory.foodRestrictions || memory.foodIntolerances)
-  )
-}
-
 function getActivityFactor(memory: GutoMemory): number {
   const baseByLevel: Record<string, number> = {
     beginner: 1.3,
@@ -261,7 +255,7 @@ function buildMeals(targetKcal: number, language: SupportedLanguage, memory?: Gu
 }
 
 function getDietLimits(memory?: GutoMemory | null) {
-  const text = `${memory?.foodRestrictions ?? ""} ${memory?.foodIntolerances ?? ""}`.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+  const text = (memory?.foodRestrictions ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
   return {
     dairy: foodSafetyTerms.dairy.test(text),
     vegan: foodSafetyTerms.vegan.test(text),
@@ -341,31 +335,6 @@ function foodFromKcal(template: FoodTemplate, kcal: number, language: SupportedL
     carbsG: Math.round(((template.carbsPer100G ?? 0) * grams) / 100),
     fatG: Math.round(((template.fatPer100G ?? 0) * grams) / 100),
   }
-}
-
-function reconcileDietPlan(plan: DietPlan): DietPlan {
-  let allocatedMeals = 0
-  const meals = plan.meals.map((meal, index) => {
-    const totalKcal =
-      index === plan.meals.length - 1
-        ? plan.macros.targetKcal - allocatedMeals
-        : Math.round(plan.macros.targetKcal * (MEAL_DISTRIBUTION[index] ?? 1 / plan.meals.length))
-    allocatedMeals += totalKcal
-
-    let allocatedFoods = 0
-    const foods = meal.foods.map((food, foodIndex) => {
-      const kcal =
-        foodIndex === meal.foods.length - 1
-          ? totalKcal - allocatedFoods
-          : Math.round(totalKcal / meal.foods.length)
-      allocatedFoods += kcal
-      return { ...food, kcal }
-    })
-
-    return { ...meal, totalKcal, foods }
-  })
-
-  return { ...plan, meals }
 }
 
 function logValidation(validation: ReturnType<typeof validateDietPlan>) {

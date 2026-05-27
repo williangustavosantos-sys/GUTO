@@ -46,7 +46,7 @@ export type TeamDraft = {
 
 export type CalibrationDraft = {
   userAge: string; biologicalSex: string; trainingLevel: string; trainingGoal: string
-  preferredTrainingLocation: string; trainingPathology: string; country: string
+  preferredTrainingLocation: string; trainingPathology: string; country: string; city: string
   heightCm: string; weightKg: string; foodRestrictions: string
 }
 
@@ -409,6 +409,7 @@ export function calibrationFromMemory(memory: GutoMemory | null): CalibrationDra
     preferredTrainingLocation: memory?.preferredTrainingLocation || "",
     trainingPathology: memory?.trainingPathology || "",
     country: memory?.country || "",
+    city: memory?.city || "",
     heightCm: memory?.heightCm ? String(memory.heightCm) : "",
     weightKg: memory?.weightKg ? String(memory.weightKg) : "",
     foodRestrictions: memory?.foodRestrictions || "",
