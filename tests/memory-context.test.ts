@@ -182,3 +182,45 @@ describe("separação treino × dieta (cenário Will: joelho + vegetariano + It�
     for (const r of profile!.restrictionLabels) assert.doesNotMatch(r, /joelho|dor/i)
   })
 })
+
+describe("WorkoutCareNotice copy — gramática natural (Fase 3L)", () => {
+  function careFor(region: string, lang: "pt-BR" | "en-US" | "it-IT" = "pt-BR") {
+    return buildWorkoutCare(
+      mem({
+        trainingPathology: "limitação",
+        resolvedFields: { pathology: { field: "pathology", rawValue: region, status: "clear", bodyRegion: region, riskTags: [region] } },
+      }),
+      lang
+    )
+  }
+
+  it("lombar usa 'proteger a lombar' — nunca 'teu lombar' / erro de gênero", () => {
+    const care = careFor("lower_back", "pt-BR")
+    assert.match(care!.body, /proteger a lombar/i)
+    assert.doesNotMatch(care!.body, /teu lombar|tua lombar|teu\b/i)
+    assert.equal(care!.title, "Cuidados: lombar")
+  })
+
+  it("joelho usa 'proteger o joelho'", () => {
+    const care = careFor("knee", "pt-BR")
+    assert.match(care!.body, /proteger o joelho/i)
+    assert.doesNotMatch(care!.body, /teu joelho/i)
+  })
+
+  it("pernas usa 'proteger as pernas' (plural correto)", () => {
+    const care = careFor("legs", "pt-BR")
+    assert.match(care!.body, /proteger as pernas/i)
+  })
+
+  it("não mistura 'teu/sua' nem usa 'pra' (tom profissional)", () => {
+    const care = careFor("lower_back", "pt-BR")
+    assert.doesNotMatch(care!.body, /\bpra\b/i)
+    assert.doesNotMatch(care!.body, /\bteu\b|\btua\b/i)
+  })
+
+  it("EN/IT com artigo correto", () => {
+    assert.match(careFor("lower_back", "en-US")!.body, /protect the lower back/i)
+    assert.match(careFor("lower_back", "it-IT")!.body, /proteggere la schiena/i)
+    assert.match(careFor("knee", "it-IT")!.body, /proteggere il ginocchio/i)
+  })
+})
