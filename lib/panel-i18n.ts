@@ -282,6 +282,35 @@ type Dict = {
     painPrefix: string
     energyPrefix: string
   }
+  empresaDrawer: {
+    close: string
+    tabResumo: string
+    tabCoaches: string
+    tabAlunos: string
+    tabPlano: string
+    tabLogs: string
+    sectionUsage: string
+    sectionStatus: string
+    sectionContact: string
+    sectionPlanDetails: string
+    rowPlan: string
+    rowStatus: string
+    rowCoaches: string
+    rowActiveStudents: string
+    rowCriticalStudents: string
+    rowCreatedAt: string
+    rowEmail: string
+    rowPhone: string
+    rowAddress: string
+    rowCityCountry: string
+    rowStudentLimit: string
+    rowCoachLimit: string
+    rowUpdatedAt: string
+    unlimited: string
+    btnAddCoach: string
+    btnAddStudent: string
+    btnRefresh: string
+  }
   coachDrawer: {
     roleBadge: string
     statusActive: string
@@ -608,6 +637,21 @@ const PT: Dict = {
     painPrefix: "dor:",
     energyPrefix: "energia:",
   },
+  empresaDrawer: {
+    close: "Fechar",
+    tabResumo: "Resumo", tabCoaches: "Coaches", tabAlunos: "Alunos",
+    tabPlano: "Plano", tabLogs: "Logs",
+    sectionUsage: "USO ATUAL", sectionStatus: "STATUS",
+    sectionContact: "CONTATO", sectionPlanDetails: "DETALHES DO PLANO",
+    rowPlan: "Plano", rowStatus: "Status", rowCoaches: "Coaches",
+    rowActiveStudents: "Alunos ativos", rowCriticalStudents: "Alunos críticos",
+    rowCreatedAt: "Criada em", rowEmail: "E-mail", rowPhone: "Telefone",
+    rowAddress: "Endereço", rowCityCountry: "Cidade / País",
+    rowStudentLimit: "Limite alunos", rowCoachLimit: "Limite coaches",
+    rowUpdatedAt: "Atualizada em",
+    unlimited: "ilimitado",
+    btnAddCoach: "+ Coach", btnAddStudent: "+ Aluno", btnRefresh: "Atualizar",
+  },
   coachDrawer: {
     roleBadge: "COACH",
     statusActive: "ATIVO", statusPaused: "PAUSADO",
@@ -906,6 +950,21 @@ const EN: Dict = {
     painPrefix: "pain:",
     energyPrefix: "energy:",
   },
+  empresaDrawer: {
+    close: "Close",
+    tabResumo: "Summary", tabCoaches: "Coaches", tabAlunos: "Students",
+    tabPlano: "Plan", tabLogs: "Logs",
+    sectionUsage: "CURRENT USAGE", sectionStatus: "STATUS",
+    sectionContact: "CONTACT", sectionPlanDetails: "PLAN DETAILS",
+    rowPlan: "Plan", rowStatus: "Status", rowCoaches: "Coaches",
+    rowActiveStudents: "Active students", rowCriticalStudents: "Critical students",
+    rowCreatedAt: "Created at", rowEmail: "Email", rowPhone: "Phone",
+    rowAddress: "Address", rowCityCountry: "City / Country",
+    rowStudentLimit: "Student limit", rowCoachLimit: "Coach limit",
+    rowUpdatedAt: "Updated at",
+    unlimited: "unlimited",
+    btnAddCoach: "+ Coach", btnAddStudent: "+ Student", btnRefresh: "Refresh",
+  },
   coachDrawer: {
     roleBadge: "COACH",
     statusActive: "ACTIVE", statusPaused: "PAUSED",
@@ -1203,6 +1262,21 @@ const IT: Dict = {
     xpUnit: "XP",
     painPrefix: "dolore:",
     energyPrefix: "energia:",
+  },
+  empresaDrawer: {
+    close: "Chiudi",
+    tabResumo: "Riepilogo", tabCoaches: "Coach", tabAlunos: "Allievi",
+    tabPlano: "Piano", tabLogs: "Log",
+    sectionUsage: "USO ATTUALE", sectionStatus: "STATO",
+    sectionContact: "CONTATTO", sectionPlanDetails: "DETTAGLI DEL PIANO",
+    rowPlan: "Piano", rowStatus: "Stato", rowCoaches: "Coach",
+    rowActiveStudents: "Allievi attivi", rowCriticalStudents: "Allievi critici",
+    rowCreatedAt: "Creata il", rowEmail: "Email", rowPhone: "Telefono",
+    rowAddress: "Indirizzo", rowCityCountry: "Città / Paese",
+    rowStudentLimit: "Limite allievi", rowCoachLimit: "Limite coach",
+    rowUpdatedAt: "Aggiornata il",
+    unlimited: "illimitato",
+    btnAddCoach: "+ Coach", btnAddStudent: "+ Allievo", btnRefresh: "Aggiorna",
   },
   coachDrawer: {
     roleBadge: "COACH",
