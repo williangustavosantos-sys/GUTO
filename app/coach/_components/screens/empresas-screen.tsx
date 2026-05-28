@@ -11,35 +11,45 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cleanupEmptyTeams, deleteAdminTeam, updateAdminTeam, type AdminTeam } from "@/lib/api/admin"
 import { ApiError } from "@/lib/api/client"
 import { clientTeams } from "@/lib/panel-rules"
+import { usePanelI18n } from "@/lib/panel-i18n"
 
-const FILTERS: { id: "todas" | "active" | "paused" | "archived"; label: string }[] = [
-  { id: "todas", label: "Todas" },
-  { id: "active", label: "Ativas" },
-  { id: "paused", label: "Pausadas" },
-  { id: "archived", label: "Arquivadas" },
+const FILTER_IDS: ReadonlyArray<"todas" | "active" | "paused" | "archived"> = [
+  "todas", "active", "paused", "archived",
 ]
 
 export function EmpresasScreen() {
   const { teams, students, coaches, openEmpresa, setTeams, isSuperAdmin } = useCockpit()
+  const { t } = usePanelI18n()
   const [search, setSearch] = useState("")
-  const [filter, setFilter] = useState<(typeof FILTERS)[number]["id"]>("todas")
+  const [filter, setFilter] = useState<(typeof FILTER_IDS)[number]>("todas")
   const [cleaning, setCleaning] = useState(false)
   const [actionPendingId, setActionPendingId] = useState<string | null>(null)
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
+
+  const filterLabels: Record<typeof FILTER_IDS[number], string> = {
+    todas: t.empresasScreen.filterAll,
+    active: t.empresasScreen.filterActive,
+    paused: t.empresasScreen.filterPaused,
+    archived: t.empresasScreen.filterArchived,
+  }
 
   // Pausar / Reativar / Arquivar empresa. Super_admin apenas (PATCH /admin/teams).
   async function handleStatusChange(team: AdminTeam, newStatus: "active" | "paused" | "archived") {
     if (newStatus === team.status) return
     setOpenMenuId(null)
-    const verb = newStatus === "active" ? "Reativar" : newStatus === "paused" ? "Pausar" : "Arquivar"
-    if (!window.confirm(`${verb} a empresa "${team.name}"?`)) return
+    const verb = newStatus === "active"
+      ? t.empresasScreen.actions.changeStatusVerbActivate
+      : newStatus === "paused"
+        ? t.empresasScreen.actions.changeStatusVerbPause
+        : t.empresasScreen.actions.changeStatusVerbArchive
+    if (!window.confirm(t.empresasScreen.actions.changeStatusConfirm(verb, team.name))) return
     setActionPendingId(team.id)
     try {
       const { team: updated } = await updateAdminTeam(team.id, { status: newStatus })
       setTeams((prev) => prev.map((t) => (t.id === team.id ? updated : t)))
-      toast.success(`Empresa "${team.name}" agora está ${teamStatusLabel(newStatus)}.`)
+      toast.success(t.empresasScreen.actions.changeStatusSuccess(team.name, teamStatusLabel(newStatus)))
     } catch {
-      toast.error("Não foi possível alterar o status da empresa.")
+      toast.error(t.empresasScreen.actions.changeStatusError)
     } finally {
       setActionPendingId(null)
     }
@@ -49,27 +59,27 @@ export function EmpresasScreen() {
   // troca por modal com ações). Bloqueia GUTO_CORE no backend.
   async function handleDelete(team: AdminTeam) {
     setOpenMenuId(null)
-    if (!window.confirm(`Excluir a empresa "${team.name}" definitivamente? Esta ação não pode ser desfeita.`)) return
+    if (!window.confirm(t.empresasScreen.actions.deleteConfirm(team.name))) return
     setActionPendingId(team.id)
     try {
       await deleteAdminTeam(team.id)
       setTeams((prev) => prev.filter((t) => t.id !== team.id))
-      toast.success(`Empresa "${team.name}" excluída.`)
+      toast.success(t.empresasScreen.actions.deleteSuccess(team.name))
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
         const details = (err.details as { members?: { coaches: number; students: number } } | undefined)?.members
         if (details) {
           toast.error(
-            `Não dá pra excluir: ${details.coaches} coach(es) e ${details.students} aluno(s) vinculado(s). Realoque ou arquive antes.`,
+            t.empresasScreen.actions.deleteNotEmpty(details.coaches, details.students),
             { duration: 6000 },
           )
         } else {
-          toast.error(err.message || "Empresa não está vazia.")
+          toast.error(err.message || t.empresasScreen.actions.deleteError)
         }
       } else if (err instanceof ApiError && err.status === 400 && err.code === "GUTO_CORE_PROTECTED") {
-        toast.error("A empresa interna GUTO_CORE não pode ser removida.")
+        toast.error(t.empresasScreen.actions.deleteCoreBlocked)
       } else {
-        toast.error("Não foi possível excluir a empresa.")
+        toast.error(t.empresasScreen.actions.deleteError)
       }
     } finally {
       setActionPendingId(null)
@@ -81,15 +91,15 @@ export function EmpresasScreen() {
   // do super admin — nunca automática.
   async function handleCleanupEmpty() {
     if (cleaning) return
-    if (!window.confirm("Remover empresas VAZIAS (sem coaches e sem alunos)? GUTO_CORE e empresas com membros são preservadas. Ação não destrutiva de dados de alunos.")) return
+    if (!window.confirm(t.empresasScreen.cleanEmptyConfirm)) return
     setCleaning(true)
     try {
       const { removedCount, removed } = await cleanupEmptyTeams()
       const removedIds = new Set(removed.map((r) => r.id))
       setTeams((prev) => prev.filter((t) => !removedIds.has(t.id)))
-      toast.success(removedCount > 0 ? `${removedCount} empresa(s) vazia(s) removida(s).` : "Nenhuma empresa vazia encontrada.")
+      toast.success(removedCount > 0 ? t.empresasScreen.cleanEmptySuccess(removedCount) : t.empresasScreen.cleanEmptyEmpty)
     } catch {
-      toast.error("Não foi possível limpar empresas vazias.")
+      toast.error(t.empresasScreen.cleanEmptyError)
     } finally {
       setCleaning(false)
     }
@@ -174,11 +184,11 @@ export function EmpresasScreen() {
           marginBottom: 18,
         }}
       >
-        <SearchBox value={search} onChange={setSearch} placeholder="Buscar empresa…" />
+        <SearchBox value={search} onChange={setSearch} placeholder={t.empresasScreen.searchPlaceholder} />
         <div style={{ display: "flex", gap: 6 }}>
-          {FILTERS.map((f) => (
-            <FilterPill key={f.id} active={filter === f.id} onClick={() => setFilter(f.id)}>
-              {f.label}
+          {FILTER_IDS.map((id) => (
+            <FilterPill key={id} active={filter === id} onClick={() => setFilter(id)}>
+              {filterLabels[id]}
             </FilterPill>
           ))}
         </div>
@@ -186,7 +196,7 @@ export function EmpresasScreen() {
           <div style={{ marginLeft: "auto" }}>
             <Btn sm disabled={cleaning} onClick={handleCleanupEmpty}>
               <Sparkles className="h-3 w-3" />
-              {cleaning ? "Limpando…" : "Limpar vazias"}
+              {cleaning ? t.empresasScreen.cleaningEmpty : t.empresasScreen.cleanEmpty}
             </Btn>
           </div>
         )}
@@ -204,12 +214,12 @@ export function EmpresasScreen() {
           textTransform: "uppercase",
         }}
       >
-        <span>EMPRESA / ID</span>
-        <span>STATUS</span>
-        <span>PLANO</span>
-        <span>ALUNOS</span>
-        <span>COACHES</span>
-        <span>CRÍTICOS</span>
+        <span>{t.empresasScreen.headerCompany}</span>
+        <span>{t.empresasScreen.headerStatus}</span>
+        <span>{t.empresasScreen.headerPlan}</span>
+        <span>{t.empresasScreen.headerStudents}</span>
+        <span>{t.empresasScreen.headerCoaches}</span>
+        <span>{t.empresasScreen.headerCriticals}</span>
         <span></span>
       </div>
 
@@ -321,7 +331,7 @@ export function EmpresasScreen() {
                     gap: 4,
                   }}
                 >
-                  Abrir <ChevronRight className="h-3 w-3" />
+                  {t.empresasScreen.rowOpen} <ChevronRight className="h-3 w-3" />
                 </span>
                 {isSuperAdmin && (
                   <Popover
@@ -332,7 +342,7 @@ export function EmpresasScreen() {
                       <button
                         type="button"
                         onClick={(e) => e.stopPropagation()}
-                        aria-label={`Ações da empresa ${team.name}`}
+                        aria-label={t.empresasScreen.actions.menuLabel(team.name)}
                         disabled={isPending}
                         style={{
                           width: 28,
@@ -365,26 +375,26 @@ export function EmpresasScreen() {
                     >
                       <ActionMenuItem
                         icon={<Play className="h-3.5 w-3.5" />}
-                        label="Reativar"
+                        label={t.empresasScreen.actions.activate}
                         disabled={team.status === "active"}
                         onClick={() => handleStatusChange(team, "active")}
                       />
                       <ActionMenuItem
                         icon={<Pause className="h-3.5 w-3.5" />}
-                        label="Pausar"
+                        label={t.empresasScreen.actions.pause}
                         disabled={team.status === "paused"}
                         onClick={() => handleStatusChange(team, "paused")}
                       />
                       <ActionMenuItem
                         icon={<Archive className="h-3.5 w-3.5" />}
-                        label="Arquivar"
+                        label={t.empresasScreen.actions.archive}
                         disabled={team.status === "archived"}
                         onClick={() => handleStatusChange(team, "archived")}
                       />
                       <div style={{ height: 1, background: T.border, margin: "4px 0" }} />
                       <ActionMenuItem
                         icon={<Trash2 className="h-3.5 w-3.5" />}
-                        label="Excluir"
+                        label={t.empresasScreen.actions.delete}
                         danger
                         onClick={() => handleDelete(team)}
                       />
@@ -399,7 +409,7 @@ export function EmpresasScreen() {
         {!list.length && (
           <Plate style={{ padding: 48, textAlign: "center" }}>
             <p style={{ fontFamily: T.mono, fontSize: 12, color: T.fg3 }}>
-              Nenhuma empresa encontrada.
+              {t.empresasScreen.empty}
             </p>
           </Plate>
         )}

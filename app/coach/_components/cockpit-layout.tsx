@@ -22,6 +22,7 @@ import { T } from "./control-tokens"
 import { Btn, TelemetryStamp } from "./controls"
 import type { Screen } from "./utils"
 import { activeClientTeams, headerCtaForScreen } from "@/lib/panel-rules"
+import { usePanelI18n, PANEL_LANGUAGES, type PanelLang } from "@/lib/panel-i18n"
 
 // ─── Sidebar config ───────────────────────────────────────────────────────────
 
@@ -29,10 +30,15 @@ import { activeClientTeams, headerCtaForScreen } from "@/lib/panel-rules"
 // empresa do admin. Tratado especialmente no clique do Sidebar.
 type NavId = Screen | "minha_empresa"
 
+// Chave de tradução estável por item da nav. Lê em `t.nav.*`.
+type NavKey =
+  | "dashboard" | "approvals" | "companies" | "myCompany"
+  | "students" | "arena" | "bank" | "logs"
+
 interface NavItem {
   id: NavId
-  label: string
-  group: string
+  labelKey: NavKey
+  groupKey: "operation" | "registry" | "analysis" | "system"
   icon: ReactNode
   adminOnly?: boolean // admin OU super_admin
   superAdminOnly?: boolean // apenas super_admin
@@ -43,25 +49,15 @@ interface NavItem {
 // Hierarquia operacional: Coaches vivem DENTRO da empresa (drawer), não como aba
 // global. Treino/Dieta vivem DENTRO do aluno (drawer), não como abas globais.
 const NAV_ITEMS: NavItem[] = [
-  { id: "hoje", label: "Dashboard", group: "Operação", icon: <Zap className="h-[18px] w-[18px]" /> },
-  { id: "aprovacoes", label: "Aprovações", group: "Operação", icon: <Gavel className="h-[18px] w-[18px]" />, adminOnly: true, showsBadge: true },
-  { id: "empresas", label: "Empresas", group: "Cadastros", icon: <Building2 className="h-[18px] w-[18px]" />, superAdminOnly: true },
-  { id: "minha_empresa", label: "Minha Empresa", group: "Cadastros", icon: <Building2 className="h-[18px] w-[18px]" />, adminCompanyOnly: true },
-  { id: "students", label: "Alunos", group: "Cadastros", icon: <Users className="h-[18px] w-[18px]" /> },
-  { id: "arena", label: "Arena", group: "Análise", icon: <Activity className="h-[18px] w-[18px]" /> },
-  { id: "banco", label: "Banco GUTO", group: "Sistema", icon: <Database className="h-[18px] w-[18px]" />, superAdminOnly: true },
-  { id: "logs", label: "Logs", group: "Sistema", icon: <Settings className="h-[18px] w-[18px]" />, superAdminOnly: true },
+  { id: "hoje", labelKey: "dashboard", groupKey: "operation", icon: <Zap className="h-[18px] w-[18px]" /> },
+  { id: "aprovacoes", labelKey: "approvals", groupKey: "operation", icon: <Gavel className="h-[18px] w-[18px]" />, adminOnly: true, showsBadge: true },
+  { id: "empresas", labelKey: "companies", groupKey: "registry", icon: <Building2 className="h-[18px] w-[18px]" />, superAdminOnly: true },
+  { id: "minha_empresa", labelKey: "myCompany", groupKey: "registry", icon: <Building2 className="h-[18px] w-[18px]" />, adminCompanyOnly: true },
+  { id: "students", labelKey: "students", groupKey: "registry", icon: <Users className="h-[18px] w-[18px]" /> },
+  { id: "arena", labelKey: "arena", groupKey: "analysis", icon: <Activity className="h-[18px] w-[18px]" /> },
+  { id: "banco", labelKey: "bank", groupKey: "system", icon: <Database className="h-[18px] w-[18px]" />, superAdminOnly: true },
+  { id: "logs", labelKey: "logs", groupKey: "system", icon: <Settings className="h-[18px] w-[18px]" />, superAdminOnly: true },
 ]
-
-const SCREEN_TITLES: Record<Screen, { t: string; sub: string }> = {
-  hoje: { t: "Hoje", sub: "Visão geral operacional" },
-  empresas: { t: "Empresas", sub: "Cadastros / clientes B2B" },
-  students: { t: "Alunos", sub: "Todos os alunos do seu escopo" },
-  aprovacoes: { t: "Aprovações", sub: "Itens pendentes para o catálogo GUTO" },
-  banco: { t: "Banco do GUTO", sub: "Catálogo aprovado · treinos e dietas" },
-  arena: { t: "Arena", sub: "Ranking competitivo" },
-  logs: { t: "Logs", sub: "Auditoria do sistema" },
-}
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
@@ -75,6 +71,7 @@ function Sidebar({
   onClose?: () => void
 }) {
   const { user, isAdmin, isSuperAdmin, activeScreen, setActiveScreen, pendingExercises, teams, openEmpresa } = useCockpit()
+  const { t } = usePanelI18n()
 
   const visibleItems = NAV_ITEMS.filter((item) => {
     if (item.superAdminOnly) return isSuperAdmin
@@ -97,9 +94,10 @@ function Sidebar({
   // Preserve declaration order while grouping under section headers.
   const groups: { name: string; items: NavItem[] }[] = []
   for (const item of visibleItems) {
-    const existing = groups.find((g) => g.name === item.group)
+    const groupName = t.nav[item.groupKey]
+    const existing = groups.find((g) => g.name === groupName)
     if (existing) existing.items.push(item)
-    else groups.push({ name: item.group, items: [item] })
+    else groups.push({ name: groupName, items: [item] })
   }
 
   const pendingTotal = pendingExercises.length
@@ -156,7 +154,7 @@ function Sidebar({
                   lineHeight: 1.15,
                 }}
               >
-                GUTO
+                {t.brand.title}
               </div>
               <div
                 style={{
@@ -168,7 +166,7 @@ function Sidebar({
                   letterSpacing: "0.04em",
                 }}
               >
-                Sala de Controle
+                {t.brand.subtitle}
               </div>
             </div>
             <button
@@ -183,7 +181,7 @@ function Sidebar({
                 alignItems: "center",
                 borderRadius: 6,
               }}
-              aria-label="Recolher"
+              aria-label={t.nav.collapse}
             >
               <ChevronLeft className="h-[15px] w-[15px]" />
             </button>
@@ -220,7 +218,7 @@ function Sidebar({
                     handleNav(item)
                     onClose?.()
                   }}
-                  title={collapsed ? item.label : undefined}
+                  title={collapsed ? t.nav[item.labelKey] : undefined}
                   style={{
                     width: collapsed ? "100%" : "calc(100% - 12px)",
                     margin: collapsed ? "0" : "1px 6px",
@@ -244,7 +242,7 @@ function Sidebar({
                   }}
                 >
                   <span style={{ opacity: active ? 1 : 0.7, display: "flex" }}>{item.icon}</span>
-                  {!collapsed && <span style={{ flex: 1 }}>{item.label}</span>}
+                  {!collapsed && <span style={{ flex: 1 }}>{t.nav[item.labelKey]}</span>}
                   {!collapsed && badge && (
                     <span
                       style={{
@@ -346,7 +344,7 @@ function Sidebar({
             display: "flex",
             justifyContent: "center",
           }}
-          aria-label="Expandir"
+          aria-label={t.nav.expand}
         >
           <ChevronRight className="h-4 w-4" />
         </button>
@@ -371,8 +369,9 @@ function Header({ onMobileMenu }: { onMobileMenu: () => void }) {
     setShowCreateTeam,
     selectedTeamId,
   } = useCockpit()
+  const { t, lang, setLang } = usePanelI18n()
 
-  const meta = SCREEN_TITLES[activeScreen]
+  const meta = { t: t.header.screenTitle[activeScreen], sub: t.header.screenSub[activeScreen] }
   const pendingTotal = pendingExercises.length
 
   // CTA contextual baseado na screen. O Dashboard ("hoje") NÃO cria aluno solto:
@@ -383,7 +382,7 @@ function Header({ onMobileMenu }: { onMobileMenu: () => void }) {
     if (ctaKind === "empresa") {
       return (
         <Btn cyan sm onClick={() => setShowCreateTeam(true)}>
-          + Empresa
+          {t.header.ctaCompany}
         </Btn>
       )
     }
@@ -408,7 +407,7 @@ function Header({ onMobileMenu }: { onMobileMenu: () => void }) {
             setShowCreateStudent(true)
           }}
         >
-          + Aluno
+          {t.header.ctaStudent}
         </Btn>
       )
     }
@@ -462,7 +461,7 @@ function Header({ onMobileMenu }: { onMobileMenu: () => void }) {
               marginBottom: 2,
             }}
           >
-            Sala de Controle
+            {t.brand.subtitle}
           </div>
           <div
             style={{
@@ -494,28 +493,30 @@ function Header({ onMobileMenu }: { onMobileMenu: () => void }) {
       {/* Telemetry strip */}
       <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
         <div className="hidden xl:flex" style={{ alignItems: "center", gap: 10 }}>
-          <TelemetryStamp icon={<Signal className="h-2.5 w-2.5" />} label="SYS" value="ONLINE" tone="ok" />
+          <TelemetryStamp icon={<Signal className="h-2.5 w-2.5" />} label="SYS" value={t.header.online} tone="ok" />
           {isSuperAdmin && (
             <TelemetryStamp
               icon={<Globe className="h-2.5 w-2.5" />}
-              label="Empresas"
+              label={t.header.companiesLabel}
               value={String(activeClientTeams(teams).length)}
             />
           )}
           <TelemetryStamp
             icon={<Users className="h-2.5 w-2.5" />}
-            label="Alunos"
+            label={t.header.studentsLabel}
             value={String(students.length)}
           />
           {isAdmin && (
             <TelemetryStamp
               icon={<Gavel className="h-2.5 w-2.5" />}
-              label="Pend."
+              label={t.header.pendingLabel}
               value={String(pendingTotal)}
               tone={pendingTotal > 0 ? "warn" : "ok"}
             />
           )}
         </div>
+        {/* Seletor de idioma do painel — compartilha localStorage com /admin/login */}
+        <PanelLanguageSwitcher value={lang} onChange={setLang} />
         {cta && (
           <>
             <div style={{ width: 1, height: 24, background: T.border, margin: "0 4px" }} />
@@ -593,6 +594,53 @@ export function CockpitLayout({ children }: { children: ReactNode }) {
         <Header onMobileMenu={() => setMobileMenuOpen(true)} />
         <main style={{ flex: 1, overflowY: "auto" }}>{children}</main>
       </div>
+    </div>
+  )
+}
+
+// ─── Panel language switcher ─────────────────────────────────────────────────
+
+function PanelLanguageSwitcher({ value, onChange }: { value: PanelLang; onChange: (next: PanelLang) => void }) {
+  return (
+    <div
+      className="hidden md:flex"
+      style={{
+        gap: 2,
+        background: T.bg,
+        border: `1px solid ${T.border}`,
+        borderRadius: 8,
+        padding: 2,
+      }}
+      role="group"
+      aria-label="Painel — idioma"
+    >
+      {PANEL_LANGUAGES.map((lang) => {
+        const active = value === lang.code
+        return (
+          <button
+            key={lang.code}
+            type="button"
+            onClick={() => onChange(lang.code)}
+            title={lang.label}
+            aria-pressed={active}
+            style={{
+              padding: "4px 8px",
+              borderRadius: 6,
+              border: "none",
+              background: active ? T.surface : "transparent",
+              color: active ? T.fg : T.fg3,
+              fontFamily: T.mono,
+              fontSize: 10,
+              fontWeight: 900,
+              letterSpacing: "0.12em",
+              cursor: "pointer",
+              boxShadow: active ? `0 1px 2px ${T.border}` : "none",
+            }}
+          >
+            {lang.short}
+          </button>
+        )
+      })}
     </div>
   )
 }
