@@ -158,13 +158,51 @@ export function getStatusInfo(
   return { text: "ATIVO", variant: "default" }
 }
 
+// Tradução de campo de memória → rótulo curto pro coach (em PT, idioma do
+// painel). Usado nas mensagens de WORKOUT_PROFILE_INCOMPLETE / DIET_PROFILE_INCOMPLETE.
+const CALIBRATION_FIELD_LABEL: Record<string, string> = {
+  biologicalSex: "Sexo biológico",
+  userAge: "Idade",
+  heightCm: "Altura",
+  weightKg: "Peso",
+  trainingLevel: "Nível",
+  trainingGoal: "Objetivo",
+  preferredTrainingLocation: "Local de treino",
+  trainingLocation: "Local de treino",
+  country: "País",
+  city: "Cidade",
+  foodRestrictions: "Restrições alimentares (NÃO COMO)",
+}
+
+function describeMissingFields(missing: unknown): string {
+  if (!Array.isArray(missing)) return ""
+  const labels = missing
+    .filter((value): value is string => typeof value === "string")
+    .map((field) => CALIBRATION_FIELD_LABEL[field] || field)
+  if (labels.length === 0) return ""
+  if (labels.length === 1) return labels[0]
+  if (labels.length === 2) return `${labels[0]} e ${labels[1]}`
+  return `${labels.slice(0, -1).join(", ")} e ${labels[labels.length - 1]}`
+}
+
 export function adminErrorMessage(error: unknown): string {
   if (error instanceof ApiError) {
-    const code =
-      error.details && typeof error.details === "object" && "code" in error.details
-        ? String(error.details.code)
-        : ""
+    const details = error.details && typeof error.details === "object" ? (error.details as Record<string, unknown>) : null
+    const code = details && typeof details.code === "string" ? details.code : ""
     if (code === "GUTO_TEAM_PLAN_LIMIT_REACHED") return "Limite do plano GUTO Time atingido."
+    if (code === "WORKOUT_PROFILE_INCOMPLETE") {
+      const list = describeMissingFields(details?.missing)
+      return list
+        ? `Não dá pra gerar treino: o aluno ainda não tem ${list}. Abra a aba "Calibragem" e preencha.`
+        : "Não dá pra gerar treino sem a calibragem do aluno. Abra a aba Calibragem."
+    }
+    if (code === "DIET_PROFILE_INCOMPLETE") {
+      const list = describeMissingFields(details?.missing)
+      return list
+        ? `Não dá pra gerar dieta: o aluno ainda não tem ${list}. Abra a aba "Calibragem" e preencha.`
+        : "Não dá pra gerar dieta sem a calibragem do aluno. Abra a aba Calibragem."
+    }
+    if (code === "COACH_LOCKED_PLAN") return "Este plano está bloqueado pelo coach. Desbloqueie antes de gerar/editar."
     if (error.status === 403) return "Você não tem acesso a este aluno."
     const suffix = error.status ? ` (${error.status})` : ""
     return `${error.message || "Backend recusou a ação"}${suffix}`
