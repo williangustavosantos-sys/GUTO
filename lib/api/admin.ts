@@ -1,6 +1,6 @@
 import { apiRequest } from "./client"
 import { AuthUser } from "./auth"
-import type { DietPlan, GutoMemory, GutoWorkoutPlan } from "./guto"
+import type { DietPlan, GutoMemory, GutoWorkoutPlan, WorkoutValidationRecord, WorkoutFeedbackRecord } from "./guto"
 
 export type AdminPlanSource = "guto_generated" | "coach_manual" | "mixed"
 export type CatalogLanguage = "pt-BR" | "it-IT" | "en-US"
@@ -334,6 +334,18 @@ export function getAdminUserWorkout(userId: string): Promise<{ workout: GutoWork
 
 export function getAdminStudentWorkout(userId: string): Promise<{ workout: GutoWorkoutPlan | null }> {
   return apiRequest<{ workout: GutoWorkoutPlan | null }>(`/admin/students/${userId}/workout`)
+}
+
+// Histórico de validações + feedback do aluno (até 5 últimas com fotos).
+// Coach precisa ver evolução real, não só contagem (bug do fundador 2026-05-28).
+export function getAdminStudentValidations(userId: string): Promise<{
+  validations: WorkoutValidationRecord[]
+  feedback: WorkoutFeedbackRecord[]
+}> {
+  return apiRequest<{
+    validations: WorkoutValidationRecord[]
+    feedback: WorkoutFeedbackRecord[]
+  }>(`/admin/students/${userId}/validations`)
 }
 
 export function updateAdminUserWorkout(userId: string, workout: GutoWorkoutPlan, reason?: string): Promise<{ workout: GutoWorkoutPlan }> {
