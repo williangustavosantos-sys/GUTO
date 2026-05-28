@@ -133,7 +133,9 @@ export function studentRisk(s: AdminStudent): RiskLevel {
   if (!s.active || s.archived) return "ok"
   const days = daysSince(s.lastValidationAt) ?? daysSince(s.lastActiveAt)
   if (days === null) return "sem-sinal"
-  if (days >= 7) return "critico"
+  // Decisão do fundador (doc canônico GUTO_PAINEL_ADMIN_CANONICO_V1.md):
+  // Crítico ≥6 dias parado · Atenção 3–5 dias. Antes era ≥7 / 3–6.
+  if (days >= 6) return "critico"
   if (days >= 3) return "atencao"
   return "ok"
 }

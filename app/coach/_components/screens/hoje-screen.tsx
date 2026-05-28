@@ -80,7 +80,7 @@ export function HojeScreen() {
           icon={<Zap className="h-3.5 w-3.5" />}
           label="Críticos"
           value={stats.criticos.length}
-          sub="7+ dias parado"
+          sub="6+ dias parado"
           tone="bad"
           onClick={() => setActiveScreen("students")}
         />
@@ -88,7 +88,7 @@ export function HojeScreen() {
           icon={<Gavel className="h-3.5 w-3.5" />}
           label="Atenção"
           value={stats.atencao.length}
-          sub="3-6 dias parado"
+          sub="3-5 dias parado"
           tone="warn"
           onClick={() => setActiveScreen("students")}
         />
