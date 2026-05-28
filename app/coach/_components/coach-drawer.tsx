@@ -9,13 +9,14 @@ import { Plate, Pill, Btn, CtrlDataRow, SectionTitle } from "./controls"
 import type { CoachDetailTab } from "./utils"
 import { coachLabel, relativeTime, studentRisk } from "./utils"
 import type { AdminCoach, AdminStudent } from "@/lib/api/admin"
+import { usePanelI18n } from "@/lib/panel-i18n"
 
-const COACH_TABS: { id: CoachDetailTab; label: string; icon: React.ReactNode }[] = [
-  { id: "resumo", label: "RESUMO", icon: <Shield className="h-3 w-3" /> },
-  { id: "alunos", label: "ALUNOS", icon: <Users className="h-3 w-3" /> },
-  { id: "treinos", label: "TREINOS", icon: <Dumbbell className="h-3 w-3" /> },
-  { id: "dietas", label: "DIETAS", icon: <UtensilsCrossed className="h-3 w-3" /> },
-  { id: "logs", label: "LOGS", icon: <ScrollText className="h-3 w-3" /> },
+const COACH_TABS: { id: CoachDetailTab; icon: React.ReactNode }[] = [
+  { id: "resumo", icon: <Shield className="h-3 w-3" /> },
+  { id: "alunos", icon: <Users className="h-3 w-3" /> },
+  { id: "treinos", icon: <Dumbbell className="h-3 w-3" /> },
+  { id: "dietas", icon: <UtensilsCrossed className="h-3 w-3" /> },
+  { id: "logs", icon: <ScrollText className="h-3 w-3" /> },
 ]
 
 // ─── Drawer principal ─────────────────────────────────────────────────────────
@@ -57,7 +58,8 @@ export function CoachDrawer() {
 
 function DrawerHeader({ coach, onClose }: { coach: AdminCoach; onClose: () => void }) {
   const { teams } = useCockpit()
-  const team = teams.find((t) => t.id === coach.teamId)
+  const { t } = usePanelI18n()
+  const team = teams.find((tm) => tm.id === coach.teamId)
 
   return (
     <header
@@ -68,11 +70,11 @@ function DrawerHeader({ coach, onClose }: { coach: AdminCoach; onClose: () => vo
       }}
     >
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-        <Pill tone="cyan">COACH</Pill>
+        <Pill tone="cyan">{t.coachDrawer.roleBadge}</Pill>
         <button
           onClick={onClose}
           style={{ background: "none", border: "none", color: T.fg3, cursor: "pointer", padding: 4 }}
-          aria-label="Fechar"
+          aria-label={t.coachDrawer.close}
         >
           <X className="h-4 w-4" />
         </button>
@@ -89,7 +91,7 @@ function DrawerHeader({ coach, onClose }: { coach: AdminCoach; onClose: () => vo
         {coach.name || coach.email || coach.userId}
       </SheetTitle>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
-        <Pill tone={coach.active ? "ok" : "mute"}>{coach.active ? "ATIVO" : "PAUSADO"}</Pill>
+        <Pill tone={coach.active ? "ok" : "mute"}>{coach.active ? t.coachDrawer.statusActive : t.coachDrawer.statusPaused}</Pill>
         {team && <Pill tone="neutral">{team.name}</Pill>}
         <span style={{ fontFamily: T.mono, fontSize: 10, color: T.fg4, letterSpacing: "0.10em" }}>
           {coach.email || "—"}
@@ -106,6 +108,14 @@ function DrawerTabBar({
   activeTab: CoachDetailTab
   onChange: (t: CoachDetailTab) => void
 }) {
+  const { t } = usePanelI18n()
+  const tabLabel: Record<CoachDetailTab, string> = {
+    resumo: t.coachDrawer.tabResumo,
+    alunos: t.coachDrawer.tabAlunos,
+    treinos: t.coachDrawer.tabTreinos,
+    dietas: t.coachDrawer.tabDietas,
+    logs: t.coachDrawer.tabLogs,
+  }
   return (
     <div
       style={{
@@ -147,7 +157,7 @@ function DrawerTabBar({
             }}
           >
             {tab.icon}
-            {tab.label}
+            {tabLabel[tab.id]}
           </button>
         )
       })}
@@ -165,6 +175,7 @@ function studentsOfCoach(coach: AdminCoach, all: AdminStudent[]): AdminStudent[]
 
 function TabResumo({ coach }: { coach: AdminCoach }) {
   const { students } = useCockpit()
+  const { t, lang } = usePanelI18n()
   const myStudents = useMemo(() => studentsOfCoach(coach, students), [coach, students])
   const ativos = myStudents.filter((s) => s.active && !s.archived).length
   const criticos = myStudents.filter((s) => studentRisk(s) === "critico").length
@@ -174,22 +185,22 @@ function TabResumo({ coach }: { coach: AdminCoach }) {
   return (
     <div style={{ display: "grid", gap: 16 }}>
       <Plate style={{ padding: 20 }}>
-        <SectionTitle>DESEMPENHO</SectionTitle>
-        <CtrlDataRow label="Alunos ativos" value={String(ativos)} />
-        <CtrlDataRow label="Críticos" value={String(criticos)} />
-        <CtrlDataRow label="Atenção" value={String(atencao)} />
-        <CtrlDataRow label="Sem sinal" value={String(semSinal)} />
-        <CtrlDataRow label="Total atribuídos" value={String(myStudents.length)} />
+        <SectionTitle>{t.coachDrawer.sectionPerformance}</SectionTitle>
+        <CtrlDataRow label={t.coachDrawer.rowActiveStudents} value={String(ativos)} />
+        <CtrlDataRow label={t.coachDrawer.rowCriticals} value={String(criticos)} />
+        <CtrlDataRow label={t.coachDrawer.rowAttention} value={String(atencao)} />
+        <CtrlDataRow label={t.coachDrawer.rowNoSignal} value={String(semSinal)} />
+        <CtrlDataRow label={t.coachDrawer.rowTotalAssigned} value={String(myStudents.length)} />
       </Plate>
 
       <Plate style={{ padding: 20 }}>
-        <SectionTitle>DADOS</SectionTitle>
-        <CtrlDataRow label="E-mail" value={coach.email || "—"} />
-        <CtrlDataRow label="Telefone" value={coach.phone || "—"} />
-        <CtrlDataRow label="Status" value={coach.active ? "ATIVO" : "PAUSADO"} />
+        <SectionTitle>{t.coachDrawer.sectionData}</SectionTitle>
+        <CtrlDataRow label={t.coachDrawer.rowEmail} value={coach.email || "—"} />
+        <CtrlDataRow label={t.coachDrawer.rowPhone} value={coach.phone || "—"} />
+        <CtrlDataRow label={t.coachDrawer.rowStatus} value={coach.active ? t.coachDrawer.statusActive : t.coachDrawer.statusPaused} />
         <CtrlDataRow
-          label="Criado em"
-          value={coach.createdAt ? new Date(coach.createdAt).toLocaleDateString("pt-BR") : "—"}
+          label={t.coachDrawer.rowCreatedAt}
+          value={coach.createdAt ? new Date(coach.createdAt).toLocaleDateString(lang) : "—"}
         />
       </Plate>
     </div>
@@ -200,13 +211,14 @@ function TabResumo({ coach }: { coach: AdminCoach }) {
 
 function TabAlunos({ coach }: { coach: AdminCoach }) {
   const { students, coaches, openStudent } = useCockpit()
+  const { t } = usePanelI18n()
   const myStudents = useMemo(() => studentsOfCoach(coach, students), [coach, students])
 
   if (!myStudents.length) {
     return (
       <Plate style={{ padding: 32, textAlign: "center" }}>
         <p style={{ fontFamily: T.mono, fontSize: 12, color: T.fg3 }}>
-          Este coach não tem alunos atribuídos.
+          {t.coachDrawer.emptyNoStudents}
         </p>
       </Plate>
     )
@@ -217,7 +229,10 @@ function TabAlunos({ coach }: { coach: AdminCoach }) {
       {myStudents.map((s) => {
         const risk = studentRisk(s)
         const tone = risk === "critico" ? "bad" : risk === "atencao" ? "warn" : risk === "sem-sinal" ? "mute" : "ok"
-        const label = risk === "critico" ? "CRÍTICO" : risk === "atencao" ? "ATENÇÃO" : risk === "sem-sinal" ? "SEM SINAL" : "EM DIA"
+        const label = risk === "critico" ? t.coachDrawer.riskCriticalShort
+          : risk === "atencao" ? t.coachDrawer.riskAttentionShort
+          : risk === "sem-sinal" ? t.coachDrawer.riskNoSignalShort
+          : t.coachDrawer.riskOkShort
         return (
           <button
             key={s.userId}
@@ -269,6 +284,7 @@ function TabAlunos({ coach }: { coach: AdminCoach }) {
 
 function TabFila({ coach, mode }: { coach: AdminCoach; mode: "treino" | "dieta" }) {
   const { students, openStudent } = useCockpit()
+  const { t } = usePanelI18n()
   const myStudents = useMemo(() => studentsOfCoach(coach, students), [coach, students])
 
   const sorted = useMemo(() => {
@@ -280,7 +296,7 @@ function TabFila({ coach, mode }: { coach: AdminCoach; mode: "treino" | "dieta" 
     return (
       <Plate style={{ padding: 32, textAlign: "center" }}>
         <p style={{ fontFamily: T.mono, fontSize: 12, color: T.fg3 }}>
-          Sem alunos para este coach.
+          {t.coachDrawer.emptyQueue}
         </p>
       </Plate>
     )
@@ -291,7 +307,10 @@ function TabFila({ coach, mode }: { coach: AdminCoach; mode: "treino" | "dieta" 
       {sorted.map((s) => {
         const risk = studentRisk(s)
         const tone = risk === "critico" ? "bad" : risk === "atencao" ? "warn" : risk === "sem-sinal" ? "mute" : "ok"
-        const label = risk === "critico" ? "CRÍTICO" : risk === "atencao" ? "ATENÇÃO" : risk === "sem-sinal" ? "SEM SINAL" : "EM DIA"
+        const label = risk === "critico" ? t.coachDrawer.riskCriticalShort
+          : risk === "atencao" ? t.coachDrawer.riskAttentionShort
+          : risk === "sem-sinal" ? t.coachDrawer.riskNoSignalShort
+          : t.coachDrawer.riskOkShort
         return (
           <button
             key={s.userId}
@@ -315,11 +334,11 @@ function TabFila({ coach, mode }: { coach: AdminCoach; mode: "treino" | "dieta" 
                 <Pill tone={tone}>{label}</Pill>
               </div>
               <span style={{ fontFamily: T.mono, fontSize: 9, color: T.fg3 }}>
-                última validação {relativeTime(s.lastValidationAt)}
+                {t.coachDrawer.lastValidation(relativeTime(s.lastValidationAt))}
               </span>
             </div>
             <Btn ghost sm onClick={() => openStudent(s, mode)}>
-              {mode === "treino" ? "Editar treino ›" : "Editar dieta ›"}
+              {mode === "treino" ? t.coachDrawer.editWorkout : t.coachDrawer.editDiet}
             </Btn>
           </button>
         )
@@ -332,6 +351,7 @@ function TabFila({ coach, mode }: { coach: AdminCoach; mode: "treino" | "dieta" 
 
 function TabLogs({ coach }: { coach: AdminCoach }) {
   const { globalLogs } = useCockpit()
+  const { t, lang } = usePanelI18n()
   const myLogs = useMemo(
     () => globalLogs.filter((log) => log.actorUserId === coach.userId),
     [globalLogs, coach]
@@ -341,7 +361,7 @@ function TabLogs({ coach }: { coach: AdminCoach }) {
     return (
       <Plate style={{ padding: 32, textAlign: "center" }}>
         <p style={{ fontFamily: T.mono, fontSize: 12, color: T.fg3 }}>
-          Sem ações registradas.
+          {t.coachDrawer.emptyLogs}
         </p>
       </Plate>
     )
@@ -362,15 +382,15 @@ function TabLogs({ coach }: { coach: AdminCoach }) {
                 textTransform: "uppercase",
               }}
             >
-              {log.action || "ação"}
+              {log.action || t.coachDrawer.logActionFallback}
             </span>
             <span style={{ fontFamily: T.mono, fontSize: 9, color: T.fg4 }}>
-              {log.timestamp ? new Date(log.timestamp).toLocaleString("pt-BR") : "—"}
+              {log.timestamp ? new Date(log.timestamp).toLocaleString(lang) : "—"}
             </span>
           </div>
           {log.targetUserId && (
             <p style={{ fontFamily: T.mono, fontSize: 9, color: T.fg3, marginTop: 4 }}>
-              alvo · {log.targetUserId}
+              {t.coachDrawer.logTargetPrefix} {log.targetUserId}
             </p>
           )}
         </Plate>

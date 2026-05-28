@@ -282,6 +282,111 @@ type Dict = {
     painPrefix: string
     energyPrefix: string
   }
+  coachDrawer: {
+    roleBadge: string
+    statusActive: string
+    statusPaused: string
+    close: string
+    tabResumo: string
+    tabAlunos: string
+    tabTreinos: string
+    tabDietas: string
+    tabLogs: string
+    sectionPerformance: string
+    sectionData: string
+    rowActiveStudents: string
+    rowCriticals: string
+    rowAttention: string
+    rowNoSignal: string
+    rowTotalAssigned: string
+    rowEmail: string
+    rowPhone: string
+    rowStatus: string
+    rowCreatedAt: string
+    emptyNoStudents: string
+    emptyQueue: string
+    lastValidation: (rel: string) => string
+    editWorkout: string
+    editDiet: string
+    emptyLogs: string
+    logActionFallback: string
+    logTargetPrefix: string
+    riskOkShort: string
+    riskAttentionShort: string
+    riskCriticalShort: string
+    riskNoSignalShort: string
+  }
+  dialogs: {
+    createStudent: {
+      badge: string
+      title: string
+      description: string
+      fieldName: string
+      fieldEmail: string
+      fieldPhone: string
+      fieldPassword: string
+      fieldCompany: string
+      fieldCoach: string
+      fieldSex: string
+      fieldAge: string
+      placeholderName: string
+      placeholderEmail: string
+      placeholderPhone: string
+      placeholderPassword: string
+      placeholderAge: string
+      selectCompany: string
+      selectCoach: string
+      noCoachInTeamHint: string
+      cancel: string
+      create: string
+      creating: string
+      lockedTeamHint: (teamName: string) => string
+    }
+    createCoach: {
+      badge: string
+      title: string
+      description: string
+      fieldName: string
+      fieldEmail: string
+      fieldPassword: string
+      fieldCompany: string
+      placeholderName: string
+      placeholderEmail: string
+      placeholderPassword: string
+      selectCompany: string
+      cancel: string
+      create: string
+      creating: string
+    }
+    createTeam: {
+      badge: string
+      title: string
+      description: string
+      fieldName: string
+      fieldPlan: string
+      fieldMaxStudents: string
+      fieldMaxCoaches: string
+      fieldEmail: string
+      fieldPhone: string
+      fieldAddress: string
+      fieldCity: string
+      fieldCountry: string
+      fieldStatus: string
+      placeholderName: string
+      placeholderEmail: string
+      placeholderPhone: string
+      placeholderAddress: string
+      placeholderCity: string
+      placeholderCountry: string
+      planStart: string
+      planPro: string
+      planElite: string
+      planCustom: string
+      cancel: string
+      create: string
+      creating: string
+    }
+  }
   tabCalibragem: {
     panelTitle: string
     fieldBiologicalSex: string
@@ -502,6 +607,77 @@ const PT: Dict = {
     xpUnit: "XP",
     painPrefix: "dor:",
     energyPrefix: "energia:",
+  },
+  coachDrawer: {
+    roleBadge: "COACH",
+    statusActive: "ATIVO", statusPaused: "PAUSADO",
+    close: "Fechar",
+    tabResumo: "RESUMO", tabAlunos: "ALUNOS", tabTreinos: "TREINOS",
+    tabDietas: "DIETAS", tabLogs: "LOGS",
+    sectionPerformance: "DESEMPENHO", sectionData: "DADOS",
+    rowActiveStudents: "Alunos ativos", rowCriticals: "Críticos",
+    rowAttention: "Atenção", rowNoSignal: "Sem sinal",
+    rowTotalAssigned: "Total atribuídos",
+    rowEmail: "E-mail", rowPhone: "Telefone", rowStatus: "Status",
+    rowCreatedAt: "Criado em",
+    emptyNoStudents: "Este coach não tem alunos atribuídos.",
+    emptyQueue: "Sem alunos para este coach.",
+    lastValidation: (rel) => `última validação ${rel}`,
+    editWorkout: "Editar treino ›", editDiet: "Editar dieta ›",
+    emptyLogs: "Sem ações registradas.",
+    logActionFallback: "ação", logTargetPrefix: "alvo ·",
+    riskOkShort: "EM DIA", riskAttentionShort: "ATENÇÃO",
+    riskCriticalShort: "CRÍTICO", riskNoSignalShort: "SEM SINAL",
+  },
+  dialogs: {
+    createStudent: {
+      badge: "CRIAR ALUNO",
+      title: "Novo aluno",
+      description: "Cadastre um aluno e gere o convite de acesso.",
+      fieldName: "Nome", fieldEmail: "E-mail", fieldPhone: "Telefone",
+      fieldPassword: "Senha (opcional)", fieldCompany: "Empresa",
+      fieldCoach: "Coach", fieldSex: "Sexo biológico", fieldAge: "Idade",
+      placeholderName: "Nome completo do aluno",
+      placeholderEmail: "aluno@email.com",
+      placeholderPhone: "(11) 90000-0000",
+      placeholderPassword: "Deixe em branco para enviar convite",
+      placeholderAge: "Ex: 28",
+      selectCompany: "Selecionar empresa…",
+      selectCoach: "Selecionar coach…",
+      noCoachInTeamHint: "Esta empresa ainda não tem coaches. Crie um coach antes de criar o aluno.",
+      cancel: "Cancelar", create: "Criar aluno", creating: "Criando…",
+      lockedTeamHint: (name) => `Empresa fixada: ${name}`,
+    },
+    createCoach: {
+      badge: "CRIAR COACH",
+      title: "Novo coach",
+      description: "Cadastre um coach dentro de uma empresa.",
+      fieldName: "Nome", fieldEmail: "E-mail",
+      fieldPassword: "Senha (opcional)", fieldCompany: "Empresa",
+      placeholderName: "Nome completo do coach",
+      placeholderEmail: "coach@email.com",
+      placeholderPassword: "Deixe em branco para enviar convite",
+      selectCompany: "Selecionar empresa…",
+      cancel: "Cancelar", create: "Criar coach", creating: "Criando…",
+    },
+    createTeam: {
+      badge: "CRIAR EMPRESA",
+      title: "Nova empresa",
+      description: "Cadastre uma empresa cliente (B2B).",
+      fieldName: "Nome da empresa", fieldPlan: "Plano",
+      fieldMaxStudents: "Máx. alunos", fieldMaxCoaches: "Máx. coaches",
+      fieldEmail: "E-mail de contato", fieldPhone: "Telefone",
+      fieldAddress: "Endereço", fieldCity: "Cidade",
+      fieldCountry: "País", fieldStatus: "Status",
+      placeholderName: "Ex: Studio Vertice",
+      placeholderEmail: "contato@empresa.com",
+      placeholderPhone: "(11) 0000-0000",
+      placeholderAddress: "Rua, número, bairro",
+      placeholderCity: "São Paulo",
+      placeholderCountry: "BR",
+      planStart: "Start", planPro: "Pro", planElite: "Elite", planCustom: "Custom",
+      cancel: "Cancelar", create: "Criar empresa", creating: "Criando…",
+    },
   },
   tabCalibragem: {
     panelTitle: "Calibragem do aluno",
@@ -730,6 +906,77 @@ const EN: Dict = {
     painPrefix: "pain:",
     energyPrefix: "energy:",
   },
+  coachDrawer: {
+    roleBadge: "COACH",
+    statusActive: "ACTIVE", statusPaused: "PAUSED",
+    close: "Close",
+    tabResumo: "SUMMARY", tabAlunos: "STUDENTS", tabTreinos: "WORKOUTS",
+    tabDietas: "DIETS", tabLogs: "LOGS",
+    sectionPerformance: "PERFORMANCE", sectionData: "DATA",
+    rowActiveStudents: "Active students", rowCriticals: "Critical",
+    rowAttention: "Attention", rowNoSignal: "No signal",
+    rowTotalAssigned: "Total assigned",
+    rowEmail: "Email", rowPhone: "Phone", rowStatus: "Status",
+    rowCreatedAt: "Created at",
+    emptyNoStudents: "This coach has no students assigned.",
+    emptyQueue: "No students for this coach.",
+    lastValidation: (rel) => `last validation ${rel}`,
+    editWorkout: "Edit workout ›", editDiet: "Edit diet ›",
+    emptyLogs: "No actions recorded.",
+    logActionFallback: "action", logTargetPrefix: "target ·",
+    riskOkShort: "ON TRACK", riskAttentionShort: "ATTENTION",
+    riskCriticalShort: "CRITICAL", riskNoSignalShort: "NO SIGNAL",
+  },
+  dialogs: {
+    createStudent: {
+      badge: "NEW STUDENT",
+      title: "New student",
+      description: "Register a student and generate the access invite.",
+      fieldName: "Name", fieldEmail: "Email", fieldPhone: "Phone",
+      fieldPassword: "Password (optional)", fieldCompany: "Company",
+      fieldCoach: "Coach", fieldSex: "Biological sex", fieldAge: "Age",
+      placeholderName: "Student full name",
+      placeholderEmail: "student@email.com",
+      placeholderPhone: "+1 555 000 0000",
+      placeholderPassword: "Leave empty to send invite",
+      placeholderAge: "e.g. 28",
+      selectCompany: "Select company…",
+      selectCoach: "Select coach…",
+      noCoachInTeamHint: "This company has no coaches yet. Create a coach before creating a student.",
+      cancel: "Cancel", create: "Create student", creating: "Creating…",
+      lockedTeamHint: (name) => `Company locked: ${name}`,
+    },
+    createCoach: {
+      badge: "NEW COACH",
+      title: "New coach",
+      description: "Register a coach inside a company.",
+      fieldName: "Name", fieldEmail: "Email",
+      fieldPassword: "Password (optional)", fieldCompany: "Company",
+      placeholderName: "Coach full name",
+      placeholderEmail: "coach@email.com",
+      placeholderPassword: "Leave empty to send invite",
+      selectCompany: "Select company…",
+      cancel: "Cancel", create: "Create coach", creating: "Creating…",
+    },
+    createTeam: {
+      badge: "NEW COMPANY",
+      title: "New company",
+      description: "Register a B2B client company.",
+      fieldName: "Company name", fieldPlan: "Plan",
+      fieldMaxStudents: "Max students", fieldMaxCoaches: "Max coaches",
+      fieldEmail: "Contact email", fieldPhone: "Phone",
+      fieldAddress: "Address", fieldCity: "City",
+      fieldCountry: "Country", fieldStatus: "Status",
+      placeholderName: "e.g. Studio Vertice",
+      placeholderEmail: "contact@company.com",
+      placeholderPhone: "+1 555 000 0000",
+      placeholderAddress: "Street, number, district",
+      placeholderCity: "New York",
+      placeholderCountry: "US",
+      planStart: "Start", planPro: "Pro", planElite: "Elite", planCustom: "Custom",
+      cancel: "Cancel", create: "Create company", creating: "Creating…",
+    },
+  },
   tabCalibragem: {
     panelTitle: "Student calibration",
     fieldBiologicalSex: "Biological sex",
@@ -956,6 +1203,77 @@ const IT: Dict = {
     xpUnit: "XP",
     painPrefix: "dolore:",
     energyPrefix: "energia:",
+  },
+  coachDrawer: {
+    roleBadge: "COACH",
+    statusActive: "ATTIVO", statusPaused: "IN PAUSA",
+    close: "Chiudi",
+    tabResumo: "RIEPILOGO", tabAlunos: "ALLIEVI", tabTreinos: "ALLENAMENTI",
+    tabDietas: "DIETE", tabLogs: "LOG",
+    sectionPerformance: "PRESTAZIONI", sectionData: "DATI",
+    rowActiveStudents: "Allievi attivi", rowCriticals: "Critici",
+    rowAttention: "Attenzione", rowNoSignal: "Nessun segnale",
+    rowTotalAssigned: "Totale assegnati",
+    rowEmail: "Email", rowPhone: "Telefono", rowStatus: "Stato",
+    rowCreatedAt: "Creato il",
+    emptyNoStudents: "Questo coach non ha allievi assegnati.",
+    emptyQueue: "Nessun allievo per questo coach.",
+    lastValidation: (rel) => `ultima convalida ${rel}`,
+    editWorkout: "Modifica allenamento ›", editDiet: "Modifica dieta ›",
+    emptyLogs: "Nessuna azione registrata.",
+    logActionFallback: "azione", logTargetPrefix: "target ·",
+    riskOkShort: "IN REGOLA", riskAttentionShort: "ATTENZIONE",
+    riskCriticalShort: "CRITICO", riskNoSignalShort: "NO SEGN.",
+  },
+  dialogs: {
+    createStudent: {
+      badge: "NUOVO ALLIEVO",
+      title: "Nuovo allievo",
+      description: "Registra un allievo e genera l'invito di accesso.",
+      fieldName: "Nome", fieldEmail: "Email", fieldPhone: "Telefono",
+      fieldPassword: "Password (opzionale)", fieldCompany: "Azienda",
+      fieldCoach: "Coach", fieldSex: "Sesso biologico", fieldAge: "Età",
+      placeholderName: "Nome completo dell'allievo",
+      placeholderEmail: "allievo@email.com",
+      placeholderPhone: "+39 333 0000 000",
+      placeholderPassword: "Lascia vuoto per inviare l'invito",
+      placeholderAge: "Es: 28",
+      selectCompany: "Seleziona azienda…",
+      selectCoach: "Seleziona coach…",
+      noCoachInTeamHint: "Questa azienda non ha ancora coach. Crea un coach prima di creare un allievo.",
+      cancel: "Annulla", create: "Crea allievo", creating: "Creazione…",
+      lockedTeamHint: (name) => `Azienda bloccata: ${name}`,
+    },
+    createCoach: {
+      badge: "NUOVO COACH",
+      title: "Nuovo coach",
+      description: "Registra un coach all'interno di un'azienda.",
+      fieldName: "Nome", fieldEmail: "Email",
+      fieldPassword: "Password (opzionale)", fieldCompany: "Azienda",
+      placeholderName: "Nome completo del coach",
+      placeholderEmail: "coach@email.com",
+      placeholderPassword: "Lascia vuoto per inviare l'invito",
+      selectCompany: "Seleziona azienda…",
+      cancel: "Annulla", create: "Crea coach", creating: "Creazione…",
+    },
+    createTeam: {
+      badge: "NUOVA AZIENDA",
+      title: "Nuova azienda",
+      description: "Registra un'azienda cliente B2B.",
+      fieldName: "Nome dell'azienda", fieldPlan: "Piano",
+      fieldMaxStudents: "Max allievi", fieldMaxCoaches: "Max coach",
+      fieldEmail: "Email di contatto", fieldPhone: "Telefono",
+      fieldAddress: "Indirizzo", fieldCity: "Città",
+      fieldCountry: "Paese", fieldStatus: "Stato",
+      placeholderName: "Es: Studio Vertice",
+      placeholderEmail: "contatto@azienda.com",
+      placeholderPhone: "+39 0000 000 000",
+      placeholderAddress: "Via, numero, quartiere",
+      placeholderCity: "Roma",
+      placeholderCountry: "IT",
+      planStart: "Start", planPro: "Pro", planElite: "Elite", planCustom: "Custom",
+      cancel: "Annulla", create: "Crea azienda", creating: "Creazione…",
+    },
   },
   tabCalibragem: {
     panelTitle: "Calibrazione dell'allievo",
