@@ -333,6 +333,47 @@ type Dict = {
     weekDays: { full: readonly string[]; short: readonly string[] }
     duplicatedSuffix: string
   }
+  arenaScreen: {
+    rankingWeekly: string
+    rankingMonthly: string
+    rankingOverall: string
+    empty: string
+    positionSuffix: string
+    streakSuffix: string
+    xpUnit: string
+  }
+  logsScreen: {
+    panelTitle: string
+    empty: string
+    sourceCoachLabel: string
+    sourceCoachPrefix: string
+    sourceAdminLabel: string
+    sourceAdminPrefix: string
+    targetLabel: string
+    metadataLabel: string
+  }
+  aprovacoesScreen: {
+    panelTitle: string
+    empty: string
+    btnApprove: string
+    btnReject: string
+    btnSeeVideo: string
+    confirmReject: string
+    toastApproved: string
+    toastRejected: string
+    requestedBy: string
+    submittedAt: string
+    duration: string
+    sizeMb: string
+  }
+  bancoScreen: {
+    panelTitle: string
+    empty: string
+    placeholderSearch: string
+    countLabel: string
+    actionEdit: string
+    actionReview: string
+  }
   tabDieta: {
     panelOfficial: string
     panelHistory: string
@@ -755,6 +796,40 @@ const PT: Dict = {
     },
     duplicatedSuffix: "cópia",
   },
+  arenaScreen: {
+    rankingWeekly: "RANKING SEMANAL",
+    rankingMonthly: "RANKING MENSAL",
+    rankingOverall: "RANKING GERAL",
+    empty: "Sem ranking.",
+    positionSuffix: "º",
+    streakSuffix: "d",
+    xpUnit: "XP",
+  },
+  logsScreen: {
+    panelTitle: "Logs do sistema",
+    empty: "Sem ações registradas.",
+    sourceCoachLabel: "coach", sourceCoachPrefix: "Coach ·",
+    sourceAdminLabel: "admin", sourceAdminPrefix: "Admin ·",
+    targetLabel: "alvo:", metadataLabel: "meta:",
+  },
+  aprovacoesScreen: {
+    panelTitle: "Aprovações de exercício",
+    empty: "Sem aprovações pendentes.",
+    btnApprove: "Aprovar", btnReject: "Recusar",
+    btnSeeVideo: "Ver vídeo",
+    confirmReject: "Recusar este exercício?",
+    toastApproved: "Exercício aprovado.",
+    toastRejected: "Exercício recusado.",
+    requestedBy: "Solicitado por:", submittedAt: "Enviado em:",
+    duration: "Duração:", sizeMb: "Tamanho:",
+  },
+  bancoScreen: {
+    panelTitle: "Banco GUTO",
+    empty: "Catálogo vazio.",
+    placeholderSearch: "Buscar exercício…",
+    countLabel: "exercícios no catálogo",
+    actionEdit: "Editar", actionReview: "Revisar",
+  },
   tabDieta: {
     panelOfficial: "Dieta oficial",
     panelHistory: "Histórico da dieta",
@@ -1125,6 +1200,40 @@ const EN: Dict = {
     },
     duplicatedSuffix: "copy",
   },
+  arenaScreen: {
+    rankingWeekly: "WEEKLY RANKING",
+    rankingMonthly: "MONTHLY RANKING",
+    rankingOverall: "OVERALL RANKING",
+    empty: "No ranking.",
+    positionSuffix: "",
+    streakSuffix: "d",
+    xpUnit: "XP",
+  },
+  logsScreen: {
+    panelTitle: "System logs",
+    empty: "No actions recorded.",
+    sourceCoachLabel: "coach", sourceCoachPrefix: "Coach ·",
+    sourceAdminLabel: "admin", sourceAdminPrefix: "Admin ·",
+    targetLabel: "target:", metadataLabel: "meta:",
+  },
+  aprovacoesScreen: {
+    panelTitle: "Exercise approvals",
+    empty: "No pending approvals.",
+    btnApprove: "Approve", btnReject: "Reject",
+    btnSeeVideo: "View video",
+    confirmReject: "Reject this exercise?",
+    toastApproved: "Exercise approved.",
+    toastRejected: "Exercise rejected.",
+    requestedBy: "Requested by:", submittedAt: "Submitted at:",
+    duration: "Duration:", sizeMb: "Size:",
+  },
+  bancoScreen: {
+    panelTitle: "GUTO Bank",
+    empty: "Catalog is empty.",
+    placeholderSearch: "Search exercise…",
+    countLabel: "exercises in catalog",
+    actionEdit: "Edit", actionReview: "Review",
+  },
   tabDieta: {
     panelOfficial: "Official diet",
     panelHistory: "Diet history",
@@ -1494,6 +1603,40 @@ const IT: Dict = {
       short: ["Dom","Lun","Mar","Mer","Gio","Ven","Sab"],
     },
     duplicatedSuffix: "copia",
+  },
+  arenaScreen: {
+    rankingWeekly: "CLASSIFICA SETTIMANALE",
+    rankingMonthly: "CLASSIFICA MENSILE",
+    rankingOverall: "CLASSIFICA GENERALE",
+    empty: "Nessuna classifica.",
+    positionSuffix: "º",
+    streakSuffix: "g",
+    xpUnit: "XP",
+  },
+  logsScreen: {
+    panelTitle: "Log di sistema",
+    empty: "Nessuna azione registrata.",
+    sourceCoachLabel: "coach", sourceCoachPrefix: "Coach ·",
+    sourceAdminLabel: "admin", sourceAdminPrefix: "Admin ·",
+    targetLabel: "target:", metadataLabel: "meta:",
+  },
+  aprovacoesScreen: {
+    panelTitle: "Approvazioni esercizi",
+    empty: "Nessuna approvazione in sospeso.",
+    btnApprove: "Approva", btnReject: "Rifiuta",
+    btnSeeVideo: "Vedi video",
+    confirmReject: "Rifiutare questo esercizio?",
+    toastApproved: "Esercizio approvato.",
+    toastRejected: "Esercizio rifiutato.",
+    requestedBy: "Richiesto da:", submittedAt: "Inviato il:",
+    duration: "Durata:", sizeMb: "Dimensione:",
+  },
+  bancoScreen: {
+    panelTitle: "Banca GUTO",
+    empty: "Catalogo vuoto.",
+    placeholderSearch: "Cerca esercizio…",
+    countLabel: "esercizi nel catalogo",
+    actionEdit: "Modifica", actionReview: "Rivedi",
   },
   tabDieta: {
     panelOfficial: "Dieta ufficiale",
