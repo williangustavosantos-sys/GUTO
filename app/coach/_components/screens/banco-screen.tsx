@@ -5,6 +5,7 @@ import { Database, FileVideo, UtensilsCrossed } from "lucide-react"
 import { useCockpit } from "../cockpit-context"
 import { T } from "../control-tokens"
 import { Plate, Pill, SearchBox, FilterPill, Kicker } from "../controls"
+import { usePanelI18n } from "@/lib/panel-i18n"
 
 /**
  * Banco do GUTO — catálogo aprovado que o GUTO pode usar em treinos/dietas.
@@ -18,6 +19,7 @@ type BancoTab = "ex" | "fd"
 
 export function BancoScreen() {
   const [tab, setTab] = useState<BancoTab>("ex")
+  const { t } = usePanelI18n()
 
   return (
     <div style={{ padding: "24px 28px" }}>
@@ -45,11 +47,10 @@ export function BancoScreen() {
                 marginBottom: 3,
               }}
             >
-              Catálogo aprovado · usado pelo GUTO em treinos e dietas.
+              {t.bancoScreen.bannerTitle}
             </div>
             <div style={{ fontFamily: T.mono, fontSize: 10, color: T.fg3 }}>
-              Aprovações pendentes ficam na tela <strong style={{ color: T.cyan }}>Aprovações</strong>.
-              Aqui é só leitura por enquanto — edição/desativação vem em PR posterior.
+              {t.bancoScreen.bannerCopy}
             </div>
           </div>
         </div>
@@ -58,10 +59,10 @@ export function BancoScreen() {
       {/* Tabs */}
       <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
         <FilterPill active={tab === "ex"} onClick={() => setTab("ex")}>
-          Exercícios
+          {t.bancoScreen.tabExercises}
         </FilterPill>
         <FilterPill active={tab === "fd"} onClick={() => setTab("fd")}>
-          Alimentos
+          {t.bancoScreen.tabFoods}
         </FilterPill>
       </div>
 
@@ -75,6 +76,7 @@ export function BancoScreen() {
 
 function ExercisesTab() {
   const { exerciseCatalog } = useCockpit()
+  const { t } = usePanelI18n()
   const [search, setSearch] = useState("")
   const [muscle, setMuscle] = useState("")
 
@@ -110,10 +112,10 @@ function ExercisesTab() {
           marginBottom: 14,
         }}
       >
-        <SearchBox value={search} onChange={setSearch} placeholder="Buscar exercício…" />
+        <SearchBox value={search} onChange={setSearch} placeholder={t.bancoScreen.placeholderSearch} />
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
           <FilterPill active={muscle === ""} onClick={() => setMuscle("")}>
-            Todos
+            {t.bancoScreen.filterAll}
           </FilterPill>
           {muscles.slice(0, 8).map((m) => (
             <FilterPill key={m} active={muscle === m} onClick={() => setMuscle(m)}>
@@ -127,8 +129,8 @@ function ExercisesTab() {
         <Plate style={{ padding: 48, textAlign: "center" }}>
           <p style={{ fontFamily: T.mono, fontSize: 12, color: T.fg3 }}>
             {exerciseCatalog.length === 0
-              ? "Catálogo vazio. Aguardando exercícios aprovados."
-              : "Nenhum exercício encontrado com esses filtros."}
+              ? t.bancoScreen.emptyCatalog
+              : t.bancoScreen.emptyFiltered}
           </p>
         </Plate>
       ) : (
@@ -173,7 +175,7 @@ function ExercisesTab() {
                     target="_blank"
                     rel="noopener noreferrer"
                     style={{ color: T.cyan, display: "flex" }}
-                    title="Ver vídeo"
+                    title={t.bancoScreen.videoTitle}
                   >
                     <FileVideo className="h-3.5 w-3.5" />
                   </a>
@@ -203,7 +205,7 @@ function ExercisesTab() {
           letterSpacing: "0.10em",
         }}
       >
-        {list.length} de {exerciseCatalog.length} exercícios aprovados
+        {t.bancoScreen.countCopy(list.length, exerciseCatalog.length)}
       </p>
     </>
   )
@@ -212,11 +214,12 @@ function ExercisesTab() {
 // ─── Alimentos placeholder ───────────────────────────────────────────────────
 
 function FoodsPlaceholder() {
+  const { t } = usePanelI18n()
   return (
     <Plate dp style={{ padding: "32px 24px", textAlign: "center" }}>
       <UtensilsCrossed className="mx-auto mb-4 h-8 w-8" style={{ color: T.warn }} />
       <Kicker cyan style={{ display: "block", marginBottom: 12 }}>
-        ENDPOINT PENDENTE
+        {t.bancoScreen.foodsKicker}
       </Kicker>
       <p
         style={{
@@ -227,7 +230,7 @@ function FoodsPlaceholder() {
           marginBottom: 8,
         }}
       >
-        Catálogo de alimentos pendente de backend.
+        {t.bancoScreen.foodsTitle}
       </p>
       <p
         style={{
@@ -239,8 +242,7 @@ function FoodsPlaceholder() {
           lineHeight: 1.6,
         }}
       >
-        Modelo de alimento (idiomas PT/IT/EN/ES, país, macros, alérgenos, restrições) + CRUD do
-        catálogo entram no PR <strong style={{ color: T.cyan }}>#4</strong>.
+        {t.bancoScreen.foodsCopy}
       </p>
     </Plate>
   )

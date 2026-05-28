@@ -351,6 +351,13 @@ type Dict = {
     sourceAdminPrefix: string
     targetLabel: string
     metadataLabel: string
+    placeholderSearch: string
+    filterAll: string
+    bannerLocalFilter: string
+    bannerLocalFilterCopy: string
+    emptyRecords: string
+    actionFallback: string
+    paginationCopy: (shown: number, total: number) => string
   }
   aprovacoesScreen: {
     panelTitle: string
@@ -365,6 +372,32 @@ type Dict = {
     submittedAt: string
     duration: string
     sizeMb: string
+    bannerTitle: string
+    bannerCopy: string
+    rulesTitle: string
+    rule1: string
+    rule2: string
+    rule3: string
+    rule4: string
+    riskTitle: string
+    riskCopy: string
+    tabExercises: string
+    tabFoods: string
+    emptyExercises: string
+    pillPending: string
+    pillVideoOk: string
+    pillVideoInvalid: string
+    miniDuration: string
+    miniSize: string
+    miniResolution: string
+    miniFps: string
+    sentBy: (user: string, role: string, date: string) => string
+    blockReasonNotValidated: string
+    blockReasonTooLong: string
+    rejectPrompt: string
+    foodsKicker: string
+    foodsTitle: string
+    foodsCopy: string
   }
   bancoScreen: {
     panelTitle: string
@@ -373,6 +406,18 @@ type Dict = {
     countLabel: string
     actionEdit: string
     actionReview: string
+    bannerTitle: string
+    bannerCopy: string
+    tabExercises: string
+    tabFoods: string
+    filterAll: string
+    emptyCatalog: string
+    emptyFiltered: string
+    videoTitle: string
+    countCopy: (shown: number, total: number) => string
+    foodsKicker: string
+    foodsTitle: string
+    foodsCopy: string
   }
   tabDieta: {
     panelOfficial: string
@@ -811,17 +856,45 @@ const PT: Dict = {
     sourceCoachLabel: "coach", sourceCoachPrefix: "Coach ·",
     sourceAdminLabel: "admin", sourceAdminPrefix: "Admin ·",
     targetLabel: "alvo:", metadataLabel: "meta:",
+    placeholderSearch: "Buscar ação, ator ou alvo…",
+    filterAll: "Todas",
+    bannerLocalFilter: "FILTRO LOCAL",
+    bannerLocalFilterCopy: "backend ainda só filtra por targetUserId. Filtros server-side por data, ação e severidade chegam no PR #5.",
+    emptyRecords: "Sem registros.",
+    actionFallback: "ação",
+    paginationCopy: (shown: number, total: number) => `mostrando primeiros ${shown} de ${total} registros`,
   },
   aprovacoesScreen: {
     panelTitle: "Aprovações de exercício",
     empty: "Sem aprovações pendentes.",
-    btnApprove: "Aprovar", btnReject: "Recusar",
+    btnApprove: "Aprovar", btnReject: "Rejeitar",
     btnSeeVideo: "Ver vídeo",
     confirmReject: "Recusar este exercício?",
     toastApproved: "Exercício aprovado.",
     toastRejected: "Exercício recusado.",
     requestedBy: "Solicitado por:", submittedAt: "Enviado em:",
     duration: "Duração:", sizeMb: "Tamanho:",
+    bannerTitle: "Apenas admin / super admin aprova. Coaches só sugerem.",
+    bannerCopy: "Itens aprovados entram no Banco do GUTO e podem ser usados em treinos / dietas futuros.",
+    rulesTitle: "REGRAS DO VÍDEO",
+    rule1: "✓ Vídeo obrigatório",
+    rule2: "✓ Formato MP4 recomendado",
+    rule3: "✓ Duração máxima 15 segundos",
+    rule4: "✓ Aprovação obrigatória de admin / super_admin",
+    riskTitle: "RISCO PENDENTE",
+    riskCopy: "backend hoje aceita até 30s (MAX_DURATION_SECONDS=30). CEREBROGUTO precisa apertar o limite para 15s antes da próxima safra de exercícios entrar.",
+    tabExercises: "Exercícios pendentes", tabFoods: "Alimentos pendentes",
+    emptyExercises: "Tudo em ordem. Sem exercícios aguardando aprovação.",
+    pillPending: "PENDENTE", pillVideoOk: "VÍDEO OK", pillVideoInvalid: "VÍDEO INVÁLIDO",
+    miniDuration: "DURAÇÃO", miniSize: "TAMANHO",
+    miniResolution: "RESOLUÇÃO", miniFps: "FPS",
+    sentBy: (user, role, date) => `enviado por ${user} · ${role} · ${date}`,
+    blockReasonNotValidated: "Vídeo precisa passar validação técnica do backend",
+    blockReasonTooLong: "Vídeo acima de 15 segundos — limite atual da Sala de Controle",
+    rejectPrompt: "Motivo da rejeição (opcional):",
+    foodsKicker: "ENDPOINT PENDENTE",
+    foodsTitle: "Catálogo de alimentos ainda não existe no backend.",
+    foodsCopy: "Aprovações de alimentos (com idiomas PT/IT/EN/ES, país, macros, alérgenos e restrições) chegam no PR #4, junto com o modelo de alimento, CRUD do catálogo e fluxo de sugestão por coach. Por enquanto, esta aba fica visível só para mostrar que o lugar dela existe.",
   },
   bancoScreen: {
     panelTitle: "Banco GUTO",
@@ -829,6 +902,17 @@ const PT: Dict = {
     placeholderSearch: "Buscar exercício…",
     countLabel: "exercícios no catálogo",
     actionEdit: "Editar", actionReview: "Revisar",
+    bannerTitle: "Catálogo aprovado · usado pelo GUTO em treinos e dietas.",
+    bannerCopy: "Aprovações pendentes ficam na tela Aprovações. Aqui é só leitura por enquanto — edição/desativação vem em PR posterior.",
+    tabExercises: "Exercícios", tabFoods: "Alimentos",
+    filterAll: "Todos",
+    emptyCatalog: "Catálogo vazio. Aguardando exercícios aprovados.",
+    emptyFiltered: "Nenhum exercício encontrado com esses filtros.",
+    videoTitle: "Ver vídeo",
+    countCopy: (shown: number, total: number) => `${shown} de ${total} exercícios aprovados`,
+    foodsKicker: "ENDPOINT PENDENTE",
+    foodsTitle: "Catálogo de alimentos pendente de backend.",
+    foodsCopy: "Modelo de alimento (idiomas PT/IT/EN/ES, país, macros, alérgenos, restrições) + CRUD do catálogo entram no PR #4.",
   },
   tabDieta: {
     panelOfficial: "Dieta oficial",
@@ -1215,6 +1299,13 @@ const EN: Dict = {
     sourceCoachLabel: "coach", sourceCoachPrefix: "Coach ·",
     sourceAdminLabel: "admin", sourceAdminPrefix: "Admin ·",
     targetLabel: "target:", metadataLabel: "meta:",
+    placeholderSearch: "Search action, actor or target…",
+    filterAll: "All",
+    bannerLocalFilter: "LOCAL FILTER",
+    bannerLocalFilterCopy: "backend still filters by targetUserId only. Server-side filters by date, action and severity coming in PR #5.",
+    emptyRecords: "No records.",
+    actionFallback: "action",
+    paginationCopy: (shown: number, total: number) => `showing first ${shown} of ${total} records`,
   },
   aprovacoesScreen: {
     panelTitle: "Exercise approvals",
@@ -1226,6 +1317,27 @@ const EN: Dict = {
     toastRejected: "Exercise rejected.",
     requestedBy: "Requested by:", submittedAt: "Submitted at:",
     duration: "Duration:", sizeMb: "Size:",
+    bannerTitle: "Only admin / super admin can approve. Coaches only suggest.",
+    bannerCopy: "Approved items enter the GUTO Bank and can be used in future workouts / diets.",
+    rulesTitle: "VIDEO RULES",
+    rule1: "✓ Video required",
+    rule2: "✓ MP4 format recommended",
+    rule3: "✓ Max duration 15 seconds",
+    rule4: "✓ Admin / super_admin approval required",
+    riskTitle: "PENDING RISK",
+    riskCopy: "backend currently accepts up to 30s (MAX_DURATION_SECONDS=30). CEREBROGUTO needs to tighten the limit to 15s before the next batch of exercises comes in.",
+    tabExercises: "Pending exercises", tabFoods: "Pending foods",
+    emptyExercises: "All clear. No exercises awaiting approval.",
+    pillPending: "PENDING", pillVideoOk: "VIDEO OK", pillVideoInvalid: "VIDEO INVALID",
+    miniDuration: "DURATION", miniSize: "SIZE",
+    miniResolution: "RESOLUTION", miniFps: "FPS",
+    sentBy: (user, role, date) => `sent by ${user} · ${role} · ${date}`,
+    blockReasonNotValidated: "Video needs to pass backend technical validation",
+    blockReasonTooLong: "Video over 15 seconds — current Control Room limit",
+    rejectPrompt: "Rejection reason (optional):",
+    foodsKicker: "ENDPOINT PENDING",
+    foodsTitle: "Food catalog doesn't exist in backend yet.",
+    foodsCopy: "Food approvals (with PT/IT/EN/ES languages, country, macros, allergens and restrictions) coming in PR #4, along with the food model, catalog CRUD and coach suggestion flow. For now, this tab is visible just to show its place exists.",
   },
   bancoScreen: {
     panelTitle: "GUTO Bank",
@@ -1233,6 +1345,17 @@ const EN: Dict = {
     placeholderSearch: "Search exercise…",
     countLabel: "exercises in catalog",
     actionEdit: "Edit", actionReview: "Review",
+    bannerTitle: "Approved catalog · used by GUTO in workouts and diets.",
+    bannerCopy: "Pending approvals are in the Approvals screen. Read-only here for now — edit/disable comes in a later PR.",
+    tabExercises: "Exercises", tabFoods: "Foods",
+    filterAll: "All",
+    emptyCatalog: "Catalog empty. Waiting for approved exercises.",
+    emptyFiltered: "No exercise matches these filters.",
+    videoTitle: "View video",
+    countCopy: (shown: number, total: number) => `${shown} of ${total} approved exercises`,
+    foodsKicker: "ENDPOINT PENDING",
+    foodsTitle: "Food catalog pending backend.",
+    foodsCopy: "Food model (PT/IT/EN/ES languages, country, macros, allergens, restrictions) + catalog CRUD coming in PR #4.",
   },
   tabDieta: {
     panelOfficial: "Official diet",
@@ -1619,6 +1742,13 @@ const IT: Dict = {
     sourceCoachLabel: "coach", sourceCoachPrefix: "Coach ·",
     sourceAdminLabel: "admin", sourceAdminPrefix: "Admin ·",
     targetLabel: "target:", metadataLabel: "meta:",
+    placeholderSearch: "Cerca azione, autore o target…",
+    filterAll: "Tutte",
+    bannerLocalFilter: "FILTRO LOCALE",
+    bannerLocalFilterCopy: "il backend filtra ancora solo per targetUserId. Filtri server-side per data, azione e severità arrivano nel PR #5.",
+    emptyRecords: "Nessun record.",
+    actionFallback: "azione",
+    paginationCopy: (shown: number, total: number) => `mostrando primi ${shown} di ${total} record`,
   },
   aprovacoesScreen: {
     panelTitle: "Approvazioni esercizi",
@@ -1630,6 +1760,27 @@ const IT: Dict = {
     toastRejected: "Esercizio rifiutato.",
     requestedBy: "Richiesto da:", submittedAt: "Inviato il:",
     duration: "Durata:", sizeMb: "Dimensione:",
+    bannerTitle: "Solo admin / super admin approva. I coach solo suggeriscono.",
+    bannerCopy: "Gli elementi approvati entrano nella Banca del GUTO e possono essere usati in allenamenti / diete futuri.",
+    rulesTitle: "REGOLE DEL VIDEO",
+    rule1: "✓ Video obbligatorio",
+    rule2: "✓ Formato MP4 raccomandato",
+    rule3: "✓ Durata massima 15 secondi",
+    rule4: "✓ Approvazione obbligatoria di admin / super_admin",
+    riskTitle: "RISCHIO IN SOSPESO",
+    riskCopy: "il backend oggi accetta fino a 30s (MAX_DURATION_SECONDS=30). CEREBROGUTO deve stringere il limite a 15s prima che entri la prossima ondata di esercizi.",
+    tabExercises: "Esercizi in sospeso", tabFoods: "Alimenti in sospeso",
+    emptyExercises: "Tutto in ordine. Nessun esercizio in attesa di approvazione.",
+    pillPending: "IN SOSPESO", pillVideoOk: "VIDEO OK", pillVideoInvalid: "VIDEO NON VALIDO",
+    miniDuration: "DURATA", miniSize: "DIMENSIONE",
+    miniResolution: "RISOLUZIONE", miniFps: "FPS",
+    sentBy: (user, role, date) => `inviato da ${user} · ${role} · ${date}`,
+    blockReasonNotValidated: "Il video deve passare la validazione tecnica del backend",
+    blockReasonTooLong: "Video oltre 15 secondi — limite attuale della Sala di Controllo",
+    rejectPrompt: "Motivo del rifiuto (opzionale):",
+    foodsKicker: "ENDPOINT IN SOSPESO",
+    foodsTitle: "Il catalogo di alimenti non esiste ancora nel backend.",
+    foodsCopy: "Le approvazioni di alimenti (con lingue PT/IT/EN/ES, paese, macros, allergeni e restrizioni) arrivano nel PR #4, insieme al modello di alimento, CRUD del catalogo e flusso di suggerimento per coach. Per ora, questa scheda è visibile solo per mostrare che esiste il suo posto.",
   },
   bancoScreen: {
     panelTitle: "Banca GUTO",
@@ -1637,6 +1788,17 @@ const IT: Dict = {
     placeholderSearch: "Cerca esercizio…",
     countLabel: "esercizi nel catalogo",
     actionEdit: "Modifica", actionReview: "Rivedi",
+    bannerTitle: "Catalogo approvato · usato dal GUTO in allenamenti e diete.",
+    bannerCopy: "Le approvazioni in sospeso sono nella schermata Approvazioni. Qui è solo lettura per ora — modifica/disattivazione arriva in un PR successivo.",
+    tabExercises: "Esercizi", tabFoods: "Alimenti",
+    filterAll: "Tutti",
+    emptyCatalog: "Catalogo vuoto. In attesa di esercizi approvati.",
+    emptyFiltered: "Nessun esercizio trovato con questi filtri.",
+    videoTitle: "Vedi video",
+    countCopy: (shown: number, total: number) => `${shown} di ${total} esercizi approvati`,
+    foodsKicker: "ENDPOINT IN SOSPESO",
+    foodsTitle: "Catalogo di alimenti in attesa del backend.",
+    foodsCopy: "Modello di alimento (lingue PT/IT/EN/ES, paese, macros, allergeni, restrizioni) + CRUD del catalogo arrivano nel PR #4.",
   },
   tabDieta: {
     panelOfficial: "Dieta ufficiale",
