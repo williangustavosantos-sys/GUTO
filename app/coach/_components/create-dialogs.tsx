@@ -16,6 +16,7 @@ import { Btn, CtrlField, Pill, TextInput, SelectInput } from "./controls"
 import { BIOLOGICAL_SEX_LABELS } from "@/lib/format-codes"
 import { formatHuman, type TeamDraft } from "./utils"
 import { blockCreateStudent, coachesForTeam, studentRequiresCoach } from "@/lib/panel-rules"
+import { usePanelI18n } from "@/lib/panel-i18n"
 
 const dialogClass =
   "p-0 max-w-md gap-0 overflow-hidden border bg-transparent text-slate-900"
@@ -66,6 +67,8 @@ export function CreateStudentDialog() {
     studentLimitReached,
     doCreateStudent,
   } = useCockpit()
+  const { t } = usePanelI18n()
+  const ts = t.dialogs.createStudent
 
   const isTeamLocked =
     isSuperAdmin && !!studentDraft.teamId && teams.some((t) => t.id === studentDraft.teamId)
@@ -96,7 +99,7 @@ export function CreateStudentDialog() {
     <AlertDialog open={showCreateStudent} onOpenChange={setShowCreateStudent}>
       <AlertDialogContent className={dialogClass} style={dialogStyle}>
         <AlertDialogHeader style={headerStyle}>
-          <Pill tone="cyan">CRIAR ALUNO</Pill>
+          <Pill tone="cyan">{ts.badge}</Pill>
           <AlertDialogTitle
             style={{
               fontFamily: T.mono,
@@ -106,7 +109,7 @@ export function CreateStudentDialog() {
               marginTop: 8,
             }}
           >
-            Novo aluno
+            {ts.title}
           </AlertDialogTitle>
           <AlertDialogDescription
             style={{
@@ -118,38 +121,38 @@ export function CreateStudentDialog() {
               marginTop: 4,
             }}
           >
-            Cria acesso real no backend. Sem senha, o backend gera convite.
+            {ts.description}
           </AlertDialogDescription>
         </AlertDialogHeader>
 
         <div style={bodyStyle}>
-          <CtrlField label="Nome">
+          <CtrlField label={ts.fieldName}>
             <TextInput value={studentDraft.name} onChange={(name) => setStudentDraft({ ...studentDraft, name })} />
           </CtrlField>
-          <CtrlField label="E-mail *">
+          <CtrlField label={ts.fieldEmail}>
             <TextInput
               value={studentDraft.email}
               onChange={(email) => setStudentDraft({ ...studentDraft, email })}
             />
           </CtrlField>
-          <CtrlField label="Telefone (opcional)">
+          <CtrlField label={ts.fieldPhone}>
             <TextInput
               value={studentDraft.phone}
               onChange={(phone) => setStudentDraft({ ...studentDraft, phone })}
             />
           </CtrlField>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <CtrlField label="Sexo biológico">
+            <CtrlField label={ts.fieldSex}>
               <SelectInput value={studentDraft.sex} onChange={(v) => setStudentDraft({ ...studentDraft, sex: v })}>
                 <option value="" style={{ background: T.ink }}>—</option>
-                {Object.entries(BIOLOGICAL_SEX_LABELS).map(([code, label]) => (
+                {Object.entries(t.tabCalibragem.biologicalSex).map(([code, label]) => (
                   <option key={code} value={code} style={{ background: T.ink }}>
                     {label}
                   </option>
                 ))}
               </SelectInput>
             </CtrlField>
-            <CtrlField label="Idade">
+            <CtrlField label={ts.fieldAge}>
               <TextInput
                 type="number"
                 value={studentDraft.age}
@@ -157,7 +160,7 @@ export function CreateStudentDialog() {
               />
             </CtrlField>
           </div>
-          <CtrlField label="Senha inicial (opcional)">
+          <CtrlField label={ts.fieldPassword}>
             <TextInput
               type="password"
               value={studentDraft.password}
@@ -166,7 +169,7 @@ export function CreateStudentDialog() {
           </CtrlField>
 
           {isSuperAdmin && (
-            <CtrlField label="Empresa *">
+            <CtrlField label={ts.fieldCompany}>
               {isTeamLocked && lockedTeam ? (
                 <div
                   style={{
@@ -203,7 +206,7 @@ export function CreateStudentDialog() {
           )}
 
           {shouldShowCoachSelector && (
-            <CtrlField label={requiresCoach ? "Coach responsável *" : "Coach responsável"}>
+            <CtrlField label={ts.fieldCoach}>
               {noCoachInTeam ? (
                 <p
                   style={{
@@ -215,7 +218,7 @@ export function CreateStudentDialog() {
                     lineHeight: 1.6,
                   }}
                 >
-                  ⚠ Nenhum coach nesta empresa. Crie um coach antes de adicionar alunos.
+                  ⚠ {ts.noCoachInTeamHint}
                 </p>
               ) : (
                 <SelectInput
@@ -223,7 +226,7 @@ export function CreateStudentDialog() {
                   onChange={(v) => setStudentDraft({ ...studentDraft, coachId: v })}
                 >
                   <option value="" style={{ background: T.ink }}>
-                    {requiresCoach ? "Selecione…" : "—"}
+                    {requiresCoach ? ts.selectCoach : "—"}
                   </option>
                   {availableCoaches.map((c) => (
                     <option key={c.userId} value={c.userId} style={{ background: T.ink }}>
@@ -268,7 +271,7 @@ export function CreateStudentDialog() {
               textTransform: "uppercase",
             }}
           >
-            Cancelar
+            {ts.cancel}
           </AlertDialogCancel>
           <Btn
             cyan
@@ -276,7 +279,7 @@ export function CreateStudentDialog() {
             disabled={acting || studentLimitReached || createBlock !== null}
             onClick={() => void doCreateStudent(() => {})}
           >
-            Criar aluno
+            {acting ? ts.creating : ts.create}
           </Btn>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -299,6 +302,8 @@ export function CreateCoachDialog() {
     doCreateCoach,
     setCoaches,
   } = useCockpit()
+  const { t } = usePanelI18n()
+  const tc = t.dialogs.createCoach
 
   const isTeamLocked = isSuperAdmin && !!coachDraft.teamId && teams.some((t) => t.id === coachDraft.teamId)
   const lockedTeam = teams.find((t) => t.id === coachDraft.teamId)
@@ -307,11 +312,11 @@ export function CreateCoachDialog() {
     <AlertDialog open={showCreateCoach} onOpenChange={setShowCreateCoach}>
       <AlertDialogContent className={dialogClass} style={dialogStyle}>
         <AlertDialogHeader style={headerStyle}>
-          <Pill tone="cyan">CRIAR COACH</Pill>
+          <Pill tone="cyan">{tc.badge}</Pill>
           <AlertDialogTitle
             style={{ fontFamily: T.mono, fontSize: 18, fontWeight: 900, color: T.fg, marginTop: 8 }}
           >
-            Novo coach
+            {tc.title}
           </AlertDialogTitle>
           <AlertDialogDescription
             style={{
@@ -323,18 +328,18 @@ export function CreateCoachDialog() {
               marginTop: 4,
             }}
           >
-            Coach pode editar treino/dieta dos alunos atribuídos. Não aprova catálogo.
+            {tc.description}
           </AlertDialogDescription>
         </AlertDialogHeader>
 
         <div style={bodyStyle}>
-          <CtrlField label="Nome">
+          <CtrlField label={tc.fieldName}>
             <TextInput value={coachDraft.name} onChange={(name) => setCoachDraft({ ...coachDraft, name })} />
           </CtrlField>
-          <CtrlField label="E-mail">
+          <CtrlField label={tc.fieldEmail}>
             <TextInput value={coachDraft.email} onChange={(email) => setCoachDraft({ ...coachDraft, email })} />
           </CtrlField>
-          <CtrlField label="Senha (opcional)">
+          <CtrlField label={tc.fieldPassword}>
             <TextInput
               type="password"
               value={coachDraft.password}
@@ -343,7 +348,7 @@ export function CreateCoachDialog() {
           </CtrlField>
 
           {isSuperAdmin && (
-            <CtrlField label="Empresa *">
+            <CtrlField label={tc.fieldCompany}>
               {isTeamLocked && lockedTeam ? (
                 <div
                   style={{
@@ -364,11 +369,11 @@ export function CreateCoachDialog() {
               ) : (
                 <SelectInput value={coachDraft.teamId} onChange={(v) => setCoachDraft({ ...coachDraft, teamId: v })}>
                   <option value="" style={{ background: T.ink }}>
-                    Selecione…
+                    {tc.selectCompany}
                   </option>
-                  {teams.map((t) => (
-                    <option key={t.id} value={t.id} style={{ background: T.ink }}>
-                      {t.name}
+                  {teams.map((team) => (
+                    <option key={team.id} value={team.id} style={{ background: T.ink }}>
+                      {team.name}
                     </option>
                   ))}
                 </SelectInput>
@@ -399,7 +404,7 @@ export function CreateCoachDialog() {
               textTransform: "uppercase",
             }}
           >
-            Cancelar
+            {tc.cancel}
           </AlertDialogCancel>
           <Btn
             cyan
@@ -413,7 +418,7 @@ export function CreateCoachDialog() {
             }
             onClick={() => void doCreateCoach(setCoaches)}
           >
-            Criar coach
+            {acting ? tc.creating : tc.create}
           </Btn>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -426,16 +431,18 @@ export function CreateCoachDialog() {
 export function CreateTeamDialog() {
   const { showCreateTeam, setShowCreateTeam, teamDraft, setTeamDraft, acting, doCreateTeam, setTeams } =
     useCockpit()
+  const { t } = usePanelI18n()
+  const te = t.dialogs.createTeam
 
   return (
     <AlertDialog open={showCreateTeam} onOpenChange={setShowCreateTeam}>
       <AlertDialogContent className={dialogClass} style={dialogStyle}>
         <AlertDialogHeader style={headerStyle}>
-          <Pill tone="cyan">CRIAR EMPRESA</Pill>
+          <Pill tone="cyan">{te.badge}</Pill>
           <AlertDialogTitle
             style={{ fontFamily: T.mono, fontSize: 18, fontWeight: 900, color: T.fg, marginTop: 8 }}
           >
-            Nova empresa
+            {te.title}
           </AlertDialogTitle>
           <AlertDialogDescription
             style={{
@@ -447,50 +454,50 @@ export function CreateTeamDialog() {
               marginTop: 4,
             }}
           >
-            Cria um cliente B2B (chamado <code>Team</code> no backend). Apenas super admin.
+            {te.description}
           </AlertDialogDescription>
         </AlertDialogHeader>
 
         <div style={bodyStyle}>
-          <CtrlField label="Nome da empresa">
+          <CtrlField label={te.fieldName}>
             <TextInput value={teamDraft.name} onChange={(name) => setTeamDraft({ ...teamDraft, name })} />
           </CtrlField>
 
-          <CtrlField label="E-mail de contato *">
+          <CtrlField label={te.fieldEmail}>
             <TextInput value={teamDraft.email} onChange={(email) => setTeamDraft({ ...teamDraft, email })} />
           </CtrlField>
 
-          <CtrlField label="Telefone (opcional)">
+          <CtrlField label={te.fieldPhone}>
             <TextInput value={teamDraft.phone} onChange={(phone) => setTeamDraft({ ...teamDraft, phone })} />
           </CtrlField>
 
-          <CtrlField label="Endereço (opcional)">
+          <CtrlField label={te.fieldAddress}>
             <TextInput value={teamDraft.addressLine} onChange={(addressLine) => setTeamDraft({ ...teamDraft, addressLine })} />
           </CtrlField>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <CtrlField label="Cidade">
+            <CtrlField label={te.fieldCity}>
               <TextInput value={teamDraft.city} onChange={(city) => setTeamDraft({ ...teamDraft, city })} />
             </CtrlField>
-            <CtrlField label="País">
+            <CtrlField label={te.fieldCountry}>
               <TextInput value={teamDraft.country} onChange={(country) => setTeamDraft({ ...teamDraft, country })} />
             </CtrlField>
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <CtrlField label="Plano">
+            <CtrlField label={te.fieldPlan}>
               <SelectInput
                 value={teamDraft.plan}
                 onChange={(v) => setTeamDraft({ ...teamDraft, plan: v as TeamDraft["plan"] })}
               >
                 {(["start", "pro", "elite", "custom"] as const).map((p) => (
                   <option key={p} value={p} style={{ background: T.surface }}>
-                    {formatHuman(p)}
+                    {p === "start" ? te.planStart : p === "pro" ? te.planPro : p === "elite" ? te.planElite : te.planCustom}
                   </option>
                 ))}
               </SelectInput>
             </CtrlField>
-            <CtrlField label="Status">
+            <CtrlField label={te.fieldStatus}>
               <SelectInput
                 value={teamDraft.status}
                 onChange={(v) => setTeamDraft({ ...teamDraft, status: v as TeamDraft["status"] })}
@@ -506,14 +513,14 @@ export function CreateTeamDialog() {
 
           {teamDraft.plan === "custom" && (
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <CtrlField label="Máx. alunos" hint="vazio = ilimitado">
+              <CtrlField label={te.fieldMaxStudents} hint="vazio = ilimitado">
                 <TextInput
                   type="number"
                   value={teamDraft.maxStudents}
                   onChange={(v) => setTeamDraft({ ...teamDraft, maxStudents: v })}
                 />
               </CtrlField>
-              <CtrlField label="Máx. coaches" hint="vazio = ilimitado">
+              <CtrlField label={te.fieldMaxCoaches} hint="vazio = ilimitado">
                 <TextInput
                   type="number"
                   value={teamDraft.maxCoaches}
@@ -540,7 +547,7 @@ export function CreateTeamDialog() {
               textTransform: "uppercase",
             }}
           >
-            Cancelar
+            {te.cancel}
           </AlertDialogCancel>
           <Btn
             cyan
@@ -549,7 +556,7 @@ export function CreateTeamDialog() {
             onClick={() => void doCreateTeam(setTeams)}
           >
             <Building2 className="h-3 w-3" />
-            Criar empresa
+            {acting ? te.creating : te.create}
           </Btn>
         </AlertDialogFooter>
       </AlertDialogContent>
