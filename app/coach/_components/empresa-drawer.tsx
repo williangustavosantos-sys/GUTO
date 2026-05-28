@@ -9,6 +9,7 @@ import { Plate, Pill, Btn, Kicker, CtrlDataRow, UsageBar, SectionTitle } from ".
 import type { EmpresaTab } from "./utils"
 import { coachLabel, relativeTime, studentRisk } from "./utils"
 import type { AdminCoach, AdminStudent, AdminTeam } from "@/lib/api/admin"
+import { usePanelI18n } from "@/lib/panel-i18n"
 
 const EMPRESA_TABS: { id: EmpresaTab; label: string; icon: React.ReactNode }[] = [
   { id: "resumo", label: "Resumo", icon: <Building2 className="h-3.5 w-3.5" /> },
@@ -69,6 +70,7 @@ export function EmpresaDrawer() {
 // ─── Header / Tab bar (light, handoff design) ────────────────────────────────
 
 function DrawerHeader({ empresa, onClose }: { empresa: AdminTeam; onClose: () => void }) {
+  const { t } = usePanelI18n()
   return (
     <header
       style={{
@@ -124,7 +126,7 @@ function DrawerHeader({ empresa, onClose }: { empresa: AdminTeam; onClose: () =>
         <Pill tone="neutral">{planLabel(empresa.plan)}</Pill>
         <button
           onClick={onClose}
-          aria-label="Fechar"
+          aria-label={t.empresaDrawer.close}
           style={{
             width: 32,
             height: 32,
@@ -152,6 +154,14 @@ function DrawerTabBar({
   activeTab: EmpresaTab
   onChange: (t: EmpresaTab) => void
 }) {
+  const { t } = usePanelI18n()
+  const tabLabel: Record<EmpresaTab, string> = {
+    resumo: t.empresaDrawer.tabResumo,
+    coaches: t.empresaDrawer.tabCoaches,
+    alunos: t.empresaDrawer.tabAlunos,
+    plano: t.empresaDrawer.tabPlano,
+    logs: t.empresaDrawer.tabLogs,
+  }
   return (
     <div
       style={{
@@ -188,7 +198,7 @@ function DrawerTabBar({
             }}
           >
             {tab.icon}
-            {tab.label}
+            {tabLabel[tab.id]}
           </button>
         )
       })}
@@ -200,6 +210,7 @@ function DrawerTabBar({
 
 function TabResumo({ empresa }: { empresa: AdminTeam }) {
   const { coaches, students, empresaSummary, empresaSummaryError } = useCockpit()
+  const { t, lang } = usePanelI18n()
   const empresaCoaches = useMemo(() => coachesOfEmpresa(empresa, coaches), [empresa, coaches])
   const empresaStudents = useMemo(() => studentsOfEmpresa(empresa, students), [empresa, students])
   const criticos = useMemo(
@@ -219,7 +230,7 @@ function TabResumo({ empresa }: { empresa: AdminTeam }) {
   return (
     <div style={{ display: "grid", gap: 16 }}>
       <Plate style={{ padding: 20 }}>
-        <SectionTitle>USO ATUAL</SectionTitle>
+        <SectionTitle>{t.empresaDrawer.sectionUsage}</SectionTitle>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
           <UsageBar value={usage.students} max={limits.maxStudents} />
           <UsageBar value={usage.coaches} max={limits.maxCoaches} />
@@ -240,21 +251,21 @@ function TabResumo({ empresa }: { empresa: AdminTeam }) {
       </Plate>
 
       <Plate style={{ padding: 20 }}>
-        <SectionTitle>STATUS</SectionTitle>
-        <CtrlDataRow label="Plano" value={planLabel(empresa.plan)} />
-        <CtrlDataRow label="Status" value={teamStatusLabel(empresa.status)} />
-        <CtrlDataRow label="Coaches" value={String(empresaCoaches.length)} />
-        <CtrlDataRow label="Alunos ativos" value={String(empresaStudents.filter((s) => s.active && !s.archived).length)} />
-        <CtrlDataRow label="Alunos críticos" value={String(criticos)} />
-        <CtrlDataRow label="Criada em" value={empresa.createdAt ? new Date(empresa.createdAt).toLocaleDateString("pt-BR") : "—"} />
+        <SectionTitle>{t.empresaDrawer.sectionStatus}</SectionTitle>
+        <CtrlDataRow label={t.empresaDrawer.rowPlan} value={planLabel(empresa.plan)} />
+        <CtrlDataRow label={t.empresaDrawer.rowStatus} value={teamStatusLabel(empresa.status)} />
+        <CtrlDataRow label={t.empresaDrawer.rowCoaches} value={String(empresaCoaches.length)} />
+        <CtrlDataRow label={t.empresaDrawer.rowActiveStudents} value={String(empresaStudents.filter((s) => s.active && !s.archived).length)} />
+        <CtrlDataRow label={t.empresaDrawer.rowCriticalStudents} value={String(criticos)} />
+        <CtrlDataRow label={t.empresaDrawer.rowCreatedAt} value={empresa.createdAt ? new Date(empresa.createdAt).toLocaleDateString(lang) : "—"} />
       </Plate>
 
       <Plate style={{ padding: 20 }}>
-        <SectionTitle>CONTATO</SectionTitle>
-        <CtrlDataRow label="E-mail" value={empresa.email || "—"} />
-        <CtrlDataRow label="Telefone" value={empresa.phone || "—"} />
-        <CtrlDataRow label="Endereço" value={empresa.addressLine || "—"} />
-        <CtrlDataRow label="Cidade / País" value={[empresa.city, empresa.country].filter(Boolean).join(" · ") || "—"} />
+        <SectionTitle>{t.empresaDrawer.sectionContact}</SectionTitle>
+        <CtrlDataRow label={t.empresaDrawer.rowEmail} value={empresa.email || "—"} />
+        <CtrlDataRow label={t.empresaDrawer.rowPhone} value={empresa.phone || "—"} />
+        <CtrlDataRow label={t.empresaDrawer.rowAddress} value={empresa.addressLine || "—"} />
+        <CtrlDataRow label={t.empresaDrawer.rowCityCountry} value={[empresa.city, empresa.country].filter(Boolean).join(" · ") || "—"} />
       </Plate>
     </div>
   )
@@ -265,6 +276,7 @@ function TabResumo({ empresa }: { empresa: AdminTeam }) {
 function TabCoaches({ empresa }: { empresa: AdminTeam }) {
   const { coaches, students, openCoach, coachLimitReached, setCoachDraft, setSelectedTeamId, setShowCreateCoach } =
     useCockpit()
+  const { t } = usePanelI18n()
   const empresaCoaches = useMemo(() => coachesOfEmpresa(empresa, coaches), [empresa, coaches])
 
   // Cria coach JÁ vinculado a esta empresa (contexto do drawer).
@@ -277,7 +289,7 @@ function TabCoaches({ empresa }: { empresa: AdminTeam }) {
   const addButton = (
     <Btn cyan sm disabled={coachLimitReached} onClick={openCreateCoach}>
       <Plus className="h-3 w-3" />
-      Coach
+      {t.empresaDrawer.tabCoaches}
     </Btn>
   )
 
@@ -350,6 +362,7 @@ function TabAlunos({ empresa }: { empresa: AdminTeam }) {
     setShowCreateStudent,
     studentLimitReached,
   } = useCockpit()
+  const { t } = usePanelI18n()
   const empresaStudents = useMemo(() => studentsOfEmpresa(empresa, students), [empresa, students])
 
   // Cria aluno JÁ vinculado a esta empresa (contexto do drawer). O coach é
@@ -366,7 +379,7 @@ function TabAlunos({ empresa }: { empresa: AdminTeam }) {
   const addButton = (
     <Btn cyan sm disabled={studentLimitReached} onClick={openCreateStudent}>
       <Plus className="h-3 w-3" />
-      Aluno
+      {t.empresaDrawer.tabAlunos}
     </Btn>
   )
 
@@ -459,17 +472,18 @@ function TabAlunos({ empresa }: { empresa: AdminTeam }) {
 
 function TabPlano({ empresa }: { empresa: AdminTeam }) {
   const { isSuperAdmin, refreshEmpresa } = useCockpit()
+  const { t, lang } = usePanelI18n()
   const limits = empresa.customLimits ?? {}
 
   return (
     <div style={{ display: "grid", gap: 16 }}>
       <Plate style={{ padding: 20 }}>
-        <SectionTitle>DETALHES DO PLANO</SectionTitle>
-        <CtrlDataRow label="Plano" value={planLabel(empresa.plan)} />
-        <CtrlDataRow label="Status" value={teamStatusLabel(empresa.status)} />
-        <CtrlDataRow label="Limite alunos" value={limits.maxStudents ?? "ilimitado"} />
-        <CtrlDataRow label="Limite coaches" value={limits.maxCoaches ?? "ilimitado"} />
-        <CtrlDataRow label="Atualizada em" value={empresa.updatedAt ? new Date(empresa.updatedAt).toLocaleString("pt-BR") : "—"} />
+        <SectionTitle>{t.empresaDrawer.sectionPlanDetails}</SectionTitle>
+        <CtrlDataRow label={t.empresaDrawer.rowPlan} value={planLabel(empresa.plan)} />
+        <CtrlDataRow label={t.empresaDrawer.rowStatus} value={teamStatusLabel(empresa.status)} />
+        <CtrlDataRow label={t.empresaDrawer.rowStudentLimit} value={limits.maxStudents ?? t.empresaDrawer.unlimited} />
+        <CtrlDataRow label={t.empresaDrawer.rowCoachLimit} value={limits.maxCoaches ?? t.empresaDrawer.unlimited} />
+        <CtrlDataRow label={t.empresaDrawer.rowUpdatedAt} value={empresa.updatedAt ? new Date(empresa.updatedAt).toLocaleString(lang) : "—"} />
       </Plate>
 
       {isSuperAdmin && (
