@@ -6,6 +6,7 @@ import { useCockpit } from "../cockpit-context"
 import { T } from "../control-tokens"
 import { Plate, Pill, Btn, Kicker, FilterPill } from "../controls"
 import type { AdminCustomExerciseRequest } from "@/lib/api/admin"
+import { usePanelI18n } from "@/lib/panel-i18n"
 
 type ApprTab = "ex" | "fd"
 
@@ -17,6 +18,7 @@ export function AprovacoesScreen() {
     rejectExercise,
     acting,
   } = useCockpit()
+  const { t } = usePanelI18n()
   const [tab, setTab] = useState<ApprTab>("ex")
 
   // fetch lazy só quando a tela entra em foco
@@ -50,10 +52,10 @@ export function AprovacoesScreen() {
                 marginBottom: 3,
               }}
             >
-              Apenas admin / super admin aprova. Coaches só sugerem.
+              {t.aprovacoesScreen.bannerTitle}
             </div>
             <div style={{ fontFamily: T.mono, fontSize: 10, color: T.fg3 }}>
-              Itens aprovados entram no Banco do GUTO e podem ser usados em treinos / dietas futuros.
+              {t.aprovacoesScreen.bannerCopy}
             </div>
           </div>
         </div>
@@ -79,7 +81,7 @@ export function AprovacoesScreen() {
               marginBottom: 8,
             }}
           >
-            REGRAS DO VÍDEO
+            {t.aprovacoesScreen.rulesTitle}
           </div>
           <ul
             style={{
@@ -94,10 +96,10 @@ export function AprovacoesScreen() {
               margin: 0,
             }}
           >
-            <li>✓ Vídeo <strong style={{ color: T.fg }}>obrigatório</strong></li>
-            <li>✓ Formato <strong style={{ color: T.fg }}>MP4</strong> recomendado</li>
-            <li>✓ Duração máxima <strong style={{ color: T.fg }}>15 segundos</strong></li>
-            <li>✓ Aprovação obrigatória de admin / super_admin</li>
+            <li>{t.aprovacoesScreen.rule1}</li>
+            <li>{t.aprovacoesScreen.rule2}</li>
+            <li>{t.aprovacoesScreen.rule3}</li>
+            <li>{t.aprovacoesScreen.rule4}</li>
           </ul>
           <p
             style={{
@@ -109,9 +111,7 @@ export function AprovacoesScreen() {
               lineHeight: 1.5,
             }}
           >
-            <strong style={{ letterSpacing: "0.20em" }}>RISCO PENDENTE</strong> · backend hoje aceita até 30s
-            (`MAX_DURATION_SECONDS=30` em <code>exercise-video-validation.ts</code>). CEREBROGUTO precisa apertar
-            o limite para 15s antes da próxima safra de exercícios entrar.
+            <strong style={{ letterSpacing: "0.20em" }}>{t.aprovacoesScreen.riskTitle}</strong> · {t.aprovacoesScreen.riskCopy}
           </p>
         </Plate>
       )}
@@ -119,10 +119,10 @@ export function AprovacoesScreen() {
       {/* Tabs */}
       <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
         <FilterPill active={tab === "ex"} onClick={() => setTab("ex")} count={pendingExercises.length}>
-          Exercícios pendentes
+          {t.aprovacoesScreen.tabExercises}
         </FilterPill>
         <FilterPill active={tab === "fd"} onClick={() => setTab("fd")} count={0}>
-          Alimentos pendentes
+          {t.aprovacoesScreen.tabFoods}
         </FilterPill>
       </div>
 
@@ -132,7 +132,7 @@ export function AprovacoesScreen() {
             <Plate style={{ padding: 32, textAlign: "center" }}>
               <Check className="mx-auto mb-3 h-6 w-6" style={{ color: T.ok }} />
               <p style={{ fontFamily: T.mono, fontSize: 12, color: T.fg2 }}>
-                Tudo em ordem. Sem exercícios aguardando aprovação.
+                {t.aprovacoesScreen.emptyExercises}
               </p>
             </Plate>
           ) : (
@@ -143,7 +143,7 @@ export function AprovacoesScreen() {
                 acting={acting}
                 onApprove={() => void approveExercise(item.id)}
                 onReject={() => {
-                  const reason = window.prompt("Motivo da rejeição (opcional):") ?? undefined
+                  const reason = window.prompt(t.aprovacoesScreen.rejectPrompt) ?? undefined
                   void rejectExercise(item.id, reason)
                 }}
               />
@@ -170,6 +170,7 @@ function ExerciseCard({
   onApprove: () => void
   onReject: () => void
 }) {
+  const { t, lang } = usePanelI18n()
   const v = item.videoMetadata
   const durationOk = v.durationSeconds <= 15
   const sizeMb = v.fileSizeBytes ? v.fileSizeBytes / 1024 / 1024 : 0
@@ -177,9 +178,9 @@ function ExerciseCard({
   const resolutionOk = v.height >= 720 || v.width >= 720
   const canApprove = item.videoValidated && durationOk
   const blockReason = !item.videoValidated
-    ? "Vídeo precisa passar validação técnica do backend"
+    ? t.aprovacoesScreen.blockReasonNotValidated
     : !durationOk
-      ? "Vídeo acima de 15 segundos — limite atual da Sala de Controle"
+      ? t.aprovacoesScreen.blockReasonTooLong
       : undefined
 
   return (
@@ -190,11 +191,11 @@ function ExerciseCard({
             <span style={{ fontFamily: T.mono, fontSize: 14, fontWeight: 900, color: T.fg }}>
               {item.canonicalNamePt}
             </span>
-            <Pill tone="warn">PENDENTE</Pill>
+            <Pill tone="warn">{t.aprovacoesScreen.pillPending}</Pill>
             {item.videoValidated ? (
-              <Pill tone="ok">VÍDEO OK</Pill>
+              <Pill tone="ok">{t.aprovacoesScreen.pillVideoOk}</Pill>
             ) : (
-              <Pill tone="bad">VÍDEO INVÁLIDO</Pill>
+              <Pill tone="bad">{t.aprovacoesScreen.pillVideoInvalid}</Pill>
             )}
           </div>
           <div style={{ fontFamily: T.mono, fontSize: 10, color: T.fg3, letterSpacing: "0.10em" }}>
@@ -203,15 +204,13 @@ function ExerciseCard({
             {item.movementPattern && ` · ${item.movementPattern}`}
           </div>
           <div style={{ marginTop: 10, display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 8 }}>
-            <Mini label="DURAÇÃO" value={`${v.durationSeconds.toFixed(1)}s`} ok={durationOk} />
-            <Mini label="TAMANHO" value={`${sizeMb.toFixed(1)} MB`} ok={sizeOk} />
-            <Mini label="RESOLUÇÃO" value={`${v.width}×${v.height}`} ok={resolutionOk} />
-            <Mini label="FPS" value={String(v.fps)} ok={v.fps >= 24} />
+            <Mini label={t.aprovacoesScreen.miniDuration} value={`${v.durationSeconds.toFixed(1)}s`} ok={durationOk} />
+            <Mini label={t.aprovacoesScreen.miniSize} value={`${sizeMb.toFixed(1)} MB`} ok={sizeOk} />
+            <Mini label={t.aprovacoesScreen.miniResolution} value={`${v.width}×${v.height}`} ok={resolutionOk} />
+            <Mini label={t.aprovacoesScreen.miniFps} value={String(v.fps)} ok={v.fps >= 24} />
           </div>
           <div style={{ marginTop: 10, fontFamily: T.mono, fontSize: 9, color: T.fg4, letterSpacing: "0.10em" }}>
-            enviado por {item.requestedBy} · {item.requestedByRole}
-            {" · "}
-            {new Date(item.requestedAt).toLocaleString("pt-BR")}
+            {t.aprovacoesScreen.sentBy(item.requestedBy, item.requestedByRole, new Date(item.requestedAt).toLocaleString(lang))}
           </div>
         </div>
 
@@ -241,7 +240,7 @@ function ExerciseCard({
               }}
             >
               <FileVideo className="h-3 w-3" />
-              Ver vídeo
+              {t.aprovacoesScreen.btnSeeVideo}
             </a>
           )}
           <Btn
@@ -252,11 +251,11 @@ function ExerciseCard({
             title={blockReason}
           >
             <Check className="h-3 w-3" />
-            Aprovar
+            {t.aprovacoesScreen.btnApprove}
           </Btn>
           <Btn danger sm onClick={onReject} disabled={acting}>
             <X className="h-3 w-3" />
-            Rejeitar
+            {t.aprovacoesScreen.btnReject}
           </Btn>
         </div>
       </div>
@@ -303,11 +302,12 @@ function Mini({ label, value, ok }: { label: string; value: string; ok: boolean 
 // ─── Placeholder alimentos ───────────────────────────────────────────────────
 
 function PlaceholderAlimentos() {
+  const { t } = usePanelI18n()
   return (
     <Plate dp style={{ padding: "32px 24px", textAlign: "center" }}>
       <Gavel className="mx-auto mb-4 h-8 w-8" style={{ color: T.warn }} />
       <Kicker cyan style={{ display: "block", marginBottom: 12 }}>
-        ENDPOINT PENDENTE
+        {t.aprovacoesScreen.foodsKicker}
       </Kicker>
       <p
         style={{
@@ -318,7 +318,7 @@ function PlaceholderAlimentos() {
           marginBottom: 8,
         }}
       >
-        Catálogo de alimentos ainda não existe no backend.
+        {t.aprovacoesScreen.foodsTitle}
       </p>
       <p
         style={{
@@ -330,9 +330,7 @@ function PlaceholderAlimentos() {
           lineHeight: 1.6,
         }}
       >
-        Aprovações de alimentos (com idiomas PT/IT/EN/ES, país, macros, alérgenos e restrições) chegam no PR{" "}
-        <strong style={{ color: T.cyan }}>#4</strong>, junto com o modelo de alimento, CRUD do catálogo e fluxo de
-        sugestão por coach. Por enquanto, esta aba fica visível só para mostrar que o lugar dela existe.
+        {t.aprovacoesScreen.foodsCopy}
       </p>
     </Plate>
   )
