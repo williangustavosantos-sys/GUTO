@@ -6,9 +6,11 @@ import { useCockpit } from "../cockpit-context"
 import { T } from "../control-tokens"
 import { Plate, Kicker } from "../controls"
 import { adminErrorMessage, avatarStageLabel, type RankingItem } from "../utils"
+import { usePanelI18n } from "@/lib/panel-i18n"
 
 export function ArenaScreen() {
   const { rankings, fetchRankings } = useCockpit()
+  const { t } = usePanelI18n()
 
   useEffect(() => {
     void fetchRankings().catch((err) => toast.error(adminErrorMessage(err)))
@@ -17,9 +19,9 @@ export function ArenaScreen() {
   return (
     <div style={{ padding: "24px 28px" }}>
       <div style={{ display: "grid", gap: 16, gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))" }}>
-        <RankingPanel title="RANKING SEMANAL" items={rankings?.weekly.items ?? []} />
-        <RankingPanel title="RANKING MENSAL" items={rankings?.monthly.items ?? []} />
-        <RankingPanel title="RANKING GERAL" items={rankings?.individual.items ?? []} showStreak />
+        <RankingPanel title={t.arenaScreen.rankingWeekly} items={rankings?.weekly.items ?? []} />
+        <RankingPanel title={t.arenaScreen.rankingMonthly} items={rankings?.monthly.items ?? []} />
+        <RankingPanel title={t.arenaScreen.rankingOverall} items={rankings?.individual.items ?? []} showStreak />
       </div>
     </div>
   )
@@ -34,6 +36,7 @@ function RankingPanel({
   items: RankingItem[]
   showStreak?: boolean
 }) {
+  const { t } = usePanelI18n()
   return (
     <Plate style={{ padding: 16 }}>
       <Kicker cyan style={{ display: "block", marginBottom: 14 }}>
@@ -55,21 +58,21 @@ function RankingPanel({
           >
             <div>
               <p style={{ fontFamily: T.mono, fontSize: 12, fontWeight: 900, color: T.fg, marginBottom: 2 }}>
-                {item.position}º · {item.pairName}
+                {item.position}{t.arenaScreen.positionSuffix} · {item.pairName}
               </p>
               <p style={{ fontFamily: T.mono, fontSize: 9, color: T.fg3, letterSpacing: "0.10em" }}>
                 {avatarStageLabel(item.avatarStage)}
-                {showStreak && item.currentStreak ? ` · ${item.currentStreak}d` : ""}
+                {showStreak && item.currentStreak ? ` · ${item.currentStreak}${t.arenaScreen.streakSuffix}` : ""}
               </p>
             </div>
             <p style={{ fontFamily: T.mono, fontSize: 13, fontWeight: 900, color: T.cyan }}>
-              {item.xp} XP
+              {item.xp} {t.arenaScreen.xpUnit}
             </p>
           </div>
         ))}
         {!items.length && (
           <p style={{ fontFamily: T.mono, fontSize: 11, color: T.fg3, textAlign: "center", padding: 24 }}>
-            Sem ranking.
+            {t.arenaScreen.empty}
           </p>
         )}
       </div>
