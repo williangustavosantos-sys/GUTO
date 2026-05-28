@@ -282,6 +282,57 @@ type Dict = {
     painPrefix: string
     energyPrefix: string
   }
+  tabTreino: {
+    panelOfficial: string
+    panelHistory: string
+    panelCustom: string
+    panelWeekly: string
+    fieldTitle: string
+    fieldFocus: string
+    fieldDay: string
+    fieldLocation: string
+    fieldDuration: string
+    fieldDifficulty: string
+    fieldCoachNotes: string
+    fieldSets: string
+    fieldReps: string
+    fieldLoad: string
+    fieldRest: string
+    fieldCue: string
+    fieldNote: string
+    fieldAlternatives: string
+    fieldOfficialExercise: string
+    fieldCatalog: string
+    fieldCustomName: string
+    fieldCustomId: string
+    fieldCustomGroup: string
+    fieldCustomEquipment: string
+    fieldCustomFile: string
+    fieldCustomPath: string
+    fieldCustomBytes: string
+    fieldCustomDuration: string
+    fieldCustomWidth: string
+    fieldCustomHeight: string
+    fieldCustomFps: string
+    btnSave: string
+    btnManual: string
+    btnGenerate: string
+    btnDuplicate: string
+    btnLockToggleAllow: string
+    btnLockToggleBlock: string
+    btnReset: string
+    btnSubmitCustom: string
+    placeholderSearchCatalog: string
+    selectLocation: string
+    historyEmpty: string
+    toastCustomSubmitted: string
+    toastCustomError: string
+    toastSavedWeekly: string
+    toastWeeklySaveError: string
+    todayPrefix: string
+    weekDays: { full: readonly string[]; short: readonly string[] }
+    duplicatedSuffix: string
+  }
   empresaDrawer: {
     close: string
     tabResumo: string
@@ -637,6 +688,44 @@ const PT: Dict = {
     painPrefix: "dor:",
     energyPrefix: "energia:",
   },
+  tabTreino: {
+    panelOfficial: "Treino oficial",
+    panelHistory: "Histórico do treino",
+    panelCustom: "Enviar exercício personalizado",
+    panelWeekly: "Plano semanal de treino",
+    fieldTitle: "Título", fieldFocus: "Foco / grupo muscular",
+    fieldDay: "Dia", fieldLocation: "Local",
+    fieldDuration: "Duração estimada (min)", fieldDifficulty: "Dificuldade",
+    fieldCoachNotes: "Observações do coach",
+    fieldSets: "Séries", fieldReps: "Reps", fieldLoad: "Carga",
+    fieldRest: "Intervalo", fieldCue: "Técnica", fieldNote: "Observação",
+    fieldAlternatives: "Substituições",
+    fieldOfficialExercise: "Exercício oficial", fieldCatalog: "Catálogo",
+    fieldCustomName: "Nome oficial", fieldCustomId: "ID opcional",
+    fieldCustomGroup: "Grupo", fieldCustomEquipment: "Equipamento",
+    fieldCustomFile: "Arquivo MP4 seguro", fieldCustomPath: "Caminho interno",
+    fieldCustomBytes: "Bytes", fieldCustomDuration: "Duração s",
+    fieldCustomWidth: "Width", fieldCustomHeight: "Height", fieldCustomFps: "FPS",
+    btnSave: "Salvar", btnManual: "Treino manual", btnGenerate: "Gerar com GUTO",
+    btnDuplicate: "Duplicar",
+    btnLockToggleAllow: "Permitir GUTO atualizar",
+    btnLockToggleBlock: "Bloquear auto-atualização",
+    btnReset: "Resetar treino",
+    btnSubmitCustom: "Enviar para aprovação",
+    placeholderSearchCatalog: "Pesquisar catálogo",
+    selectLocation: "Selecionar",
+    historyEmpty: "Sem histórico de treino.",
+    toastCustomSubmitted: "Exercício enviado para aprovação técnica.",
+    toastCustomError: "Erro no vídeo.",
+    toastSavedWeekly: "Plano semanal salvo.",
+    toastWeeklySaveError: "Erro ao salvar plano semanal.",
+    todayPrefix: "Hoje",
+    weekDays: {
+      full: ["Domingo","Segunda-feira","Terça-feira","Quarta-feira","Quinta-feira","Sexta-feira","Sábado"],
+      short: ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"],
+    },
+    duplicatedSuffix: "cópia",
+  },
   empresaDrawer: {
     close: "Fechar",
     tabResumo: "Resumo", tabCoaches: "Coaches", tabAlunos: "Alunos",
@@ -950,6 +1039,44 @@ const EN: Dict = {
     painPrefix: "pain:",
     energyPrefix: "energy:",
   },
+  tabTreino: {
+    panelOfficial: "Official workout",
+    panelHistory: "Workout history",
+    panelCustom: "Submit custom exercise",
+    panelWeekly: "Weekly workout plan",
+    fieldTitle: "Title", fieldFocus: "Focus / muscle group",
+    fieldDay: "Day", fieldLocation: "Location",
+    fieldDuration: "Est. duration (min)", fieldDifficulty: "Difficulty",
+    fieldCoachNotes: "Coach notes",
+    fieldSets: "Sets", fieldReps: "Reps", fieldLoad: "Load",
+    fieldRest: "Rest", fieldCue: "Cue", fieldNote: "Note",
+    fieldAlternatives: "Alternatives",
+    fieldOfficialExercise: "Official exercise", fieldCatalog: "Catalog",
+    fieldCustomName: "Official name", fieldCustomId: "Optional ID",
+    fieldCustomGroup: "Group", fieldCustomEquipment: "Equipment",
+    fieldCustomFile: "Safe MP4 file", fieldCustomPath: "Internal path",
+    fieldCustomBytes: "Bytes", fieldCustomDuration: "Duration s",
+    fieldCustomWidth: "Width", fieldCustomHeight: "Height", fieldCustomFps: "FPS",
+    btnSave: "Save", btnManual: "Manual workout", btnGenerate: "Generate with GUTO",
+    btnDuplicate: "Duplicate",
+    btnLockToggleAllow: "Allow GUTO to update",
+    btnLockToggleBlock: "Block auto-update",
+    btnReset: "Reset workout",
+    btnSubmitCustom: "Submit for approval",
+    placeholderSearchCatalog: "Search catalog",
+    selectLocation: "Select",
+    historyEmpty: "No workout history.",
+    toastCustomSubmitted: "Exercise submitted for technical approval.",
+    toastCustomError: "Video error.",
+    toastSavedWeekly: "Weekly plan saved.",
+    toastWeeklySaveError: "Error saving weekly plan.",
+    todayPrefix: "Today",
+    weekDays: {
+      full: ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"],
+      short: ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"],
+    },
+    duplicatedSuffix: "copy",
+  },
   empresaDrawer: {
     close: "Close",
     tabResumo: "Summary", tabCoaches: "Coaches", tabAlunos: "Students",
@@ -1262,6 +1389,44 @@ const IT: Dict = {
     xpUnit: "XP",
     painPrefix: "dolore:",
     energyPrefix: "energia:",
+  },
+  tabTreino: {
+    panelOfficial: "Allenamento ufficiale",
+    panelHistory: "Cronologia allenamento",
+    panelCustom: "Invia esercizio personalizzato",
+    panelWeekly: "Piano settimanale di allenamento",
+    fieldTitle: "Titolo", fieldFocus: "Focus / gruppo muscolare",
+    fieldDay: "Giorno", fieldLocation: "Luogo",
+    fieldDuration: "Durata stimata (min)", fieldDifficulty: "Difficoltà",
+    fieldCoachNotes: "Note del coach",
+    fieldSets: "Serie", fieldReps: "Rip", fieldLoad: "Carico",
+    fieldRest: "Recupero", fieldCue: "Tecnica", fieldNote: "Nota",
+    fieldAlternatives: "Alternative",
+    fieldOfficialExercise: "Esercizio ufficiale", fieldCatalog: "Catalogo",
+    fieldCustomName: "Nome ufficiale", fieldCustomId: "ID opzionale",
+    fieldCustomGroup: "Gruppo", fieldCustomEquipment: "Attrezzo",
+    fieldCustomFile: "File MP4 sicuro", fieldCustomPath: "Percorso interno",
+    fieldCustomBytes: "Byte", fieldCustomDuration: "Durata s",
+    fieldCustomWidth: "Width", fieldCustomHeight: "Height", fieldCustomFps: "FPS",
+    btnSave: "Salva", btnManual: "Allenamento manuale", btnGenerate: "Genera con GUTO",
+    btnDuplicate: "Duplica",
+    btnLockToggleAllow: "Consenti aggiornamento GUTO",
+    btnLockToggleBlock: "Blocca auto-aggiornamento",
+    btnReset: "Reset allenamento",
+    btnSubmitCustom: "Invia per approvazione",
+    placeholderSearchCatalog: "Cerca catalogo",
+    selectLocation: "Seleziona",
+    historyEmpty: "Nessuna cronologia di allenamento.",
+    toastCustomSubmitted: "Esercizio inviato per approvazione tecnica.",
+    toastCustomError: "Errore nel video.",
+    toastSavedWeekly: "Piano settimanale salvato.",
+    toastWeeklySaveError: "Errore nel salvataggio del piano.",
+    todayPrefix: "Oggi",
+    weekDays: {
+      full: ["Domenica","Lunedì","Martedì","Mercoledì","Giovedì","Venerdì","Sabato"],
+      short: ["Dom","Lun","Mar","Mer","Gio","Ven","Sab"],
+    },
+    duplicatedSuffix: "copia",
   },
   empresaDrawer: {
     close: "Chiudi",
