@@ -282,6 +282,34 @@ type Dict = {
     painPrefix: string
     energyPrefix: string
   }
+  tabCalibragem: {
+    panelTitle: string
+    fieldBiologicalSex: string
+    fieldAge: string
+    fieldTrainingLevel: string
+    fieldGoal: string
+    fieldPreferredLocation: string
+    fieldCountry: string
+    fieldCity: string
+    fieldHeightCm: string
+    fieldWeightKg: string
+    fieldPathology: string
+    fieldFoodRestrictions: string
+    selectPlaceholder: string
+    placeholderAge: string
+    placeholderCountry: string
+    placeholderCity: string
+    placeholderHeight: string
+    placeholderWeight: string
+    placeholderPathology: string
+    placeholderFoodRestrictions: string
+    saveBtn: string
+    toastSaved: string
+    biologicalSex: Record<string, string>
+    trainingLevel: Record<string, string>
+    trainingGoal: Record<string, string>
+    trainingLocation: Record<string, string>
+  }
   tabAcesso: {
     panelControl: string
     panelInvite: string
@@ -475,6 +503,45 @@ const PT: Dict = {
     painPrefix: "dor:",
     energyPrefix: "energia:",
   },
+  tabCalibragem: {
+    panelTitle: "Calibragem do aluno",
+    fieldBiologicalSex: "Sexo biológico",
+    fieldAge: "Idade",
+    fieldTrainingLevel: "Nível de treino",
+    fieldGoal: "Objetivo",
+    fieldPreferredLocation: "Local preferido",
+    fieldCountry: "País",
+    fieldCity: "Cidade",
+    fieldHeightCm: "Altura (cm)",
+    fieldWeightKg: "Peso (kg)",
+    fieldPathology: "Dor ou limitação",
+    fieldFoodRestrictions: "Restrições alimentares",
+    selectPlaceholder: "Selecionar",
+    placeholderAge: "Ex: 28",
+    placeholderCountry: "Ex: BR",
+    placeholderCity: "Ex: São Paulo",
+    placeholderHeight: "Ex: 175",
+    placeholderWeight: "Ex: 80",
+    placeholderPathology: "Ex: dor no joelho",
+    placeholderFoodRestrictions: "Ex: sem lactose",
+    saveBtn: "Salvar calibragem",
+    toastSaved: "Calibragem atualizada.",
+    biologicalSex: { male: "Masculino", female: "Feminino", other: "Outro" },
+    trainingLevel: {
+      beginner: "Iniciante", intermediate: "Intermediário", advanced: "Avançado",
+      returning: "Retornando", consistent: "Consistente",
+    },
+    trainingGoal: {
+      muscle_gain: "Ganho de massa", fat_loss: "Perda de gordura",
+      endurance: "Resistência", flexibility: "Flexibilidade",
+      general_fitness: "Condicionamento geral", rehabilitation: "Reabilitação",
+      maintenance: "Manutenção", conditioning: "Condicionamento",
+      mobility_health: "Saúde e mobilidade", consistency: "Consistência",
+    },
+    trainingLocation: {
+      gym: "Academia", home: "Em casa", park: "Ao ar livre", mixed: "Variado",
+    },
+  },
   tabAcesso: {
     panelControl: "Controle de acesso", panelInvite: "Convite de acesso", panelSecurity: "Segurança",
     btnPause: "Pausar acesso", btnReactivate: "Reativar acesso",
@@ -663,6 +730,45 @@ const EN: Dict = {
     painPrefix: "pain:",
     energyPrefix: "energy:",
   },
+  tabCalibragem: {
+    panelTitle: "Student calibration",
+    fieldBiologicalSex: "Biological sex",
+    fieldAge: "Age",
+    fieldTrainingLevel: "Training level",
+    fieldGoal: "Goal",
+    fieldPreferredLocation: "Preferred location",
+    fieldCountry: "Country",
+    fieldCity: "City",
+    fieldHeightCm: "Height (cm)",
+    fieldWeightKg: "Weight (kg)",
+    fieldPathology: "Pain or limitation",
+    fieldFoodRestrictions: "Food restrictions",
+    selectPlaceholder: "Select",
+    placeholderAge: "e.g. 28",
+    placeholderCountry: "e.g. US",
+    placeholderCity: "e.g. New York",
+    placeholderHeight: "e.g. 175",
+    placeholderWeight: "e.g. 80",
+    placeholderPathology: "e.g. knee pain",
+    placeholderFoodRestrictions: "e.g. no lactose",
+    saveBtn: "Save calibration",
+    toastSaved: "Calibration updated.",
+    biologicalSex: { male: "Male", female: "Female", other: "Other" },
+    trainingLevel: {
+      beginner: "Beginner", intermediate: "Intermediate", advanced: "Advanced",
+      returning: "Returning", consistent: "Consistent",
+    },
+    trainingGoal: {
+      muscle_gain: "Muscle gain", fat_loss: "Fat loss",
+      endurance: "Endurance", flexibility: "Flexibility",
+      general_fitness: "General fitness", rehabilitation: "Rehabilitation",
+      maintenance: "Maintenance", conditioning: "Conditioning",
+      mobility_health: "Mobility & health", consistency: "Consistency",
+    },
+    trainingLocation: {
+      gym: "Gym", home: "Home", park: "Outdoors", mixed: "Mixed",
+    },
+  },
   tabAcesso: {
     panelControl: "Access control", panelInvite: "Access invite", panelSecurity: "Security",
     btnPause: "Pause access", btnReactivate: "Reactivate access",
@@ -850,6 +956,45 @@ const IT: Dict = {
     xpUnit: "XP",
     painPrefix: "dolore:",
     energyPrefix: "energia:",
+  },
+  tabCalibragem: {
+    panelTitle: "Calibrazione dell'allievo",
+    fieldBiologicalSex: "Sesso biologico",
+    fieldAge: "Età",
+    fieldTrainingLevel: "Livello di allenamento",
+    fieldGoal: "Obiettivo",
+    fieldPreferredLocation: "Luogo preferito",
+    fieldCountry: "Paese",
+    fieldCity: "Città",
+    fieldHeightCm: "Altezza (cm)",
+    fieldWeightKg: "Peso (kg)",
+    fieldPathology: "Dolore o limitazione",
+    fieldFoodRestrictions: "Restrizioni alimentari",
+    selectPlaceholder: "Seleziona",
+    placeholderAge: "Es: 28",
+    placeholderCountry: "Es: IT",
+    placeholderCity: "Es: Roma",
+    placeholderHeight: "Es: 175",
+    placeholderWeight: "Es: 80",
+    placeholderPathology: "Es: dolore al ginocchio",
+    placeholderFoodRestrictions: "Es: senza lattosio",
+    saveBtn: "Salva calibrazione",
+    toastSaved: "Calibrazione aggiornata.",
+    biologicalSex: { male: "Maschile", female: "Femminile", other: "Altro" },
+    trainingLevel: {
+      beginner: "Principiante", intermediate: "Intermedio", advanced: "Avanzato",
+      returning: "Di ritorno", consistent: "Costante",
+    },
+    trainingGoal: {
+      muscle_gain: "Aumento massa", fat_loss: "Perdita grasso",
+      endurance: "Resistenza", flexibility: "Flessibilità",
+      general_fitness: "Forma fisica generale", rehabilitation: "Riabilitazione",
+      maintenance: "Mantenimento", conditioning: "Condizionamento",
+      mobility_health: "Mobilità e salute", consistency: "Costanza",
+    },
+    trainingLocation: {
+      gym: "Palestra", home: "Casa", park: "All'aperto", mixed: "Misto",
+    },
   },
   tabAcesso: {
     panelControl: "Controllo accesso", panelInvite: "Invito di accesso", panelSecurity: "Sicurezza",
