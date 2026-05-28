@@ -207,6 +207,111 @@ type Dict = {
     openStudentLabel: string
     empty: string
   }
+  // ─── Drawer + tabs do aluno ─────────────────────────────────────────────
+  studentDrawer: {
+    role: string
+    tabResumo: string
+    tabCalibragem: string
+    tabTreino: string
+    tabDieta: string
+    tabValidacoes: string
+    tabHistorico: string
+    tabAcesso: string
+  }
+  tabResumo: {
+    panelOnboarding: string
+    panelProfile: string
+    panelEvolution: string
+    panelCurrentPlan: string
+    rowConsent: string
+    rowSovereignName: string
+    rowCalibration: string
+    rowPact: string
+    rowSystemActive: string
+    badgeAccepted: string
+    badgePending: string
+    badgeYes: string
+    badgeWaitingOnboarding: string
+    calibComplete: string
+    calibPartial: string
+    calibMissing: string
+    rowStatus: string
+    rowEmail: string
+    rowPhone: string
+    rowSubscription: string
+    rowExpiresAt: string
+    rowCoach: string
+    rowTeam: string
+    rowArena: string
+    arenaVisible: string
+    arenaHidden: string
+    rowWeeklyXp: string
+    rowMonthlyXp: string
+    rowTotalXp: string
+    rowStreak: string
+    rowValidations: string
+    rowAvatar: string
+    streakDays: (n: number) => string
+    rowWorkout: string
+    rowDiet: string
+    workoutLocked: string
+    dietLocked: string
+    statusArchived: string
+    statusPaused: string
+    statusHiddenArena: string
+    statusActive: string
+  }
+  tabHistorico: {
+    panelWorkout: string
+    panelDiet: string
+    panelGeneral: string
+    emptyWorkout: string
+    emptyDiet: string
+    emptyGeneral: string
+  }
+  tabValidacoes: {
+    panelTitle: string
+    loading: string
+    empty: string
+    loadError: string
+    focusLabel: Record<string, string>
+    locationLabel: Record<string, string>
+    difficultyLabel: Record<"easy" | "ok" | "hard" | "pain", string>
+    energyLabel: Record<"low" | "normal" | "high", string>
+    xpUnit: string
+    painPrefix: string
+    energyPrefix: string
+  }
+  tabAcesso: {
+    panelControl: string
+    panelInvite: string
+    panelSecurity: string
+    btnPause: string
+    btnReactivate: string
+    btnRenew30: string
+    btnArenaHide: string
+    btnArenaShow: string
+    assignCoachPlaceholder: string
+    btnViewInvite: string
+    btnRegenInvite: string
+    btnResetPassword: string
+    btnDelete: string
+    confirmRegen: string
+    confirmDelete: string
+    toastPaused: string
+    toastReactivated: string
+    toastRenewed: string
+    toastArenaHidden: string
+    toastArenaShown: string
+    toastCoachAssigned: string
+    toastInviteLoaded: string
+    toastInviteUnavailable: string
+    toastInviteRegenerated: string
+    toastLinkCopied: string
+    toastPasswordGenerated: string
+    toastDeleted: string
+    tempPasswordLabel: string
+  }
 }
 
 const PT: Dict = {
@@ -321,6 +426,79 @@ const PT: Dict = {
     inviteError: "Não foi possível copiar o convite.",
     openStudentLabel: "Abrir aluno",
     empty: "Nenhum aluno encontrado.",
+  },
+  studentDrawer: {
+    role: "ALUNO",
+    tabResumo: "Resumo", tabCalibragem: "Calibragem", tabTreino: "Treino",
+    tabDieta: "Dieta", tabValidacoes: "Validações", tabHistorico: "Histórico", tabAcesso: "Acesso",
+  },
+  tabResumo: {
+    panelOnboarding: "Onboarding", panelProfile: "Perfil",
+    panelEvolution: "Evolução", panelCurrentPlan: "Plano atual",
+    rowConsent: "Consentimento", rowSovereignName: "Nome soberano",
+    rowCalibration: "Calibragem", rowPact: "Pacto", rowSystemActive: "Sistema ativo",
+    badgeAccepted: "Aceito", badgePending: "Pendente", badgeYes: "Sim",
+    badgeWaitingOnboarding: "Aguardando onboarding",
+    calibComplete: "Completa", calibPartial: "Parcial", calibMissing: "Pendente",
+    rowStatus: "Status", rowEmail: "Email", rowPhone: "Telefone",
+    rowSubscription: "Assinatura", rowExpiresAt: "Expira em", rowCoach: "Coach",
+    rowTeam: "Time", rowArena: "Arena",
+    arenaVisible: "Visível", arenaHidden: "Oculto",
+    rowWeeklyXp: "XP semanal", rowMonthlyXp: "XP mensal", rowTotalXp: "XP total",
+    rowStreak: "Sequência", rowValidations: "Validações", rowAvatar: "Avatar",
+    streakDays: (n) => `${n} dias`,
+    rowWorkout: "Treino", rowDiet: "Dieta",
+    workoutLocked: "bloqueado", dietLocked: "bloqueada",
+    statusArchived: "ARQUIVADO", statusPaused: "PAUSADO",
+    statusHiddenArena: "OCULTO ARENA", statusActive: "ATIVO",
+  },
+  tabHistorico: {
+    panelWorkout: "Treino", panelDiet: "Dieta", panelGeneral: "Geral",
+    emptyWorkout: "Sem alterações de treino.",
+    emptyDiet: "Sem alterações de dieta.",
+    emptyGeneral: "Sem histórico.",
+  },
+  tabValidacoes: {
+    panelTitle: "Validações de treino (últimas 5)",
+    loading: "Carregando…",
+    empty: "Sem validações registradas ainda.",
+    loadError: "Não foi possível carregar as validações.",
+    focusLabel: {
+      chest_triceps: "Peito · tríceps", back_biceps: "Costas · bíceps",
+      legs_core: "Pernas · core", shoulders_abs: "Ombros · abdômen",
+      full_body: "Corpo inteiro",
+    },
+    locationLabel: { gym: "Academia", home: "Casa", park: "Parque" },
+    difficultyLabel: { easy: "Leve", ok: "Na medida", hard: "Pesado", pain: "Dor" },
+    energyLabel: { low: "Baixa", normal: "Normal", high: "Alta" },
+    xpUnit: "XP",
+    painPrefix: "dor:",
+    energyPrefix: "energia:",
+  },
+  tabAcesso: {
+    panelControl: "Controle de acesso", panelInvite: "Convite de acesso", panelSecurity: "Segurança",
+    btnPause: "Pausar acesso", btnReactivate: "Reativar acesso",
+    btnRenew30: "Renovar 30 dias",
+    btnArenaHide: "Ocultar na Arena", btnArenaShow: "Mostrar na Arena",
+    assignCoachPlaceholder: "Atribuir coach…",
+    btnViewInvite: "Ver convite atual", btnRegenInvite: "Regenerar convite",
+    btnResetPassword: "Gerar senha temporária",
+    btnDelete: "Excluir permanentemente",
+    confirmRegen: "Regenerar convite? O link anterior deixa de funcionar.",
+    confirmDelete: "Excluir permanentemente este aluno e todos os dados vinculados?",
+    toastPaused: "Acesso pausado.",
+    toastReactivated: "Acesso reativado.",
+    toastRenewed: "Acesso renovado por 30 dias.",
+    toastArenaHidden: "Aluno ocultado da Arena.",
+    toastArenaShown: "Aluno visível na Arena.",
+    toastCoachAssigned: "Aluno atribuído ao coach.",
+    toastInviteLoaded: "Convite carregado.",
+    toastInviteUnavailable: "Link não disponível. Use regenerar para criar um novo.",
+    toastInviteRegenerated: "Novo convite gerado.",
+    toastLinkCopied: "Link copiado!",
+    toastPasswordGenerated: "Senha temporária gerada.",
+    toastDeleted: "Aluno excluído permanentemente.",
+    tempPasswordLabel: "Senha temporária",
   },
 }
 
@@ -437,6 +615,79 @@ const EN: Dict = {
     openStudentLabel: "Open student",
     empty: "No student found.",
   },
+  studentDrawer: {
+    role: "STUDENT",
+    tabResumo: "Summary", tabCalibragem: "Calibration", tabTreino: "Workout",
+    tabDieta: "Diet", tabValidacoes: "Validations", tabHistorico: "History", tabAcesso: "Access",
+  },
+  tabResumo: {
+    panelOnboarding: "Onboarding", panelProfile: "Profile",
+    panelEvolution: "Evolution", panelCurrentPlan: "Current plan",
+    rowConsent: "Consent", rowSovereignName: "Sovereign name",
+    rowCalibration: "Calibration", rowPact: "Pact", rowSystemActive: "System active",
+    badgeAccepted: "Accepted", badgePending: "Pending", badgeYes: "Yes",
+    badgeWaitingOnboarding: "Waiting onboarding",
+    calibComplete: "Complete", calibPartial: "Partial", calibMissing: "Pending",
+    rowStatus: "Status", rowEmail: "Email", rowPhone: "Phone",
+    rowSubscription: "Subscription", rowExpiresAt: "Expires on", rowCoach: "Coach",
+    rowTeam: "Team", rowArena: "Arena",
+    arenaVisible: "Visible", arenaHidden: "Hidden",
+    rowWeeklyXp: "Weekly XP", rowMonthlyXp: "Monthly XP", rowTotalXp: "Total XP",
+    rowStreak: "Streak", rowValidations: "Validations", rowAvatar: "Avatar",
+    streakDays: (n) => `${n} days`,
+    rowWorkout: "Workout", rowDiet: "Diet",
+    workoutLocked: "locked", dietLocked: "locked",
+    statusArchived: "ARCHIVED", statusPaused: "PAUSED",
+    statusHiddenArena: "ARENA HIDDEN", statusActive: "ACTIVE",
+  },
+  tabHistorico: {
+    panelWorkout: "Workout", panelDiet: "Diet", panelGeneral: "General",
+    emptyWorkout: "No workout changes.",
+    emptyDiet: "No diet changes.",
+    emptyGeneral: "No history.",
+  },
+  tabValidacoes: {
+    panelTitle: "Workout validations (last 5)",
+    loading: "Loading…",
+    empty: "No validations recorded yet.",
+    loadError: "Could not load validations.",
+    focusLabel: {
+      chest_triceps: "Chest · triceps", back_biceps: "Back · biceps",
+      legs_core: "Legs · core", shoulders_abs: "Shoulders · abs",
+      full_body: "Full body",
+    },
+    locationLabel: { gym: "Gym", home: "Home", park: "Park" },
+    difficultyLabel: { easy: "Easy", ok: "Right dose", hard: "Heavy", pain: "Pain" },
+    energyLabel: { low: "Low", normal: "Normal", high: "High" },
+    xpUnit: "XP",
+    painPrefix: "pain:",
+    energyPrefix: "energy:",
+  },
+  tabAcesso: {
+    panelControl: "Access control", panelInvite: "Access invite", panelSecurity: "Security",
+    btnPause: "Pause access", btnReactivate: "Reactivate access",
+    btnRenew30: "Renew 30 days",
+    btnArenaHide: "Hide from Arena", btnArenaShow: "Show in Arena",
+    assignCoachPlaceholder: "Assign coach…",
+    btnViewInvite: "View current invite", btnRegenInvite: "Regenerate invite",
+    btnResetPassword: "Generate temporary password",
+    btnDelete: "Delete permanently",
+    confirmRegen: "Regenerate invite? The previous link stops working.",
+    confirmDelete: "Permanently delete this student and all linked data?",
+    toastPaused: "Access paused.",
+    toastReactivated: "Access reactivated.",
+    toastRenewed: "Access renewed for 30 days.",
+    toastArenaHidden: "Student hidden from Arena.",
+    toastArenaShown: "Student visible in Arena.",
+    toastCoachAssigned: "Student assigned to coach.",
+    toastInviteLoaded: "Invite loaded.",
+    toastInviteUnavailable: "Link not available. Use regenerate to create a new one.",
+    toastInviteRegenerated: "New invite generated.",
+    toastLinkCopied: "Link copied!",
+    toastPasswordGenerated: "Temporary password generated.",
+    toastDeleted: "Student deleted permanently.",
+    tempPasswordLabel: "Temporary password",
+  },
 }
 
 const IT: Dict = {
@@ -551,6 +802,79 @@ const IT: Dict = {
     inviteError: "Impossibile copiare l'invito.",
     openStudentLabel: "Apri allievo",
     empty: "Nessun allievo trovato.",
+  },
+  studentDrawer: {
+    role: "ALLIEVO",
+    tabResumo: "Riepilogo", tabCalibragem: "Calibrazione", tabTreino: "Allenamento",
+    tabDieta: "Dieta", tabValidacoes: "Convalide", tabHistorico: "Cronologia", tabAcesso: "Accesso",
+  },
+  tabResumo: {
+    panelOnboarding: "Onboarding", panelProfile: "Profilo",
+    panelEvolution: "Evoluzione", panelCurrentPlan: "Piano attuale",
+    rowConsent: "Consenso", rowSovereignName: "Nome sovrano",
+    rowCalibration: "Calibrazione", rowPact: "Patto", rowSystemActive: "Sistema attivo",
+    badgeAccepted: "Accettato", badgePending: "In sospeso", badgeYes: "Sì",
+    badgeWaitingOnboarding: "In attesa di onboarding",
+    calibComplete: "Completa", calibPartial: "Parziale", calibMissing: "In sospeso",
+    rowStatus: "Stato", rowEmail: "Email", rowPhone: "Telefono",
+    rowSubscription: "Abbonamento", rowExpiresAt: "Scade il", rowCoach: "Coach",
+    rowTeam: "Team", rowArena: "Arena",
+    arenaVisible: "Visibile", arenaHidden: "Nascosto",
+    rowWeeklyXp: "XP settimanale", rowMonthlyXp: "XP mensile", rowTotalXp: "XP totale",
+    rowStreak: "Sequenza", rowValidations: "Convalide", rowAvatar: "Avatar",
+    streakDays: (n) => `${n} giorni`,
+    rowWorkout: "Allenamento", rowDiet: "Dieta",
+    workoutLocked: "bloccato", dietLocked: "bloccata",
+    statusArchived: "ARCHIVIATO", statusPaused: "IN PAUSA",
+    statusHiddenArena: "NASCOSTO ARENA", statusActive: "ATTIVO",
+  },
+  tabHistorico: {
+    panelWorkout: "Allenamento", panelDiet: "Dieta", panelGeneral: "Generale",
+    emptyWorkout: "Nessuna modifica dell'allenamento.",
+    emptyDiet: "Nessuna modifica della dieta.",
+    emptyGeneral: "Nessuna cronologia.",
+  },
+  tabValidacoes: {
+    panelTitle: "Convalide di allenamento (ultime 5)",
+    loading: "Caricamento…",
+    empty: "Nessuna convalida registrata.",
+    loadError: "Impossibile caricare le convalide.",
+    focusLabel: {
+      chest_triceps: "Petto · tricipiti", back_biceps: "Schiena · bicipiti",
+      legs_core: "Gambe · core", shoulders_abs: "Spalle · addome",
+      full_body: "Corpo intero",
+    },
+    locationLabel: { gym: "Palestra", home: "Casa", park: "Parco" },
+    difficultyLabel: { easy: "Leggero", ok: "Giusto", hard: "Pesante", pain: "Dolore" },
+    energyLabel: { low: "Bassa", normal: "Normale", high: "Alta" },
+    xpUnit: "XP",
+    painPrefix: "dolore:",
+    energyPrefix: "energia:",
+  },
+  tabAcesso: {
+    panelControl: "Controllo accesso", panelInvite: "Invito di accesso", panelSecurity: "Sicurezza",
+    btnPause: "Metti in pausa", btnReactivate: "Riattiva accesso",
+    btnRenew30: "Rinnova 30 giorni",
+    btnArenaHide: "Nascondi dall'Arena", btnArenaShow: "Mostra in Arena",
+    assignCoachPlaceholder: "Assegna coach…",
+    btnViewInvite: "Vedi invito attuale", btnRegenInvite: "Rigenera invito",
+    btnResetPassword: "Genera password temporanea",
+    btnDelete: "Elimina definitivamente",
+    confirmRegen: "Rigenerare l'invito? Il link precedente smette di funzionare.",
+    confirmDelete: "Eliminare definitivamente questo allievo e tutti i dati collegati?",
+    toastPaused: "Accesso in pausa.",
+    toastReactivated: "Accesso riattivato.",
+    toastRenewed: "Accesso rinnovato per 30 giorni.",
+    toastArenaHidden: "Allievo nascosto dall'Arena.",
+    toastArenaShown: "Allievo visibile in Arena.",
+    toastCoachAssigned: "Allievo assegnato al coach.",
+    toastInviteLoaded: "Invito caricato.",
+    toastInviteUnavailable: "Link non disponibile. Usa rigenera per crearne uno nuovo.",
+    toastInviteRegenerated: "Nuovo invito generato.",
+    toastLinkCopied: "Link copiato!",
+    toastPasswordGenerated: "Password temporanea generata.",
+    toastDeleted: "Allievo eliminato definitivamente.",
+    tempPasswordLabel: "Password temporanea",
   },
 }
 

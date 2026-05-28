@@ -9,36 +9,16 @@ import { useCockpit } from "../cockpit-context"
 import { Panel } from "../ui"
 import { T } from "../control-tokens"
 import { formatDate } from "../utils"
+import { usePanelI18n } from "@/lib/panel-i18n"
 
-const FOCUS_LABEL: Record<string, string> = {
-  chest_triceps: "Peito · tríceps",
-  back_biceps: "Costas · bíceps",
-  legs_core: "Pernas · core",
-  shoulders_abs: "Ombros · abdômen",
-  full_body: "Corpo inteiro",
-}
-
-const LOCATION_LABEL: Record<string, string> = {
-  gym: "Academia",
-  home: "Casa",
-  park: "Parque",
-}
-
-const DIFFICULTY_LABEL: Record<string, { text: string; tone: string }> = {
-  easy: { text: "Leve", tone: T.ok },
-  ok: { text: "Na medida", tone: T.fg2 },
-  hard: { text: "Pesado", tone: T.warn },
-  pain: { text: "Dor", tone: T.bad },
-}
-
-const ENERGY_LABEL: Record<string, string> = {
-  low: "Baixa",
-  normal: "Normal",
-  high: "Alta",
+// Cores do feedback por dificuldade (não traduzido — só tone visual).
+const DIFFICULTY_TONE: Record<"easy" | "ok" | "hard" | "pain", string> = {
+  easy: T.ok, ok: T.fg2, hard: T.warn, pain: T.bad,
 }
 
 export function TabValidacoes() {
   const { selectedDetail } = useCockpit()
+  const { t } = usePanelI18n()
   const [validations, setValidations] = useState<WorkoutValidationRecord[] | null>(null)
   const [feedback, setFeedback] = useState<WorkoutFeedbackRecord[] | null>(null)
   const [loading, setLoading] = useState(false)
@@ -57,7 +37,7 @@ export function TabValidacoes() {
       })
       .catch(() => {
         if (cancelled) return
-        toast.error("Não foi possível carregar as validações.")
+        toast.error(t.tabValidacoes.loadError)
       })
       .finally(() => {
         if (!cancelled) setLoading(false)
@@ -65,15 +45,15 @@ export function TabValidacoes() {
     return () => {
       cancelled = true
     }
-  }, [userId])
+  }, [userId, t])
 
   if (!selectedDetail) return null
 
   return (
     <div className="grid gap-4">
-      <Panel title="Validações de treino (últimas 5)">
+      <Panel title={t.tabValidacoes.panelTitle}>
         {loading && (
-          <p style={{ fontFamily: T.mono, fontSize: 12, color: T.fg3 }}>Carregando…</p>
+          <p style={{ fontFamily: T.mono, fontSize: 12, color: T.fg3 }}>{t.tabValidacoes.loading}</p>
         )}
         {!loading && validations && validations.length === 0 && (
           <div
@@ -91,7 +71,7 @@ export function TabValidacoes() {
             }}
           >
             <ImageOff className="h-4 w-4" />
-            Sem validações registradas ainda.
+            {t.tabValidacoes.empty}
           </div>
         )}
         {!loading && validations && validations.length > 0 && (
@@ -106,8 +86,10 @@ export function TabValidacoes() {
               const matchedFeedback = feedback?.find(
                 (f) => f.workoutFocus === v.workoutFocus && Math.abs(new Date(f.createdAt).getTime() - new Date(v.createdAt).getTime()) < 5 * 60 * 1000,
               )
-              const diff = matchedFeedback?.difficulty ? DIFFICULTY_LABEL[matchedFeedback.difficulty] : null
-              const energy = matchedFeedback?.energy ? ENERGY_LABEL[matchedFeedback.energy] : null
+              const diff = matchedFeedback?.difficulty
+                ? { text: t.tabValidacoes.difficultyLabel[matchedFeedback.difficulty], tone: DIFFICULTY_TONE[matchedFeedback.difficulty] }
+                : null
+              const energy = matchedFeedback?.energy ? t.tabValidacoes.energyLabel[matchedFeedback.energy] : null
               return (
                 <div
                   key={v.id}
@@ -163,7 +145,7 @@ export function TabValidacoes() {
                         color: T.fg,
                       }}
                     >
-                      {FOCUS_LABEL[v.workoutFocus] || v.workoutLabel}
+                      {t.tabValidacoes.focusLabel[v.workoutFocus] || v.workoutLabel}
                     </div>
                     <div
                       style={{
@@ -178,7 +160,7 @@ export function TabValidacoes() {
                     >
                       <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
                         <MapPin className="h-3 w-3" />
-                        {LOCATION_LABEL[v.locationMode] || v.locationMode}
+                        {t.tabValidacoes.locationLabel[v.locationMode] || v.locationMode}
                       </span>
                       <span style={{ display: "inline-flex", alignItems: "center", gap: 4, color: T.cyan, fontWeight: 700 }}>
                         <Zap className="h-3 w-3" />
@@ -205,11 +187,11 @@ export function TabValidacoes() {
                         )}
                         {energy && (
                           <span style={{ color: T.fg3 }}>
-                            energia: <strong style={{ color: T.fg2 }}>{energy}</strong>
+                            {t.tabValidacoes.energyPrefix} <strong style={{ color: T.fg2 }}>{energy}</strong>
                           </span>
                         )}
                         {matchedFeedback?.painArea && (
-                          <span style={{ color: T.bad }}>dor: {matchedFeedback.painArea}</span>
+                          <span style={{ color: T.bad }}>{t.tabValidacoes.painPrefix} {matchedFeedback.painArea}</span>
                         )}
                       </div>
                     )}
