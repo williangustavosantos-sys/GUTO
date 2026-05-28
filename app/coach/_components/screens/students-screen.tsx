@@ -8,21 +8,15 @@ import { useCockpit } from "../cockpit-context"
 import { T } from "../control-tokens"
 import { Plate, Pill, SearchBox, FilterPill, SelectInput } from "../controls"
 import { coachLabel, studentRisk, type RiskLevel } from "../utils"
+import { usePanelI18n } from "@/lib/panel-i18n"
 
-const STATUS_FILTERS: { id: "ativos" | "pausados" | "arquivados" | "todos"; label: string }[] = [
-  { id: "ativos", label: "Ativos" },
-  { id: "pausados", label: "Pausados" },
-  { id: "arquivados", label: "Arquivados" },
-  { id: "todos", label: "Todos" },
+const STATUS_FILTER_IDS: ReadonlyArray<"ativos" | "pausados" | "arquivados" | "todos"> = [
+  "ativos", "pausados", "arquivados", "todos",
 ]
 
 function riskTone(risk: RiskLevel): "ok" | "warn" | "bad" | "mute" {
   return risk === "critico" ? "bad" : risk === "atencao" ? "warn" : risk === "sem-sinal" ? "mute" : "ok"
 }
-function riskShortLabel(risk: RiskLevel): string {
-  return risk === "critico" ? "CRÍTICO" : risk === "atencao" ? "ATENÇÃO" : risk === "sem-sinal" ? "S/SINAL" : "EM DIA"
-}
-
 export function StudentsScreen() {
   const {
     students,
@@ -38,10 +32,24 @@ export function StudentsScreen() {
     isSuperAdmin,
     openStudent,
   } = useCockpit()
+  const { t } = usePanelI18n()
 
   // filtros client-side adicionais (empresa + risco)
   const [empresaFilter, setEmpresaFilter] = useState("")
   const [riskFilter, setRiskFilter] = useState<"" | RiskLevel>("")
+
+  const statusFilterLabels: Record<typeof STATUS_FILTER_IDS[number], string> = {
+    ativos: t.studentsScreen.filterActive,
+    pausados: t.studentsScreen.filterPaused,
+    arquivados: t.studentsScreen.filterArchived,
+    todos: t.studentsScreen.filterAll,
+  }
+
+  const riskShortLabel = (risk: RiskLevel): string =>
+    risk === "critico" ? t.studentsScreen.riskCriticalShort
+    : risk === "atencao" ? t.studentsScreen.riskAttentionShort
+    : risk === "sem-sinal" ? t.studentsScreen.riskNoSignalShort
+    : t.studentsScreen.riskOkShort
 
   const filteredList = useMemo(() => {
     let l = students
@@ -101,11 +109,11 @@ export function StudentsScreen() {
           marginBottom: 14,
         }}
       >
-        <SearchBox value={search} onChange={setSearch} placeholder="Buscar nome, email ou telefone…" />
+        <SearchBox value={search} onChange={setSearch} placeholder={t.studentsScreen.searchPlaceholder} />
         <div style={{ display: "flex", gap: 6 }}>
-          {STATUS_FILTERS.map((f) => (
-            <FilterPill key={f.id} active={filter === f.id} onClick={() => setFilter(f.id)}>
-              {f.label}
+          {STATUS_FILTER_IDS.map((id) => (
+            <FilterPill key={id} active={filter === id} onClick={() => setFilter(id)}>
+              {statusFilterLabels[id]}
             </FilterPill>
           ))}
         </div>
@@ -123,7 +131,7 @@ export function StudentsScreen() {
         {isSuperAdmin && (
           <SelectInput value={empresaFilter} onChange={setEmpresaFilter}>
             <option value="" style={{ background: T.ink }}>
-              Todas as empresas
+              {t.studentsScreen.allCompanies}
             </option>
             {teams.map((t) => (
               <option key={t.id} value={t.id} style={{ background: T.ink }}>
@@ -135,7 +143,7 @@ export function StudentsScreen() {
         {isAdmin && (
           <SelectInput value={coachFilter} onChange={setCoachFilter}>
             <option value="" style={{ background: T.ink }}>
-              Todos os coaches
+              {t.studentsScreen.allCoaches}
             </option>
             {coaches.map((c) => (
               <option key={c.userId} value={c.userId} style={{ background: T.ink }}>
@@ -146,19 +154,19 @@ export function StudentsScreen() {
         )}
         <SelectInput value={riskFilter} onChange={(v) => setRiskFilter(v as RiskLevel | "")}>
           <option value="" style={{ background: T.ink }}>
-            Todos os riscos
+            {t.studentsScreen.allRisks}
           </option>
           <option value="ok" style={{ background: T.ink }}>
-            Em dia
+            {t.studentsScreen.riskOk}
           </option>
           <option value="atencao" style={{ background: T.ink }}>
-            Atenção
+            {t.studentsScreen.riskAttention}
           </option>
           <option value="critico" style={{ background: T.ink }}>
-            Crítico
+            {t.studentsScreen.riskCritical}
           </option>
           <option value="sem-sinal" style={{ background: T.ink }}>
-            Sem sinal
+            {t.studentsScreen.riskNoSignal}
           </option>
         </SelectInput>
       </div>
@@ -220,9 +228,9 @@ export function StudentsScreen() {
                   overflow: "hidden",
                   textOverflow: "ellipsis",
                 }}
-                title={s.coachId ? coachLabel(s, coaches) : "Aluno sem coach atribuído — atenção operacional"}
+                title={s.coachId ? coachLabel(s, coaches) : t.studentsScreen.noCoachTitle}
               >
-                {s.coachId ? coachLabel(s, coaches) : "⚠ SEM COACH"}
+                {s.coachId ? coachLabel(s, coaches) : t.studentsScreen.noCoach}
               </span>
               <span style={{ fontFamily: T.mono, fontSize: 11, color: T.cyan, fontWeight: 700 }}>
                 {s.weeklyXp} XP
@@ -243,7 +251,7 @@ export function StudentsScreen() {
               </span>
               <div className="guto-students-actions" style={{ display: "flex", gap: 8 }}>
                 <button
-                  title="Copiar convite"
+                  title={t.studentsScreen.inviteAction}
                   onClick={async () => {
                     try {
                       const result = await getAdminStudentInvite(s.userId)
@@ -251,9 +259,9 @@ export function StudentsScreen() {
                         result.inviteLink ??
                         (await regenerateAdminStudentInvite(s.userId)).inviteLink
                       await navigator.clipboard.writeText(link)
-                      toast.success("Link copiado.")
+                      toast.success(t.studentsScreen.inviteCopied)
                     } catch {
-                      toast.error("Não foi possível copiar o convite.")
+                      toast.error(t.studentsScreen.inviteError)
                     }
                   }}
                   style={{
@@ -275,7 +283,7 @@ export function StudentsScreen() {
                   }}
                 >
                   <Copy className="h-3 w-3" />
-                  Convite
+                  {t.studentsScreen.inviteAction}
                 </button>
                 <button
                   onClick={() => openStudent(s)}
@@ -290,7 +298,7 @@ export function StudentsScreen() {
                     display: "grid",
                     placeItems: "center",
                   }}
-                  aria-label="Abrir aluno"
+                  aria-label={t.studentsScreen.openStudentLabel}
                 >
                   <ChevronRight className="h-4 w-4" />
                 </button>

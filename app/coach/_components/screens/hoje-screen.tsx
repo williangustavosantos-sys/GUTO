@@ -8,16 +8,20 @@ import { Plate, Pill, Btn, SectionTitle, StatCard } from "../controls"
 import { studentRisk, relativeTime, type RiskLevel } from "../utils"
 import type { AdminStudent, AdminTeam } from "@/lib/api/admin"
 import { activeClientTeams, clientTeams } from "@/lib/panel-rules"
+import { usePanelI18n } from "@/lib/panel-i18n"
 
 function riskTone(risk: RiskLevel): "ok" | "warn" | "bad" | "mute" {
   return risk === "critico" ? "bad" : risk === "atencao" ? "warn" : risk === "sem-sinal" ? "mute" : "ok"
 }
-function riskLabel(risk: RiskLevel): string {
-  return risk === "critico" ? "CRÍTICO" : risk === "atencao" ? "ATENÇÃO" : risk === "sem-sinal" ? "SEM SINAL" : "EM DIA"
-}
 
 export function HojeScreen() {
   const { students, teams, openStudent, openEmpresa, setActiveScreen, isSuperAdmin } = useCockpit()
+  const { t } = usePanelI18n()
+  const riskLabel = (risk: RiskLevel): string =>
+    risk === "critico" ? t.hojeScreen.riskCritical
+    : risk === "atencao" ? t.hojeScreen.riskAttention
+    : risk === "sem-sinal" ? t.hojeScreen.riskNoSignal
+    : t.hojeScreen.riskOk
 
   const todayStr = new Date().toISOString().split("T")[0]
   const stats = useMemo(() => {
@@ -54,41 +58,41 @@ export function HojeScreen() {
         {isSuperAdmin && (
           <StatCard
             icon={<Building2 className="h-3.5 w-3.5" />}
-            label="Empresas ativas"
+            label={t.hojeScreen.activeCompanies}
             value={empresasAtivas.length}
-            sub={`${empresasCliente.length} cliente(s) cadastrada(s)`}
+            sub={t.hojeScreen.activeCompaniesSub(empresasCliente.length)}
             tone="cyan"
             onClick={() => setActiveScreen("empresas")}
           />
         )}
         <StatCard
           icon={<Users className="h-3.5 w-3.5" />}
-          label="Ativos"
+          label={t.hojeScreen.activeStudents}
           value={stats.ativos.length}
-          sub="alunos com acesso"
+          sub={t.hojeScreen.activeStudentsSub}
           tone="cyan"
           onClick={() => setActiveScreen("students")}
         />
         <StatCard
           icon={<CheckCircle2 className="h-3.5 w-3.5" />}
-          label="Treinos hoje"
+          label={t.hojeScreen.workoutsToday}
           value={stats.validatedToday.length}
-          sub="validações no dia"
+          sub={t.hojeScreen.workoutsTodaySub}
           tone="ok"
         />
         <StatCard
           icon={<Zap className="h-3.5 w-3.5" />}
-          label="Críticos"
+          label={t.hojeScreen.criticals}
           value={stats.criticos.length}
-          sub="6+ dias parado"
+          sub={t.hojeScreen.criticalsSub}
           tone="bad"
           onClick={() => setActiveScreen("students")}
         />
         <StatCard
           icon={<Gavel className="h-3.5 w-3.5" />}
-          label="Atenção"
+          label={t.hojeScreen.attention}
           value={stats.atencao.length}
-          sub="3-5 dias parado"
+          sub={t.hojeScreen.attentionSub}
           tone="warn"
           onClick={() => setActiveScreen("students")}
         />
@@ -109,18 +113,18 @@ export function HojeScreen() {
             action={
               priorityList.length >= 6 && (
                 <Btn ghost sm onClick={() => setActiveScreen("students")}>
-                  Ver todos
+                  {t.hojeScreen.seeAll}
                 </Btn>
               )
             }
           >
-            ALUNOS QUE PRECISAM DE ATENÇÃO
+            {t.hojeScreen.needsAttentionTitle}
           </SectionTitle>
 
           {priorityList.length === 0 ? (
             <Plate style={{ padding: "48px 24px", textAlign: "center" }}>
               <CheckCircle2 className="mx-auto mb-3 h-7 w-7" style={{ color: T.ok }} />
-              <p style={{ fontFamily: T.mono, fontSize: 12, color: T.fg2 }}>Todos em dia.</p>
+              <p style={{ fontFamily: T.mono, fontSize: 12, color: T.fg2 }}>{t.hojeScreen.allOnTrack}</p>
             </Plate>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -160,8 +164,8 @@ export function HojeScreen() {
                       </div>
                       <div style={{ fontFamily: T.mono, fontSize: 9, color: T.fg3 }}>
                         {s.lastValidationAt
-                          ? `último treino ${relativeTime(s.lastValidationAt)}`
-                          : "sem sinal"}
+                          ? t.hojeScreen.workoutDoneRelative(relativeTime(s.lastValidationAt))
+                          : t.hojeScreen.noSignal}
                       </div>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
@@ -187,7 +191,7 @@ export function HojeScreen() {
                 </Btn>
               }
             >
-              EMPRESAS ATIVAS
+              {t.hojeScreen.activeCompaniesTitle}
             </SectionTitle>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {empresasAtivas.slice(0, 5).map((team) => (
