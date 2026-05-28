@@ -55,7 +55,6 @@ const copy = {
     retry: "TENTAR NOVAMENTE",
     cameraError: "Não foi possível acessar a câmera.",
     cameraTimeout: "Câmera não detectou o rosto. Tente novamente.",
-    skipCamera: "Validar sem câmera",
     errorTitle: "Algo deu errado",
     missingLocation: "Local do treino não está fechado. Volte e ajuste o local antes de validar.",
     incompleteWorkout: "Este treino está incompleto. GUTO precisa corrigir os exercícios antes de validar.",
@@ -99,7 +98,6 @@ const copy = {
     retry: "TRY AGAIN",
     cameraError: "Could not access the camera.",
     cameraTimeout: "Camera couldn't detect your face. Please try again.",
-    skipCamera: "Validate without camera",
     errorTitle: "Something went wrong",
     missingLocation: "Workout location is not locked. Go back and set the location before validating.",
     incompleteWorkout: "This workout is incomplete. GUTO must fix the exercises before validation.",
@@ -143,7 +141,6 @@ const copy = {
     retry: "RIPROVA",
     cameraError: "Impossibile accedere alla fotocamera.",
     cameraTimeout: "La fotocamera non ha rilevato il viso. Riprova.",
-    skipCamera: "Valida senza fotocamera",
     errorTitle: "Qualcosa è andato storto",
     missingLocation: "Il luogo dell'allenamento non è definito. Torna indietro e impostalo prima di validare.",
     incompleteWorkout: "Questo allenamento è incompleto. GUTO deve correggere gli esercizi prima di validare.",
@@ -214,14 +211,11 @@ export function WorkoutValidationFlow({
   const countdownTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const speakingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const cameraTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const skipCameraTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   // face-detection refs
   const rafRef = useRef<number | null>(null)
   const faceStableCountRef = useRef(0)
   const prevFrameDataRef = useRef<Uint8ClampedArray | null>(null)
   const faceLockedRef = useRef(false)
-
-  const [showSkipCamera, setShowSkipCamera] = useState(false)
 
   const clearTimers = useCallback(() => {
     if (countdownTimerRef.current !== null) {
@@ -235,10 +229,6 @@ export function WorkoutValidationFlow({
     if (cameraTimeoutRef.current !== null) {
       clearTimeout(cameraTimeoutRef.current)
       cameraTimeoutRef.current = null
-    }
-    if (skipCameraTimerRef.current !== null) {
-      clearTimeout(skipCameraTimerRef.current)
-      skipCameraTimerRef.current = null
     }
   }, [])
 
@@ -258,20 +248,15 @@ export function WorkoutValidationFlow({
     return () => { stopCamera() }
   }, [stopCamera])
 
-  // Camera step: show "skip" button after 8s, force timeout error after 20s
+  // Camera step: force timeout error after 20s if camera doesn't initialize.
+  // Sem skip-camera: selfie é obrigatória (decisão do fundador, ver doc X-7/O-7).
   useEffect(() => {
-    if (step !== "camera") {
-      setShowSkipCamera(false)
-      return
-    }
-    setShowSkipCamera(false)
-    skipCameraTimerRef.current = setTimeout(() => setShowSkipCamera(true), 8000)
+    if (step !== "camera") return
     cameraTimeoutRef.current = setTimeout(() => {
       stopCamera()
       setCameraError(locale.cameraTimeout)
     }, 20000)
     return () => {
-      if (skipCameraTimerRef.current !== null) clearTimeout(skipCameraTimerRef.current)
       if (cameraTimeoutRef.current !== null) clearTimeout(cameraTimeoutRef.current)
     }
   }, [step, locale.cameraTimeout, stopCamera])
@@ -748,27 +733,12 @@ export function WorkoutValidationFlow({
               )
             })()}
 
-            {/* Bottom: hint label + skip button after 8s */}
+            {/* Bottom: hint label (sem skip-camera: selfie obrigatória) */}
             {step === "camera" && (
               <div className="absolute bottom-[max(env(safe-area-inset-bottom),2rem)] z-20 flex flex-col items-center gap-3">
                 <p className="font-mono text-[9px] uppercase tracking-[0.2em] text-[rgba(255,255,255,0.3)]">
                   {locale.faceHint}
                 </p>
-                {showSkipCamera && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      stopCamera()
-                      // P0 FIX: do NOT set imageBase64 — send undefined so backend
-                      // processes validation without image (skip-camera path).
-                      imageBase64Ref.current = ""
-                      setStep("feedback")
-                    }}
-                    className="rounded-full border border-[rgba(82,231,255,0.25)] bg-[rgba(5,13,26,0.7)] px-5 py-2 font-mono text-[8px] font-black uppercase tracking-[0.16em] text-[rgba(82,231,255,0.55)]"
-                  >
-                    {locale.skipCamera}
-                  </button>
-                )}
               </div>
             )}
 
