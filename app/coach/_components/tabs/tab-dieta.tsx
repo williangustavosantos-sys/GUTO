@@ -22,6 +22,7 @@ import type { DietPlan } from "@/lib/api/guto"
 import { useCockpit } from "../cockpit-context"
 import { Panel, Field, PlanStatus, LogList } from "../ui"
 import { normalizeDietForEditor, blankDiet, dietDaySummary, blankDietDay, WEEK_DAYS } from "../utils"
+import { usePanelI18n } from "@/lib/panel-i18n"
 
 // ─── DietEditor ───────────────────────────────────────────────────────────────
 
@@ -40,6 +41,7 @@ function DietEditor({
   onLock: () => void
   onReset: () => void
 }) {
+  const { t } = usePanelI18n()
   const updateMeal = (i: number, patch: Partial<DietPlan["meals"][number]>) =>
     onChange({ ...value, meals: value.meals.map((m, idx) => idx === i ? { ...m, ...patch } : m) })
 
@@ -55,27 +57,27 @@ function DietEditor({
 
   return (
     <div className="grid gap-4">
-      <Panel title="Dieta oficial">
+      <Panel title={t.tabDieta.panelOfficial}>
         <PlanStatus source={value.source} locked={value.lockedByCoach} />
         <div className="mt-4 grid gap-3 md:grid-cols-3">
-          <Field label="Título" value={value.title || ""} onChange={(v) => onChange({ ...value, title: v })} className="md:col-span-2" />
-          <Field label="País" value={value.country || ""} onChange={(v) => onChange({ ...value, country: v })} />
-          <Field label="Calorias (kcal)" value={String(value.macros.targetKcal)} onChange={(v) => onChange({ ...value, macros: { ...value.macros, targetKcal: Number(v) || 0 } })} />
-          <Field label="Proteína (g)" value={String(value.macros.proteinG)} onChange={(v) => onChange({ ...value, macros: { ...value.macros, proteinG: Number(v) || 0 } })} />
-          <Field label="Carbo (g)" value={String(value.macros.carbsG)} onChange={(v) => onChange({ ...value, macros: { ...value.macros, carbsG: Number(v) || 0 } })} />
-          <Field label="Gordura (g)" value={String(value.macros.fatG)} onChange={(v) => onChange({ ...value, macros: { ...value.macros, fatG: Number(v) || 0 } })} />
-          <Field label="Restrições" value={value.foodRestrictions || ""} onChange={(v) => onChange({ ...value, foodRestrictions: v })} />
-          <Field label="Notas do coach" value={value.coachNotes || ""} onChange={(v) => onChange({ ...value, coachNotes: v })} />
+          <Field label={t.tabDieta.fieldTitle} value={value.title || ""} onChange={(v) => onChange({ ...value, title: v })} className="md:col-span-2" />
+          <Field label={t.tabDieta.fieldCountry} value={value.country || ""} onChange={(v) => onChange({ ...value, country: v })} />
+          <Field label={t.tabDieta.fieldKcal} value={String(value.macros.targetKcal)} onChange={(v) => onChange({ ...value, macros: { ...value.macros, targetKcal: Number(v) || 0 } })} />
+          <Field label={t.tabDieta.fieldProtein} value={String(value.macros.proteinG)} onChange={(v) => onChange({ ...value, macros: { ...value.macros, proteinG: Number(v) || 0 } })} />
+          <Field label={t.tabDieta.fieldCarbs} value={String(value.macros.carbsG)} onChange={(v) => onChange({ ...value, macros: { ...value.macros, carbsG: Number(v) || 0 } })} />
+          <Field label={t.tabDieta.fieldFat} value={String(value.macros.fatG)} onChange={(v) => onChange({ ...value, macros: { ...value.macros, fatG: Number(v) || 0 } })} />
+          <Field label={t.tabDieta.fieldRestrictions} value={value.foodRestrictions || ""} onChange={(v) => onChange({ ...value, foodRestrictions: v })} />
+          <Field label={t.tabDieta.fieldCoachNotes} value={value.coachNotes || ""} onChange={(v) => onChange({ ...value, coachNotes: v })} />
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
-          <Button className="bg-[#0891B2] text-slate-900 hover:bg-[#0E7490]" disabled={acting} onClick={onSave}><Save className="mr-2 h-4 w-4" />Salvar</Button>
-          <Button variant="outline" className="border-slate-200 bg-slate-50 text-slate-900" disabled={acting} onClick={onCreateManual}><Utensils className="mr-2 h-4 w-4" />Dieta manual</Button>
-          <Button variant="outline" className="border-slate-200 bg-slate-50 text-slate-900" disabled={acting} onClick={onGenerate}><RefreshCw className="mr-2 h-4 w-4" />Gerar com GUTO</Button>
+          <Button className="bg-[#0891B2] text-slate-900 hover:bg-[#0E7490]" disabled={acting} onClick={onSave}><Save className="mr-2 h-4 w-4" />{t.tabDieta.btnSave}</Button>
+          <Button variant="outline" className="border-slate-200 bg-slate-50 text-slate-900" disabled={acting} onClick={onCreateManual}><Utensils className="mr-2 h-4 w-4" />{t.tabDieta.btnManual}</Button>
+          <Button variant="outline" className="border-slate-200 bg-slate-50 text-slate-900" disabled={acting} onClick={onGenerate}><RefreshCw className="mr-2 h-4 w-4" />{t.tabDieta.btnGenerate}</Button>
           <Button variant="outline" className="border-slate-200 bg-slate-50 text-slate-900" disabled={acting} onClick={onLock}>
             {value.lockedByCoach ? <Unlock className="mr-2 h-4 w-4" /> : <Lock className="mr-2 h-4 w-4" />}
             {value.lockedByCoach ? "Permitir GUTO atualizar" : "Bloquear auto-atualização"}
           </Button>
-          <Button variant="outline" className="border-red-300 bg-transparent text-red-600" disabled={acting} onClick={onReset}><Trash2 className="mr-2 h-4 w-4" />Resetar dieta</Button>
+          <Button variant="outline" className="border-red-300 bg-transparent text-red-600" disabled={acting} onClick={onReset}><Trash2 className="mr-2 h-4 w-4" />{t.tabDieta.btnReset}</Button>
         </div>
       </Panel>
 
@@ -84,16 +86,16 @@ function DietEditor({
           {value.meals.map((meal, mealIdx) => (
             <div key={`${meal.id}-${mealIdx}`} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
               <div className="grid gap-3 md:grid-cols-4">
-                <Field label="Refeição" value={meal.name} onChange={(v) => updateMeal(mealIdx, { name: v })} className="md:col-span-2" />
-                <Field label="Horário" value={meal.time} onChange={(v) => updateMeal(mealIdx, { time: v })} />
-                <Field label="Kcal total" value={String(meal.totalKcal)} onChange={(v) => updateMeal(mealIdx, { totalKcal: Number(v) || 0 })} />
-                <Field label="Substituições" value={(meal.alternatives || []).join(", ")} onChange={(v) => updateMeal(mealIdx, { alternatives: v.split(",").map((s) => s.trim()).filter(Boolean) })} className="md:col-span-4" />
+                <Field label={t.tabDieta.fieldMealName} value={meal.name} onChange={(v) => updateMeal(mealIdx, { name: v })} className="md:col-span-2" />
+                <Field label={t.tabDieta.fieldMealTime} value={meal.time} onChange={(v) => updateMeal(mealIdx, { time: v })} />
+                <Field label={t.tabDieta.fieldMealKcal} value={String(meal.totalKcal)} onChange={(v) => updateMeal(mealIdx, { totalKcal: Number(v) || 0 })} />
+                <Field label={t.tabDieta.fieldMealAlternatives} value={(meal.alternatives || []).join(", ")} onChange={(v) => updateMeal(mealIdx, { alternatives: v.split(",").map((s) => s.trim()).filter(Boolean) })} className="md:col-span-4" />
               </div>
               <div className="mt-3 grid gap-2">
                 {meal.foods.map((food, foodIdx) => (
                   <div key={`${food.name}-${foodIdx}`} className="grid gap-2 rounded-md bg-white p-2 md:grid-cols-[1fr_1fr_.6fr_auto]">
-                    <Input value={food.name} onChange={(e) => updateFood(mealIdx, foodIdx, { name: e.target.value })} placeholder="Alimento" className="border-slate-200 bg-slate-50 text-slate-900" />
-                    <Input value={food.quantity} onChange={(e) => updateFood(mealIdx, foodIdx, { quantity: e.target.value })} placeholder="Quantidade" className="border-slate-200 bg-slate-50 text-slate-900" />
+                    <Input value={food.name} onChange={(e) => updateFood(mealIdx, foodIdx, { name: e.target.value })} placeholder={t.tabDieta.placeholderFood} className="border-slate-200 bg-slate-50 text-slate-900" />
+                    <Input value={food.quantity} onChange={(e) => updateFood(mealIdx, foodIdx, { quantity: e.target.value })} placeholder={t.tabDieta.placeholderQuantity} className="border-slate-200 bg-slate-50 text-slate-900" />
                     <Input value={String(food.kcal || "")} onChange={(e) => updateFood(mealIdx, foodIdx, { kcal: Number(e.target.value) || 0 })} placeholder="kcal" className="border-slate-200 bg-slate-50 text-slate-900" />
                     <Button variant="outline" className="border-red-300 bg-transparent text-red-600" onClick={() => updateMeal(mealIdx, { foods: meal.foods.filter((_, i) => i !== foodIdx) })}><Trash2 className="h-4 w-4" /></Button>
                   </div>
@@ -110,7 +112,7 @@ function DietEditor({
         </Button>
       </Panel>
 
-      <Panel title="Histórico da dieta">
+      <Panel title={t.tabDieta.panelHistory}>
         <LogList logs={history} empty="Sem histórico de dieta." />
       </Panel>
     </div>
