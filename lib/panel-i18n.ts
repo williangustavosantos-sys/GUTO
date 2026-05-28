@@ -333,6 +333,35 @@ type Dict = {
     weekDays: { full: readonly string[]; short: readonly string[] }
     duplicatedSuffix: string
   }
+  tabDieta: {
+    panelOfficial: string
+    panelHistory: string
+    panelWeekly: string
+    fieldTitle: string
+    fieldCountry: string
+    fieldKcal: string
+    fieldProtein: string
+    fieldCarbs: string
+    fieldFat: string
+    fieldRestrictions: string
+    fieldCoachNotes: string
+    fieldMealName: string
+    fieldMealTime: string
+    fieldMealKcal: string
+    fieldMealAlternatives: string
+    placeholderFood: string
+    placeholderQuantity: string
+    btnSave: string
+    btnManual: string
+    btnGenerate: string
+    btnLockToggleAllow: string
+    btnLockToggleBlock: string
+    btnReset: string
+    historyEmpty: string
+    weeklyIntro: string
+    toastSavedWeekly: string
+    toastWeeklySaveError: string
+  }
   empresaDrawer: {
     close: string
     tabResumo: string
@@ -726,6 +755,25 @@ const PT: Dict = {
     },
     duplicatedSuffix: "cópia",
   },
+  tabDieta: {
+    panelOfficial: "Dieta oficial",
+    panelHistory: "Histórico da dieta",
+    panelWeekly: "Plano semanal de dieta",
+    fieldTitle: "Título", fieldCountry: "País", fieldKcal: "Calorias (kcal)",
+    fieldProtein: "Proteína (g)", fieldCarbs: "Carbo (g)", fieldFat: "Gordura (g)",
+    fieldRestrictions: "Restrições", fieldCoachNotes: "Notas do coach",
+    fieldMealName: "Refeição", fieldMealTime: "Horário",
+    fieldMealKcal: "Kcal total", fieldMealAlternatives: "Substituições",
+    placeholderFood: "Alimento", placeholderQuantity: "Quantidade",
+    btnSave: "Salvar", btnManual: "Dieta manual", btnGenerate: "Gerar com GUTO",
+    btnLockToggleAllow: "Permitir GUTO atualizar",
+    btnLockToggleBlock: "Bloquear auto-atualização",
+    btnReset: "Resetar dieta",
+    historyEmpty: "Sem histórico de dieta.",
+    weeklyIntro: "Monte a dieta de cada dia. O aluno verá a dieta do dia atual.",
+    toastSavedWeekly: "Plano semanal de dieta salvo.",
+    toastWeeklySaveError: "Erro ao salvar plano semanal de dieta.",
+  },
   empresaDrawer: {
     close: "Fechar",
     tabResumo: "Resumo", tabCoaches: "Coaches", tabAlunos: "Alunos",
@@ -1077,6 +1125,25 @@ const EN: Dict = {
     },
     duplicatedSuffix: "copy",
   },
+  tabDieta: {
+    panelOfficial: "Official diet",
+    panelHistory: "Diet history",
+    panelWeekly: "Weekly diet plan",
+    fieldTitle: "Title", fieldCountry: "Country", fieldKcal: "Calories (kcal)",
+    fieldProtein: "Protein (g)", fieldCarbs: "Carbs (g)", fieldFat: "Fat (g)",
+    fieldRestrictions: "Restrictions", fieldCoachNotes: "Coach notes",
+    fieldMealName: "Meal", fieldMealTime: "Time",
+    fieldMealKcal: "Total kcal", fieldMealAlternatives: "Alternatives",
+    placeholderFood: "Food", placeholderQuantity: "Quantity",
+    btnSave: "Save", btnManual: "Manual diet", btnGenerate: "Generate with GUTO",
+    btnLockToggleAllow: "Allow GUTO to update",
+    btnLockToggleBlock: "Block auto-update",
+    btnReset: "Reset diet",
+    historyEmpty: "No diet history.",
+    weeklyIntro: "Build the diet for each day. The student sees today's diet.",
+    toastSavedWeekly: "Weekly diet plan saved.",
+    toastWeeklySaveError: "Error saving weekly diet plan.",
+  },
   empresaDrawer: {
     close: "Close",
     tabResumo: "Summary", tabCoaches: "Coaches", tabAlunos: "Students",
@@ -1427,6 +1494,25 @@ const IT: Dict = {
       short: ["Dom","Lun","Mar","Mer","Gio","Ven","Sab"],
     },
     duplicatedSuffix: "copia",
+  },
+  tabDieta: {
+    panelOfficial: "Dieta ufficiale",
+    panelHistory: "Cronologia dieta",
+    panelWeekly: "Piano settimanale della dieta",
+    fieldTitle: "Titolo", fieldCountry: "Paese", fieldKcal: "Calorie (kcal)",
+    fieldProtein: "Proteine (g)", fieldCarbs: "Carbo (g)", fieldFat: "Grassi (g)",
+    fieldRestrictions: "Restrizioni", fieldCoachNotes: "Note del coach",
+    fieldMealName: "Pasto", fieldMealTime: "Orario",
+    fieldMealKcal: "Kcal totali", fieldMealAlternatives: "Alternative",
+    placeholderFood: "Alimento", placeholderQuantity: "Quantità",
+    btnSave: "Salva", btnManual: "Dieta manuale", btnGenerate: "Genera con GUTO",
+    btnLockToggleAllow: "Consenti aggiornamento GUTO",
+    btnLockToggleBlock: "Blocca auto-aggiornamento",
+    btnReset: "Reset dieta",
+    historyEmpty: "Nessuna cronologia di dieta.",
+    weeklyIntro: "Componi la dieta di ogni giorno. L'allievo vedrà la dieta del giorno.",
+    toastSavedWeekly: "Piano settimanale di dieta salvato.",
+    toastWeeklySaveError: "Errore nel salvataggio del piano settimanale di dieta.",
   },
   empresaDrawer: {
     close: "Chiudi",
