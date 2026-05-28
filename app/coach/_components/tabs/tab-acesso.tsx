@@ -11,6 +11,7 @@ import {
 } from "@/lib/api/admin"
 import { useCockpit } from "../cockpit-context"
 import { Panel, ActionButton } from "../ui"
+import { usePanelI18n } from "@/lib/panel-i18n"
 
 export function TabAcesso() {
   const {
@@ -19,6 +20,7 @@ export function TabAcesso() {
     acting, act, setLastSecret, lastSecret,
     setStudents,
   } = useCockpit()
+  const { t } = usePanelI18n()
 
   if (!selectedDetail) return null
   const { student } = selectedDetail
@@ -26,7 +28,7 @@ export function TabAcesso() {
   return (
     <div className="grid gap-4">
       {/* Pause / reactivate */}
-      <Panel title="Controle de acesso">
+      <Panel title={t.tabAcesso.panelControl}>
         <div className="grid gap-2 sm:grid-cols-2">
           <ActionButton
             disabled={acting}
@@ -36,10 +38,10 @@ export function TabAcesso() {
                   ? await pauseAdminStudent(student.userId)
                   : await reactivateAdminStudent(student.userId)
                 setSelectedDetail((c) => c ? { ...c, student: result.student } : c)
-              }, student.active ? "Acesso pausado." : "Acesso reativado.")
+              }, student.active ? t.tabAcesso.toastPaused : t.tabAcesso.toastReactivated)
             }
           >
-            {student.active ? "Pausar acesso" : "Reativar acesso"}
+            {student.active ? t.tabAcesso.btnPause : t.tabAcesso.btnReactivate}
           </ActionButton>
 
           <ActionButton
@@ -48,10 +50,10 @@ export function TabAcesso() {
               void act(async () => {
                 const result = await renewAdminStudent(student.userId, 30)
                 setSelectedDetail((c) => c ? { ...c, student: result.student } : c)
-              }, "Acesso renovado por 30 dias.")
+              }, t.tabAcesso.toastRenewed)
             }
           >
-            Renovar 30 dias
+            {t.tabAcesso.btnRenew30}
           </ActionButton>
 
           <ActionButton
@@ -62,10 +64,10 @@ export function TabAcesso() {
                   visibleInArena: !student.visibleInArena,
                 })
                 setSelectedDetail((c) => c ? { ...c, student: result.student } : c)
-              }, student.visibleInArena ? "Aluno ocultado da Arena." : "Aluno visível na Arena.")
+              }, student.visibleInArena ? t.tabAcesso.toastArenaHidden : t.tabAcesso.toastArenaShown)
             }
           >
-            {student.visibleInArena ? "Ocultar na Arena" : "Mostrar na Arena"}
+            {student.visibleInArena ? t.tabAcesso.btnArenaHide : t.tabAcesso.btnArenaShow}
           </ActionButton>
 
           {isAdmin && (
@@ -77,11 +79,11 @@ export function TabAcesso() {
                 void act(async () => {
                   const result = await assignStudentToCoach(coachId, student.userId)
                   setSelectedDetail((c) => c ? { ...c, student: result.student } : c)
-                }, "Aluno atribuído ao coach.")
+                }, t.tabAcesso.toastCoachAssigned)
               }}
               className="h-11 rounded-md border border-slate-200 bg-slate-50 px-3 text-sm text-slate-900"
             >
-              <option value="" className="bg-white">Atribuir coach…</option>
+              <option value="" className="bg-white">{t.tabAcesso.assignCoachPlaceholder}</option>
               {coaches.map((c) => (
                 <option key={c.userId} value={c.userId} className="bg-white">
                   {c.name || c.email || c.userId}
@@ -93,7 +95,7 @@ export function TabAcesso() {
       </Panel>
 
       {/* Invite */}
-      <Panel title="Convite de acesso">
+      <Panel title={t.tabAcesso.panelInvite}>
         <div className="grid gap-2 sm:grid-cols-2">
           <ActionButton
             disabled={acting}
@@ -103,26 +105,26 @@ export function TabAcesso() {
                 if (result.inviteLink) {
                   setLastSecret(result.inviteLink)
                 } else {
-                  toast.info(result.message || "Link não disponível. Use regenerar para criar um novo.")
+                  toast.info(result.message || t.tabAcesso.toastInviteUnavailable)
                 }
-              }, "Convite carregado.")
+              }, t.tabAcesso.toastInviteLoaded)
             }
           >
-            Ver convite atual
+            {t.tabAcesso.btnViewInvite}
           </ActionButton>
 
           <ActionButton
             disabled={acting}
             onClick={() => {
-              if (!window.confirm("Regenerar convite? O link anterior deixa de funcionar.")) return
+              if (!window.confirm(t.tabAcesso.confirmRegen)) return
               void act(async () => {
                 const result = await regenerateAdminStudentInvite(student.userId)
                 setLastSecret(result.inviteLink)
-              }, "Novo convite gerado.")
+              }, t.tabAcesso.toastInviteRegenerated)
             }}
           >
             <RefreshCw className="mr-2 h-4 w-4" />
-            Regenerar convite
+            {t.tabAcesso.btnRegenInvite}
           </ActionButton>
         </div>
 
@@ -135,7 +137,7 @@ export function TabAcesso() {
               className="shrink-0 border-slate-200 bg-slate-50 text-slate-900"
               onClick={() => {
                 void navigator.clipboard.writeText(lastSecret)
-                toast.success("Link copiado!")
+                toast.success(t.tabAcesso.toastLinkCopied)
               }}
             >
               <Copy className="h-3.5 w-3.5" />
@@ -145,7 +147,7 @@ export function TabAcesso() {
       </Panel>
 
       {/* Password + danger */}
-      <Panel title="Segurança">
+      <Panel title={t.tabAcesso.panelSecurity}>
         <div className="grid gap-3 sm:grid-cols-2">
           <ActionButton
             disabled={acting}
@@ -153,11 +155,11 @@ export function TabAcesso() {
               void act(async () => {
                 const result = await resetAdminStudentPassword(student.userId)
                 setLastSecret(result.temporaryPassword || null)
-              }, "Senha temporária gerada.")
+              }, t.tabAcesso.toastPasswordGenerated)
             }
           >
             <KeyRound className="mr-2 h-4 w-4" />
-            Gerar senha temporária
+            {t.tabAcesso.btnResetPassword}
           </ActionButton>
 
           {isSuperAdmin && (
@@ -165,16 +167,16 @@ export function TabAcesso() {
               danger
               disabled={acting}
               onClick={() => {
-                if (!window.confirm("Excluir permanentemente este aluno e todos os dados vinculados?")) return
+                if (!window.confirm(t.tabAcesso.confirmDelete)) return
                 void act(async () => {
                   await deleteAdminStudent(student.userId)
                   setSelectedDetail(null)
                   setStudents((prev) => prev.filter((s) => s.userId !== student.userId))
-                }, "Aluno excluído permanentemente.")
+                }, t.tabAcesso.toastDeleted)
               }}
             >
               <Trash2 className="mr-2 h-4 w-4" />
-              Excluir permanentemente
+              {t.tabAcesso.btnDelete}
             </ActionButton>
           )}
         </div>
@@ -182,7 +184,7 @@ export function TabAcesso() {
         {lastSecret && !lastSecret.startsWith("http") && (
           <div className="mt-4 rounded-lg border border-[#0E7490]/40 bg-cyan-50 p-4">
             <p className="mb-1 text-[10px] font-black uppercase tracking-widest text-[#0E7490]">
-              Senha temporária
+              {t.tabAcesso.tempPasswordLabel}
             </p>
             <p className="font-mono text-lg font-black text-slate-900">{lastSecret}</p>
           </div>

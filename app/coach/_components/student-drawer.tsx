@@ -3,7 +3,7 @@
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Badge } from "@/components/ui/badge"
 import { useCockpit } from "./cockpit-context"
-import { getStatusInfo, DETAIL_TABS } from "./utils"
+import { getStatusInfo, DETAIL_TABS, type DetailTab } from "./utils"
 import { TabResumo } from "./tabs/tab-resumo"
 import { TabCalibragem } from "./tabs/tab-calibragem"
 import { TabTreino } from "./tabs/tab-treino"
@@ -11,9 +11,26 @@ import { TabDieta } from "./tabs/tab-dieta"
 import { TabValidacoes } from "./tabs/tab-validacoes"
 import { TabHistorico } from "./tabs/tab-historico"
 import { TabAcesso } from "./tabs/tab-acesso"
+import { usePanelI18n } from "@/lib/panel-i18n"
+
+// Labels traduzidas para cada aba do drawer. Centralizado aqui para que
+// DETAIL_TABS continue sendo pura (sem dependência do hook React).
+function detailTabLabel(id: DetailTab, t: ReturnType<typeof usePanelI18n>["t"]): string {
+  const map: Record<DetailTab, string> = {
+    resumo: t.studentDrawer.tabResumo,
+    calibragem: t.studentDrawer.tabCalibragem,
+    treino: t.studentDrawer.tabTreino,
+    dieta: t.studentDrawer.tabDieta,
+    validacoes: t.studentDrawer.tabValidacoes,
+    historico: t.studentDrawer.tabHistorico,
+    acesso: t.studentDrawer.tabAcesso,
+  }
+  return map[id]
+}
 
 export function StudentDrawer() {
   const { selectedDetail, closeStudent, detailTab, setDetailTab } = useCockpit()
+  const { t } = usePanelI18n()
   const selected = selectedDetail?.student ?? null
 
   return (
@@ -30,7 +47,7 @@ export function StudentDrawer() {
                 <div className="min-w-0">
                   <div className="mb-1 flex items-center gap-2">
                     <Badge className="bg-[#0891B2] text-slate-900 text-[9px] font-black">
-                      STUDENT
+                      {t.studentDrawer.role}
                     </Badge>
                     <span className="truncate font-mono text-[10px] text-slate-400">
                       {selected.userId}
@@ -62,7 +79,7 @@ export function StudentDrawer() {
                         : "bg-slate-50 text-slate-500 hover:text-slate-900"
                     }`}
                   >
-                    {tab.label}
+                    {detailTabLabel(tab.id, t)}
                   </button>
                 ))}
               </div>
