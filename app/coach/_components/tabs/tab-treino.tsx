@@ -24,9 +24,9 @@ import {
   type WeekDayKey,
 } from "@/lib/api/admin"
 import type { GutoWorkoutPlan, GutoWorkoutExercise } from "@/lib/api/guto"
-import { TRAINING_LOCATION_LABELS } from "@/lib/format-codes"
 import { useCockpit } from "../cockpit-context"
 import { Panel, Field, PlanStatus, LogList } from "../ui"
+import { usePanelI18n } from "@/lib/panel-i18n"
 import {
   blankExercise, blankWorkout, normalizeWorkoutForEditor,
   hasInvalidWorkoutExerciseContract, normalizeCatalogSearch, catalogSearchText,
@@ -53,6 +53,7 @@ function WorkoutEditor({
   onLock: () => void
   onReset: () => void
 }) {
+  const { t } = usePanelI18n()
   const [exerciseSearch, setExerciseSearch] = useState<Record<number, string>>({})
   const [customDraft, setCustomDraft] = useState<CustomExerciseDraft>(blankCustomExerciseDraft())
   const [creatingCustom, setCreatingCustom] = useState(false)
@@ -101,10 +102,10 @@ function WorkoutEditor({
         mimeType: "video/mp4",
         hasAudio: customDraft.hasAudio,
       })
-      toast.success("Exercício enviado para aprovação técnica.")
+      toast.success(t.tabTreino.toastCustomSubmitted)
       setCustomDraft(blankCustomExerciseDraft())
     } catch (error) {
-      toast.error(error instanceof ApiError ? error.message || "Erro no vídeo." : String(error))
+      toast.error(error instanceof ApiError ? error.message || t.tabTreino.toastCustomError : String(error))
     } finally {
       setCreatingCustom(false)
     }
@@ -112,43 +113,43 @@ function WorkoutEditor({
 
   return (
     <div className="grid gap-4">
-      <Panel title="Treino oficial">
+      <Panel title={t.tabTreino.panelOfficial}>
         <PlanStatus source={value.source} locked={value.lockedByCoach} />
         <div className="mt-4 grid gap-3 md:grid-cols-2">
-          <Field label="Título" value={value.title || ""} onChange={(title) => onChange({ ...value, title, focus: title || value.focus })} />
-          <Field label="Foco / grupo muscular" value={value.focus || ""} onChange={(focus) => onChange({ ...value, focus })} />
+          <Field label={t.tabTreino.fieldTitle} value={value.title || ""} onChange={(title) => onChange({ ...value, title, focus: title || value.focus })} />
+          <Field label={t.tabTreino.fieldFocus} value={value.focus || ""} onChange={(focus) => onChange({ ...value, focus })} />
           <label className="block">
-            <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">Dia</span>
+            <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">{t.tabTreino.fieldDay}</span>
             <select value={value.weekDay || "today"} onChange={(e) => onChange({ ...value, weekDay: e.target.value })} className="h-10 w-full rounded-md border border-slate-200 bg-slate-50 px-3 text-sm text-slate-900">
-              {["Domingo","Segunda-feira","Terça-feira","Quarta-feira","Quinta-feira","Sexta-feira","Sábado"].map((d) => (
+              {t.tabTreino.weekDays.full.map((d) => (
                 <option key={d} value={d} className="bg-white">{d}</option>
               ))}
-              <option value="today" className="bg-white">Hoje ({["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"][new Date().getDay()]})</option>
+              <option value="today" className="bg-white">{t.tabTreino.todayPrefix} ({t.tabTreino.weekDays.short[new Date().getDay()]})</option>
             </select>
           </label>
           <label className="block">
-            <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">Local</span>
+            <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">{t.tabTreino.fieldLocation}</span>
             <select value={value.location || ""} onChange={(e) => onChange({ ...value, location: e.target.value })} className="h-10 w-full rounded-md border border-slate-200 bg-slate-50 px-3 text-sm text-slate-900">
-              <option value="" className="bg-white">Selecionar</option>
-              {Object.entries(TRAINING_LOCATION_LABELS).map(([code, label]) => (
+              <option value="" className="bg-white">{t.tabTreino.selectLocation}</option>
+              {Object.entries(t.tabCalibragem.trainingLocation).map(([code, label]) => (
                 <option key={code} value={code} className="bg-white">{label}</option>
               ))}
             </select>
           </label>
-          <Field label="Duração estimada (min)" value={String(value.estimatedDurationMinutes || "")} onChange={(v) => onChange({ ...value, estimatedDurationMinutes: Number(v) || undefined })} />
-          <Field label="Dificuldade" value={value.difficulty || ""} onChange={(v) => onChange({ ...value, difficulty: v })} />
-          <Field label="Observações do coach" value={value.coachNotes || ""} onChange={(v) => onChange({ ...value, coachNotes: v, summary: v || value.summary })} className="md:col-span-2" />
+          <Field label={t.tabTreino.fieldDuration} value={String(value.estimatedDurationMinutes || "")} onChange={(v) => onChange({ ...value, estimatedDurationMinutes: Number(v) || undefined })} />
+          <Field label={t.tabTreino.fieldDifficulty} value={value.difficulty || ""} onChange={(v) => onChange({ ...value, difficulty: v })} />
+          <Field label={t.tabTreino.fieldCoachNotes} value={value.coachNotes || ""} onChange={(v) => onChange({ ...value, coachNotes: v, summary: v || value.summary })} className="md:col-span-2" />
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
-          <Button className="bg-[#0891B2] text-slate-900 hover:bg-[#0E7490]" disabled={acting} onClick={onSave}><Save className="mr-2 h-4 w-4" />Salvar</Button>
-          <Button variant="outline" className="border-slate-200 bg-slate-50 text-slate-900" disabled={acting} onClick={onCreateManual}><Dumbbell className="mr-2 h-4 w-4" />Treino manual</Button>
-          <Button variant="outline" className="border-slate-200 bg-slate-50 text-slate-900" disabled={acting} onClick={onGenerate}><RefreshCw className="mr-2 h-4 w-4" />Gerar com GUTO</Button>
-          <Button variant="outline" className="border-slate-200 bg-slate-50 text-slate-900" disabled={acting} onClick={() => onChange({ ...value, title: `${value.title || value.focus} cópia`, source: "coach_manual", lockedByCoach: true })}>Duplicar</Button>
+          <Button className="bg-[#0891B2] text-slate-900 hover:bg-[#0E7490]" disabled={acting} onClick={onSave}><Save className="mr-2 h-4 w-4" />{t.tabTreino.btnSave}</Button>
+          <Button variant="outline" className="border-slate-200 bg-slate-50 text-slate-900" disabled={acting} onClick={onCreateManual}><Dumbbell className="mr-2 h-4 w-4" />{t.tabTreino.btnManual}</Button>
+          <Button variant="outline" className="border-slate-200 bg-slate-50 text-slate-900" disabled={acting} onClick={onGenerate}><RefreshCw className="mr-2 h-4 w-4" />{t.tabTreino.btnGenerate}</Button>
+          <Button variant="outline" className="border-slate-200 bg-slate-50 text-slate-900" disabled={acting} onClick={() => onChange({ ...value, title: `${value.title || value.focus} ${t.tabTreino.duplicatedSuffix}`, source: "coach_manual", lockedByCoach: true })}>{t.tabTreino.btnDuplicate}</Button>
           <Button variant="outline" className="border-slate-200 bg-slate-50 text-slate-900" disabled={acting} onClick={onLock}>
             {value.lockedByCoach ? <Unlock className="mr-2 h-4 w-4" /> : <Lock className="mr-2 h-4 w-4" />}
-            {value.lockedByCoach ? "Permitir GUTO atualizar" : "Bloquear auto-atualização"}
+            {value.lockedByCoach ? t.tabTreino.btnLockToggleAllow : t.tabTreino.btnLockToggleBlock}
           </Button>
-          <Button variant="outline" className="border-red-300 bg-transparent text-red-600" disabled={acting} onClick={onReset}><Trash2 className="mr-2 h-4 w-4" />Resetar treino</Button>
+          <Button variant="outline" className="border-red-300 bg-transparent text-red-600" disabled={acting} onClick={onReset}><Trash2 className="mr-2 h-4 w-4" />{t.tabTreino.btnReset}</Button>
         </div>
       </Panel>
 
@@ -173,16 +174,16 @@ function WorkoutEditor({
 
                 <div className="mb-3 grid gap-2 md:grid-cols-[1fr_7rem]">
                   <label className="block">
-                    <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">Exercício oficial</span>
+                    <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">{t.tabTreino.fieldOfficialExercise}</span>
                     <Input
                       value={searchTerm}
                       onChange={(e) => setExerciseSearch((s) => ({ ...s, [index]: e.target.value }))}
-                      placeholder={catEx ? catEx.canonicalNamePt : "Pesquisar catálogo"}
+                      placeholder={catEx ? catEx.canonicalNamePt : t.tabTreino.placeholderSearchCatalog}
                       className="h-10 border-slate-200 bg-slate-50 text-slate-900 placeholder:text-slate-400"
                     />
                   </label>
                   <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
-                    <span className="block text-[10px] font-black uppercase tracking-widest text-slate-400">Catálogo</span>
+                    <span className="block text-[10px] font-black uppercase tracking-widest text-slate-400">{t.tabTreino.fieldCatalog}</span>
                     <span className={catEx ? "text-xs font-black text-[#0E7490]" : "text-xs font-black text-red-600"}>
                       {catEx ? catEx.id : "Não selecionado"}
                     </span>
@@ -220,13 +221,13 @@ function WorkoutEditor({
                 )}
 
                 <div className="grid gap-3 md:grid-cols-4">
-                  <Field label="Séries" value={String(exercise.sets)} onChange={(v) => updateExercise(index, { sets: Number(v) || 0 })} />
-                  <Field label="Reps" value={String(exercise.reps)} onChange={(v) => updateExercise(index, { reps: v })} />
-                  <Field label="Carga" value={String(exercise.load || "")} onChange={(v) => updateExercise(index, { load: v })} />
-                  <Field label="Intervalo" value={exercise.rest} onChange={(v) => updateExercise(index, { rest: v })} />
-                  <Field label="Técnica" value={exercise.cue || ""} onChange={(v) => updateExercise(index, { cue: v })} className="md:col-span-2" />
-                  <Field label="Observação" value={exercise.note || ""} onChange={(v) => updateExercise(index, { note: v })} className="md:col-span-2" />
-                  <Field label="Substituições" value={(exercise.alternatives || []).join(", ")} onChange={(v) => updateExercise(index, { alternatives: v.split(",").map((s) => s.trim()).filter(Boolean) })} className="md:col-span-4" />
+                  <Field label={t.tabTreino.fieldSets} value={String(exercise.sets)} onChange={(v) => updateExercise(index, { sets: Number(v) || 0 })} />
+                  <Field label={t.tabTreino.fieldReps} value={String(exercise.reps)} onChange={(v) => updateExercise(index, { reps: v })} />
+                  <Field label={t.tabTreino.fieldLoad} value={String(exercise.load || "")} onChange={(v) => updateExercise(index, { load: v })} />
+                  <Field label={t.tabTreino.fieldRest} value={exercise.rest} onChange={(v) => updateExercise(index, { rest: v })} />
+                  <Field label={t.tabTreino.fieldCue} value={exercise.cue || ""} onChange={(v) => updateExercise(index, { cue: v })} className="md:col-span-2" />
+                  <Field label={t.tabTreino.fieldNote} value={exercise.note || ""} onChange={(v) => updateExercise(index, { note: v })} className="md:col-span-2" />
+                  <Field label={t.tabTreino.fieldAlternatives} value={(exercise.alternatives || []).join(", ")} onChange={(v) => updateExercise(index, { alternatives: v.split(",").map((s) => s.trim()).filter(Boolean) })} className="md:col-span-4" />
                 </div>
               </div>
             )
@@ -237,27 +238,27 @@ function WorkoutEditor({
         </Button>
       </Panel>
 
-      <Panel title="Enviar exercício personalizado">
+      <Panel title={t.tabTreino.panelCustom}>
         <div className="mb-3 rounded-md border border-[#0E7490]/30 bg-cyan-50 px-3 py-2">
           <p className="text-xs font-bold text-[#155E75]">{EXERCISE_VIDEO_LIMIT_COPY}</p>
         </div>
         <div className="grid gap-3 md:grid-cols-4">
-          <Field label="Nome oficial" value={customDraft.canonicalNamePt} onChange={(v) => setCustomDraft((d) => ({ ...d, canonicalNamePt: v }))} className="md:col-span-2" />
-          <Field label="ID opcional" value={customDraft.id} onChange={(v) => setCustomDraft((d) => ({ ...d, id: v }))} />
+          <Field label={t.tabTreino.fieldCustomName} value={customDraft.canonicalNamePt} onChange={(v) => setCustomDraft((d) => ({ ...d, canonicalNamePt: v }))} className="md:col-span-2" />
+          <Field label={t.tabTreino.fieldCustomId} value={customDraft.id} onChange={(v) => setCustomDraft((d) => ({ ...d, id: v }))} />
           <label className="block">
-            <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">Grupo</span>
+            <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">{t.tabTreino.fieldCustomGroup}</span>
             <select value={customDraft.muscleGroup} onChange={(e) => setCustomDraft((d) => ({ ...d, muscleGroup: e.target.value }))} className="h-10 w-full rounded-md border border-slate-200 bg-slate-50 px-3 text-sm text-slate-900">
               {["aquecimento","peito","costas","ombro","bracos","pernas","abdomen"].map((g) => <option key={g} value={g} className="bg-white">{g}</option>)}
             </select>
           </label>
-          <Field label="Equipamento" value={customDraft.equipment} onChange={(v) => setCustomDraft((d) => ({ ...d, equipment: v }))} />
-          <Field label="Arquivo MP4 seguro" value={customDraft.sourceFileName} onChange={(v) => setCustomDraft((d) => ({ ...d, sourceFileName: v }))} />
-          <Field label="Caminho interno" value={customDraft.videoUrl} onChange={(v) => setCustomDraft((d) => ({ ...d, videoUrl: v }))} className="md:col-span-2" />
-          <Field label="Bytes" value={customDraft.fileSizeBytes} onChange={(v) => setCustomDraft((d) => ({ ...d, fileSizeBytes: v }))} />
-          <Field label="Duração s" value={customDraft.durationSeconds} onChange={(v) => setCustomDraft((d) => ({ ...d, durationSeconds: v }))} />
-          <Field label="Width" value={customDraft.width} onChange={(v) => setCustomDraft((d) => ({ ...d, width: v }))} />
-          <Field label="Height" value={customDraft.height} onChange={(v) => setCustomDraft((d) => ({ ...d, height: v }))} />
-          <Field label="FPS" value={customDraft.fps} onChange={(v) => setCustomDraft((d) => ({ ...d, fps: v }))} />
+          <Field label={t.tabTreino.fieldCustomEquipment} value={customDraft.equipment} onChange={(v) => setCustomDraft((d) => ({ ...d, equipment: v }))} />
+          <Field label={t.tabTreino.fieldCustomFile} value={customDraft.sourceFileName} onChange={(v) => setCustomDraft((d) => ({ ...d, sourceFileName: v }))} />
+          <Field label={t.tabTreino.fieldCustomPath} value={customDraft.videoUrl} onChange={(v) => setCustomDraft((d) => ({ ...d, videoUrl: v }))} className="md:col-span-2" />
+          <Field label={t.tabTreino.fieldCustomBytes} value={customDraft.fileSizeBytes} onChange={(v) => setCustomDraft((d) => ({ ...d, fileSizeBytes: v }))} />
+          <Field label={t.tabTreino.fieldCustomDuration} value={customDraft.durationSeconds} onChange={(v) => setCustomDraft((d) => ({ ...d, durationSeconds: v }))} />
+          <Field label={t.tabTreino.fieldCustomWidth} value={customDraft.width} onChange={(v) => setCustomDraft((d) => ({ ...d, width: v }))} />
+          <Field label={t.tabTreino.fieldCustomHeight} value={customDraft.height} onChange={(v) => setCustomDraft((d) => ({ ...d, height: v }))} />
+          <Field label={t.tabTreino.fieldCustomFps} value={customDraft.fps} onChange={(v) => setCustomDraft((d) => ({ ...d, fps: v }))} />
         </div>
         <label className="mt-3 flex items-center gap-2 text-sm text-slate-600">
           <input type="checkbox" checked={customDraft.hasAudio} onChange={(e) => setCustomDraft((d) => ({ ...d, hasAudio: e.target.checked }))} />
@@ -268,8 +269,8 @@ function WorkoutEditor({
         </Button>
       </Panel>
 
-      <Panel title="Histórico do treino">
-        <LogList logs={history} empty="Sem histórico de treino." />
+      <Panel title={t.tabTreino.panelHistory}>
+        <LogList logs={history} empty={t.tabTreino.historyEmpty} />
       </Panel>
     </div>
   )
