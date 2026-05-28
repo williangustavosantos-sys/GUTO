@@ -8,6 +8,7 @@ import { TabResumo } from "./tabs/tab-resumo"
 import { TabCalibragem } from "./tabs/tab-calibragem"
 import { TabTreino } from "./tabs/tab-treino"
 import { TabDieta } from "./tabs/tab-dieta"
+import { TabValidacoes } from "./tabs/tab-validacoes"
 import { TabHistorico } from "./tabs/tab-historico"
 import { TabAcesso } from "./tabs/tab-acesso"
 
@@ -73,6 +74,7 @@ export function StudentDrawer() {
               {detailTab === "calibragem" && <TabCalibragem />}
               {detailTab === "treino" && <TabTreino />}
               {detailTab === "dieta" && <TabDieta />}
+              {detailTab === "validacoes" && <TabValidacoes />}
               {detailTab === "historico" && <TabHistorico />}
               {detailTab === "acesso" && <TabAcesso />}
             </div>

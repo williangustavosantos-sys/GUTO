@@ -19,7 +19,7 @@ export type Screen =
   | "arena"
   | "logs"
 export type FilterTab = "ativos" | "pausados" | "arquivados" | "todos"
-export type DetailTab = "resumo" | "calibragem" | "treino" | "dieta" | "historico" | "acesso"
+export type DetailTab = "resumo" | "calibragem" | "treino" | "dieta" | "validacoes" | "historico" | "acesso"
 export type EmpresaTab = "resumo" | "coaches" | "alunos" | "plano" | "logs"
 export type CoachDetailTab = "resumo" | "alunos" | "treinos" | "dietas" | "logs"
 export type AvatarStage = "baby" | "teen" | "adult" | "elite"
@@ -93,6 +93,7 @@ export const DETAIL_TABS: Array<{ id: DetailTab; label: string }> = [
   { id: "calibragem", label: "Calibragem" },
   { id: "treino", label: "Treino" },
   { id: "dieta", label: "Dieta" },
+  { id: "validacoes", label: "Validações" },
   { id: "historico", label: "Histórico" },
   { id: "acesso", label: "Acesso" },
 ]
