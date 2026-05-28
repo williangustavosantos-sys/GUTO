@@ -3,12 +3,13 @@
 import { Save } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { updateAdminStudent } from "@/lib/api/admin"
-import { TRAINING_LOCATION_LABELS, BIOLOGICAL_SEX_LABELS, TRAINING_GOAL_LABELS, TRAINING_LEVEL_LABELS } from "@/lib/format-codes"
 import { useCockpit } from "../cockpit-context"
 import { Panel, Field } from "../ui"
+import { usePanelI18n } from "@/lib/panel-i18n"
 
 export function TabCalibragem() {
   const { selectedDetail, calibrationDraft, setCalibrationDraft, acting, act } = useCockpit()
+  const { t } = usePanelI18n()
 
   if (!selectedDetail) return null
   const { student } = selectedDetail
@@ -17,43 +18,43 @@ export function TabCalibragem() {
     setCalibrationDraft((d) => ({ ...d, ...val }))
 
   return (
-    <Panel title="Calibragem do aluno">
+    <Panel title={t.tabCalibragem.panelTitle}>
       <div className="grid gap-3 md:grid-cols-2">
         <label className="block">
           <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">
-            Sexo biológico
+            {t.tabCalibragem.fieldBiologicalSex}
           </span>
           <select
             value={calibrationDraft.biologicalSex}
             onChange={(e) => patch({ biologicalSex: e.target.value })}
             className="h-10 w-full rounded-md border border-slate-200 bg-slate-50 px-3 text-sm text-slate-900"
           >
-            <option value="" className="bg-white">Selecionar</option>
-            {Object.entries(BIOLOGICAL_SEX_LABELS).map(([code, label]) => (
+            <option value="" className="bg-white">{t.tabCalibragem.selectPlaceholder}</option>
+            {Object.entries(t.tabCalibragem.biologicalSex).map(([code, label]) => (
               <option key={code} value={code} className="bg-white">{label}</option>
             ))}
           </select>
         </label>
 
         <Field
-          label="Idade"
+          label={t.tabCalibragem.fieldAge}
           value={calibrationDraft.userAge}
           onChange={(userAge) => patch({ userAge })}
           type="number"
-          placeholder="Ex: 28"
+          placeholder={t.tabCalibragem.placeholderAge}
         />
 
         <label className="block">
           <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">
-            Nível de treino
+            {t.tabCalibragem.fieldTrainingLevel}
           </span>
           <select
             value={calibrationDraft.trainingLevel}
             onChange={(e) => patch({ trainingLevel: e.target.value })}
             className="h-10 w-full rounded-md border border-slate-200 bg-slate-50 px-3 text-sm text-slate-900"
           >
-            <option value="" className="bg-white">Selecionar</option>
-            {Object.entries(TRAINING_LEVEL_LABELS).map(([code, label]) => (
+            <option value="" className="bg-white">{t.tabCalibragem.selectPlaceholder}</option>
+            {Object.entries(t.tabCalibragem.trainingLevel).map(([code, label]) => (
               <option key={code} value={code} className="bg-white">{label}</option>
             ))}
           </select>
@@ -61,15 +62,15 @@ export function TabCalibragem() {
 
         <label className="block">
           <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">
-            Objetivo
+            {t.tabCalibragem.fieldGoal}
           </span>
           <select
             value={calibrationDraft.trainingGoal}
             onChange={(e) => patch({ trainingGoal: e.target.value })}
             className="h-10 w-full rounded-md border border-slate-200 bg-slate-50 px-3 text-sm text-slate-900"
           >
-            <option value="" className="bg-white">Selecionar</option>
-            {Object.entries(TRAINING_GOAL_LABELS).map(([code, label]) => (
+            <option value="" className="bg-white">{t.tabCalibragem.selectPlaceholder}</option>
+            {Object.entries(t.tabCalibragem.trainingGoal).map(([code, label]) => (
               <option key={code} value={code} className="bg-white">{label}</option>
             ))}
           </select>
@@ -77,64 +78,64 @@ export function TabCalibragem() {
 
         <label className="block">
           <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">
-            Local preferido
+            {t.tabCalibragem.fieldPreferredLocation}
           </span>
           <select
             value={calibrationDraft.preferredTrainingLocation}
             onChange={(e) => patch({ preferredTrainingLocation: e.target.value })}
             className="h-10 w-full rounded-md border border-slate-200 bg-slate-50 px-3 text-sm text-slate-900"
           >
-            <option value="" className="bg-white">Selecionar</option>
-            {Object.entries(TRAINING_LOCATION_LABELS).map(([code, label]) => (
+            <option value="" className="bg-white">{t.tabCalibragem.selectPlaceholder}</option>
+            {Object.entries(t.tabCalibragem.trainingLocation).map(([code, label]) => (
               <option key={code} value={code} className="bg-white">{label}</option>
             ))}
           </select>
         </label>
 
         <Field
-          label="País"
+          label={t.tabCalibragem.fieldCountry}
           value={calibrationDraft.country}
           onChange={(country) => patch({ country })}
-          placeholder="Ex: BR"
+          placeholder={t.tabCalibragem.placeholderCountry}
         />
 
         <Field
-          label="Cidade"
+          label={t.tabCalibragem.fieldCity}
           value={calibrationDraft.city}
           onChange={(city) => patch({ city })}
-          placeholder="Ex: São Paulo"
+          placeholder={t.tabCalibragem.placeholderCity}
         />
 
         <Field
-          label="Altura (cm)"
+          label={t.tabCalibragem.fieldHeightCm}
           value={calibrationDraft.heightCm}
           onChange={(heightCm) => patch({ heightCm })}
           type="number"
-          placeholder="Ex: 175"
+          placeholder={t.tabCalibragem.placeholderHeight}
         />
 
         <Field
-          label="Peso (kg)"
+          label={t.tabCalibragem.fieldWeightKg}
           value={calibrationDraft.weightKg}
           onChange={(weightKg) => patch({ weightKg })}
           type="number"
-          placeholder="Ex: 80"
+          placeholder={t.tabCalibragem.placeholderWeight}
         />
 
         <Field
-          label="Dor ou limitação"
+          label={t.tabCalibragem.fieldPathology}
           value={calibrationDraft.trainingPathology}
           onChange={(trainingPathology) => patch({ trainingPathology })}
           className="md:col-span-2"
-          placeholder="Ex: dor no joelho"
+          placeholder={t.tabCalibragem.placeholderPathology}
         />
 
         <Field
-          label="Restrições alimentares"
+          label={t.tabCalibragem.fieldFoodRestrictions}
           value={calibrationDraft.foodRestrictions}
           onChange={(foodRestrictions) => patch({ foodRestrictions })}
           className="md:col-span-2"
-          placeholder="Ex: sem lactose"
+          placeholder={t.tabCalibragem.placeholderFoodRestrictions}
         />
       </div>
 
@@ -155,11 +156,11 @@ export function TabCalibragem() {
                   : undefined,
               },
             })
-          }, "Calibragem atualizada.")
+          }, t.tabCalibragem.toastSaved)
         }
       >
         <Save className="mr-2 h-4 w-4" />
-        Salvar calibragem
+        {t.tabCalibragem.saveBtn}
       </Button>
     </Panel>
   )
