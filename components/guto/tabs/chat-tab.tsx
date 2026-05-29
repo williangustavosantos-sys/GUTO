@@ -172,9 +172,9 @@ const chatCopy: Record<
       "Prêmio do pacto. Mesmo que você demore nos primeiros desafios, essa base fica contigo — o GUTO nunca fica com XP negativo.",
     xpCardDismiss: "Bora",
     exerciseContextHint: (name) =>
-      `Fala tua dúvida sobre ${name}. Equipamento ocupado, execução ou troca — eu já sei qual exercício é.`,
+      `Manda tua dúvida sobre ${name} — eu já sei qual exercício é.`,
     mealContextHint: (name) =>
-      `Fala o que precisa sobre ${name}. Troca, porção ou substituição — eu já tenho o contexto da refeição.`,
+      `Manda o que precisa sobre ${name} — eu já tenho o contexto da refeição.`,
     exerciseDoubtTrigger: (name) => `Tenho uma dúvida sobre ${name}.`,
     mealDoubtTrigger: (name) => `Tenho uma dúvida sobre ${name} na refeição.`,
     exerciseInputPlaceholder: "Ex.: equipamento ocupado, como executar, trocar exercício…",
@@ -199,9 +199,9 @@ const chatCopy: Record<
       "Pact reward. Even if you take your time on the first challenges, this base stays with you — GUTO never goes below zero XP.",
     xpCardDismiss: "Let's go",
     exerciseContextHint: (name) =>
-      `Ask your question about ${name}. Busy equipment, form, or swap — I already know which exercise this is.`,
+      `Send your question about ${name} — I already know which exercise this is.`,
     mealContextHint: (name) =>
-      `Say what you need about ${name}. Swap, portion, or substitute — I already have this meal's context.`,
+      `Tell me what you need about ${name} — I already have this meal's context.`,
     exerciseDoubtTrigger: (name) => `I have a question about ${name}.`,
     mealDoubtTrigger: (name) => `I have a question about ${name} in this meal.`,
     exerciseInputPlaceholder: "E.g. equipment busy, how to perform, swap exercise…",
@@ -226,9 +226,9 @@ const chatCopy: Record<
       "Premio del patto. Anche se ci metti con le prime sfide, questa base resta con te — GUTO non scende mai sotto zero XP.",
     xpCardDismiss: "Andiamo",
     exerciseContextHint: (name) =>
-      `Dimmi il dubbio su ${name}. Attrezzo occupato, esecuzione o sostituzione — so già quale esercizio è.`,
+      `Mandami il tuo dubbio su ${name} — so già quale esercizio è.`,
     mealContextHint: (name) =>
-      `Dimmi cosa ti serve su ${name}. Sostituzione, porzione o cambio — ho già il contesto del pasto.`,
+      `Dimmi cosa ti serve su ${name} — ho già il contesto del pasto.`,
     exerciseDoubtTrigger: (name) => `Ho un dubbio su ${name}.`,
     mealDoubtTrigger: (name) => `Ho un dubbio su ${name} in questo pasto.`,
     exerciseInputPlaceholder: "Es.: attrezzo occupato, come eseguire, cambiare esercizio…",
