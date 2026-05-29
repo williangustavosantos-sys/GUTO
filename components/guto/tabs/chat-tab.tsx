@@ -888,6 +888,9 @@ export function ChatTab({
     proactiveInFlightRef.current = true
     if (forceArrivalBriefing) {
       arrivalBriefingRequestedRef.current = true
+      // Abertura demora (chamada ao modelo): liga o "GUTO digitando" (som + spinner)
+      // pra não parecer travado. Só na abertura — o poll de 60s não pisca o indicador.
+      setIsSending(true)
     }
     const safeLanguage = getLanguage(language) as SupportedLanguage
 
@@ -946,6 +949,7 @@ export function ChatTab({
       console.warn(`Proatividade do GUTO indisponível: ${getApiErrorMessage(error)}`)
     } finally {
       proactiveInFlightRef.current = false
+      if (forceArrivalBriefing) setIsSending(false)
     }
   }, [isMuted, language, onWorkoutPlanUpdated, synthesizeAndPlay, userId])
 
