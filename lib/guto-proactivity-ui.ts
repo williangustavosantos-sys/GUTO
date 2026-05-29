@@ -5,26 +5,38 @@ export type ProactiveMemoryUiCopy = {
   pendingValidate: (label: string) => string
   hintConfirm: string
   hintValidate: string
+  btnYes: string
+  btnNo: string
+  btnFix: string
 }
 
 const copyByLang: Record<SupportedLanguage, ProactiveMemoryUiCopy> = {
   "pt-BR": {
     pendingConfirm: (label) => `Confirmar: ${label}`,
     pendingValidate: (label) => `Validar: ${label}`,
-    hintConfirm: "Responde no chat — sim, não ou corrige — antes do GUTO seguir.",
+    hintConfirm: "Confirma aqui ou corrige no chat antes do GUTO seguir.",
     hintValidate: "O GUTO quer saber o que aconteceu com este compromisso da semana passada.",
+    btnYes: "Sim",
+    btnNo: "Não",
+    btnFix: "Corrigir",
   },
   "en-US": {
     pendingConfirm: (label) => `Confirm: ${label}`,
     pendingValidate: (label) => `Validate: ${label}`,
-    hintConfirm: "Reply in chat — yes, no, or correct — before GUTO moves on.",
+    hintConfirm: "Confirm here or correct in chat before GUTO moves on.",
     hintValidate: "GUTO needs to know what happened with this commitment from last week.",
+    btnYes: "Yes",
+    btnNo: "No",
+    btnFix: "Fix",
   },
   "it-IT": {
     pendingConfirm: (label) => `Conferma: ${label}`,
     pendingValidate: (label) => `Valida: ${label}`,
-    hintConfirm: "Rispondi in chat — sì, no o correggi — prima che GUTO vada avanti.",
+    hintConfirm: "Conferma qui o correggi in chat prima che GUTO vada avanti.",
     hintValidate: "GUTO vuole sapere cosa è successo con questo impegno della settimana scorsa.",
+    btnYes: "Sì",
+    btnNo: "No",
+    btnFix: "Correggi",
   },
 }
 

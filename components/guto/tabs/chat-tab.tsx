@@ -699,6 +699,24 @@ export function ChatTab({
     return memories
   }, [])
 
+  // Botões Sim/Não do card de proatividade: resolve de forma determinística
+  // (não depende do GUTO interpretar o chat). Remove o card na hora (otimista),
+  // chama a API e reconcilia com o backend.
+  const resolveProactiveConfirmation = useCallback(
+    async (memoryId: string, decision: "confirm" | "discard") => {
+      gutoAudio.playGutoFeedback("tap")
+      setProactiveMemories((prev) => prev.filter((item) => item.id !== memoryId))
+      try {
+        if (decision === "confirm") await confirmProactiveMemory(memoryId)
+        else await discardProactiveMemory(memoryId)
+      } catch {
+        // silencioso — o refresh abaixo reflete o estado real do backend
+      }
+      await refreshProactiveMemories()
+    },
+    [refreshProactiveMemories]
+  )
+
   const triggerProactivityExtraction = useCallback(
     (safeLanguage: SupportedLanguage) => {
       if (hasExtractedThisWeek(userId)) return
@@ -1586,7 +1604,7 @@ export function ChatTab({
         <motion.div
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
-          className="absolute left-[8.46%] z-50 w-[81.34%] bottom-[calc(var(--guto-chat-input-bottom)+4.75rem)] rounded-[16px] border border-[rgba(82,231,255,0.4)] bg-white/92 px-3 py-2 shadow-[0_8px_24px_rgba(82,231,255,0.1)]"
+          className="absolute left-[8.46%] z-[60] max-h-[42vh] w-[81.34%] overflow-y-auto bottom-[calc(var(--guto-chat-input-bottom)+4.75rem)] rounded-[16px] border border-[rgba(82,231,255,0.4)] bg-white/95 px-3 py-2 shadow-[0_8px_24px_rgba(82,231,255,0.18)]"
         >
           <p className="mb-1.5 font-mono text-[9px] font-bold uppercase tracking-[0.12em] text-[rgba(13,35,65,0.55)]">
             {actionableProactive.pendingConfirmation.length > 0
@@ -1597,12 +1615,37 @@ export function ChatTab({
           </p>
           <div className="flex flex-wrap gap-1.5">
             {actionableProactive.pendingConfirmation.map((memory) => (
-              <span
-                key={memory.id}
-                className="rounded-full border border-[rgba(255,193,7,0.55)] bg-[rgba(255,243,205,0.9)] px-2.5 py-1 font-mono text-[9px] font-black uppercase tracking-[0.06em] text-(--guto-navy)"
-              >
-                {proactiveUi.pendingConfirm(formatProactiveMemoryLabel(memory))}
-              </span>
+              <div key={memory.id} className="flex w-full flex-col gap-1.5">
+                <span className="self-start rounded-full border border-[rgba(255,193,7,0.55)] bg-[rgba(255,243,205,0.9)] px-2.5 py-1 font-mono text-[9px] font-black uppercase tracking-[0.06em] text-(--guto-navy)">
+                  {proactiveUi.pendingConfirm(formatProactiveMemoryLabel(memory))}
+                </span>
+                <div className="flex gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => void resolveProactiveConfirmation(memory.id, "confirm")}
+                    className="rounded-full bg-(--guto-cyan) px-3 py-1.5 font-mono text-[10px] font-black uppercase tracking-[0.08em] text-(--guto-navy)"
+                  >
+                    {proactiveUi.btnYes}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void resolveProactiveConfirmation(memory.id, "discard")}
+                    className="rounded-full border border-[rgba(13,35,65,0.25)] bg-white px-3 py-1.5 font-mono text-[10px] font-black uppercase tracking-[0.08em] text-[rgba(13,35,65,0.7)]"
+                  >
+                    {proactiveUi.btnNo}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      gutoAudio.playGutoFeedback("tap")
+                      inputRef.current?.focus()
+                    }}
+                    className="rounded-full border border-[rgba(82,231,255,0.5)] bg-white px-3 py-1.5 font-mono text-[10px] font-black uppercase tracking-[0.08em] text-(--guto-cyan)"
+                  >
+                    {proactiveUi.btnFix}
+                  </button>
+                </div>
+              </div>
             ))}
             {actionableProactive.awaitingDiscard.map((memory) => (
               <span
