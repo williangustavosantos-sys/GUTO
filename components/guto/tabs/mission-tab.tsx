@@ -247,13 +247,13 @@ export function MissionTab({
     return (
       <motion.div
         key={`${exercise.id}-${index}`}
-        className="guto-premium-card overflow-hidden p-3.5"
+        className="guto-premium-card overflow-hidden p-3"
         initial={{ opacity: 0, y: 6 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: exerciseIndex * 0.025 }}
       >
         {/* Card header: checkbox + name + ? */}
-        <div className="mb-3 flex items-center gap-3">
+        <div className="mb-2.5 flex items-center gap-3">
           <button
             type="button"
             onClick={() => { gutoAudio.playGutoFeedback('select'); toggleExercise(exercise.id) }}
@@ -313,7 +313,7 @@ export function MissionTab({
           </div>
 
           {/* Video thumbnail */}
-          <div className="h-[96px] w-[96px] shrink-0 overflow-hidden rounded-[1rem] border border-[rgba(82,231,255,0.45)] bg-white/65 shadow-[inset_0_1px_0_rgba(255,255,255,0.86)]">
+          <div className="h-[80px] w-[80px] shrink-0 overflow-hidden rounded-[1rem] border border-[rgba(82,231,255,0.45)] bg-white/65 shadow-[inset_0_1px_0_rgba(255,255,255,0.86)]">
             {exercise.videoUrl ? (
               <video
                 src={exercise.videoUrl}
@@ -415,7 +415,7 @@ export function MissionTab({
 
       {/* Exercise sections */}
       <div className="flex min-h-0 flex-1 flex-col">
-        <div className="guto-tab-scroll space-y-2.5 pb-3 pt-0.5">
+        <div className="guto-tab-scroll space-y-2 pb-3 pt-0.5">
           {warmupExercises.length > 0 && (
             <section className="space-y-2">
               {renderSectionHeader(copy.warmup)}
