@@ -55,7 +55,10 @@ const VOICE_HISTORY_KEY = "guto.voice.history.v1"
 const DB_NAME = "guto-voice-bank"
 const DB_VERSION = 1
 const AUDIO_STORE = "audio"
-const MAX_REMOTE_TEXT_LENGTH = 240
+// Respostas do GUTO são curtas (2-3 frases), mas algumas passavam de 240 e
+// caíam no fallback do navegador — mudo no celular. 600 cobre praticamente
+// toda fala do GUTO com a voz real do servidor, deixando o áudio consistente.
+const MAX_REMOTE_TEXT_LENGTH = 600
 
 function isBrowser() {
   return typeof window !== "undefined"
