@@ -538,7 +538,9 @@ export function CockpitLayout({ children }: { children: ReactNode }) {
     <div
       style={{
         display: "flex",
-        height: "100vh",
+        // 100dvh (não 100vh): no celular o 100vh ignora a barra do navegador e
+        // empurra o fim do conteúdo pra fora da área visível — a tela não rolava.
+        height: "100dvh",
         overflow: "hidden",
         background: T.bg,
         color: T.fg,
