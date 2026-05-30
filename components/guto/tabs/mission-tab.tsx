@@ -365,13 +365,12 @@ export function MissionTab({
       {/* Cuidados do treino — memória visível (Fase 3K) */}
       <WorkoutCareNotice memory={memory} language={validLang} />
 
-      {/* Progress bar + start/reset */}
-      <div className="guto-premium-card mb-3 grid grid-cols-[1fr_auto] items-center gap-3 px-3.5 py-3">
-        <div>
-          <p className="guto-readable-label">
-            {copy.progress}
-          </p>
-          <div className="mt-1 h-2 overflow-hidden rounded-full bg-[rgba(13,35,65,0.08)]">
+      {/* Progresso (linha fina) + GUTO Online e Start lado a lado — antes eram
+          dois blocos empilhados ocupando muito espaço antes do 1º exercício. */}
+      <div className="mb-2.5">
+        <div className="mb-2 flex items-center gap-2.5">
+          <p className="guto-readable-label shrink-0">{copy.progress}</p>
+          <div className="h-2 flex-1 overflow-hidden rounded-full bg-[rgba(13,35,65,0.08)]">
             <motion.div
               className="h-full rounded-full bg-[linear-gradient(90deg,rgba(82,231,255,0.58),rgba(82,231,255,0.98))]"
               animate={{ width: `${trainedToday ? 100 : progress}%` }}
@@ -379,39 +378,40 @@ export function MissionTab({
             />
           </div>
         </div>
-        <button
-          type="button"
-          onClick={() => {
-            if (trainedToday || adaptedMissionToday) return
-            gutoAudio.playGutoFeedback('tap')
-            if (started) {
-              setStarted(false)
-              setCompletedExerciseIds([])
-              return
-            }
-            setStarted(true)
-          }}
-          className="guto-slot guto-big-touch grid place-items-center rounded-full disabled:opacity-45"
-          disabled={trainedToday || adaptedMissionToday}
-          aria-label={started ? copy.reset : copy.start}
-        >
-          {started ? <RotateCcw className="h-4 w-4 text-(--guto-cyan)" /> : <Play className="h-4 w-4 text-(--guto-cyan)" />}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              gutoAudio.playGutoFeedback('transition')
+              setStarted(true)
+              setOnlineOpen(true)
+            }}
+            disabled={trainedToday || adaptedMissionToday}
+            className="guto-cta-ghost flex-1 disabled:opacity-30"
+          >
+            <Radio className="h-4 w-4" />
+            {copy.gutoOnline}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (trainedToday || adaptedMissionToday) return
+              gutoAudio.playGutoFeedback('tap')
+              if (started) {
+                setStarted(false)
+                setCompletedExerciseIds([])
+                return
+              }
+              setStarted(true)
+            }}
+            className="guto-slot guto-big-touch grid shrink-0 place-items-center rounded-full disabled:opacity-45"
+            disabled={trainedToday || adaptedMissionToday}
+            aria-label={started ? copy.reset : copy.start}
+          >
+            {started ? <RotateCcw className="h-4 w-4 text-(--guto-cyan)" /> : <Play className="h-4 w-4 text-(--guto-cyan)" />}
+          </button>
+        </div>
       </div>
-
-      <button
-        type="button"
-        onClick={() => {
-          gutoAudio.playGutoFeedback('transition')
-          setStarted(true)
-          setOnlineOpen(true)
-        }}
-        disabled={trainedToday || adaptedMissionToday}
-        className="guto-cta-ghost mb-3 disabled:opacity-30"
-      >
-        <Radio className="h-4 w-4" />
-        {copy.gutoOnline}
-      </button>
 
       {/* Exercise sections */}
       <div className="flex min-h-0 flex-1 flex-col">
