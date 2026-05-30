@@ -7,6 +7,52 @@ import type {
 } from "@/lib/api/admin"
 import type { GutoMemory, GutoWorkoutPlan, GutoWorkoutExercise, DietPlan } from "@/lib/api/guto"
 import { ApiError } from "@/lib/api/client"
+import type { PanelLang } from "@/lib/panel-i18n"
+
+// ─── Logs: rótulos legíveis ──────────────────────────────────────────────────────
+// Antes os logs mostravam o enum cru (ACCESS_REACTIVATED, USER_CREATED…). Aqui
+// vira texto legível no idioma do painel; ações desconhecidas caem num fallback
+// que troca "_" por espaço e capitaliza (nunca mais SCREAMING_SNAKE na tela).
+const LOG_ACTION_LABELS: Record<string, Record<PanelLang, string>> = {
+  admin_login: { "pt-BR": "Login admin", "en-US": "Admin login", "it-IT": "Login admin" },
+  user_created: { "pt-BR": "Aluno criado", "en-US": "Student created", "it-IT": "Studente creato" },
+  user_updated: { "pt-BR": "Aluno atualizado", "en-US": "Student updated", "it-IT": "Studente aggiornato" },
+  invite_created: { "pt-BR": "Convite criado", "en-US": "Invite created", "it-IT": "Invito creato" },
+  access_paused: { "pt-BR": "Acesso pausado", "en-US": "Access paused", "it-IT": "Accesso in pausa" },
+  access_reactivated: { "pt-BR": "Acesso reativado", "en-US": "Access reactivated", "it-IT": "Accesso riattivato" },
+  access_renewed: { "pt-BR": "Acesso renovado", "en-US": "Access renewed", "it-IT": "Accesso rinnovato" },
+  coach_created: { "pt-BR": "Coach criado", "en-US": "Coach created", "it-IT": "Coach creato" },
+  coach_updated: { "pt-BR": "Coach atualizado", "en-US": "Coach updated", "it-IT": "Coach aggiornato" },
+  coach_deleted: { "pt-BR": "Coach excluído", "en-US": "Coach deleted", "it-IT": "Coach eliminato" },
+  coach_assigned: { "pt-BR": "Coach vinculado", "en-US": "Coach assigned", "it-IT": "Coach assegnato" },
+  coach_unassigned: { "pt-BR": "Coach desvinculado", "en-US": "Coach unassigned", "it-IT": "Coach rimosso" },
+  workout_edited: { "pt-BR": "Treino editado", "en-US": "Workout edited", "it-IT": "Allenamento modificato" },
+  workout_generated: { "pt-BR": "Treino gerado", "en-US": "Workout generated", "it-IT": "Allenamento generato" },
+  workout_locked: { "pt-BR": "Treino travado", "en-US": "Workout locked", "it-IT": "Allenamento bloccato" },
+  workout_unlocked: { "pt-BR": "Treino destravado", "en-US": "Workout unlocked", "it-IT": "Allenamento sbloccato" },
+  workout_reset: { "pt-BR": "Treino resetado", "en-US": "Workout reset", "it-IT": "Allenamento azzerato" },
+  workout_published: { "pt-BR": "Treino publicado", "en-US": "Workout published", "it-IT": "Allenamento pubblicato" },
+  workout_weekly_saved: { "pt-BR": "Treino semanal salvo", "en-US": "Weekly workout saved", "it-IT": "Allenamento settimanale salvato" },
+  diet_edited: { "pt-BR": "Dieta editada", "en-US": "Diet edited", "it-IT": "Dieta modificata" },
+  diet_generated: { "pt-BR": "Dieta gerada", "en-US": "Diet generated", "it-IT": "Dieta generata" },
+  diet_locked: { "pt-BR": "Dieta travada", "en-US": "Diet locked", "it-IT": "Dieta bloccata" },
+  diet_unlocked: { "pt-BR": "Dieta destravada", "en-US": "Diet unlocked", "it-IT": "Dieta sbloccata" },
+  diet_reset: { "pt-BR": "Dieta resetada", "en-US": "Diet reset", "it-IT": "Dieta azzerata" },
+  diet_published: { "pt-BR": "Dieta publicada", "en-US": "Diet published", "it-IT": "Dieta pubblicata" },
+  diet_weekly_saved: { "pt-BR": "Dieta semanal salva", "en-US": "Weekly diet saved", "it-IT": "Dieta settimanale salvata" },
+  custom_exercise_requested: { "pt-BR": "Exercício custom solicitado", "en-US": "Custom exercise requested", "it-IT": "Esercizio custom richiesto" },
+  custom_exercise_approved: { "pt-BR": "Exercício custom aprovado", "en-US": "Custom exercise approved", "it-IT": "Esercizio custom approvato" },
+  arena_reset: { "pt-BR": "Arena resetada", "en-US": "Arena reset", "it-IT": "Arena azzerata" },
+  password_reset: { "pt-BR": "Senha redefinida", "en-US": "Password reset", "it-IT": "Password reimpostata" },
+}
+
+export function formatLogAction(action: string | null | undefined, lang: PanelLang): string {
+  if (!action) return ""
+  const entry = LOG_ACTION_LABELS[action]
+  if (entry) return entry[lang] ?? entry["pt-BR"]
+  const pretty = action.replace(/_/g, " ").toLowerCase().trim()
+  return pretty.charAt(0).toUpperCase() + pretty.slice(1)
+}
 
 // ─── Screen & Tab Types ────────────────────────────────────────────────────────
 

@@ -370,7 +370,7 @@ function TabAlunos({ empresa }: { empresa: AdminTeam }) {
   const openCreateStudent = () => {
     setSelectedTeamId(empresa.id)
     setStudentDraft({
-      name: "", email: "", phone: "", password: "", active: false,
+      name: "", email: "", phone: "", password: "", active: true,
       coachId: "", teamId: empresa.id, sex: "", age: "",
     })
     setShowCreateStudent(true)
