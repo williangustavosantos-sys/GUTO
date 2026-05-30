@@ -86,7 +86,9 @@ export const T = {
 
   // typography
   ui: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif',
-  mono: '"JetBrains Mono","SF Mono",Menlo,Monaco,Consolas,monospace',
+  // Decisão do fundador: sem fonte "máquina de escrever". T.mono passa a ser a
+  // MESMA do T.ui — todo o painel numa fonte só.
+  mono: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif',
 } as const
 
 export type Tone = "neutral" | "cyan" | "ok" | "warn" | "bad" | "mute"

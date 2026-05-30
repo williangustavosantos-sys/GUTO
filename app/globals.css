@@ -65,7 +65,10 @@
      mesmo onde o código atual usa "font-mono". JetBrains Mono fica disponível
      via .guto-mono para kickers/labels específicos. */
   --font-tech: var(--font-inter), "Inter", "Montserrat", system-ui, sans-serif;
-  --font-mono-real: var(--font-jetbrains-mono), "JetBrains Mono", "SFMono-Regular", "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  /* Decisão do fundador: sem fonte de "máquina de escrever" em lugar nenhum.
+     --font-mono-real (usado por .guto-mono e pelos kickers/labels) passa a ser
+     a MESMA Inter do resto. O look uppercase/tracking continua; só a fonte muda. */
+  --font-mono-real: var(--font-tech);
   --guto-font-tech: var(--font-display);
 }
 
