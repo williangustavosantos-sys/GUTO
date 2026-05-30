@@ -7,7 +7,7 @@ import { useCockpit } from "./cockpit-context"
 import { T } from "./control-tokens"
 import { Plate, Pill, Btn, CtrlDataRow, SectionTitle } from "./controls"
 import type { CoachDetailTab } from "./utils"
-import { coachLabel, relativeTime, studentRisk } from "./utils"
+import { coachLabel, relativeTime, studentRisk, formatLogAction } from "./utils"
 import type { AdminCoach, AdminStudent } from "@/lib/api/admin"
 import { usePanelI18n } from "@/lib/panel-i18n"
 
@@ -382,7 +382,7 @@ function TabLogs({ coach }: { coach: AdminCoach }) {
                 textTransform: "uppercase",
               }}
             >
-              {log.action || t.coachDrawer.logActionFallback}
+              {formatLogAction(log.action, lang) || t.coachDrawer.logActionFallback}
             </span>
             <span style={{ fontFamily: T.mono, fontSize: 9, color: T.fg4 }}>
               {log.timestamp ? new Date(log.timestamp).toLocaleString(lang) : "—"}

@@ -1042,7 +1042,7 @@ const PT: Dict = {
     placeholderFoodRestrictions: "Ex: sem lactose",
     saveBtn: "Salvar calibragem",
     toastSaved: "Calibragem atualizada.",
-    biologicalSex: { male: "Masculino", female: "Feminino", other: "Outro" },
+    biologicalSex: { male: "Masculino", female: "Feminino" },
     trainingLevel: {
       beginner: "Iniciante", intermediate: "Intermediário", advanced: "Avançado",
       returning: "Retornando", consistent: "Consistente",
@@ -1485,7 +1485,7 @@ const EN: Dict = {
     placeholderFoodRestrictions: "e.g. no lactose",
     saveBtn: "Save calibration",
     toastSaved: "Calibration updated.",
-    biologicalSex: { male: "Male", female: "Female", other: "Other" },
+    biologicalSex: { male: "Male", female: "Female" },
     trainingLevel: {
       beginner: "Beginner", intermediate: "Intermediate", advanced: "Advanced",
       returning: "Returning", consistent: "Consistent",
@@ -1928,7 +1928,7 @@ const IT: Dict = {
     placeholderFoodRestrictions: "Es: senza lattosio",
     saveBtn: "Salva calibrazione",
     toastSaved: "Calibrazione aggiornata.",
-    biologicalSex: { male: "Maschile", female: "Femminile", other: "Altro" },
+    biologicalSex: { male: "Maschile", female: "Femminile" },
     trainingLevel: {
       beginner: "Principiante", intermediate: "Intermedio", advanced: "Avanzato",
       returning: "Di ritorno", consistent: "Costante",

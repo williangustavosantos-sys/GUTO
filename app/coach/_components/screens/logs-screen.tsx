@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
-import { adminErrorMessage } from "../utils"
+import { adminErrorMessage, formatLogAction } from "../utils"
 import { useCockpit } from "../cockpit-context"
 import { T } from "../control-tokens"
 import { Plate, SearchBox, FilterPill } from "../controls"
@@ -61,7 +61,7 @@ export function LogsScreen() {
           </FilterPill>
           {distinctActions.slice(0, 8).map((a) => (
             <FilterPill key={a} active={actionFilter === a} onClick={() => setActionFilter(a)}>
-              {a}
+              {formatLogAction(a, lang)}
             </FilterPill>
           ))}
         </div>
@@ -113,7 +113,7 @@ export function LogsScreen() {
                     textTransform: "uppercase",
                   }}
                 >
-                  {log.action || t.logsScreen.actionFallback}
+                  {formatLogAction(log.action, lang) || t.logsScreen.actionFallback}
                 </span>
                 <span style={{ fontFamily: T.mono, fontSize: 9, color: T.fg4 }}>
                   {log.timestamp ? new Date(log.timestamp).toLocaleString(lang) : "—"}

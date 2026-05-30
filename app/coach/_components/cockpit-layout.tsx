@@ -398,7 +398,7 @@ function Header({ onMobileMenu }: { onMobileMenu: () => void }) {
               email: "",
               phone: "",
               password: "",
-              active: false,
+              active: true,
               coachId: "",
               teamId: selectedTeamId || "",
               sex: "",
