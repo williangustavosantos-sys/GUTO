@@ -257,7 +257,7 @@ export default function AdminLoginPage() {
               </div>
               <div
                 style={{
-                  fontFamily: '"JetBrains Mono", "SF Mono", Menlo, Monaco, monospace',
+                  fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif',
                   fontSize: 22,
                   fontWeight: 600,
                   color: "#fff",
@@ -434,7 +434,7 @@ export default function AdminLoginPage() {
               style={{
                 textAlign: "center",
                 marginTop: 20,
-                fontFamily: '"JetBrains Mono", "SF Mono", Menlo, Monaco, monospace',
+                fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif',
                 fontSize: 10,
                 color: "rgba(255,255,255,0.20)",
                 letterSpacing: "0.18em",
