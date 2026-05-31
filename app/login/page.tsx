@@ -125,8 +125,8 @@ function LoginPageContent() {
   }
 
   return (
-    <div ref={shellRef} className="sala-guto flex min-h-dvh flex-col overflow-y-auto">
-      <div className="flex flex-1 flex-col items-center justify-center px-8 py-12">
+    <div ref={shellRef} className="sala-guto overflow-y-auto" style={{ height: "var(--guto-viewport-height, 100dvh)" }}>
+      <div className="flex min-h-full flex-col items-center justify-center px-8 py-12">
 
         <div className="mb-12 flex w-full max-w-sm flex-col items-center px-1 text-center">
           <Image
