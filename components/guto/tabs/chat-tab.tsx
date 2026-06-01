@@ -73,6 +73,7 @@ interface ChatTabProps {
   onChangeLanguage?: (language: SupportedLanguage) => void
   onOpenPrivacySettings?: () => void
   isAvatarActive?: boolean
+  isKeyboardOpen?: boolean
 }
 
 interface Message {
@@ -567,6 +568,7 @@ export function ChatTab({
   onChangeLanguage,
   onOpenPrivacySettings,
   isAvatarActive = true,
+  isKeyboardOpen = false,
 }: ChatTabProps) {
   const validLang = getLanguage(language)
   const locale = translations[validLang]
@@ -1430,13 +1432,19 @@ export function ChatTab({
   )
   const showProactiveBanner =
     !showInitialXpCard && hasActionableProactiveMemories(proactiveMemories)
-  const inputStackBottom = showProactiveBanner
-    ? contextChip
-      ? "calc(var(--guto-chat-input-bottom) + 7.75rem)"
-      : "calc(var(--guto-chat-input-bottom) + 4.75rem)"
-    : contextChip
-      ? "calc(var(--guto-chat-input-bottom) + 4.25rem)"
-      : "var(--guto-chat-input-bottom)"
+  // Com o teclado aberto, o input PRECISA ficar fixo no rodapé (logo acima do
+  // teclado). Os offsets do banner/contextChip são só pro layout flutuante sem
+  // teclado; mantê-los com o teclado aberto jogava o input pro meio da tela,
+  // sobrepondo a mensagem do GUTO (bug iOS reportado). Por isso, fixa no rodapé.
+  const inputStackBottom = isKeyboardOpen
+    ? "var(--guto-chat-input-bottom)"
+    : showProactiveBanner
+      ? contextChip
+        ? "calc(var(--guto-chat-input-bottom) + 7.75rem)"
+        : "calc(var(--guto-chat-input-bottom) + 4.75rem)"
+      : contextChip
+        ? "calc(var(--guto-chat-input-bottom) + 4.25rem)"
+        : "var(--guto-chat-input-bottom)"
   const inputPlaceholder =
     contextChip?.type === "exercise"
       ? copy.exerciseInputPlaceholder

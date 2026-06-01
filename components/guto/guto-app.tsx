@@ -2155,6 +2155,7 @@ export function GutoApp({
         setStage("settings")
       }}
       isAvatarActive={activeTab === "guto" && !isKeyboardOpen}
+      isKeyboardOpen={isKeyboardOpen}
     />
   ), [activeTab, evolution, gutoUserId, isKeyboardOpen, localizedWorkoutPlan, vitalState, memory, pendingExerciseQuestion, pendingFoodQuestion, persistMemory, persistProfile, selectedLanguage, updateUserProfileField, userLabel])
 
